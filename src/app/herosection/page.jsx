@@ -14,7 +14,6 @@ const HeroSection = () => {
 
     return (
         <div className="relative min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 overflow-hidden">
-            {/* Background Decorative Elements */}
             <div className="absolute top-20 left-10 w-32 h-32 bg-orange-200 rounded-full opacity-20 blur-3xl"></div>
             <div className="absolute bottom-20 right-10 w-40 h-40 bg-red-200 rounded-full opacity-20 blur-3xl"></div>
 
@@ -25,7 +24,7 @@ const HeroSection = () => {
                     <div className="space-y-8 z-10">
                         <div className="inline-block">
                             <span className="text-[#f65e14] font-semibold text-sm uppercase tracking-wider bg-orange-100 px-4 py-2 rounded-full">
-                                Welcome to Research Academy
+                                Welcome to Arin Publishing Academy
                             </span>
                         </div>
 
@@ -86,7 +85,7 @@ const HeroSection = () => {
                         </div>
 
                         {/* Stats */}
-                        <div className="flex flex-wrap gap-8 pt-8 border-t border-gray-200">
+                        {/* <div className="flex flex-wrap gap-8 pt-8 border-t border-gray-200">
                             <div>
                                 <div className="text-3xl font-bold text-gray-900">50+</div>
                                 <div className="text-sm text-gray-600">Expert Researchers</div>
@@ -99,10 +98,9 @@ const HeroSection = () => {
                                 <div className="text-3xl font-bold text-gray-900">2k+</div>
                                 <div className="text-sm text-gray-600">Active Students</div>
                             </div>
-                        </div>
+                        </div> */}
                     </div>
 
-                    {/* Right Image with Border & Static Icons */}
                     <div className="relative flex justify-center lg:justify-end">
                         <div className="relative h-full">
                             {/* Main Image Container with Thin Black Border */}

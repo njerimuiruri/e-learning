@@ -5,8 +5,8 @@ import {
     Clock, Users, Star, CheckCircle, Award, BookOpen,
     TrendingUp, Play, ChevronDown, ChevronUp, ArrowLeft,
     Download, Share2, Heart, Sparkles, ArrowRight, Globe,
-    FileText, Video, Headphones, Zap, Trophy, Target, BarChart,
-    Laptop, MessageCircle, Certificate, Lock, PlayCircle
+    FileText, Video, Headphones, Zap, Trophy, Target,
+    Laptop, MessageCircle, PlayCircle
 } from 'lucide-react';
 
 import coursesData from '../../../data/courses/courses';
@@ -201,7 +201,7 @@ const CourseDetailPage = () => {
                                                 <span>Downloadable resources</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Certificate className="w-4 h-4 text-[#f65e14]" />
+                                                <Award className="w-4 h-4 text-[#f65e14]" />
                                                 <span>Certificate of completion</span>
                                             </div>
                                             <div className="flex items-center gap-2">
