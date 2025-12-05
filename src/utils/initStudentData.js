@@ -43,7 +43,6 @@ export const initializeSampleStudentData = () => {
       },
     ],
 
-    // Overall student stats
     totalXP: 310,
     totalCertificates: 0,
     totalCoursesCompleted: 0,
