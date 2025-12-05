@@ -1,14 +1,13 @@
 'use client';
 
 import React from 'react';
-import StudentSidebar from '@/components/student/StudentSidebar';
+import AdminSidebar from '@/components/Admin/AdminSidebar';
 
-export default function StudentLayout({ children }) {
+export default function AdminLayout({ children }) {
     return (
         <div className="flex min-h-screen bg-gray-50 pt-16">
             {/* Sidebar */}
-            <StudentSidebar />
-
+            <AdminSidebar />
             {/* Main Content */}
             <div className="flex-1 lg:ml-64 pb-16 lg:pb-0">
                 {children}
