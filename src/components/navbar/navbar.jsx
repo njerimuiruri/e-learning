@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Menu, X, Search, User, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen, ChevronDown } from 'lucide-react';
 import LoginModal from '@/app/(auth)/login/page';
 import RegisterModal from '@/app/(auth)/register/page';
+import authService from '@/lib/api/authService';
 import { getStudentProgress, getLastAccessedLesson } from '@/data/courses/courses';
 
 const Navbar = () => {
@@ -18,6 +19,7 @@ const Navbar = () => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [userRole, setUserRole] = useState('student');
+    const [currentUser, setCurrentUser] = useState(null);
     const [studentData, setStudentData] = useState(null);
 
     useEffect(() => {
@@ -41,27 +43,75 @@ const Navbar = () => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isSearchOpen, showProfileMenu]);
 
-    // Check if user is logged in
+    // Check authentication and load user data
     useEffect(() => {
-        const checkAuth = () => {
+        checkAuth();
+    }, [pathname]);
+
+    const checkAuth = async () => {
+        try {
+            const user = authService.getCurrentUser();
             const isDashboard = pathname?.startsWith('/student') ||
                 pathname?.startsWith('/instructor') ||
                 pathname?.startsWith('/admin');
-            setIsLoggedIn(isDashboard);
 
-            if (pathname?.startsWith('/student')) {
-                setUserRole('student');
-                // Load student data
-                const data = getStudentProgress();
-                setStudentData(data);
-            } else if (pathname?.startsWith('/instructor')) {
-                setUserRole('instructor');
-            } else if (pathname?.startsWith('/admin')) {
-                setUserRole('admin');
+            if (user) {
+                setCurrentUser(user);
+                setIsLoggedIn(true);
+                setUserRole(user.role);
+
+                // Load student-specific data
+                if (user.role === 'student') {
+                    const data = getStudentProgress();
+                    setStudentData(data);
+                }
+            } else if (isDashboard) {
+                // User is on dashboard but not logged in - redirect
+                router.push('/');
+            } else {
+                setIsLoggedIn(false);
+                setCurrentUser(null);
             }
-        };
-        checkAuth();
-    }, [pathname]);
+        } catch (error) {
+            console.error('Auth check error:', error);
+            setIsLoggedIn(false);
+            setCurrentUser(null);
+        }
+    };
+
+    const getInitials = () => {
+        if (currentUser) {
+            const first = currentUser.firstName?.charAt(0) || '';
+            const last = currentUser.lastName?.charAt(0) || '';
+            return (first + last).toUpperCase();
+        }
+        return 'U';
+    };
+
+    const getFullName = () => {
+        if (currentUser) {
+            return `${currentUser.firstName} ${currentUser.lastName}`;
+        }
+        return 'User';
+    };
+
+    const calculateProfileCompletion = () => {
+        if (!currentUser) return 0;
+
+        let completed = 0;
+        const totalFields = 8;
+
+        if (currentUser.firstName) completed++;
+        if (currentUser.lastName) completed++;
+        if (currentUser.email) completed++;
+        if (currentUser.profilePhotoUrl) completed++;
+        if (currentUser.bio) completed++;
+        if (currentUser.phoneNumber) completed++;
+        if (currentUser.country) completed++;
+        if (currentUser.emailVerified) completed++;
+
+        return Math.round((completed / totalFields) * 100);
+    };
 
     const navLinks = [
         { name: 'Home', href: '/' },
@@ -69,11 +119,6 @@ const Navbar = () => {
         { name: 'Courses', href: '/courses' },
         { name: 'Community', href: '#community' },
         { name: 'Contact', href: '#contact' }
-    ];
-
-    const courseCategories = [
-        { title: 'Courses', items: ['Free Courses', 'Certificated Courses'] },
-        { title: 'Content', items: ['Business', 'Health', 'Leadership', 'Government', 'Data and Computer Science'] }
     ];
 
     const handleSwitchToRegister = () => {
@@ -86,33 +131,56 @@ const Navbar = () => {
         setShowLoginModal(true);
     };
 
+    const handleLoginSuccess = (user) => {
+        setCurrentUser(user);
+        setIsLoggedIn(true);
+        setUserRole(user.role);
+
+        if (user.role === 'student') {
+            const data = getStudentProgress();
+            setStudentData(data);
+        }
+    };
+
+    const handleRegistrationSuccess = (user) => {
+        setCurrentUser(user);
+        setIsLoggedIn(true);
+        setUserRole(user.role);
+
+        if (user.role === 'student') {
+            const data = getStudentProgress();
+            setStudentData(data);
+        }
+    };
+
     const handleLogout = () => {
+        authService.logout();
         setIsLoggedIn(false);
+        setCurrentUser(null);
+        setStudentData(null);
         setShowProfileMenu(false);
         router.push('/');
     };
 
     const handleContinueLearning = () => {
-        // Get the first course in progress
         if (studentData && studentData.enrolledCourses.length > 0) {
             const firstCourse = studentData.enrolledCourses.find(ec => ec.status === 'in_progress');
             if (firstCourse) {
                 const lastLesson = getLastAccessedLesson(firstCourse.courseId);
                 router.push(`/courses/${firstCourse.courseId}/learn/${lastLesson.moduleId}/${lastLesson.lessonId}`);
             } else {
-                // No courses in progress, go to courses page
                 router.push('/courses');
             }
         } else {
-            // No enrolled courses, go to courses page
             router.push('/courses');
         }
     };
 
+    const profileCompletion = calculateProfileCompletion();
+
     return (
         <>
-            <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-lg' : 'bg-white shadow-md'
-                }`}>
+            <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-lg' : 'bg-white shadow-md'}`}>
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16 md:h-20">
                         <div className="flex-shrink-0">
@@ -157,44 +225,58 @@ const Navbar = () => {
                                         </button>
                                     )}
 
-                                    {/* Profile Menu */}
                                     <div className="relative profile-menu">
                                         <button
                                             onClick={() => setShowProfileMenu(!showProfileMenu)}
                                             className="flex items-center gap-2 p-2 hover:bg-orange-50 rounded-lg transition-all duration-200"
                                         >
-                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold">
-                                                FM
-                                            </div>
+                                            {currentUser?.profilePhotoUrl ? (
+                                                <img
+                                                    src={currentUser.profilePhotoUrl}
+                                                    alt={getFullName()}
+                                                    className="w-10 h-10 rounded-full object-cover border-2 border-orange-400"
+                                                />
+                                            ) : (
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold">
+                                                    {getInitials()}
+                                                </div>
+                                            )}
                                         </button>
 
                                         {showProfileMenu && (
                                             <div className="absolute right-0 mt-2 w-80 bg-white rounded-2xl shadow-2xl border-2 border-gray-100 py-4 animate-fadeIn">
-                                                {/* Profile Header */}
                                                 <div className="px-6 pb-4 border-b border-gray-200">
                                                     <div className="flex items-center gap-4 mb-3">
-                                                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
-                                                            FM
-                                                        </div>
+                                                        {currentUser?.profilePhotoUrl ? (
+                                                            <img
+                                                                src={currentUser.profilePhotoUrl}
+                                                                alt={getFullName()}
+                                                                className="w-16 h-16 rounded-full object-cover border-2 border-orange-400"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
+                                                                {getInitials()}
+                                                            </div>
+                                                        )}
                                                         <div>
-                                                            <h3 className="font-bold text-gray-900 text-lg">Faith Muiruri</h3>
-                                                            <p className="text-sm text-gray-500">faith@example.com</p>
+                                                            <h3 className="font-bold text-gray-900 text-lg">{getFullName()}</h3>
+                                                            <p className="text-sm text-gray-500">{currentUser?.email}</p>
                                                         </div>
                                                     </div>
 
-                                                    {/* Profile Completion */}
-                                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="text-sm font-semibold text-gray-700">Finish Your Profile</span>
-                                                            <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full font-bold">New</span>
+                                                    {profileCompletion < 100 && (
+                                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-sm font-semibold text-gray-700">Finish Your Profile</span>
+                                                                <span className="text-xs bg-blue-500 text-white px-2 py-1 rounded-full font-bold">New</span>
+                                                            </div>
+                                                            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                                                <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${profileCompletion}%` }}></div>
+                                                            </div>
+                                                            <span className="text-xs text-blue-600 font-medium">{profileCompletion}% Complete</span>
                                                         </div>
-                                                        <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                                                            <div className="bg-blue-500 h-2 rounded-full" style={{ width: '0%' }}></div>
-                                                        </div>
-                                                        <span className="text-xs text-blue-600 font-medium">0% Complete</span>
-                                                    </div>
+                                                    )}
 
-                                                    {/* XP Points */}
                                                     <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-orange-200 rounded-lg p-3">
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
@@ -204,30 +286,48 @@ const Navbar = () => {
                                                                 <span className="text-sm font-semibold text-gray-700">XP</span>
                                                             </div>
                                                             <span className="text-2xl font-black text-orange-600">
-                                                                {studentData?.totalXP || 310}
+                                                                {currentUser?.totalPoints || 0}
                                                             </span>
                                                         </div>
                                                     </div>
                                                 </div>
 
-                                                {/* Menu Items */}
                                                 <div className="py-2">
-                                                    <button
-                                                        onClick={() => {
-                                                            router.push('/student/certificates');
-                                                            setShowProfileMenu(false);
-                                                        }}
-                                                        className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
-                                                    >
-                                                        <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                                                            <Award className="w-5 h-5 text-purple-600" />
-                                                        </div>
-                                                        <span className="font-medium text-gray-700">Claim Your Certificates</span>
-                                                    </button>
+                                                    {userRole === 'student' && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => {
+                                                                    router.push('/student/certificates');
+                                                                    setShowProfileMenu(false);
+                                                                }}
+                                                                className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                                                                    <Award className="w-5 h-5 text-purple-600" />
+                                                                </div>
+                                                                <span className="font-medium text-gray-700">Claim Your Certificates</span>
+                                                            </button>
+
+                                                            <button
+                                                                onClick={() => {
+                                                                    router.push('/student/achievements');
+                                                                    setShowProfileMenu(false);
+                                                                }}
+                                                                className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
+                                                            >
+                                                                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                                                                    <Trophy className="w-5 h-5 text-orange-600" />
+                                                                </div>
+                                                                <span className="font-medium text-gray-700">Your Achievements</span>
+                                                            </button>
+                                                        </>
+                                                    )}
 
                                                     <button
                                                         onClick={() => {
-                                                            router.push('/student');
+                                                            const dashboardPath = userRole === 'student' ? '/student' :
+                                                                userRole === 'instructor' ? '/instructor' : '/admin';
+                                                            router.push(dashboardPath);
                                                             setShowProfileMenu(false);
                                                         }}
                                                         className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
@@ -240,20 +340,7 @@ const Navbar = () => {
 
                                                     <button
                                                         onClick={() => {
-                                                            router.push('/student/achievements');
-                                                            setShowProfileMenu(false);
-                                                        }}
-                                                        className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
-                                                    >
-                                                        <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                                                            <Trophy className="w-5 h-5 text-orange-600" />
-                                                        </div>
-                                                        <span className="font-medium text-gray-700">Your Achievements</span>
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() => {
-                                                            router.push('/student/settings');
+                                                            router.push(`/${userRole}/settings`);
                                                             setShowProfileMenu(false);
                                                         }}
                                                         className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
@@ -265,7 +352,6 @@ const Navbar = () => {
                                                     </button>
                                                 </div>
 
-                                                {/* Logout */}
                                                 <div className="pt-2 border-t border-gray-200">
                                                     <button
                                                         onClick={handleLogout}
@@ -300,7 +386,6 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        {/* Mobile menu button */}
                         <div className="flex lg:hidden items-center space-x-2">
                             <button
                                 onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -317,34 +402,19 @@ const Navbar = () => {
                         </div>
                     </div>
                 </div>
-
-                {/* Search Dropdown - Same as before */}
-                <div
-                    className={`search-container absolute top-full left-0 right-0 bg-white shadow-2xl transition-all duration-300 ease-in-out overflow-hidden ${isSearchOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
-                        }`}
-                >
-                    {/* Search content */}
-                </div>
-
-                {/* Mobile Menu - Same as before */}
-                <div
-                    className={`lg:hidden transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
-                        }`}
-                >
-                    {/* Mobile menu content */}
-                </div>
             </nav>
 
-            {/* Modals */}
             <LoginModal
                 isOpen={showLoginModal}
                 onClose={() => setShowLoginModal(false)}
                 onSwitchToRegister={handleSwitchToRegister}
+                onLoginSuccess={handleLoginSuccess}
             />
             <RegisterModal
                 isOpen={showRegisterModal}
                 onClose={() => setShowRegisterModal(false)}
                 onSwitchToLogin={handleSwitchToLogin}
+                onRegistrationSuccess={handleRegistrationSuccess}
             />
 
             <style jsx>{`

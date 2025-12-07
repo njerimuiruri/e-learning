@@ -2,13 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Eye, EyeOff, User, Mail, Lock, Facebook, Linkedin } from 'lucide-react';
-
-const AppleIcon = () => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-        <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-    </svg>
-);
+import { X, Eye, EyeOff, User, Mail, Lock, AlertCircle, Phone, Upload, Building, Globe, CheckCircle } from 'lucide-react';
+import authService from '@/lib/api/authService';
 
 const GoogleIcon = () => (
     <svg viewBox="0 0 24 24" className="w-5 h-5">
@@ -19,224 +14,455 @@ const GoogleIcon = () => (
     </svg>
 );
 
-export default function RegisterModal({ isOpen, onClose, onSwitchToLogin }) {
+// Toast Notification Component
+const Toast = ({ message, type, onClose }) => {
+    const bgColor = type === 'success' ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500';
+    const textColor = type === 'success' ? 'text-green-800' : 'text-red-800';
+    const Icon = type === 'success' ? CheckCircle : AlertCircle;
+    const iconColor = type === 'success' ? 'text-green-500' : 'text-red-500';
+
+    return (
+        <div className={`fixed top-20 right-4 z-[60] ${bgColor} border-l-4 rounded-lg shadow-2xl p-4 min-w-[320px] max-w-md animate-slideIn`}>
+            <div className="flex items-start gap-3">
+                <Icon className={`w-5 h-5 ${iconColor} flex-shrink-0 mt-0.5`} />
+                <div className="flex-1">
+                    <p className={`${textColor} font-medium text-sm`}>{message}</p>
+                </div>
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <X size={18} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegistrationSuccess }) {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
     const [userRole, setUserRole] = useState('student');
-    const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [toast, setToast] = useState(null);
     const [formData, setFormData] = useState({
         firstName: '',
         lastName: '',
         email: '',
         password: '',
+        phoneNumber: '',
+        country: '',
+        institution: '',
+        bio: '',
+        agreedToTerms: false,
+        profileImage: null,
+        cvFile: null,
     });
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const showToast = (message, type) => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 5000);
+    };
 
-        if (!agreedToTerms) {
-            alert('Please agree to the terms and conditions');
+    const handleSubmit = async () => {
+        setError('');
+
+        if (!formData.agreedToTerms) {
+            setError('Please agree to the terms and conditions');
             return;
         }
 
         if (userRole === 'instructor') {
-            alert('Your instructor account request has been submitted for approval. You will be notified once approved.');
-            onClose();
-            router.push('/login');
-        } else {
-            onClose();
-            router.push(`/${userRole}`);
+            if (!formData.phoneNumber || !formData.institution || !formData.bio) {
+                setError('Please fill in all required fields');
+                return;
+            }
+            if (!formData.cvFile) {
+                setError('CV/Resume is required for instructors');
+                return;
+            }
+        }
+
+        setLoading(true);
+
+        try {
+            if (userRole === 'student') {
+                const response = await authService.registerStudent({
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    password: formData.password,
+                    country: formData.country,
+                });
+
+                if (response.token) {
+                    localStorage.setItem('token', response.token);
+                    localStorage.setItem('user', JSON.stringify(response.user));
+                }
+
+                showToast('🎉 Registration successful! Welcome to the platform.', 'success');
+
+                if (onRegistrationSuccess) {
+                    onRegistrationSuccess(response.user);
+                }
+
+                setTimeout(() => {
+                    onClose();
+                    router.push('/student');
+                }, 1500);
+
+            } else if (userRole === 'instructor') {
+                const response = await authService.registerInstructor({
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    email: formData.email,
+                    password: formData.password,
+                    phoneNumber: formData.phoneNumber,
+                    institution: formData.institution,
+                    bio: formData.bio,
+                    country: formData.country,
+                    profileImage: formData.profileImage,
+                    cvFile: formData.cvFile,
+                });
+
+                showToast('✅ Instructor request submitted! You will be notified once approved.', 'success');
+
+                setTimeout(() => {
+                    onClose();
+                    onSwitchToLogin();
+                }, 2000);
+            }
+        } catch (err) {
+            console.error('Registration error:', err);
+            setError(err.message || 'Registration failed. Please try again.');
+            showToast(err.message || 'Registration failed. Please try again.', 'error');
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleInputChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value, type, checked, files } = e.target;
+
+        if (type === 'file') {
+            setFormData({ ...formData, [name]: files[0] });
+        } else if (type === 'checkbox') {
+            setFormData({ ...formData, [name]: checked });
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
+    };
+
+    const handleRoleChange = (role) => {
+        setUserRole(role);
+        setError('');
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+        }
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
-            onClick={onClose}
-        >
+        <>
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
             <div
-                className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
+                onClick={onClose}
             >
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all z-10"
+                <div
+                    className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl max-h-[92vh] overflow-y-auto"
+                    onClick={(e) => e.stopPropagation()}
                 >
-                    <X size={24} />
-                </button>
+                    <button
+                        onClick={onClose}
+                        className="sticky top-4 float-right mr-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all z-10 bg-white shadow-md"
+                    >
+                        <X size={20} />
+                    </button>
 
-                <div className="p-8">
-                    <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl mx-auto mb-4 flex items-center justify-center transform -rotate-3 shadow-lg">
-                            <span className="text-3xl">🎓</span>
+                    <div className="p-6">
+                        <div className="text-center mb-5">
+                            <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl mx-auto mb-3 flex items-center justify-center shadow-lg">
+                                <span className="text-2xl">🎓</span>
+                            </div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-1">Join Us Today!</h2>
+                            <p className="text-sm text-gray-600">Start your learning journey</p>
                         </div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Join Us Today!</h2>
-                        <p className="text-gray-600">Start your learning journey with 50M+ learners</p>
-                    </div>
 
-                    <div className="mb-6">
-                        <label className="block text-sm font-semibold text-gray-700 mb-3">I want to:</label>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setUserRole('student')}
-                                className={`h-auto py-4 px-4 rounded-xl font-semibold transition-all ${userRole === 'student'
-                                    ? 'bg-gradient-to-br from-orange-500 to-pink-500 text-white shadow-lg scale-105'
-                                    : 'border-2 border-gray-200 text-gray-700 hover:border-orange-300 hover:bg-orange-50'
-                                    }`}
-                            >
-                                <div className="text-2xl mb-1">📚</div>
-                                Learn
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setUserRole('instructor')}
-                                className={`h-auto py-4 px-4 rounded-xl font-semibold transition-all ${userRole === 'instructor'
-                                    ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-lg scale-105'
-                                    : 'border-2 border-gray-200 text-gray-700 hover:border-green-300 hover:bg-green-50'
-                                    }`}
-                            >
-                                <div className="text-2xl mb-1">👨‍🏫</div>
-                                Teach
-                            </button>
-                        </div>
-                        {userRole === 'instructor' && (
-                            <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                <p className="text-xs text-amber-800 flex items-center">
-                                    <span className="mr-2">⚠️</span>
-                                    Instructor accounts require admin approval
-                                </p>
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                <p className="text-xs text-red-800">{error}</p>
                             </div>
                         )}
-                    </div>
 
-                    <div className="grid grid-cols-4 gap-3 mb-6">
-                        <button className="h-12 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 flex items-center justify-center transition-all hover:scale-105">
-                            <Facebook className="w-5 h-5 text-blue-600" />
-                        </button>
-                        <button className="h-12 border-2 border-gray-200 rounded-xl hover:border-gray-800 hover:bg-gray-50 flex items-center justify-center transition-all hover:scale-105">
-                            <AppleIcon />
-                        </button>
-                        <button className="h-12 border-2 border-gray-200 rounded-xl hover:border-red-500 hover:bg-red-50 flex items-center justify-center transition-all hover:scale-105">
+                        <div className="mb-4">
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleRoleChange('student')}
+                                    className={`h-auto py-3 px-3 rounded-lg font-semibold transition-all text-sm ${userRole === 'student'
+                                        ? 'bg-gradient-to-br from-orange-500 to-pink-500 text-white shadow-md'
+                                        : 'border-2 border-gray-200 text-gray-700 hover:border-orange-300'
+                                        }`}
+                                >
+                                    <div className="text-xl mb-1">📚</div>
+                                    Learn
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleRoleChange('instructor')}
+                                    className={`h-auto py-3 px-3 rounded-lg font-semibold transition-all text-sm ${userRole === 'instructor'
+                                        ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-md'
+                                        : 'border-2 border-gray-200 text-gray-700 hover:border-green-300'
+                                        }`}
+                                >
+                                    <div className="text-xl mb-1">👨‍🏫</div>
+                                    Teach
+                                </button>
+                            </div>
+                            {userRole === 'instructor' && (
+                                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
+                                    <p className="text-xs text-amber-800">⚠️ Requires admin approval</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <button
+                            type="button"
+                            className="w-full h-10 border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 flex items-center justify-center gap-2 transition-all mb-4"
+                        >
                             <GoogleIcon />
+                            <span className="text-sm font-medium text-gray-700">Continue with Google</span>
                         </button>
-                        <button className="h-12 border-2 border-gray-200 rounded-xl hover:border-blue-700 hover:bg-blue-50 flex items-center justify-center transition-all hover:scale-105">
-                            <Linkedin className="w-5 h-5 text-blue-700" />
-                        </button>
-                    </div>
 
-                    <div className="relative mb-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-3 bg-white text-gray-500 font-medium">OR</span>
-                        </div>
-                    </div>
-
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="relative">
-                                <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    name="firstName"
-                                    placeholder="First Name"
-                                    value={formData.firstName}
-                                    onChange={handleInputChange}
-                                    className="w-full h-12 pl-11 pr-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
-                                    required
-                                />
+                        <div className="relative mb-4">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-300"></div>
                             </div>
-                            <div className="relative">
-                                <User className="absolute left-4 top-3.5 text-gray-400" size={18} />
-                                <input
-                                    type="text"
-                                    name="lastName"
-                                    placeholder="Last Name"
-                                    value={formData.lastName}
-                                    onChange={handleInputChange}
-                                    className="w-full h-12 pl-11 pr-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
-                                    required
-                                />
+                            <div className="relative flex justify-center text-xs">
+                                <span className="px-2 bg-white text-gray-500">OR</span>
                             </div>
                         </div>
 
-                        <div className="relative">
-                            <Mail className="absolute left-4 top-3.5 text-gray-400" size={20} />
-                            <input
-                                type="email"
-                                name="email"
-                                placeholder="Email address"
-                                value={formData.email}
-                                onChange={handleInputChange}
-                                className="w-full h-12 pl-12 pr-4 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
-                                required
-                            />
-                        </div>
+                        <div className="space-y-3" onKeyPress={handleKeyPress}>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="relative">
+                                    <User className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                                    <input
+                                        type="text"
+                                        name="firstName"
+                                        placeholder="First Name *"
+                                        value={formData.firstName}
+                                        onChange={handleInputChange}
+                                        className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
+                                        required
+                                    />
+                                </div>
+                                <div className="relative">
+                                    <User className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                                    <input
+                                        type="text"
+                                        name="lastName"
+                                        placeholder="Last Name *"
+                                        value={formData.lastName}
+                                        onChange={handleInputChange}
+                                        className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
+                                        required
+                                    />
+                                </div>
+                            </div>
 
-                        <div className="relative">
-                            <Lock className="absolute left-4 top-3.5 text-gray-400" size={20} />
-                            <input
-                                type={showPassword ? 'text' : 'password'}
-                                name="password"
-                                placeholder="Password"
-                                value={formData.password}
-                                onChange={handleInputChange}
-                                className="w-full h-12 pl-12 pr-12 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none transition-colors"
-                                required
-                            />
+                            <div className="relative">
+                                <Mail className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="Email address *"
+                                    value={formData.email}
+                                    onChange={handleInputChange}
+                                    className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
+                                    required
+                                />
+                            </div>
+
+                            <div className="relative">
+                                <Lock className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                                <input
+                                    type={showPassword ? 'text' : 'password'}
+                                    name="password"
+                                    placeholder="Password (min 6 chars) *"
+                                    value={formData.password}
+                                    onChange={handleInputChange}
+                                    className="w-full h-10 pl-9 pr-9 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
+                                    required
+                                    minLength={6}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                                >
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
+
+                            <div className="relative">
+                                <Globe className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                                <input
+                                    type="text"
+                                    name="country"
+                                    placeholder="Country"
+                                    value={formData.country}
+                                    onChange={handleInputChange}
+                                    className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
+                                />
+                            </div>
+
+                            {userRole === 'instructor' && (
+                                <>
+                                    <div className="relative">
+                                        <Phone className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                                        <input
+                                            type="tel"
+                                            name="phoneNumber"
+                                            placeholder="Phone Number *"
+                                            value={formData.phoneNumber}
+                                            onChange={handleInputChange}
+                                            className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="relative">
+                                        <Building className="absolute left-3 top-2.5 text-gray-400" size={16} />
+                                        <input
+                                            type="text"
+                                            name="institution"
+                                            placeholder="Institution/Organization *"
+                                            value={formData.institution}
+                                            onChange={handleInputChange}
+                                            className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
+                                            required
+                                        />
+                                    </div>
+
+                                    <textarea
+                                        name="bio"
+                                        placeholder="Brief bio (teaching experience, expertise) *"
+                                        value={formData.bio}
+                                        onChange={handleInputChange}
+                                        className="w-full h-20 px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors resize-none text-sm"
+                                        required
+                                    />
+
+                                    <div className="space-y-2">
+                                        <label className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg hover:border-green-300 cursor-pointer transition-colors">
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                <Upload className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                                <span className="text-xs text-gray-600 truncate">
+                                                    {formData.profileImage ? formData.profileImage.name : 'Profile Photo (Optional)'}
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                name="profileImage"
+                                                accept="image/*"
+                                                onChange={handleInputChange}
+                                                className="hidden"
+                                            />
+                                        </label>
+
+                                        <label className="flex items-center justify-between p-3 border-2 border-green-200 rounded-lg hover:border-green-400 cursor-pointer transition-colors bg-green-50">
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                <Upload className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                                <span className="text-xs font-medium text-gray-700 truncate">
+                                                    {formData.cvFile ? formData.cvFile.name : 'Upload CV/Resume *'}
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="file"
+                                                name="cvFile"
+                                                accept=".pdf,.doc,.docx"
+                                                onChange={handleInputChange}
+                                                className="hidden"
+                                                required
+                                            />
+                                        </label>
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="flex items-start space-x-2">
+                                <input
+                                    type="checkbox"
+                                    id="terms"
+                                    name="agreedToTerms"
+                                    checked={formData.agreedToTerms}
+                                    onChange={handleInputChange}
+                                    className="w-4 h-4 mt-0.5 text-green-600 border-gray-300 rounded focus:ring-green-500"
+                                    required
+                                />
+                                <label htmlFor="terms" className="text-xs text-gray-600 leading-tight">
+                                    I agree to the{' '}
+                                    <a href="#" className="text-green-600 hover:underline">Terms</a>
+                                    {' '}and{' '}
+                                    <a href="#" className="text-green-600 hover:underline">Privacy Policy</a>
+                                </label>
+                            </div>
+
                             <button
                                 type="button"
-                                onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600"
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="w-full h-10 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                             >
-                                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                {loading ? (
+                                    <span className="flex items-center justify-center">
+                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Creating account...
+                                    </span>
+                                ) : (
+                                    'Sign Up'
+                                )}
                             </button>
                         </div>
 
-                        <div className="flex items-start space-x-2">
-                            <input
-                                type="checkbox"
-                                id="terms"
-                                checked={agreedToTerms}
-                                onChange={(e) => setAgreedToTerms(e.target.checked)}
-                                className="w-4 h-4 mt-1 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                                required
-                            />
-                            <label htmlFor="terms" className="text-sm text-gray-600">
-                                I agree to the{' '}
-                                <a href="#" className="text-green-600 hover:underline">
-                                    Terms & Conditions
-                                </a>
-                            </label>
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="w-full h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-xl transition-all transform hover:scale-[1.02] shadow-lg"
-                        >
-                            Sign Up
-                        </button>
-                    </form>
-
-                    <p className="text-center text-sm text-gray-600 mt-6">
-                        Already have an account?{' '}
-                        <button
-                            onClick={onSwitchToLogin}
-                            className="text-green-600 font-semibold hover:text-green-700"
-                        >
-                            Log In
-                        </button>
-                    </p>
+                        <p className="text-center text-xs text-gray-600 mt-4">
+                            Already have an account?{' '}
+                            <button
+                                onClick={onSwitchToLogin}
+                                className="text-green-600 font-semibold hover:text-green-700"
+                            >
+                                Log In
+                            </button>
+                        </p>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <style jsx>{`
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                .animate-slideIn {
+                    animation: slideIn 0.3s ease-out;
+                }
+            `}</style>
+        </>
     );
 }

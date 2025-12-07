@@ -3,53 +3,105 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
-import coursesData, { getStudentProgress } from '@/data/courses/courses';
+import courseService from '@/lib/api/courseService';
 import Navbar from '@/components/navbar/navbar';
 
 export default function CertificatesPage() {
     const router = useRouter();
-    const [studentProgress, setStudentProgress] = useState(null);
-    const [selectedTab, setSelectedTab] = useState('available');
+    const [certificates, setCertificates] = useState([]);
+    const [selectedTab, setSelectedTab] = useState('earned');
     const [selectedCertificate, setSelectedCertificate] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    // Claimed certificates: those that are valid (already filtered as earnedCertificates)
+    const claimedCertificates = certificates.filter(c => c.isValid);
+    // Completed courses: unique courseIds from claimed certificates
+    const completedCourses = [...new Set(claimedCertificates.map(c => c.courseId))];
 
     useEffect(() => {
-        const progress = getStudentProgress();
-        setStudentProgress(progress);
+        fetchCertificates();
     }, []);
 
-    // Get completed courses ready for certificate claim
-    const completedCourses = studentProgress?.enrolledCourses
-        .filter(ec => ec.status === 'completed')
-        .map(ec => {
-            const course = coursesData.find(c => c.id === ec.courseId);
-            return {
-                ...course,
-                enrollmentData: ec,
-                completedDate: ec.lastAccessedDate,
-                certificateEarned: ec.certificateEarned,
-                certificateDate: ec.certificateDate,
-            };
-        }) || [];
-
-    const availableCertificates = completedCourses.filter(c => !c.certificateEarned);
-    const claimedCertificates = completedCourses.filter(c => c.certificateEarned);
-
-    const handleClaimCertificate = (course) => {
-        setSelectedCertificate(course);
+    const fetchCertificates = async () => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await courseService.getStudentCertificates();
+            setCertificates(data || []);
+        } catch (err) {
+            setError('Failed to load certificates');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleDownloadCertificate = (course) => {
-        // Implement certificate download logic
-        console.log('Downloading certificate for:', course.title);
-        alert('Certificate download started!');
+    const earnedCertificates = certificates.filter(c => c.isValid);
+    const availableCertificates = []; // Could add logic for eligible but unclaimed
+
+    const handleClaimCertificate = async (certificateId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/certificates/${certificateId}/claim`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Failed to claim certificate');
+
+            await fetchCertificates();
+            alert('Certificate claimed successfully!');
+        } catch (err) {
+            alert('Failed to claim certificate');
+            console.error(err);
+        }
     };
 
-    const handleShareCertificate = (course, platform) => {
-        console.log('Sharing certificate on:', platform, 'for:', course.title);
-        alert(`Sharing certificate on ${platform}!`);
+    const handleDownloadCertificate = async (certificate) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`http://localhost:5000/api/certificates/${certificate._id}/download`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) throw new Error('Failed to download certificate');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `certificate-${certificate.certificateNumber}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (err) {
+            alert('Failed to download certificate');
+            console.error(err);
+        }
     };
 
-    if (!studentProgress) {
+    const handleShareCertificate = (certificate, platform) => {
+        const shareUrl = `${window.location.origin}/certificates/${certificate.certificateNumber}`;
+        const shareText = `I've earned a certificate for ${certificate.courseName}!`;
+
+        const shareUrls = {
+            linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`,
+            twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
+            facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`
+        };
+
+        if (shareUrls[platform]) {
+            window.open(shareUrls[platform], '_blank', 'width=600,height=400');
+        }
+    };
+
+    if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">

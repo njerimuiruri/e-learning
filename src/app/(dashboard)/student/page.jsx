@@ -3,51 +3,57 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
-import coursesData, { getStudentProgress, getLastAccessedLesson } from '@/data/courses/courses';
+import courseService from '@/lib/api/courseService';
 import Navbar from '@/components/navbar/navbar';
+import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
 
-export default function StudentDashboardPage() {
+function StudentDashboardContent() {
     const router = useRouter();
-    const [studentProgress, setStudentProgress] = useState(null);
+    const [dashboardData, setDashboardData] = useState(null);
     const [coursesInProgress, setCoursesInProgress] = useState([]);
     const [completedCourses, setCompletedCourses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
-        const progress = getStudentProgress();
-        setStudentProgress(progress);
-
-        const inProgress = progress.enrolledCourses
-            .filter(ec => ec.status === 'in_progress')
-            .map(ec => {
-                const course = coursesData.find(c => c.id === ec.courseId);
-                const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0);
-                const timeRemaining = calculateTimeRemaining(course, ec.completedLessons);
-
-                return {
-                    ...course,
-                    progress: ec.progress,
-                    lastActive: formatLastActive(ec.lastAccessedDate),
-                    timeLeft: timeRemaining,
-                    lessons: totalLessons,
-                    completedLessons: ec.completedLessons.length,
-                    currentModule: ec.currentModule,
-                    currentLesson: ec.currentLesson,
-                };
-            });
-        setCoursesInProgress(inProgress);
-
-        const completed = progress.enrolledCourses
-            .filter(ec => ec.status === 'completed')
-            .map(ec => {
-                const course = coursesData.find(c => c.id === ec.courseId);
-                return {
-                    ...course,
-                    completedDate: formatLastActive(ec.lastAccessedDate),
-                    hasCertificate: ec.certificateEarned,
-                };
-            });
-        setCompletedCourses(completed);
+        fetchDashboardData();
     }, []);
+
+    const fetchDashboardData = async () => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await courseService.getStudentDashboard();
+            setDashboardData(data);
+
+            const inProgress = data.enrollments
+                ?.filter(enrollment => !enrollment.isCompleted)
+                .map(enrollment => ({
+                    ...enrollment.course,
+                    enrollmentId: enrollment._id,
+                    progress: enrollment.progress || 0,
+                    lastActive: formatLastActive(enrollment.lastAccessedAt),
+                    completedModules: enrollment.completedModules?.length || 0,
+                })) || [];
+            setCoursesInProgress(inProgress);
+
+            const completed = data.enrollments
+                ?.filter(enrollment => enrollment.isCompleted)
+                .map(enrollment => ({
+                    ...enrollment.course,
+                    enrollmentId: enrollment._id,
+                    completedDate: formatLastActive(enrollment.completedAt),
+                    hasCertificate: enrollment.certificateEarned,
+                    score: enrollment.totalScore || 0,
+                })) || [];
+            setCompletedCourses(completed);
+        } catch (err) {
+            setError('Failed to load dashboard data');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const calculateTimeRemaining = (course, completedLessons = []) => {
         const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0);
@@ -81,13 +87,13 @@ export default function StudentDashboardPage() {
     };
 
     const stats = [
-        { label: 'XP', value: studentProgress?.totalXP || '0', icon: 'Zap', color: 'text-yellow-600' },
-        { label: 'Certificates', value: studentProgress?.totalCertificates || '0', icon: 'Award', color: 'text-blue-600' },
-        { label: 'Learning Streak', value: studentProgress?.learningStreak || '0', icon: 'Flame', color: 'text-orange-600' },
-        { label: 'Total Learning Hours', value: studentProgress?.totalLearningHours || '0', icon: 'Clock', color: 'text-purple-600' },
+        { label: 'Enrollments', value: dashboardData?.enrollments?.length || '0', icon: 'BookOpen', color: 'text-yellow-600' },
+        { label: 'Certificates', value: dashboardData?.certificates?.length || '0', icon: 'Award', color: 'text-blue-600' },
+        { label: 'In Progress', value: coursesInProgress?.length || '0', icon: 'Zap', color: 'text-orange-600' },
+        { label: 'Completed', value: completedCourses?.length || '0', icon: 'CheckCircle', color: 'text-green-600' },
     ];
 
-    if (!studentProgress) {
+    if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
@@ -269,6 +275,14 @@ export default function StudentDashboardPage() {
                 </main>
             </div>
         </>
-
     );
+}
+
+export default function StudentDashboardPage() {
+    return (
+        <ProtectedStudentRoute>
+            <StudentDashboardContent />
+        </ProtectedStudentRoute>
+    );
+}
 }

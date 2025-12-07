@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
 
@@ -8,6 +8,51 @@ export default function AdminSidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const [showPhotoModal, setShowPhotoModal] = useState(false);
+    const [showUserDropdown, setShowUserDropdown] = useState(false);
+    const [adminUser, setAdminUser] = useState(null);
+
+    useEffect(() => {
+        // Load admin user details from localStorage
+        const user = localStorage.getItem('user');
+        if (user) {
+            try {
+                setAdminUser(JSON.parse(user));
+            } catch (error) {
+                console.error('Error parsing user data:', error);
+            }
+        }
+    }, []);
+
+    const handleLogout = () => {
+        if (confirm('Are you sure you want to logout?')) {
+            // Clear all authentication data
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+
+            // Redirect to home page
+            router.replace('/');
+        }
+    };
+
+    // Get user initials
+    const getUserInitials = () => {
+        if (!adminUser) return 'AD';
+        const firstName = adminUser.firstName || '';
+        const lastName = adminUser.lastName || '';
+        return (firstName.charAt(0) + lastName.charAt(0)).toUpperCase() || 'AD';
+    };
+
+    // Get full name
+    const getFullName = () => {
+        if (!adminUser) return 'Admin User';
+        return `${adminUser.firstName || ''} ${adminUser.lastName || ''}`.trim() || 'Admin User';
+    };
+
+    // Get email
+    const getEmail = () => {
+        return adminUser?.email || 'admin@platform.com';
+    };
 
     const menuItems = [
         {
@@ -15,11 +60,7 @@ export default function AdminSidebar() {
             label: 'Dashboard',
             path: '/admin',
         },
-        {
-            icon: 'Users',
-            label: 'User Management',
-            path: '/admin/users',
-        },
+
         {
             icon: 'UserCheck',
             label: 'Fellows Management',
@@ -41,22 +82,22 @@ export default function AdminSidebar() {
             label: 'Certificates',
             path: '/admin/certificates',
         },
-        {
-            icon: 'MessageSquare',
-            label: 'Discussions',
-            path: '/admin/discussions',
-            badge: 2,
-        },
+        // {
+        //     icon: 'MessageSquare',
+        //     label: 'Discussions',
+        //     path: '/admin/discussions',
+        //     badge: 2,
+        // },
         {
             icon: 'BarChart3',
             label: 'Analytics & Reports',
             path: '/admin/analytics',
         },
-        {
-            icon: 'DollarSign',
-            label: 'Revenue',
-            path: '/admin/revenue',
-        },
+        // {
+        //     icon: 'DollarSign',
+        //     label: 'Revenue',
+        //     path: '/admin/revenue',
+        // },
     ];
 
     const handleNavigation = (path) => {
@@ -65,15 +106,169 @@ export default function AdminSidebar() {
 
     return (
         <>
+            {/* Top Navigation - moved here to be reused across admin pages */}
+            <header className="fixed top-0 left-0 lg:left-72 right-0 bg-white border-b border-gray-200 z-40 shadow-sm">
+                <div className="flex items-center justify-between px-6 py-4">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-md">
+                                <Icons.Shield className="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-gray-900">Admin Portal</h2>
+                                <p className="text-xs text-gray-500">Management Dashboard</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                            <Icons.Bell className="w-5 h-5 text-gray-600" />
+                            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+                        </button>
+
+                        <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
+                            <Icons.Search className="w-4 h-4 text-gray-500" />
+                            <span className="text-sm text-gray-600">Quick search...</span>
+                            <kbd className="px-2 py-0.5 text-xs bg-white rounded border border-gray-300">⌘K</kbd>
+                        </button>
+
+                        <div className="relative">
+                            <button
+                                onClick={() => setShowUserDropdown(!showUserDropdown)}
+                                className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 group"
+                            >
+                                <div className="relative">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:shadow-lg transition-shadow">
+                                        {getUserInitials()}
+                                    </div>
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
+                                </div>
+                                <div className="hidden md:block text-left">
+                                    <p className="text-sm font-semibold text-gray-900">{getFullName()}</p>
+                                    <p className="text-xs text-gray-500">{adminUser?.role === 'admin' ? 'Administrator' : 'User'}</p>
+                                </div>
+                                <Icons.ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-200 ${showUserDropdown ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {showUserDropdown && (
+                                <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
+                                    <div className="px-4 py-3 border-b border-gray-100">
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold shadow-md">
+                                                {getUserInitials()}
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="font-semibold text-gray-900">{getFullName()}</p>
+                                                <p className="text-xs text-gray-500">{getEmail()}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between text-xs">
+                                            <span className="text-gray-600">Role: {adminUser?.role || 'Administrator'}</span>
+                                            <span className="flex items-center gap-1 text-green-600">
+                                                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                                                Active
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="py-2">
+                                        <button
+                                            onClick={() => {
+                                                setShowUserDropdown(false);
+                                                router.push('/admin/profile');
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center">
+                                                <Icons.User className="w-4 h-4 text-blue-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">My Profile</p>
+                                                <p className="text-xs text-gray-500">View and edit profile</p>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setShowUserDropdown(false);
+                                                router.push('/admin/settings');
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 bg-purple-50 rounded-lg flex items-center justify-center">
+                                                <Icons.Settings className="w-4 h-4 text-purple-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">Settings</p>
+                                                <p className="text-xs text-gray-500">System preferences</p>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setShowUserDropdown(false);
+                                                router.push('/admin/activity');
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 bg-green-50 rounded-lg flex items-center justify-center">
+                                                <Icons.Activity className="w-4 h-4 text-green-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">Activity Log</p>
+                                                <p className="text-xs text-gray-500">View recent actions</p>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setShowUserDropdown(false);
+                                                alert('Help Center opened');
+                                            }}
+                                            className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
+                                        >
+                                            <div className="w-8 h-8 bg-yellow-50 rounded-lg flex items-center justify-center">
+                                                <Icons.HelpCircle className="w-4 h-4 text-yellow-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-medium text-gray-900">Help & Support</p>
+                                                <p className="text-xs text-gray-500">Get assistance</p>
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <div className="border-t border-gray-100 pt-2 px-2">
+                                        <button
+                                            onClick={() => {
+                                                setShowUserDropdown(false);
+                                                handleLogout();
+                                            }}
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-red-50 rounded-lg transition-colors text-left group"
+                                        >
+                                            <div className="w-8 h-8 bg-red-50 group-hover:bg-red-100 rounded-lg flex items-center justify-center transition-colors">
+                                                <Icons.LogOut className="w-4 h-4 text-red-600" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-semibold text-red-600">Logout</p>
+                                                <p className="text-xs text-red-500">Sign out of your account</p>
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </header>
             {/* Desktop Sidebar */}
-            <aside className="hidden lg:block fixed left-0 top-0 h-screen bg-white w-72 z-50 pt-16 shadow-lg border-r border-gray-200">
+            <aside className="hidden lg:block fixed left-0 top-0 h-screen bg-white w-72 z-50 shadow-lg border-r border-gray-200">
                 <div className="flex flex-col h-full">
                     {/* Admin Profile Section */}
                     <div className="p-6 border-b border-gray-200">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="relative group">
                                 <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl cursor-pointer shadow-md">
-                                    AD
+                                    {getUserInitials()}
                                 </div>
                                 <button
                                     onClick={() => setShowPhotoModal(true)}
@@ -84,9 +279,9 @@ export default function AdminSidebar() {
                                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-gray-900 truncate">Admin User</h3>
-                                <p className="text-xs text-gray-600">System Administrator</p>
-                                <p className="text-xs text-gray-500">ID: ADM-001</p>
+                                <h3 className="font-semibold text-gray-900 truncate">{getFullName()}</h3>
+                                <p className="text-xs text-gray-600">{adminUser?.role === 'admin' ? 'System Administrator' : 'User'}</p>
+                                <p className="text-xs text-gray-500 truncate">{getEmail()}</p>
                             </div>
                         </div>
 

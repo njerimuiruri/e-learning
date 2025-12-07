@@ -1,17 +1,149 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
+import authService from '@/lib/api/authService';
+import { getStudentProgress, getLastAccessedLesson } from '@/data/courses/courses';
 
 export default function StudentSidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [showPhotoModal, setShowPhotoModal] = useState(false);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [studentData, setStudentData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+    // Fetch user data on component mount
+    useEffect(() => {
+        fetchUserData();
+    }, []);
+
+    const fetchUserData = async () => {
+        try {
+            setLoading(true);
+            const user = authService.getCurrentUser();
+
+            if (user) {
+                setCurrentUser(user);
+                // Fetch student progress data
+                const progress = getStudentProgress();
+                setStudentData(progress);
+            } else {
+                // If no user found, redirect to home
+                router.push('/');
+            }
+        } catch (error) {
+            console.error('Error fetching user data:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const getInitials = () => {
+        if (currentUser) {
+            const first = currentUser.firstName?.charAt(0) || '';
+            const last = currentUser.lastName?.charAt(0) || '';
+            return (first + last).toUpperCase();
+        }
+        return 'U';
+    };
+
+    const getFullName = () => {
+        if (currentUser) {
+            return `${currentUser.firstName} ${currentUser.lastName}`;
+        }
+        return 'User';
+    };
+
+    const calculateProfileCompletion = () => {
+        if (!currentUser) return 0;
+
+        let completed = 0;
+        const totalFields = 8;
+
+        if (currentUser.firstName) completed++;
+        if (currentUser.lastName) completed++;
+        if (currentUser.email) completed++;
+        if (currentUser.profilePhotoUrl) completed++;
+        if (currentUser.bio) completed++;
+        if (currentUser.phoneNumber) completed++;
+        if (currentUser.country) completed++;
+        if (currentUser.emailVerified) completed++;
+
+        return Math.round((completed / totalFields) * 100);
+    };
+
+    const handlePhotoUpload = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.match(/image\/(jpeg|jpg|png|gif)/)) {
+            alert('Please upload a valid image file (JPEG, PNG, or GIF)');
+            return;
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('File size must be less than 5MB');
+            return;
+        }
+
+        setUploadingPhoto(true);
+
+        try {
+
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setCurrentUser({
+                    ...currentUser,
+                    profilePhotoUrl: reader.result
+                });
+                // Update localStorage
+                localStorage.setItem('user', JSON.stringify({
+                    ...currentUser,
+                    profilePhotoUrl: reader.result
+                }));
+            };
+            reader.readAsDataURL(file);
+
+            setShowPhotoModal(false);
+        } catch (error) {
+            console.error('Error uploading photo:', error);
+            alert('Failed to upload photo. Please try again.');
+        } finally {
+            setUploadingPhoto(false);
+        }
+    };
+
+    const handleRemovePhoto = () => {
+        setCurrentUser({
+            ...currentUser,
+            profilePhotoUrl: null
+        });
+        localStorage.setItem('user', JSON.stringify({
+            ...currentUser,
+            profilePhotoUrl: null
+        }));
+        setShowPhotoModal(false);
+    };
+
+    const handleLogout = () => {
+        // Clear auth data
+        authService.logout();
+
+        // Clear any other local data
+        setCurrentUser(null);
+        setStudentData(null);
+
+        // Redirect to home page
+        router.push('/');
+    };
 
     const menuItems = [
-
         {
             icon: 'LayoutDashboard',
             label: 'Dashboard',
@@ -22,13 +154,11 @@ export default function StudentSidebar() {
             label: 'Your Achievements',
             path: '/student/achievements',
         },
-
         {
             icon: 'Award',
             label: 'Claim Your Certificates',
             path: '/student/certificates',
         },
-
     ];
 
     const handleNavigation = (path) => {
@@ -36,8 +166,37 @@ export default function StudentSidebar() {
     };
 
     const handleContinueLearning = () => {
-        router.push('/courses/1/learn/1/1');
+        if (studentData && studentData.enrolledCourses.length > 0) {
+            const inProgressCourse = studentData.enrolledCourses.find(
+                course => course.status === 'in_progress'
+            );
+
+            if (inProgressCourse) {
+                const lastLesson = getLastAccessedLesson(inProgressCourse.courseId);
+                router.push(`/courses/${inProgressCourse.courseId}/learn/${lastLesson.moduleId}/${lastLesson.lessonId}`);
+            } else {
+                // Go to first course
+                const firstCourse = studentData.enrolledCourses[0];
+                router.push(`/courses/${firstCourse.courseId}`);
+            }
+        } else {
+            // No courses enrolled, go to courses page
+            router.push('/courses');
+        }
     };
+
+    const profileCompletion = calculateProfileCompletion();
+    const remainingPercentage = 100 - profileCompletion;
+
+    if (loading) {
+        return (
+            <aside className="hidden lg:block fixed left-0 top-0 h-screen bg-white border-r border-gray-200 w-64 z-50 pt-16">
+                <div className="flex items-center justify-center h-full">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600"></div>
+                </div>
+            </aside>
+        );
+    }
 
     return (
         <>
@@ -48,9 +207,17 @@ export default function StudentSidebar() {
                     <div className="p-6 border-b border-gray-200">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="relative group">
-                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold text-xl cursor-pointer">
-                                    FM
-                                </div>
+                                {currentUser?.profilePhotoUrl ? (
+                                    <img
+                                        src={currentUser.profilePhotoUrl}
+                                        alt={getFullName()}
+                                        className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+                                    />
+                                ) : (
+                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
+                                        {getInitials()}
+                                    </div>
+                                )}
                                 <button
                                     onClick={() => setShowPhotoModal(true)}
                                     className="absolute bottom-0 right-0 w-6 h-6 bg-white rounded-full border-2 border-gray-300 flex items-center justify-center hover:bg-gray-50 transition-colors"
@@ -60,9 +227,13 @@ export default function StudentSidebar() {
                                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h3 className="font-semibold text-gray-900 truncate">Faith Muiruri</h3>
-                                <p className="text-xs text-gray-500">Finish Your Profile</p>
-                                <p className="text-xs text-gray-400">Alison ID: 24223577</p>
+                                <h3 className="font-semibold text-gray-900 truncate">{getFullName()}</h3>
+                                <p className="text-xs text-gray-500">
+                                    {profileCompletion === 100 ? 'Profile Complete' : 'Finish Your Profile'}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                    XP: {currentUser?.totalPoints || 0}
+                                </p>
                             </div>
                         </div>
 
@@ -75,14 +246,22 @@ export default function StudentSidebar() {
                         </button>
 
                         {/* Profile Completion */}
-                        <div className="mt-4">
-                            <div className="flex items-center justify-between text-xs mb-2">
-                                <span className="text-orange-600 font-medium">100% Remaining</span>
+                        {profileCompletion < 100 && (
+                            <div className="mt-4">
+                                <div className="flex items-center justify-between text-xs mb-2">
+                                    <span className="text-orange-600 font-medium">
+                                        {remainingPercentage}% Remaining
+                                    </span>
+                                    <span className="text-gray-500">{profileCompletion}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                    <div
+                                        className="bg-orange-500 h-1.5 rounded-full transition-all duration-500"
+                                        style={{ width: `${profileCompletion}%` }}
+                                    ></div>
+                                </div>
                             </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                <div className="bg-orange-500 h-1.5 rounded-full" style={{ width: '0%' }}></div>
-                            </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* Navigation Menu */}
@@ -122,17 +301,13 @@ export default function StudentSidebar() {
                                 <Icons.Settings className="w-5 h-5 text-gray-500" />
                                 <span>Account Settings</span>
                             </button>
-
                         </div>
                     </nav>
 
                     {/* Logout Button */}
                     <div className="p-3 border-t border-gray-200">
                         <button
-                            onClick={() => {
-                                console.log('Logging out...');
-                                router.push('/');
-                            }}
+                            onClick={handleLogout}
                             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 transition-colors text-sm font-medium"
                         >
                             <Icons.LogOut className="w-5 h-5" />
@@ -158,23 +333,50 @@ export default function StudentSidebar() {
                         <div className="p-6">
                             <div className="flex justify-center mb-6">
                                 <div className="relative">
-                                    <div className="w-40 h-40 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold text-5xl">
-                                        FM
-                                    </div>
-                                    <button className="absolute bottom-2 right-2 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors">
+                                    {currentUser?.profilePhotoUrl ? (
+                                        <img
+                                            src={currentUser.profilePhotoUrl}
+                                            alt={getFullName()}
+                                            className="w-40 h-40 rounded-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-40 h-40 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold text-5xl">
+                                            {getInitials()}
+                                        </div>
+                                    )}
+                                    <label className="absolute bottom-2 right-2 w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors cursor-pointer">
                                         <Icons.Camera className="w-5 h-5 text-white" />
-                                    </button>
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handlePhotoUpload}
+                                            className="hidden"
+                                            disabled={uploadingPhoto}
+                                        />
+                                    </label>
                                 </div>
                             </div>
                             <div className="space-y-3">
-                                <button className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
+                                <label className="w-full bg-blue-500 hover:bg-blue-600 text-white py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 cursor-pointer">
                                     <Icons.Upload className="w-4 h-4" />
-                                    Upload Photo
-                                </button>
-                                <button className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2">
-                                    <Icons.Trash2 className="w-4 h-4" />
-                                    Remove Photo
-                                </button>
+                                    {uploadingPhoto ? 'Uploading...' : 'Upload Photo'}
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handlePhotoUpload}
+                                        className="hidden"
+                                        disabled={uploadingPhoto}
+                                    />
+                                </label>
+                                {currentUser?.profilePhotoUrl && (
+                                    <button
+                                        onClick={handleRemovePhoto}
+                                        className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Icons.Trash2 className="w-4 h-4" />
+                                        Remove Photo
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -185,20 +387,20 @@ export default function StudentSidebar() {
             <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50">
                 <div className="grid grid-cols-5 gap-1 px-2 py-2">
                     <button
-                        onClick={() => handleNavigation('/student/for-you')}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg ${pathname === '/student/for-you' ? 'text-green-600' : 'text-gray-600'
-                            }`}
-                    >
-                        <Icons.Heart className="w-5 h-5" />
-                        <span className="text-xs">For You</span>
-                    </button>
-                    <button
                         onClick={() => handleNavigation('/student')}
                         className={`flex flex-col items-center gap-1 p-2 rounded-lg ${pathname === '/student' ? 'text-green-600' : 'text-gray-600'
                             }`}
                     >
                         <Icons.LayoutDashboard className="w-5 h-5" />
                         <span className="text-xs">Dashboard</span>
+                    </button>
+                    <button
+                        onClick={() => handleNavigation('/courses')}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg ${pathname === '/courses' ? 'text-green-600' : 'text-gray-600'
+                            }`}
+                    >
+                        <Icons.BookOpen className="w-5 h-5" />
+                        <span className="text-xs">Courses</span>
                     </button>
                     <button
                         onClick={() => handleNavigation('/student/achievements')}

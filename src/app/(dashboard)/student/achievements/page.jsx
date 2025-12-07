@@ -3,32 +3,52 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
-import coursesData, { getStudentProgress } from '@/data/courses/courses';
+import courseService from '@/lib/api/courseService';
 import Navbar from '@/components/navbar/navbar';
 
 export default function AchievementsPage() {
     const router = useRouter();
-    const [studentProgress, setStudentProgress] = useState(null);
+    const [dashboardData, setDashboardData] = useState(null);
     const [selectedCategory, setSelectedCategory] = useState('all');
     const [selectedAchievement, setSelectedAchievement] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
 
     useEffect(() => {
-        const progress = getStudentProgress();
-        setStudentProgress(progress);
+        fetchAchievements();
     }, []);
 
-    // Dynamic achievements based on actual student data
+    const fetchAchievements = async () => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await courseService.getStudentDashboard();
+            setDashboardData(data);
+        } catch (err) {
+            setError('Failed to load achievements');
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Dynamic achievements based on actual student data from API
     const getAchievements = () => {
-        if (!studentProgress) return [];
+        if (!dashboardData) return [];
 
-        const completedCourses = studentProgress.enrolledCourses.filter(ec => ec.status === 'completed');
-        const inProgressCourses = studentProgress.enrolledCourses.filter(ec => ec.status === 'in_progress');
-
+        const completedCourses = dashboardData.enrollments?.filter(e => e.isCompleted) || [];
+        const inProgressCourses = dashboardData.enrollments?.filter(e => !e.isCompleted) || [];
         // Calculate total lessons completed across all courses
-        const totalLessonsCompleted = studentProgress.enrolledCourses.reduce(
-            (sum, ec) => sum + (ec.completedLessons?.length || 0),
+        const totalLessonsCompleted = dashboardData.enrollments?.reduce(
+            (sum, e) => sum + (e.completedModules?.length || 0),
             0
-        );
+        ) || 0;
+        // Calculate XP: 10 XP per completed module
+        const totalXP = totalLessonsCompleted * 10;
+        // Calculate learning streak (not implemented, set to 0)
+        const learningStreak = 0;
+        // Calculate total learning hours (assume 0.5 hour per module)
+        const totalLearningHours = totalLessonsCompleted * 0.5;
 
         return [
             {
@@ -37,7 +57,7 @@ export default function AchievementsPage() {
                 description: 'Complete your first lesson',
                 icon: 'Footprints',
                 earned: totalLessonsCompleted >= 1,
-                earnedDate: totalLessonsCompleted >= 1 ? studentProgress.enrolledCourses[0]?.enrolledDate : null,
+                earnedDate: totalLessonsCompleted >= 1 ? completedCourses[0]?.completedAt : null,
                 xp: 50,
                 category: 'learning',
                 color: 'from-blue-400 to-blue-600',
@@ -54,8 +74,8 @@ export default function AchievementsPage() {
                 title: 'Knowledge Seeker',
                 description: 'Earn 100 XP',
                 icon: 'BookOpen',
-                earned: studentProgress.totalXP >= 100,
-                earnedDate: studentProgress.totalXP >= 100 ? new Date() : null,
+                earned: totalXP >= 100,
+                earnedDate: totalXP >= 100 ? new Date() : null,
                 xp: 100,
                 category: 'xp',
                 color: 'from-purple-400 to-purple-600',
@@ -63,7 +83,7 @@ export default function AchievementsPage() {
                     requirement: 'Earn 100 XP',
                     reward: '100 XP Bonus',
                     tips: 'Complete lessons and assessments to earn XP!',
-                    progress: Math.min(studentProgress.totalXP, 100),
+                    progress: Math.min(totalXP, 100),
                     total: 100
                 }
             },
@@ -72,8 +92,8 @@ export default function AchievementsPage() {
                 title: 'Rising Star',
                 description: 'Earn 500 XP',
                 icon: 'Star',
-                earned: studentProgress.totalXP >= 500,
-                earnedDate: studentProgress.totalXP >= 500 ? new Date() : null,
+                earned: totalXP >= 500,
+                earnedDate: totalXP >= 500 ? new Date() : null,
                 xp: 150,
                 category: 'xp',
                 color: 'from-yellow-400 to-orange-500',
@@ -81,7 +101,7 @@ export default function AchievementsPage() {
                     requirement: 'Earn 500 XP',
                     reward: '150 XP Bonus',
                     tips: 'Keep learning and completing courses to reach this milestone!',
-                    progress: Math.min(studentProgress.totalXP, 500),
+                    progress: Math.min(totalXP, 500),
                     total: 500
                 }
             },
@@ -90,8 +110,8 @@ export default function AchievementsPage() {
                 title: 'Week Warrior',
                 description: 'Maintain a 7-day learning streak',
                 icon: 'Flame',
-                earned: studentProgress.learningStreak >= 7,
-                earnedDate: studentProgress.learningStreak >= 7 ? new Date() : null,
+                earned: learningStreak >= 7,
+                earnedDate: learningStreak >= 7 ? new Date() : null,
                 xp: 200,
                 category: 'streak',
                 color: 'from-orange-400 to-red-500',
@@ -99,7 +119,7 @@ export default function AchievementsPage() {
                     requirement: '7-day learning streak',
                     reward: '200 XP',
                     tips: 'Learn something every day for a week to unlock this!',
-                    progress: Math.min(studentProgress.learningStreak, 7),
+                    progress: Math.min(learningStreak, 7),
                     total: 7
                 }
             },
@@ -109,7 +129,7 @@ export default function AchievementsPage() {
                 description: 'Complete your first course',
                 icon: 'Trophy',
                 earned: completedCourses.length >= 1,
-                earnedDate: completedCourses.length >= 1 ? completedCourses[0]?.lastAccessedDate : null,
+                earnedDate: completedCourses.length >= 1 ? completedCourses[0]?.completedAt : null,
                 xp: 300,
                 category: 'courses',
                 color: 'from-green-400 to-emerald-600',
@@ -119,10 +139,7 @@ export default function AchievementsPage() {
                     tips: 'Finish all modules and assessments in any course!',
                     progress: completedCourses.length,
                     total: 1,
-                    courses: completedCourses.map(ec => {
-                        const course = coursesData.find(c => c.id === ec.courseId);
-                        return course?.title;
-                    })
+                    courses: completedCourses.map(ec => ec.courseId)
                 }
             },
             {
@@ -159,10 +176,7 @@ export default function AchievementsPage() {
                     tips: 'Master multiple subjects to unlock this achievement!',
                     progress: completedCourses.length,
                     total: 3,
-                    courses: completedCourses.map(ec => {
-                        const course = coursesData.find(c => c.id === ec.courseId);
-                        return course?.title;
-                    })
+                    courses: completedCourses.map(ec => ec.courseId)
                 }
             },
             {
@@ -170,8 +184,8 @@ export default function AchievementsPage() {
                 title: 'Dedicated Learner',
                 description: 'Spend 10 hours learning',
                 icon: 'Clock',
-                earned: studentProgress.totalLearningHours >= 10,
-                earnedDate: studentProgress.totalLearningHours >= 10 ? new Date() : null,
+                earned: totalLearningHours >= 10,
+                earnedDate: totalLearningHours >= 10 ? new Date() : null,
                 xp: 250,
                 category: 'learning',
                 color: 'from-amber-400 to-orange-500',
@@ -179,7 +193,7 @@ export default function AchievementsPage() {
                     requirement: '10 hours of learning',
                     reward: '250 XP',
                     tips: 'Time spent learning counts towards this achievement!',
-                    progress: Math.min(studentProgress.totalLearningHours, 10),
+                    progress: Math.min(totalLearningHours, 10),
                     total: 10
                 }
             },
@@ -204,11 +218,11 @@ export default function AchievementsPage() {
     const totalXP = achievements.filter(a => a.earned).reduce((sum, a) => sum + a.xp, 0);
     const progressPercentage = Math.round((earnedCount / achievements.length) * 100);
 
-    if (!studentProgress) {
+    if (!dashboardData) {
         return (
             <div className="flex items-center justify-center min-h-screen">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-green-500 mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-green-500 mx-auto mb-4\"></div>
                     <p className="text-gray-600">Loading achievements...</p>
                 </div>
             </div>

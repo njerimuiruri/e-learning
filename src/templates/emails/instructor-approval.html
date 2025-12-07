@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Application Approved</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #f3f4f6;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
+            padding: 40px 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            color: white;
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .header p {
+            color: #d1fae5;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .content {
+            background: white;
+            padding: 40px 30px;
+        }
+
+        .greeting {
+            font-size: 18px;
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            color: #4b5563;
+            line-height: 1.6;
+            font-size: 15px;
+            margin-bottom: 30px;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #16a34a 0%, #059669 100%);
+            color: white !important;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
+        }
+
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .info-box {
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #16a34a;
+            font-size: 16px;
+        }
+
+        .info-box ul {
+            margin: 10px 0;
+            padding-left: 20px;
+            color: #4b5563;
+        }
+
+        .info-box li {
+            margin: 8px 0;
+        }
+
+        .footer {
+            background: #f9fafb;
+            padding: 30px;
+            text-align: center;
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .footer a {
+            color: #16a34a;
+            text-decoration: none;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 30px 0;
+        }
+
+        .icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="icon">🎉</div>
+            <h1>Congratulations!</h1>
+            <p>Your Instructor Application Has Been Approved</p>
+        </div>
+
+        <div class="content">
+            <p class="greeting">Dear <strong>{{INSTRUCTOR_NAME}}</strong>,</p>
+
+            <p class="message">
+                We are thrilled to inform you that your application to become an instructor on our e-learning platform
+                has been <strong>approved</strong>!
+                Welcome to our community of passionate educators.
+            </p>
+
+            <p class="message">
+                Your expertise in <strong>{{EXPERTISE_AREA}}</strong> and dedication to education will be a valuable
+                addition to our platform.
+                We're excited to see the impact you'll make on students' learning journeys.
+            </p>
+
+            <div class="info-box">
+                <h3>🚀 Next Steps:</h3>
+                <ul>
+                    <li>Click the button below to access your instructor dashboard</li>
+                    <li>Complete your instructor profile</li>
+                    <li>Start creating and uploading your first course</li>
+                    <li>Set up assessments and engage with students</li>
+                </ul>
+            </div>
+
+            <div class="button-container">
+                <a href="{{DASHBOARD_LINK}}" class="cta-button">
+                    Access Instructor Dashboard
+                </a>
+            </div>
+
+            <div class="info-box">
+                <h3>📚 What You Can Do Now:</h3>
+                <ul>
+                    <li><strong>Upload Courses:</strong> Create engaging video-based courses with modules and lessons
+                    </li>
+                    <li><strong>Create Assessments:</strong> Build quizzes and exams to evaluate student progress</li>
+                    <li><strong>Engage Students:</strong> Respond to discussions and provide personalized feedback</li>
+                    <li><strong>Track Analytics:</strong> Monitor student performance and course engagement</li>
+                </ul>
+            </div>
+
+            <div class="divider"></div>
+
+            <p class="message">
+                <strong>Need Help Getting Started?</strong><br>
+                Check out our Instructor Guide or contact our support team at
+                <a href="mailto:support@elearning.com" style="color: #16a34a;">support@elearning.com</a>
+            </p>
+
+            <p class="message">
+                We're here to support you every step of the way. Welcome aboard!
+            </p>
+
+            <p class="message" style="margin-top: 30px;">
+                Best regards,<br>
+                <strong>The E-Learning Team</strong>
+            </p>
+        </div>
+
+        <div class="footer">
+            <p>
+                This email was sent to <strong>{{INSTRUCTOR_EMAIL}}</strong><br>
+                If you didn't apply to become an instructor, please ignore this email.
+            </p>
+            <p style="margin-top: 15px;">
+                <a href="{{PLATFORM_URL}}">Visit our website</a> |
+                <a href="{{HELP_CENTER_URL}}">Help Center</a> |
+                <a href="{{TERMS_URL}}">Terms of Service</a>
+            </p>
+            <p style="margin-top: 15px; color: #9ca3af;">
+                © 2025 E-Learning Platform. All rights reserved.
+            </p>
+        </div>
+    </div>
+</body>
+
+</html>

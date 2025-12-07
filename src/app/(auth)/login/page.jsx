@@ -2,13 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Eye, EyeOff, Mail, Lock, Facebook, Linkedin } from 'lucide-react';
-
-const AppleIcon = () => (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-        <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-    </svg>
-);
+import { X, Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import authService from '@/lib/api/authService';
 
 const GoogleIcon = () => (
     <svg viewBox="0 0 24 24" className="w-5 h-5">
@@ -19,156 +14,264 @@ const GoogleIcon = () => (
     </svg>
 );
 
-export default function LoginModal({ isOpen, onClose, onSwitchToRegister }) {
+const Toast = ({ message, type, onClose }) => {
+    const bgColor = type === 'success' ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500';
+    const textColor = type === 'success' ? 'text-green-800' : 'text-red-800';
+    const Icon = type === 'success' ? CheckCircle : AlertCircle;
+    const iconColor = type === 'success' ? 'text-green-500' : 'text-red-500';
+
+    return (
+        <div className={`fixed top-20 right-4 z-[60] ${bgColor} border-l-4 rounded-lg shadow-2xl p-4 min-w-[320px] max-w-md animate-slideIn`}>
+            <div className="flex items-start gap-3">
+                <Icon className={`w-5 h-5 ${iconColor} flex-shrink-0 mt-0.5`} />
+                <div className="flex-1">
+                    <p className={`${textColor} font-medium text-sm`}>{message}</p>
+                </div>
+                <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                    <X size={18} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLoginSuccess }) {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [toast, setToast] = useState(null);
     const [formData, setFormData] = useState({
         email: '',
         password: '',
+        rememberMe: false,
     });
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const showToast = (message, type) => {
+        setToast({ message, type });
+        setTimeout(() => setToast(null), 5000);
+    };
 
-        let role = 'student';
-        if (formData.email.includes('admin')) {
-            role = 'admin';
-        } else if (formData.email.includes('instructor')) {
-            role = 'instructor';
+    const handleSubmit = async () => {
+        setError('');
+
+        if (!formData.email || !formData.password) {
+            setError('Please fill in all fields');
+            return;
         }
 
-        onClose();
-        router.push(`/${role}`);
+        setLoading(true);
+
+        try {
+            const response = await authService.login({
+                email: formData.email,
+                password: formData.password,
+            });
+
+            if (response.token) {
+                localStorage.setItem('token', response.token);
+                localStorage.setItem('user', JSON.stringify(response.user));
+            }
+
+            const userName = `${response.user.firstName} ${response.user.lastName}`;
+            showToast(`🎉 Welcome back, ${userName}!`, 'success');
+
+            if (onLoginSuccess) {
+                onLoginSuccess(response.user);
+            }
+
+            // Close modal immediately
+            onClose();
+
+            // Redirect immediately based on role using router.replace for faster navigation
+            setTimeout(() => {
+                if (response.user.role === 'student') {
+                    router.replace('/student');
+                } else if (response.user.role === 'instructor') {
+                    router.replace('/instructor');
+                } else if (response.user.role === 'admin') {
+                    router.replace('/admin');
+                } else {
+                    router.replace('/');
+                }
+            }, 500);
+
+        } catch (err) {
+            console.error('Login error:', err);
+            setError(err.message || 'Login failed. Please check your credentials.');
+            showToast(err.message || 'Login failed. Please try again.', 'error');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleInputChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value, type, checked } = e.target;
+        setFormData({
+            ...formData,
+            [name]: type === 'checkbox' ? checked : value
+        });
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSubmit();
+        }
     };
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
-            onClick={onClose}
-        >
+        <>
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+
             <div
-                className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
+                onClick={onClose}
             >
-                <button
-                    onClick={onClose}
-                    className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all z-10"
+                <div
+                    className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl"
+                    onClick={(e) => e.stopPropagation()}
                 >
-                    <X size={24} />
-                </button>
+                    <button
+                        onClick={onClose}
+                        className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all z-10"
+                    >
+                        <X size={20} />
+                    </button>
 
-                <div className="p-8">
-                    <div className="text-center mb-8">
-                        <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-pink-500 rounded-2xl mx-auto mb-4 flex items-center justify-center transform rotate-3 shadow-lg">
-                            <Mail className="w-8 h-8 text-white" />
+                    <div className="p-8">
+                        <div className="text-center mb-8">
+                            <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-lg">
+                                <span className="text-3xl">👋</span>
+                            </div>
+                            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back!</h2>
+                            <p className="text-gray-600">Continue your learning journey</p>
                         </div>
-                        <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome Back!</h2>
-                        <p className="text-gray-600">Sign in to continue your learning journey</p>
-                    </div>
 
-                    <div className="grid grid-cols-4 gap-3 mb-6">
-                        <button className="h-12 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 flex items-center justify-center transition-all hover:scale-105">
-                            <Facebook className="w-5 h-5 text-blue-600" />
-                        </button>
-                        <button className="h-12 border-2 border-gray-200 rounded-xl hover:border-gray-800 hover:bg-gray-50 flex items-center justify-center transition-all hover:scale-105">
-                            <AppleIcon />
-                        </button>
-                        <button className="h-12 border-2 border-gray-200 rounded-xl hover:border-red-500 hover:bg-red-50 flex items-center justify-center transition-all hover:scale-105">
+                        {error && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                                <p className="text-sm text-red-800">{error}</p>
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            className="w-full h-12 border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 flex items-center justify-center gap-2 transition-all mb-6"
+                        >
                             <GoogleIcon />
+                            <span className="font-medium text-gray-700">Continue with Google</span>
                         </button>
-                        <button className="h-12 border-2 border-gray-200 rounded-xl hover:border-blue-700 hover:bg-blue-50 flex items-center justify-center transition-all hover:scale-105">
-                            <Linkedin className="w-5 h-5 text-blue-700" />
-                        </button>
-                    </div>
 
-                    <div className="relative mb-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300"></div>
+                        <div className="relative mb-6">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-white text-gray-500">OR</span>
+                            </div>
                         </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-3 bg-white text-gray-500 font-medium">OR</span>
-                        </div>
-                    </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
+                        <div className="space-y-4" onKeyPress={handleKeyPress}>
                             <div className="relative">
-                                <Mail className="absolute left-4 top-3.5 text-gray-400" size={20} />
+                                <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
                                 <input
                                     type="email"
                                     name="email"
                                     placeholder="Email address"
                                     value={formData.email}
                                     onChange={handleInputChange}
-                                    className="w-full h-12 pl-12 pr-4 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors"
+                                    className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none transition-colors"
                                     required
                                 />
                             </div>
-                        </div>
 
-                        <div>
                             <div className="relative">
-                                <Lock className="absolute left-4 top-3.5 text-gray-400" size={20} />
+                                <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
                                 <input
                                     type={showPassword ? 'text' : 'password'}
                                     name="password"
                                     placeholder="Password"
                                     value={formData.password}
                                     onChange={handleInputChange}
-                                    className="w-full h-12 pl-12 pr-12 border-2 border-gray-200 rounded-xl focus:border-orange-500 focus:outline-none transition-colors"
+                                    className="w-full h-12 pl-10 pr-12 border-2 border-gray-200 rounded-lg focus:border-orange-500 focus:outline-none transition-colors"
                                     required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-3.5 text-gray-400 hover:text-gray-600"
+                                    className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
                                 >
-                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                                 </button>
                             </div>
+
+                            <div className="flex items-center justify-between">
+                                <label className="flex items-center space-x-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        name="rememberMe"
+                                        checked={formData.rememberMe}
+                                        onChange={handleInputChange}
+                                        className="w-4 h-4 text-orange-600 border-gray-300 rounded focus:ring-orange-500"
+                                    />
+                                    <span className="text-sm text-gray-700">Remember me</span>
+                                </label>
+                                <a href="#" className="text-sm text-orange-600 hover:text-orange-700 font-medium">
+                                    Forgot password?
+                                </a>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleSubmit}
+                                disabled={loading}
+                                className="w-full h-12 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {loading ? (
+                                    <span className="flex items-center justify-center">
+                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Signing in...
+                                    </span>
+                                ) : (
+                                    'Sign In'
+                                )}
+                            </button>
                         </div>
 
-                        <div className="flex items-center justify-between text-sm">
-                            <label className="flex items-center cursor-pointer">
-                                <input type="checkbox" className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500" />
-                                <span className="ml-2 text-gray-600">Remember me</span>
-                            </label>
-                            <a href="#" className="text-orange-500 hover:text-orange-600 font-medium">
-                                Forgot password?
-                            </a>
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="w-full h-12 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold rounded-xl transition-all transform hover:scale-[1.02] shadow-lg"
-                        >
-                            Sign In
-                        </button>
-                    </form>
-
-                    <p className="text-center text-sm text-gray-600 mt-6">
-                        Don't have an account?{' '}
-                        <button
-                            onClick={onSwitchToRegister}
-                            className="text-orange-500 font-semibold hover:text-orange-600"
-                        >
-                            Sign Up
-                        </button>
-                    </p>
-
-                    <div className="mt-6 text-center">
-                        <a href="#" className="text-sm text-gray-500 hover:text-gray-700">
-                            Having trouble logging in? Get in touch
-                        </a>
+                        <p className="text-center text-sm text-gray-600 mt-6">
+                            Don't have an account?{' '}
+                            <button
+                                onClick={onSwitchToRegister}
+                                className="text-orange-600 font-semibold hover:text-orange-700"
+                            >
+                                Sign Up
+                            </button>
+                        </p>
                     </div>
                 </div>
             </div>
-        </div>
+
+            <style jsx>{`
+                @keyframes slideIn {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+                .animate-slideIn {
+                    animation: slideIn 0.3s ease-out;
+                }
+            `}</style>
+        </>
     );
 }
