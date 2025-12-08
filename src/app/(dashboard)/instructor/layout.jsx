@@ -39,8 +39,8 @@ export default function InstructorLayout({ children }) {
             setInstructorData(user);
 
             // Check if instructor is approved
-            // In a real app, this would be from the user object from backend
-            const approved = user.approved === true || user.status === 'approved';
+            // The backend returns 'instructorStatus' field with values: 'pending', 'approved', 'rejected'
+            const approved = user.instructorStatus === 'approved';
             setIsApproved(approved);
             setIsAuthorized(true);
         } catch (error) {

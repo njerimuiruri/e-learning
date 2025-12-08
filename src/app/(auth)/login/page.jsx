@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import authService from '@/lib/api/authService';
 
 const GoogleIcon = () => (
@@ -28,14 +29,16 @@ const Toast = ({ message, type, onClose }) => {
                     <p className={`${textColor} font-medium text-sm`}>{message}</p>
                 </div>
                 <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                    <X size={18} />
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                 </button>
             </div>
         </div>
     );
 };
 
-export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLoginSuccess }) {
+export default function LoginPage() {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -47,14 +50,13 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
         rememberMe: false,
     });
 
-    if (!isOpen) return null;
-
     const showToast = (message, type) => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 5000);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (e) => {
+        if (e) e.preventDefault();
         setError('');
 
         if (!formData.email || !formData.password) {
@@ -78,19 +80,22 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
             const userName = `${response.user.firstName} ${response.user.lastName}`;
             showToast(`🎉 Welcome back, ${userName}!`, 'success');
 
-            if (onLoginSuccess) {
-                onLoginSuccess(response.user);
-            }
-
-            // Close modal immediately
-            onClose();
-
-            // Redirect immediately based on role using router.replace for faster navigation
+            // Redirect based on role
             setTimeout(() => {
                 if (response.user.role === 'student') {
                     router.replace('/student');
                 } else if (response.user.role === 'instructor') {
-                    router.replace('/instructor');
+                    // Check if instructor is approved before redirecting to dashboard
+                    const instructorStatus = response.user.instructorStatus;
+                    if (instructorStatus === 'approved') {
+                        router.replace('/instructor');
+                    } else if (instructorStatus === 'pending') {
+                        router.replace('/instructor/pending-approval');
+                    } else if (instructorStatus === 'rejected') {
+                        router.replace('/instructor/application-rejected');
+                    } else {
+                        router.replace('/login');
+                    }
                 } else if (response.user.role === 'admin') {
                     router.replace('/admin');
                 } else {
@@ -126,22 +131,18 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
         <>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
-                onClick={onClose}
-            >
-                <div
-                    className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <button
-                        onClick={onClose}
-                        className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all z-10"
+            <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50">
+                <div className="w-full max-w-md">
+                    {/* Back to Home Button */}
+                    <Link 
+                        href="/"
+                        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
                     >
-                        <X size={20} />
-                    </button>
+                        <ArrowLeft size={20} />
+                        <span>Back to Home</span>
+                    </Link>
 
-                    <div className="p-8">
+                    <div className="bg-white rounded-2xl shadow-2xl p-8">
                         <div className="text-center mb-8">
                             <div className="w-16 h-16 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl mx-auto mb-4 flex items-center justify-center shadow-lg">
                                 <span className="text-3xl">👋</span>
@@ -174,7 +175,7 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
                             </div>
                         </div>
 
-                        <div className="space-y-4" onKeyPress={handleKeyPress}>
+                        <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="relative">
                                 <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
                                 <input
@@ -219,14 +220,13 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
                                     />
                                     <span className="text-sm text-gray-700">Remember me</span>
                                 </label>
-                                <a href="#" className="text-sm text-orange-600 hover:text-orange-700 font-medium">
+                                <Link href="/forgot-password" className="text-sm text-orange-600 hover:text-orange-700 font-medium">
                                     Forgot password?
-                                </a>
+                                </Link>
                             </div>
 
                             <button
-                                type="button"
-                                onClick={handleSubmit}
+                                type="submit"
                                 disabled={loading}
                                 className="w-full h-12 bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                             >
@@ -242,16 +242,16 @@ export default function LoginModal({ isOpen, onClose, onSwitchToRegister, onLogi
                                     'Sign In'
                                 )}
                             </button>
-                        </div>
+                        </form>
 
                         <p className="text-center text-sm text-gray-600 mt-6">
                             Don't have an account?{' '}
-                            <button
-                                onClick={onSwitchToRegister}
+                            <Link
+                                href="/register"
                                 className="text-orange-600 font-semibold hover:text-orange-700"
                             >
                                 Sign Up
-                            </button>
+                            </Link>
                         </p>
                     </div>
                 </div>

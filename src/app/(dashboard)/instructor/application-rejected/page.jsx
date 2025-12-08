@@ -36,11 +36,11 @@ export default function ApplicationRejectedPage() {
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        router.replace('/auth/login');
+        router.replace('/login');
     };
 
     const handleReapply = () => {
-        router.replace('/auth/register');
+        router.replace('/register');
     };
 
     if (loading) {

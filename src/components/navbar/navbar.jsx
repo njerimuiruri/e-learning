@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { Menu, X, Search, User, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen, ChevronDown } from 'lucide-react';
-import LoginModal from '@/app/(auth)/login/page';
-import RegisterModal from '@/app/(auth)/register/page';
 import authService from '@/lib/api/authService';
 import { getStudentProgress, getLastAccessedLesson } from '@/data/courses/courses';
 
@@ -14,8 +12,6 @@ const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
-    const [showLoginModal, setShowLoginModal] = useState(false);
-    const [showRegisterModal, setShowRegisterModal] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [userRole, setUserRole] = useState('student');
@@ -121,28 +117,7 @@ const Navbar = () => {
         { name: 'Contact', href: '#contact' }
     ];
 
-    const handleSwitchToRegister = () => {
-        setShowLoginModal(false);
-        setShowRegisterModal(true);
-    };
-
-    const handleSwitchToLogin = () => {
-        setShowRegisterModal(false);
-        setShowLoginModal(true);
-    };
-
     const handleLoginSuccess = (user) => {
-        setCurrentUser(user);
-        setIsLoggedIn(true);
-        setUserRole(user.role);
-
-        if (user.role === 'student') {
-            const data = getStudentProgress();
-            setStudentData(data);
-        }
-    };
-
-    const handleRegistrationSuccess = (user) => {
         setCurrentUser(user);
         setIsLoggedIn(true);
         setUserRole(user.role);
@@ -369,19 +344,19 @@ const Navbar = () => {
                                 </>
                             ) : (
                                 <>
-                                    <button
-                                        onClick={() => setShowLoginModal(true)}
+                                    <Link
+                                        href="/login"
                                         className="text-gray-700 hover:text-[#f65e14] font-medium px-4 py-2 rounded-lg hover:bg-orange-50 transition-all duration-200"
                                     >
                                         Sign In
-                                    </button>
+                                    </Link>
 
-                                    <button
-                                        onClick={() => setShowRegisterModal(true)}
+                                    <Link
+                                        href="/register"
                                         className="bg-[#f65e14] hover:bg-[#e54d03] text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
                                     >
                                         Join Now
-                                    </button>
+                                    </Link>
                                 </>
                             )}
                         </div>
@@ -403,19 +378,6 @@ const Navbar = () => {
                     </div>
                 </div>
             </nav>
-
-            <LoginModal
-                isOpen={showLoginModal}
-                onClose={() => setShowLoginModal(false)}
-                onSwitchToRegister={handleSwitchToRegister}
-                onLoginSuccess={handleLoginSuccess}
-            />
-            <RegisterModal
-                isOpen={showRegisterModal}
-                onClose={() => setShowRegisterModal(false)}
-                onSwitchToLogin={handleSwitchToLogin}
-                onRegistrationSuccess={handleRegistrationSuccess}
-            />
 
             <style jsx>{`
                 @keyframes fadeIn {

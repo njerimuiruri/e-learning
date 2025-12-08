@@ -9,21 +9,62 @@ import {
     Laptop, MessageCircle, PlayCircle
 } from 'lucide-react';
 
-import coursesData from '../../../data/courses/courses';
+import { useEffect } from 'react';
+import courseService from '@/lib/api/courseService';
 import Navbar from '../../../components/navbar/navbar';
 import Footer from '../../../components/Footer/Footer';
+
 const CourseDetailPage = () => {
     const router = useRouter();
     const params = useParams();
-    const courseId = parseInt(params.id);
+    const courseId = params.id;
 
+    const [course, setCourse] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const [expandedModule, setExpandedModule] = useState(1);
     const [activeTab, setActiveTab] = useState("overview");
+    const [enrolling, setEnrolling] = useState(false);
+    const [enrolled, setEnrolled] = useState(false);
 
-    const course = coursesData.find((c) => c.id === courseId);
-    const otherCourses = coursesData.filter((c) => c.id !== courseId).slice(0, 3);
+    useEffect(() => {
+        let mounted = true;
+        const fetchCourse = async () => {
+            try {
+                setLoading(true);
+                const data = await courseService.getCourseById(courseId);
+                if (mounted) setCourse(data);
+            } catch (err) {
+                setError('Course not found');
+            } finally {
+                if (mounted) setLoading(false);
+            }
+        };
+        fetchCourse();
+        return () => { mounted = false; };
+    }, [courseId]);
 
-    if (!course) {
+    const handleEnrollClick = async () => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        if (!token) {
+            router.push('/login');
+            return;
+        }
+        setEnrolling(true);
+        try {
+            await courseService.enrollCourse(courseId);
+            setEnrolled(true);
+        } catch (err) {
+            alert('Enrollment failed. Please try again.');
+        } finally {
+            setEnrolling(false);
+        }
+    };
+
+    if (loading) {
+        return <div className="min-h-screen flex items-center justify-center text-lg text-gray-600">Loading course...</div>;
+    }
+    if (error || !course) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-orange-50 to-blue-50 flex items-center justify-center p-8">
                 <div className="text-center bg-white p-12 rounded-2xl shadow-xl">
@@ -46,14 +87,6 @@ const CourseDetailPage = () => {
             </div>
         );
     }
-
-    const toggleModule = (moduleId) => {
-        setExpandedModule(expandedModule === moduleId ? null : moduleId);
-    };
-
-    const handleEnrollClick = () => {
-        router.push(`/courses/${courseId}/enroll`);
-    };
 
     return (
         <>
@@ -172,11 +205,12 @@ const CourseDetailPage = () => {
                                     {/* Enroll Button */}
                                     <button
                                         onClick={handleEnrollClick}
-                                        className="w-full bg-gradient-to-r from-[#f65e14] to-[#ff8243] hover:from-[#e54d03] hover:to-[#f65e14] text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 mb-4"
+                                        disabled={enrolling || enrolled}
+                                        className={`w-full bg-gradient-to-r from-[#f65e14] to-[#ff8243] hover:from-[#e54d03] hover:to-[#f65e14] text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 mb-4 ${enrolling ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     >
                                         <span className="flex items-center justify-center gap-2">
                                             <Zap className="w-5 h-5" />
-                                            Enroll Now - Start Learning
+                                            {enrolled ? 'Enrolled!' : enrolling ? 'Enrolling...' : 'Enroll Now - Start Learning'}
                                         </span>
                                     </button>
 

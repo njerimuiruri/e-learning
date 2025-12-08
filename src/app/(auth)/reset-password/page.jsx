@@ -27,7 +27,7 @@ export default function ResetPasswordPage() {
                     <h1 className="text-2xl font-bold text-gray-900 mb-2">Invalid Reset Link</h1>
                     <p className="text-gray-600 mb-6">The password reset link is missing or invalid.</p>
                     <button
-                        onClick={() => router.push('/auth/login')}
+                        onClick={() => router.push('/login')}
                         className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                         Back to Login
@@ -70,7 +70,7 @@ export default function ResetPasswordPage() {
 
             setMessage('Password reset successfully! Redirecting to login...');
             setTimeout(() => {
-                router.push('/auth/login');
+                router.push('/login');
             }, 2000);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to reset password');
@@ -159,7 +159,7 @@ export default function ResetPasswordPage() {
                 <p className="text-center text-gray-600 text-sm mt-6">
                     Remember your password?{' '}
                     <button
-                        onClick={() => router.push('/auth/login')}
+                        onClick={() => router.push('/login')}
                         className="text-blue-600 hover:text-blue-700 font-medium"
                     >
                         Back to Login

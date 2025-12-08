@@ -3,10 +3,13 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
+import courseService from '@/lib/api/courseService';
+import uploadService from '@/lib/api/uploadService';
 
 export default function CourseUploadPage() {
     const router = useRouter();
     const [currentStep, setCurrentStep] = useState(1);
+    const [uploading, setUploading] = useState(false);
     const [courseData, setCourseData] = useState({
         title: '',
         description: '',
@@ -15,6 +18,7 @@ export default function CourseUploadPage() {
         duration: '',
         price: '',
         bannerImage: null,
+        bannerImageUrl: null,
         modules: []
     });
 
@@ -37,14 +41,27 @@ export default function CourseUploadPage() {
     const categories = ['Marketing', 'Programming', 'Design', 'Business', 'Data Science', 'Other'];
     const levels = ['Beginner', 'Intermediate', 'Advanced', 'All Levels'];
 
-    const handleImageUpload = (e) => {
+    const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setCourseData({ ...courseData, bannerImage: reader.result });
-            };
-            reader.readAsDataURL(file);
+            setUploading(true);
+            try {
+                // Show preview
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    setCourseData({ ...courseData, bannerImage: reader.result });
+                };
+                reader.readAsDataURL(file);
+
+                // Upload to Cloudinary
+                const imageUrl = await uploadService.uploadImage(file);
+                setCourseData(prev => ({ ...prev, bannerImageUrl: imageUrl }));
+            } catch (error) {
+                alert('Failed to upload image. Please try again.');
+                console.error('Image upload error:', error);
+            } finally {
+                setUploading(false);
+            }
         }
     };
 
@@ -88,11 +105,47 @@ export default function CourseUploadPage() {
         }
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (courseData.title && courseData.modules.length > 0) {
-            console.log('Course Data:', courseData);
-            alert('Course submitted for review! Admin will approve it soon.');
-            router.push('/instructor/courses');
+            try {
+                setUploading(true);
+                // Transform modules to match backend format
+                const transformedModules = courseData.modules.map(module => ({
+                    title: module.title,
+                    description: module.description,
+                    content: module.description,
+                    duration: module.lessons.reduce((sum, lesson) => {
+                        // Extract minutes from duration string like "15 mins"
+                        const minutes = parseInt(lesson.duration) || 0;
+                        return sum + minutes;
+                    }, 0),
+                    videoUrl: module.lessons[0]?.videoUrl || '',
+                    questions: [] // Optional for now
+                }));
+
+                const coursePayload = {
+                    title: courseData.title,
+                    description: courseData.description,
+                    category: courseData.category,
+                    level: courseData.level,
+                    modules: transformedModules
+                };
+
+                // Add thumbnail URL if image was uploaded
+                if (courseData.bannerImageUrl) {
+                    coursePayload.thumbnailUrl = courseData.bannerImageUrl;
+                }
+
+                console.log('Submitting course:', coursePayload);
+                await courseService.createCourse(coursePayload);
+                alert('Course created successfully! You can now submit it for approval.');
+                router.push('/instructor/courses');
+            } catch (error) {
+                console.error('Error creating course:', error);
+                alert(`Failed to create course: ${error.response?.data?.message || error.message}`);
+            } finally {
+                setUploading(false);
+            }
         }
     };
 

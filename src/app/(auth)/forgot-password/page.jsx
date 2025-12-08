@@ -47,7 +47,7 @@ export default function ForgotPasswordPage() {
                         If an account exists with that email, you will receive a password reset link shortly.
                     </p>
                     <button
-                        onClick={() => router.push('/auth/login')}
+                        onClick={() => router.push('/login')}
                         className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                     >
                         Back to Login

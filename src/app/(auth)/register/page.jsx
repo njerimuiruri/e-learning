@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Eye, EyeOff, User, Mail, Lock, AlertCircle, Phone, Upload, Building, Globe, CheckCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Eye, EyeOff, User, Mail, Lock, AlertCircle, Phone, Upload, Building, Globe, CheckCircle, ArrowLeft } from 'lucide-react';
 import authService from '@/lib/api/authService';
 
 const GoogleIcon = () => (
@@ -29,14 +30,16 @@ const Toast = ({ message, type, onClose }) => {
                     <p className={`${textColor} font-medium text-sm`}>{message}</p>
                 </div>
                 <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                    <X size={18} />
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                 </button>
             </div>
         </div>
     );
 };
 
-export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegistrationSuccess }) {
+export default function RegisterPage() {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
     const [userRole, setUserRole] = useState('student');
@@ -57,14 +60,13 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
         cvFile: null,
     });
 
-    if (!isOpen) return null;
-
     const showToast = (message, type) => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 5000);
     };
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (e) => {
+        if (e) e.preventDefault();
         setError('');
 
         if (!formData.agreedToTerms) {
@@ -102,12 +104,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
 
                 showToast('🎉 Registration successful! Welcome to the platform.', 'success');
 
-                if (onRegistrationSuccess) {
-                    onRegistrationSuccess(response.user);
-                }
-
                 setTimeout(() => {
-                    onClose();
                     router.push('/student');
                 }, 1500);
 
@@ -128,8 +125,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
                 showToast('✅ Instructor request submitted! You will be notified once approved.', 'success');
 
                 setTimeout(() => {
-                    onClose();
-                    onSwitchToLogin();
+                    router.push('/login');
                 }, 2000);
             }
         } catch (err) {
@@ -158,33 +154,24 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
         setError('');
     };
 
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSubmit();
-        }
-    };
+
 
     return (
         <>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-            <div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
-                onClick={onClose}
-            >
-                <div
-                    className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl max-h-[92vh] overflow-y-auto"
-                    onClick={(e) => e.stopPropagation()}
-                >
-                    <button
-                        onClick={onClose}
-                        className="sticky top-4 float-right mr-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all z-10 bg-white shadow-md"
+            <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
+                <div className="w-full max-w-md">
+                    {/* Back to Home Button */}
+                    <Link 
+                        href="/"
+                        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
                     >
-                        <X size={20} />
-                    </button>
+                        <ArrowLeft size={20} />
+                        <span>Back to Home</span>
+                    </Link>
 
-                    <div className="p-6">
+                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto">
                         <div className="text-center mb-5">
                             <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl mx-auto mb-3 flex items-center justify-center shadow-lg">
                                 <span className="text-2xl">🎓</span>
@@ -249,7 +236,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
                             </div>
                         </div>
 
-                        <div className="space-y-3" onKeyPress={handleKeyPress}>
+                        <form onSubmit={handleSubmit} className="space-y-3">
                             <div className="grid grid-cols-2 gap-2">
                                 <div className="relative">
                                     <User className="absolute left-3 top-2.5 text-gray-400" size={16} />
@@ -416,8 +403,7 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
                             </div>
 
                             <button
-                                type="button"
-                                onClick={handleSubmit}
+                                type="submit"
                                 disabled={loading}
                                 className="w-full h-10 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                             >
@@ -433,16 +419,16 @@ export default function RegisterModal({ isOpen, onClose, onSwitchToLogin, onRegi
                                     'Sign Up'
                                 )}
                             </button>
-                        </div>
+                        </form>
 
                         <p className="text-center text-xs text-gray-600 mt-4">
                             Already have an account?{' '}
-                            <button
-                                onClick={onSwitchToLogin}
+                            <Link
+                                href="/login"
                                 className="text-green-600 font-semibold hover:text-green-700"
                             >
                                 Log In
-                            </button>
+                            </Link>
                         </p>
                     </div>
                 </div>

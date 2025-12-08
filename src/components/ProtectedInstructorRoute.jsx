@@ -4,7 +4,6 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { handleInstructorRedirect } from '@/lib/api/redirects';
 
 export default function ProtectedInstructorRoute({ children }) {
     const router = useRouter();
@@ -12,14 +11,37 @@ export default function ProtectedInstructorRoute({ children }) {
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
-        const checkAccess = async () => {
-            const token = localStorage.getItem('token');
-            const authorized = await handleInstructorRedirect(router, token);
+        const checkAccess = () => {
+            try {
+                const token = localStorage.getItem('token');
+                const userStr = localStorage.getItem('user');
 
-            if (authorized) {
-                setIsAuthorized(true);
+                // If no token or user data, not authorized
+                if (!token || !userStr) {
+                    router.replace('/login');
+                    setIsChecking(false);
+                    return;
+                }
+
+                // Parse user data from localStorage
+                const user = JSON.parse(userStr);
+
+                // Check if user is an instructor and is approved
+                if (user.role === 'instructor' && user.instructorStatus === 'approved') {
+                    setIsAuthorized(true);
+                } else if (user.role === 'instructor' && user.instructorStatus === 'pending') {
+                    router.replace('/instructor/pending-approval');
+                } else if (user.role === 'instructor' && user.instructorStatus === 'rejected') {
+                    router.replace('/instructor/application-rejected');
+                } else {
+                    router.replace('/login');
+                }
+            } catch (error) {
+                console.error('Error checking access:', error);
+                router.replace('/login');
+            } finally {
+                setIsChecking(false);
             }
-            setIsChecking(false);
         };
 
         checkAccess();
@@ -37,7 +59,7 @@ export default function ProtectedInstructorRoute({ children }) {
     }
 
     if (!isAuthorized) {
-        return null; // Will be redirected by handleInstructorRedirect
+        return null; // Will be redirected by useEffect above
     }
 
     return children;

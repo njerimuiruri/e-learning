@@ -17,8 +17,26 @@ function InstructorDashboardContent() {
             try {
                 setLoading(true);
                 setError('');
-                const data = await courseService.getInstructorDashboard();
-                setDashboardData(data);
+                
+                // Fetch instructor courses
+                const coursesData = await courseService.getInstructorCourses();
+                const courses = Array.isArray(coursesData) ? coursesData : coursesData?.courses || [];
+                
+                // Calculate stats from courses
+                const totalCourses = courses.length;
+                const activeStudents = courses.reduce((sum, c) => sum + (c.enrollmentCount || 0), 0);
+                const avgRating = courses.length > 0 
+                    ? (courses.reduce((sum, c) => sum + (c.instructorId?.avgRating || 0), 0) / courses.length)
+                    : 0;
+                const totalHours = courses.reduce((sum, c) => sum + ((c.modules?.length || 0) * 2), 0);
+                
+                setDashboardData({
+                    courses,
+                    activeStudents,
+                    avgRating,
+                    totalHours,
+                    totalCourses
+                });
             } catch (err) {
                 setError('Failed to load dashboard data');
                 console.error(err);
@@ -32,7 +50,7 @@ function InstructorDashboardContent() {
     const stats = dashboardData ? [
         {
             label: 'Total Courses',
-            value: dashboardData.courses?.length?.toString() || '0',
+            value: dashboardData.totalCourses?.toString() || '0',
             icon: 'BookOpen',
             color: 'from-emerald-500 to-teal-600',
             change: '',
@@ -58,8 +76,8 @@ function InstructorDashboardContent() {
             iconColor: 'text-yellow-600'
         },
         {
-            label: 'Pending Reviews',
-            value: dashboardData.pendingReviews?.toString() || '0',
+            label: 'Total Content Hours',
+            value: dashboardData.totalHours?.toString() || '0',
             icon: 'MessageSquare',
             color: 'from-purple-500 to-purple-600',
             change: '',

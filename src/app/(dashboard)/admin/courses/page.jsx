@@ -14,6 +14,11 @@ export default function CourseManagementPage() {
     const [courseToDelete, setCourseToDelete] = useState(null);
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showApprovalModal, setShowApprovalModal] = useState(false);
+    const [approvalCourse, setApprovalCourse] = useState(null);
+    const [approvalFeedback, setApprovalFeedback] = useState('');
+    const [approvalAction, setApprovalAction] = useState('approve'); // 'approve' or 'reject'
+    const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         fetchCourses();
@@ -29,6 +34,35 @@ export default function CourseManagementPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleApproveRejectCourse = async () => {
+        if (!approvalCourse) return;
+        setSubmitting(true);
+        try {
+            if (approvalAction === 'approve') {
+                await courseService.approveCourse(approvalCourse._id, approvalFeedback);
+                alert('Course approved successfully! Instructor has been notified.');
+            } else {
+                await courseService.rejectCourse(approvalCourse._id, approvalFeedback);
+                alert('Course rejected. Instructor has been notified with feedback.');
+            }
+            fetchCourses();
+            setShowApprovalModal(false);
+            setApprovalCourse(null);
+            setApprovalFeedback('');
+        } catch (error) {
+            alert('Failed to process course. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const openApprovalModal = (course, action) => {
+        setApprovalCourse(course);
+        setApprovalAction(action);
+        setApprovalFeedback('');
+        setShowApprovalModal(true);
     };
 
     const categories = useMemo(() => ['all', ...new Set((courses || []).map(c => c.category || 'Uncategorized'))], [courses]);
@@ -50,12 +84,12 @@ export default function CourseManagementPage() {
     const stats = useMemo(() => {
         const total = courses.length;
         const published = courses.filter((c) => c.status === 'published').length;
-        const draft = courses.filter((c) => c.status !== 'published').length;
+        const submitted = courses.filter((c) => c.status === 'submitted').length;
         const totalStudents = courses.reduce((sum, c) => sum + (c.enrollmentCount || 0), 0);
         return [
             { label: 'Total Courses', value: total, icon: 'BookOpen', color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Published', value: published, icon: 'CheckCircle', color: 'text-green-600', bg: 'bg-green-50' },
-            { label: 'Other Status', value: draft, icon: 'FileEdit', color: 'text-yellow-600', bg: 'bg-yellow-50' },
+            { label: 'Pending Approval', value: submitted, icon: 'Clock', color: 'text-orange-600', bg: 'bg-orange-50' },
             { label: 'Total Students', value: totalStudents.toLocaleString(), icon: 'Users', color: 'text-purple-600', bg: 'bg-purple-50' },
         ];
     }, [courses]);
@@ -148,6 +182,9 @@ export default function CourseManagementPage() {
                         >
                             <option value="all">All Status</option>
                             <option value="published">Published</option>
+                            <option value="submitted">Pending Approval</option>
+                            <option value="approved">Approved</option>
+                            <option value="rejected">Rejected</option>
                             <option value="draft">Draft</option>
                         </select>
                         <div className="flex gap-2 border border-gray-300 rounded-lg p-1 bg-gray-50">
@@ -242,6 +279,24 @@ export default function CourseManagementPage() {
                                         >
                                             View Details
                                         </button>
+                                        {course.status === 'submitted' && (
+                                            <>
+                                                <button
+                                                    onClick={() => openApprovalModal(course, 'approve')}
+                                                    className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors"
+                                                    title="Approve Course"
+                                                >
+                                                    <Icons.CheckCircle className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => openApprovalModal(course, 'reject')}
+                                                    className="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
+                                                    title="Reject Course"
+                                                >
+                                                    <Icons.XCircle className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        )}
                                         <button className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors">
                                             <Icons.Edit className="w-4 h-4" />
                                         </button>
@@ -559,6 +614,62 @@ export default function CourseManagementPage() {
                                     className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-medium transition-colors"
                                 >
                                     Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Course Approval/Rejection Modal */}
+            {showApprovalModal && approvalCourse && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+                        <div className="p-6">
+                            <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                                approvalAction === 'approve' ? 'bg-green-100' : 'bg-red-100'
+                            }`}>
+                                {approvalAction === 'approve' ? (
+                                    <Icons.CheckCircle className="w-6 h-6 text-green-600" />
+                                ) : (
+                                    <Icons.XCircle className="w-6 h-6 text-red-600" />
+                                )}
+                            </div>
+                            <h3 className="text-xl font-bold text-center text-gray-900 mb-2">
+                                {approvalAction === 'approve' ? 'Approve Course' : 'Reject Course'}
+                            </h3>
+                            <p className="text-center text-gray-600 mb-4">
+                                <strong>{approvalCourse.title}</strong> by {approvalCourse.instructorId?.firstName} {approvalCourse.instructorId?.lastName}
+                            </p>
+                            <textarea
+                                placeholder={approvalAction === 'approve' ? 'Add approval message (optional)' : 'Provide feedback for rejection (required)'}
+                                value={approvalFeedback}
+                                onChange={(e) => setApprovalFeedback(e.target.value)}
+                                className="w-full p-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none mb-4"
+                                rows="4"
+                            />
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowApprovalModal(false);
+                                        setApprovalCourse(null);
+                                        setApprovalFeedback('');
+                                    }}
+                                    disabled={submitting}
+                                    className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-lg font-medium transition-colors disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleApproveRejectCourse}
+                                    disabled={submitting}
+                                    className={`flex-1 py-3 rounded-lg font-medium transition-colors disabled:opacity-50 text-white ${
+                                        approvalAction === 'approve'
+                                            ? 'bg-green-600 hover:bg-green-700'
+                                            : 'bg-red-600 hover:bg-red-700'
+                                    }`}
+                                >
+                                    {submitting ? 'Processing...' : (approvalAction === 'approve' ? 'Approve' : 'Reject')}
                                 </button>
                             </div>
                         </div>

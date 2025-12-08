@@ -51,8 +51,8 @@ export default function FeaturedCoursesComponent() {
 
     const handleEnrollClick = (courseId) => {
         const token = localStorage.getItem('token');
-        if (!token) {
-            router.push('/auth/login');
+        if (!user) {
+            router.push('/login');
             return;
         }
 

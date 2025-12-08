@@ -15,7 +15,7 @@ export default function ProtectedStudentRoute({ children }) {
                 const userStr = localStorage.getItem('user');
 
                 if (!token || !userStr) {
-                    router.push('/auth/login');
+                    router.push('/login');
                     return;
                 }
 
@@ -32,7 +32,7 @@ export default function ProtectedStudentRoute({ children }) {
                 setIsAuthorized(true);
             } catch (error) {
                 console.error('Error checking student access:', error);
-                router.push('/auth/login');
+                router.push('/login');
             } finally {
                 setIsChecking(false);
             }

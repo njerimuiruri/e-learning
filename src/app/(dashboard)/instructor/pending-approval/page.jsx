@@ -22,7 +22,7 @@ export default function PendingApprovalPage() {
         try {
             const token = localStorage.getItem('token');
             if (!token) {
-                router.replace('/auth/login');
+                router.replace('/login');
                 return;
             }
 
@@ -65,7 +65,7 @@ export default function PendingApprovalPage() {
     const handleLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
-        router.replace('/auth/login');
+        router.replace('/login');
     };
 
     const handleCheckNow = async () => {
