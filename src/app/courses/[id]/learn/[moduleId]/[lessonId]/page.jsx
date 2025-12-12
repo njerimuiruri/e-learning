@@ -21,19 +21,23 @@ import {
     Menu,
     ChevronDown,
 } from "lucide-react";
-import coursesData from "../../../../../../data/courses/courses";
+import courseService from "@/lib/api/courseService";
+import ModuleProgressionGuard from "@/components/ModuleProgressionGuard";
+import FinalAssessmentGuard from "@/components/FinalAssessmentGuard";
+import { canAccessModule, canAccessFinalAssessment } from "@/lib/utils/courseProgressionLogic";
 
 const CourseLearningPage = () => {
     const router = useRouter();
     const params = useParams();
-    const courseId = parseInt(params.id);
-    const moduleId = parseInt(params.moduleId);
-    const lessonId = parseInt(params.lessonId);
+    const courseId = params.id;
+    const moduleParam = params.moduleId;
+    const lessonParam = params.lessonId;
 
-    const course = coursesData.find((c) => c.id === courseId);
-    const module = course?.modules.find((m) => m.id === moduleId);
-    const lesson = module?.lessons.find((l) => l.id === lessonId);
-
+    const [course, setCourse] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [enrollment, setEnrollment] = useState(null);
+    const [showModuleGuard, setShowModuleGuard] = useState(false);
+    const [showFinalAssessmentGuard, setShowFinalAssessmentGuard] = useState(false);
     const [currentPage, setCurrentPage] = useState("lesson");
     const [answers, setAnswers] = useState({});
     const [note, setNote] = useState("");
@@ -44,16 +48,89 @@ const CourseLearningPage = () => {
     const [showXPBoost, setShowXPBoost] = useState(false);
     const [totalXP, setTotalXP] = useState(0);
     const [completedModules, setCompletedModules] = useState([]);
-    const [expandedModules, setExpandedModules] = useState([moduleId]);
+    const [expandedModules, setExpandedModules] = useState([]);
     const [notes, setNotes] = useState([]);
     const [showNotesList, setShowNotesList] = useState(false);
     const [showCertificate, setShowCertificate] = useState(false);
 
     useEffect(() => {
-        setCurrentPage("lesson");
-    }, [lessonId]);
+        const fetchCourse = async () => {
+            try {
+                setLoading(true);
+                const data = await courseService.getCourseById(courseId);
+                setCourse(data);
+                setExpandedModules([moduleParam]);
+                setCurrentPage("lesson");
 
-    if (!course || !module || !lesson) {
+                // Fetch enrollment data to check progression
+                try {
+                    const enrollmentData = await courseService.getEnrollment(courseId);
+                    setEnrollment(enrollmentData);
+                } catch (err) {
+                    console.log("Not enrolled in this course yet or error fetching enrollment");
+                }
+            } catch (err) {
+                console.error("Failed to load course", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCourse();
+    }, [courseId, moduleParam, lessonParam]);
+
+    const modules = course?.modules || [];
+    const moduleIndex = modules.findIndex(
+        (m, idx) => `${m._id || idx}` === moduleParam || `${idx}` === moduleParam
+    );
+    const activeModule = modules[moduleIndex >= 0 ? moduleIndex : 0];
+    const lessons = activeModule
+        ? activeModule.lessons && activeModule.lessons.length > 0
+            ? activeModule.lessons
+            : [
+                {
+                    _id: activeModule._id || "lesson-0",
+                    title: activeModule.title || "Lesson",
+                    content: activeModule.content,
+                    videoUrl: activeModule.videoUrl,
+                    duration: activeModule.duration,
+                },
+            ]
+        : [];
+    const lessonIndex = lessons.findIndex(
+        (l, idx) => `${l._id || idx}` === lessonParam || `${idx}` === lessonParam
+    );
+    const activeLesson = lessons[lessonIndex >= 0 ? lessonIndex : 0];
+
+    useEffect(() => {
+        setCurrentPage("lesson");
+    }, [lessonParam]);
+
+    // Check module access and show guard if needed
+    useEffect(() => {
+        if (!enrollment || !course) return;
+
+        // Check if can access this module
+        if (moduleIndex >= 0) {
+            const access = canAccessModule(moduleIndex, enrollment.moduleProgress || []);
+            if (!access.canAccess) {
+                setShowModuleGuard(true);
+            } else {
+                setShowModuleGuard(false);
+            }
+        }
+    }, [enrollment, course, moduleIndex]);
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+                <div className="text-center bg-white p-12 rounded-2xl shadow-xl">
+                    <p className="text-gray-600">Loading course...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!course || !activeModule || !activeLesson) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
                 <div className="text-center bg-white p-12 rounded-2xl shadow-xl">
@@ -80,23 +157,21 @@ const CourseLearningPage = () => {
     };
 
     const handleNext = () => {
-        if (!completedLessons.includes(lessonId)) {
-            const newCompletedLessons = [...completedLessons, lessonId];
+        if (!completedLessons.includes(lessonIndex)) {
+            const newCompletedLessons = [...completedLessons, lessonIndex];
             setCompletedLessons(newCompletedLessons);
 
-            const newXP = totalXP + (lesson.xpReward || 50);
+            const newXP = totalXP + (activeLesson?.xpReward || 50);
             setTotalXP(newXP);
 
             setShowXPBoost(true);
         }
 
-        const currentLessonIndex = module.lessons.findIndex(
-            (l) => l.id === lessonId
-        );
-        const nextLesson = module.lessons[currentLessonIndex + 1];
+        const currentLessonIndex = lessonIndex;
+        const nextLesson = lessons[currentLessonIndex + 1];
 
         if (nextLesson) {
-            router.push(`/courses/${courseId}/learn/${moduleId}/${nextLesson.id}`);
+            router.push(`/courses/${courseId}/learn/${moduleParam}/${nextLesson._id || currentLessonIndex + 1}`);
             setAnswers({});
             setCurrentPage("lesson");
         } else {
@@ -105,20 +180,18 @@ const CourseLearningPage = () => {
     };
 
     const handlePrevious = () => {
-        const currentLessonIndex = module.lessons.findIndex(
-            (l) => l.id === lessonId
-        );
-        const prevLesson = module.lessons[currentLessonIndex - 1];
+        const currentLessonIndex = lessonIndex;
+        const prevLesson = lessons[currentLessonIndex - 1];
 
         if (prevLesson) {
-            router.push(`/courses/${courseId}/learn/${moduleId}/${prevLesson.id}`);
+            router.push(`/courses/${courseId}/learn/${moduleParam}/${prevLesson._id || currentLessonIndex - 1}`);
             setAnswers({});
             setCurrentPage("lesson");
         }
     };
 
     const handleLessonClick = (clickedLessonId) => {
-        router.push(`/courses/${courseId}/learn/${moduleId}/${clickedLessonId}`);
+        router.push(`/courses/${courseId}/learn/${moduleParam}/${clickedLessonId}`);
         setCurrentPage("lesson");
     };
 
@@ -139,16 +212,14 @@ const CourseLearningPage = () => {
     };
 
     const calculateProgress = () => {
-        const totalLessons = module.lessons.length;
-        const completed = completedLessons.filter((id) =>
-            module.lessons.some((l) => l.id === id)
-        ).length;
+        const totalLessons = lessons.length || 1;
+        const completed = completedLessons.filter((id) => id < totalLessons).length;
         return Math.round((completed / totalLessons) * 100);
     };
 
     const handleModuleComplete = (passed) => {
-        if (passed && !completedModules.includes(moduleId)) {
-            const newCompletedModules = [...completedModules, moduleId];
+        if (passed && !completedModules.includes(moduleParam)) {
+            const newCompletedModules = [...completedModules, moduleParam];
             setCompletedModules(newCompletedModules);
 
             const newXP = totalXP + (module.xpReward || 310);
@@ -174,9 +245,43 @@ const CourseLearningPage = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-gray-50">
+            {/* Module Progression Guard */}
+            {showModuleGuard && (
+                <ModuleProgressionGuard
+                    moduleIndex={moduleIndex}
+                    modules={modules}
+                    enrollment={enrollment}
+                    onClose={() => {
+                        setShowModuleGuard(false);
+                        router.push(`/courses/${courseId}`);
+                    }}
+                    onProceed={() => {
+                        // Navigate to previous module
+                        if (moduleIndex > 0) {
+                            const previousModule = modules[moduleIndex - 1];
+                            const previousModuleId = previousModule._id || (moduleIndex - 1);
+                            const previousLessonId = previousModule.lessons?.[0]?._id || 0;
+                            router.push(`/courses/${courseId}/learn/${previousModuleId}/${previousLessonId}`);
+                        }
+                    }}
+                />
+            )}
+
+            {/* Final Assessment Guard */}
+            {showFinalAssessmentGuard && currentPage === "final-assessment" && (
+                <FinalAssessmentGuard
+                    course={course}
+                    enrollment={enrollment}
+                    onClose={() => {
+                        setShowFinalAssessmentGuard(false);
+                        setCurrentPage("lesson");
+                    }}
+                />
+            )}
+
             {showXPBoost && (
                 <XPBoostModal
-                    xp={lesson.xpReward || module.xpReward || 50}
+                    xp={activeLesson?.xpReward || activeModule?.xpReward || 50}
                     totalXP={totalXP}
                     onClose={() => setShowXPBoost(false)}
                 />
@@ -216,15 +321,23 @@ const CourseLearningPage = () => {
                             </button>
                             <div className="border-l border-gray-300 pl-4">
                                 <h2 className="text-sm text-gray-600 truncate max-w-xs">
-                                    {course.title}
+                                    {course?.title}
                                 </h2>
                                 <p className="text-sm font-semibold text-gray-900 truncate max-w-xs">
-                                    {module.title}
+                                    {activeModule?.title}
                                 </p>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => router.push('/student')}
+                                className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-600 transition shadow-md"
+                                title="Go to Dashboard"
+                            >
+                                <BookOpen className="w-4 h-4" />
+                                Dashboard
+                            </button>
                             <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-yellow-100 to-orange-100 px-4 py-2 rounded-full">
                                 <Trophy className="w-5 h-5 text-orange-600" />
                                 <span className="font-bold text-orange-900">{totalXP} XP</span>
@@ -362,7 +475,7 @@ const CourseLearningPage = () => {
                                     >
                                         <button
                                             onClick={() => toggleModule(m.id)}
-                                            className={`w-full flex items-center gap-3 p-4 transition-all ${moduleId === m.id
+                                            className={`w-full flex items-center gap-3 p-4 transition-all ${moduleParam === m.id || moduleIndex === 0
                                                 ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
                                                 : "hover:bg-gray-50 bg-gray-50"
                                                 }`}
@@ -374,7 +487,7 @@ const CourseLearningPage = () => {
                                                     }`}
                                             />
                                             <span
-                                                className={`text-sm font-bold ${moduleId === m.id ? "text-white" : "text-gray-900"
+                                                className={`text-sm font-bold ${moduleParam === m.id || moduleIndex === 0 ? "text-white" : "text-gray-900"
                                                     }`}
                                             >
                                                 Module {moduleIndex + 1}: {m.title}
@@ -386,7 +499,7 @@ const CourseLearningPage = () => {
                                                 {m.lessons.map((l, idx) => {
                                                     const isCompleted = completedLessons.includes(l.id);
                                                     const isCurrent =
-                                                        l.id === lessonId && m.id === moduleId;
+                                                        l.id === lessonParam && m.id === moduleParam;
 
                                                     return (
                                                         <button
@@ -460,11 +573,11 @@ const CourseLearningPage = () => {
 
                     {/* Main Content */}
                     <div className="lg:col-span-3">
-                        {currentPage === "lesson" && <LessonSection lesson={lesson} />}
+                        {currentPage === "lesson" && <LessonSection lesson={activeLesson} />}
 
                         {currentPage === "questions" && (
                             <QuestionsSection
-                                lesson={lesson}
+                                lesson={activeLesson}
                                 answers={answers}
                                 onAnswer={handleAnswer}
                             />
@@ -472,16 +585,16 @@ const CourseLearningPage = () => {
 
                         {currentPage === "assessment" && (
                             <AssessmentSection
-                                module={module}
+                                module={activeModule}
                                 onComplete={(passed) => {
                                     handleModuleComplete(passed);
                                     if (passed) {
                                         const nextModule = course.modules.find(
-                                            (m) => m.id === moduleId + 1
+                                            (m, idx) => `${idx}` === `${moduleIndex + 1}`
                                         );
                                         if (nextModule) {
                                             router.push(
-                                                `/courses/${courseId}/learn/${nextModule.id}/${nextModule.lessons[0].id}`
+                                                `/courses/${courseId}/learn/${moduleIndex + 1}/0`
                                             );
                                         } else {
                                             router.push(`/courses/${courseId}/final-assessment`);
@@ -495,7 +608,7 @@ const CourseLearningPage = () => {
                             <div className="flex gap-4 mt-8">
                                 <button
                                     onClick={handlePrevious}
-                                    disabled={module.lessons[0].id === lessonId}
+                                    disabled={lessonIndex <= 0}
                                     className="flex-1 py-4 px-6 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all flex items-center justify-center gap-2 shadow-sm"
                                 >
                                     <ChevronLeft className="w-5 h-5" />
@@ -505,7 +618,7 @@ const CourseLearningPage = () => {
                                     onClick={() => {
                                         if (
                                             currentPage === "lesson" &&
-                                            lesson.questions?.length > 0
+                                            activeLesson?.questions?.length > 0
                                         ) {
                                             setCurrentPage("questions");
                                         } else {
@@ -529,7 +642,7 @@ const CourseLearningPage = () => {
                     setNote={setNote}
                     onClose={() => setShowNoteModal(false)}
                     onSave={(newNote) => setNotes([...notes, newNote])}
-                    currentLesson={lesson.title}
+                    currentLesson={activeLesson?.title}
                 />
             )}
 
@@ -906,92 +1019,133 @@ const formatLessonNotes = (notes) => {
     return processedSections.join("\n");
 };
 
-const QuestionsSection = ({ lesson, answers, onAnswer }) => (
-    <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
-        <div className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-                <span className="inline-block bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm px-4 py-2 rounded-full font-bold">
-                    <Star className="w-4 h-4 inline mr-1" />
-                    Knowledge Check
-                </span>
+const QuestionsSection = ({ lesson, answers, onAnswer }) => {
+    // Guard against missing questions
+    if (!lesson?.questions || lesson.questions.length === 0) {
+        return (
+            <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+                <p className="text-gray-600 text-center">No questions available for this lesson.</p>
             </div>
-            <h2 className="text-3xl font-black text-gray-900 mb-2">
-                Check Your Understanding
-            </h2>
-            <p className="text-gray-600 text-lg">
-                Answer the following questions to reinforce your learning.
-            </p>
-        </div>
+        );
+    }
 
-        <div className="space-y-6">
-            {lesson.questions.map((question, idx) => (
-                <div
-                    key={question.id}
-                    className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white"
-                >
-                    <p className="font-bold text-gray-900 mb-4 text-lg flex items-start gap-3">
-                        <span className="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
-                            {idx + 1}
-                        </span>
-                        {question.question}
-                    </p>
-
-                    {question.type === "multiple_choice" ? (
-                        <div className="space-y-3">
-                            {question.options.map((option, optIdx) => (
-                                <label
-                                    key={optIdx}
-                                    className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${answers[question.id] == optIdx
-                                        ? "border-orange-500 bg-orange-50"
-                                        : "border-gray-200 hover:border-orange-300 hover:bg-gray-50"
-                                        }`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name={`question-${question.id}`}
-                                        value={optIdx}
-                                        onChange={(e) => onAnswer(question.id, e.target.value)}
-                                        checked={answers[question.id] == optIdx}
-                                        className="w-5 h-5 mt-0.5 text-orange-500 focus:ring-orange-500"
-                                    />
-                                    <span className="text-gray-700 flex-1">{option}</span>
-                                </label>
-                            ))}
-                        </div>
-                    ) : (
-                        <textarea
-                            placeholder="Type your answer here..."
-                            value={answers[question.id] || ""}
-                            onChange={(e) => onAnswer(question.id, e.target.value)}
-                            className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 transition-all"
-                            rows="5"
-                        />
-                    )}
+    return (
+        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+            <div className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                    <span className="inline-block bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm px-4 py-2 rounded-full font-bold">
+                        <Star className="w-4 h-4 inline mr-1" />
+                        Knowledge Check
+                    </span>
                 </div>
-            ))}
+                <h2 className="text-3xl font-black text-gray-900 mb-2">
+                    Check Your Understanding
+                </h2>
+                <p className="text-gray-600 text-lg">
+                    Answer the following questions to reinforce your learning.
+                </p>
+            </div>
+
+            <div className="space-y-6">
+                {lesson.questions.map((question, idx) => (
+                    <div
+                        key={question.id || question._id || idx}
+                        className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white"
+                    >
+                        <p className="font-bold text-gray-900 mb-4 text-lg flex items-start gap-3">
+                            <span className="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
+                                {idx + 1}
+                            </span>
+                            {question.question || question.text || 'Question text not available'}
+                        </p>
+
+                        {(question.type === "multiple_choice" || question.type === "mcq") && question.options?.length > 0 ? (
+                            <div className="space-y-3">
+                                {question.options.map((option, optIdx) => {
+                                    const questionId = question.id || question._id || idx;
+                                    return (
+                                        <label
+                                            key={optIdx}
+                                            className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${answers[questionId] == optIdx
+                                                ? "border-orange-500 bg-orange-50"
+                                                : "border-gray-200 hover:border-orange-300 hover:bg-gray-50"
+                                                }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name={`question-${questionId}`}
+                                                value={optIdx}
+                                                onChange={(e) => onAnswer(questionId, e.target.value)}
+                                                checked={answers[questionId] == optIdx}
+                                                className="w-5 h-5 mt-0.5 text-orange-500 focus:ring-orange-500"
+                                            />
+                                            <span className="text-gray-700 flex-1">{option}</span>
+                                        </label>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <textarea
+                                placeholder="Type your answer here..."
+                                value={answers[question.id || question._id || idx] || ""}
+                                onChange={(e) => onAnswer(question.id || question._id || idx, e.target.value)}
+                                className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 transition-all"
+                                rows="5"
+                            />
+                        )}
+                    </div>
+                ))}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 const AssessmentSection = ({ module, onComplete }) => {
     const [assessmentAnswers, setAssessmentAnswers] = useState({});
     const [submitted, setSubmitted] = useState(false);
 
-    const handleAssessmentAnswer = (questionId, answer) => {
-        setAssessmentAnswers({ ...assessmentAnswers, [questionId]: answer });
+    // Guard against missing module or assessment - check both assessment and moduleAssessment
+    const assessment = module?.moduleAssessment || module?.assessment;
+
+    if (!module || !assessment || !assessment.questions || assessment.questions.length === 0) {
+        return (
+            <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+                <p className="text-gray-600">No assessment available for this module.</p>
+            </div>
+        );
+    }
+
+    const handleAssessmentAnswer = (questionId, answer, index) => {
+        // Store both the selected value and its index to support string/number comparisons
+        setAssessmentAnswers({ ...assessmentAnswers, [questionId]: { value: answer, index } });
     };
 
     const handleSubmit = () => {
         let correct = 0;
-        module.assessment.questions.forEach((q) => {
-            if (assessmentAnswers[q.id] == q.correctAnswer) {
+
+        const normalize = (val) => (val === undefined || val === null ? '' : String(val).trim().toLowerCase());
+
+        assessment.questions.forEach((q, idx) => {
+            const questionId = q.id || q._id || idx;
+            const selected = assessmentAnswers[questionId];
+
+            const selectedValue = typeof selected === 'object' && selected !== null ? selected.value : selected;
+            const selectedIndex = typeof selected === 'object' && selected !== null ? selected.index : selected;
+
+            const correctVal = normalize(q.correctAnswer);
+            const selectedValNormalized = normalize(selectedValue);
+
+            const matchesByValue = selectedValNormalized === correctVal;
+            const matchesByIndex = String(selectedIndex) === String(q.correctAnswer);
+
+            if (matchesByValue || matchesByIndex) {
                 correct++;
             }
         });
         const score = Math.round(
-            (correct / module.assessment.questions.length) * 100
+            (correct / assessment.questions.length) * 100
         );
-        const passed = score >= module.assessment.passingScore;
+        const passed = score >= (assessment.passingScore || 70);
 
         setSubmitted(true);
 
@@ -1000,7 +1154,7 @@ const AssessmentSection = ({ module, onComplete }) => {
                 alert(`🎉 Congratulations! You passed with ${score}%`);
             } else {
                 alert(
-                    `You scored ${score}%. You need ${module.assessment.passingScore}% to pass. Please review and try again.`
+                    `You scored ${score}%. You need ${assessment.passingScore}% to pass. Please review and try again.`
                 );
             }
             onComplete(passed);
@@ -1017,12 +1171,12 @@ const AssessmentSection = ({ module, onComplete }) => {
                     </span>
                 </div>
                 <h2 className="text-4xl font-black text-gray-900 mb-3">
-                    {module.assessment.title}
+                    {assessment?.title || "Module Assessment"}
                 </h2>
                 <p className="text-gray-600 text-lg">
                     Complete all questions to finish this module. Passing score:{" "}
                     <span className="font-bold text-orange-600">
-                        {module.assessment.passingScore}%
+                        {assessment?.passingScore || 70}%
                     </span>
                 </p>
             </div>
@@ -1037,48 +1191,107 @@ const AssessmentSection = ({ module, onComplete }) => {
                         </div>
                     </div>
                     <span className="text-3xl font-black text-orange-600">
-                        +{module.xpReward} XP
+                        +{module?.xpReward || 0} XP
                     </span>
                 </div>
             </div>
 
             <div className="space-y-6">
-                {module.assessment.questions.map((question, idx) => (
-                    <div
-                        key={question.id}
-                        className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white"
-                    >
-                        <p className="font-bold text-gray-900 mb-4 text-lg flex items-start gap-3">
-                            <span className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
-                                {idx + 1}
-                            </span>
-                            {question.question}
-                        </p>
-                        <div className="space-y-3">
-                            {question.options.map((option, optIdx) => (
-                                <label
-                                    key={optIdx}
-                                    className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${assessmentAnswers[question.id] == optIdx
-                                        ? "border-blue-500 bg-blue-50"
-                                        : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
-                                        }`}
-                                >
-                                    <input
-                                        type="radio"
-                                        name={`assessment-q-${question.id}`}
-                                        value={optIdx}
-                                        onChange={(e) =>
-                                            handleAssessmentAnswer(question.id, e.target.value)
-                                        }
-                                        checked={assessmentAnswers[question.id] == optIdx}
-                                        className="w-5 h-5 mt-0.5 text-blue-500 focus:ring-blue-500"
-                                    />
-                                    <span className="text-gray-700 flex-1">{option}</span>
-                                </label>
-                            ))}
+                {assessment.questions.map((question, idx) => {
+                    const questionId = question.id || question._id || idx;
+                    const questionText = question.question || question.text || `Question ${idx + 1}`;
+
+                    // Log question data for debugging
+                    console.log('=== QUESTION DEBUG ===');
+                    console.log('Question:', question);
+                    console.log('Type:', question.type);
+                    console.log('Options:', question.options);
+                    console.log('Options is array:', Array.isArray(question.options));
+                    console.log('Options length:', question.options?.length);
+
+                    // Handle different option formats (force valid visible options)
+                    let options = [];
+                    const questionType = (question.type || '').toLowerCase().trim();
+
+                    console.log('Question type (normalized):', questionType);
+
+                    // If it's a boolean/true-false style question, ignore provided options and force True/False
+                    if (questionType.includes('true') || questionType.includes('false') || questionType === 'boolean') {
+                        options = ['True', 'False'];
+                        console.log('Setting True/False options based on type');
+                    } else {
+                        // Otherwise, try to use provided options if they are non-empty
+                        if (question.options && Array.isArray(question.options) && question.options.length > 0) {
+                            const validOptions = question.options.filter(opt => typeof opt === 'string' && opt.trim() !== '');
+                            if (validOptions.length > 0) {
+                                options = validOptions;
+                                console.log('Using provided options:', options);
+                            }
+                        }
+
+                        // Fallbacks
+                        if (options.length === 0) {
+                            if (questionType === 'mcq' || questionType === 'multiple_choice' || questionType === 'multiple choice') {
+                                options = ['Option A', 'Option B', 'Option C', 'Option D'];
+                                console.log('Setting default MCQ options');
+                            } else {
+                                options = ['True', 'False'];
+                                console.log('Setting default True/False options');
+                            }
+                        }
+                    }
+
+                    console.log('Final options:', options);
+                    console.log('======================');
+
+                    return (
+                        <div
+                            key={questionId}
+                            className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white"
+                        >
+                            <p className="font-bold text-gray-900 mb-4 text-lg flex items-start gap-3">
+                                <span className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
+                                    {idx + 1}
+                                </span>
+                                {questionText}
+                            </p>
+
+                            {options.length > 0 ? (
+                                <div className="space-y-3">
+                                    {options.map((option, optIdx) => (
+                                        <label
+                                            key={optIdx}
+                                            className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${assessmentAnswers[questionId] == optIdx
+                                                ? "border-blue-500 bg-blue-50"
+                                                : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                                                }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name={`assessment-q-${questionId}`}
+                                                value={option}
+                                                onChange={() =>
+                                                    handleAssessmentAnswer(questionId, option, optIdx)
+                                                }
+                                                checked={assessmentAnswers[questionId]?.index == optIdx}
+                                                className="w-5 h-5 mt-0.5 text-blue-500 focus:ring-blue-500"
+                                            />
+                                            <span className="text-gray-700 flex-1">{option}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            ) : (
+                                <textarea
+                                    placeholder="Type your answer here..."
+                                    value={assessmentAnswers[questionId]?.value || ""}
+                                    onChange={(e) => handleAssessmentAnswer(questionId, e.target.value, null)}
+                                    className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-all"
+                                    rows="4"
+                                />
+                            )}
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             <button

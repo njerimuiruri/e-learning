@@ -17,25 +17,43 @@ function InstructorDashboardContent() {
             try {
                 setLoading(true);
                 setError('');
-                
+
                 // Fetch instructor courses
                 const coursesData = await courseService.getInstructorCourses();
                 const courses = Array.isArray(coursesData) ? coursesData : coursesData?.courses || [];
-                
+
                 // Calculate stats from courses
                 const totalCourses = courses.length;
                 const activeStudents = courses.reduce((sum, c) => sum + (c.enrollmentCount || 0), 0);
-                const avgRating = courses.length > 0 
+                const avgRating = courses.length > 0
                     ? (courses.reduce((sum, c) => sum + (c.instructorId?.avgRating || 0), 0) / courses.length)
                     : 0;
                 const totalHours = courses.reduce((sum, c) => sum + ((c.modules?.length || 0) * 2), 0);
-                
+
+                // Calculate total questions across all courses
+                const getTotalQuestions = (course) => {
+                    let totalQuestions = 0;
+                    if (course?.modules?.length) {
+                        course.modules.forEach((module) => {
+                            if (module.lessons?.length) {
+                                module.lessons.forEach((lesson) => {
+                                    totalQuestions += lesson.questions?.length || 0;
+                                });
+                            }
+                            totalQuestions += module.moduleAssessment?.questions?.length || 0;
+                        });
+                    }
+                    totalQuestions += course?.finalAssessment?.questions?.length || 0;
+                    return totalQuestions;
+                };
+
                 setDashboardData({
                     courses,
                     activeStudents,
                     avgRating,
                     totalHours,
-                    totalCourses
+                    totalCourses,
+                    getTotalQuestions
                 });
             } catch (err) {
                 setError('Failed to load dashboard data');
@@ -228,12 +246,12 @@ function InstructorDashboardContent() {
                                                             {course.enrollmentCount || 0}
                                                         </span>
                                                         <span className="flex items-center gap-1">
-                                                            <Icons.Star className="w-3 h-3 text-yellow-500" />
-                                                            {course.rating || 0}
+                                                            <Icons.BookOpen className="w-3 h-3" />
+                                                            {course.modules?.length || 0} modules
                                                         </span>
                                                         <span className="flex items-center gap-1">
-                                                            <Icons.Clock className="w-3 h-3" />
-                                                            {course.totalDuration || '0h'}
+                                                            <Icons.HelpCircle className="w-3 h-3" />
+                                                            {dashboardData.getTotalQuestions(course)} questions
                                                         </span>
                                                     </div>
                                                     <div className="flex gap-2">

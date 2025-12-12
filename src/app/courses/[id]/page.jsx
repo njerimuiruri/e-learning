@@ -26,6 +26,36 @@ const CourseDetailPage = () => {
     const [activeTab, setActiveTab] = useState("overview");
     const [enrolling, setEnrolling] = useState(false);
     const [enrolled, setEnrolled] = useState(false);
+    const [resumeDestination, setResumeDestination] = useState(null);
+    const [otherCourses, setOtherCourses] = useState([]);
+    const instructor = course?.instructorId || course?.instructor || {};
+    const instructorName = `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || instructor.name || 'Unknown Instructor';
+    const instructorAvatar = instructor.profilePhotoUrl || instructor.avatar || 'https://via.placeholder.com/96';
+    const instructorEmail = instructor.email || '';
+    const requirements = course?.requirements?.length ? course.requirements : ['Basic computer skills', 'Internet connection', 'Willingness to learn'];
+    const targetAudience = course?.targetAudience?.length ? course.targetAudience : ['Beginners starting their journey', 'Professionals looking to upskill', 'Anyone interested in the subject'];
+
+    const computeResumeDestination = (courseData, enrollmentData) => {
+        if (!courseData?.modules?.length) return null;
+        const modules = courseData.modules;
+        const moduleProgress = enrollmentData?.moduleProgress || [];
+        const firstIncomplete = moduleProgress.find((mp) => !mp.assessmentPassed);
+        const allCompleted = moduleProgress.length > 0 && moduleProgress.every((mp) => mp.assessmentPassed);
+
+        let targetIndex = 0;
+        if (typeof firstIncomplete?.moduleIndex === "number") {
+            targetIndex = firstIncomplete.moduleIndex;
+        } else if (allCompleted && modules.length > 0) {
+            targetIndex = Math.max(modules.length - 1, 0);
+        }
+        const targetModule = modules[targetIndex] || modules[0];
+        const targetLesson = targetModule.lessons?.[0];
+
+        return {
+            moduleId: targetModule?._id || `${targetIndex}`,
+            lessonId: targetLesson?._id || "0",
+        };
+    };
 
     useEffect(() => {
         let mounted = true;
@@ -33,7 +63,11 @@ const CourseDetailPage = () => {
             try {
                 setLoading(true);
                 const data = await courseService.getCourseById(courseId);
-                if (mounted) setCourse(data);
+                if (mounted) {
+                    setCourse(data);
+                    // TODO: replace with real related courses query when available
+                    setOtherCourses([]);
+                }
             } catch (err) {
                 setError('Course not found');
             } finally {
@@ -44,16 +78,53 @@ const CourseDetailPage = () => {
         return () => { mounted = false; };
     }, [courseId]);
 
+    useEffect(() => {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        if (!token || !course) return;
+
+        const fetchEnrollment = async () => {
+            try {
+                const enrollmentData = await courseService.getEnrollment(courseId);
+                setEnrolled(true);
+                setResumeDestination(computeResumeDestination(course, enrollmentData));
+            } catch (err) {
+                setEnrolled(false);
+                setResumeDestination(null);
+            }
+        };
+
+        fetchEnrollment();
+    }, [courseId, course]);
+
     const handleEnrollClick = async () => {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
         if (!token) {
+            // Store the course ID to enroll after login
+            localStorage.setItem('pendingEnrollment', courseId);
             router.push('/login');
             return;
         }
+
+        if (enrolled && resumeDestination) {
+            router.push(`/courses/${courseId}/learn/${resumeDestination.moduleId}/${resumeDestination.lessonId}`);
+            return;
+        }
+
+        if (!course) {
+            return;
+        }
+
         setEnrolling(true);
         try {
-            await courseService.enrollCourse(courseId);
+            const enrollmentData = await courseService.enrollCourse(courseId);
             setEnrolled(true);
+            const destination = computeResumeDestination(course, enrollmentData);
+            setResumeDestination(destination);
+
+            const targetModuleId = destination?.moduleId || (course.modules?.[0]?._id || '0');
+            const targetLessonId = destination?.lessonId || (course.modules?.[0]?.lessons?.[0]?._id || '0');
+
+            router.push(`/courses/${courseId}/learn/${targetModuleId}/${targetLessonId}`);
         } catch (err) {
             alert('Enrollment failed. Please try again.');
         } finally {
@@ -160,14 +231,14 @@ const CourseDetailPage = () => {
                                 {/* Instructor */}
                                 <div className="flex items-center gap-4 bg-white/10 backdrop-blur-sm p-4 rounded-xl border border-white/20">
                                     <img
-                                        src={course.instructor.avatar}
-                                        alt={course.instructor.name}
-                                        className="w-16 h-16 rounded-full border-3 border-white shadow-lg"
+                                        src={instructorAvatar}
+                                        alt={instructorName}
+                                        className="w-16 h-16 rounded-full border-3 border-white shadow-lg object-cover"
                                     />
                                     <div>
                                         <p className="text-sm text-orange-100">Course Instructor</p>
                                         <p className="text-xl font-bold text-white">
-                                            {course.instructor.name}
+                                            {instructorName}
                                         </p>
                                         <p className="text-sm text-orange-100">Expert Educator</p>
                                     </div>
@@ -205,12 +276,12 @@ const CourseDetailPage = () => {
                                     {/* Enroll Button */}
                                     <button
                                         onClick={handleEnrollClick}
-                                        disabled={enrolling || enrolled}
+                                        disabled={enrolling}
                                         className={`w-full bg-gradient-to-r from-[#f65e14] to-[#ff8243] hover:from-[#e54d03] hover:to-[#f65e14] text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 mb-4 ${enrolling ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     >
                                         <span className="flex items-center justify-center gap-2">
                                             <Zap className="w-5 h-5" />
-                                            {enrolled ? 'Enrolled!' : enrolling ? 'Enrolling...' : 'Enroll Now - Start Learning'}
+                                            {enrolled ? 'Continue Learning' : enrolling ? 'Enrolling...' : 'Enroll Now - Start Learning'}
                                         </span>
                                     </button>
 
@@ -517,13 +588,13 @@ const CourseDetailPage = () => {
                                     <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
                                         <div className="flex items-center gap-6 mb-8">
                                             <img
-                                                src={course.instructor.avatar}
-                                                alt={course.instructor.name}
+                                                src={instructorAvatar}
+                                                alt={instructorName}
                                                 className="w-24 h-24 rounded-full border-4 border-orange-200 shadow-lg"
                                             />
                                             <div>
                                                 <h2 className="text-3xl font-bold text-gray-900 mb-1">
-                                                    {course.instructor.name}
+                                                    {instructorName}
                                                 </h2>
                                                 <p className="text-gray-600 mb-3">
                                                     Expert Instructor & Course Creator
@@ -614,18 +685,12 @@ const CourseDetailPage = () => {
                                         Requirements
                                     </h3>
                                     <ul className="space-y-2 text-sm text-gray-700">
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-gray-400">•</span>
-                                            <span>Basic computer skills</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-gray-400">•</span>
-                                            <span>Internet connection</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <span className="text-gray-400">•</span>
-                                            <span>Willingness to learn</span>
-                                        </li>
+                                        {requirements.map((req, idx) => (
+                                            <li key={idx} className="flex items-start gap-2">
+                                                <span className="text-gray-400">•</span>
+                                                <span>{req}</span>
+                                            </li>
+                                        ))}
                                     </ul>
                                 </div>
 
@@ -635,18 +700,12 @@ const CourseDetailPage = () => {
                                         Who This Course Is For
                                     </h3>
                                     <ul className="space-y-3 text-sm text-gray-700">
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                                            <span>Beginners starting their journey</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                                            <span>Professionals looking to upskill</span>
-                                        </li>
-                                        <li className="flex items-start gap-2">
-                                            <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-                                            <span>Anyone interested in the subject</span>
-                                        </li>
+                                        {targetAudience.map((item, idx) => (
+                                            <li key={idx} className="flex items-start gap-2">
+                                                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                                                <span>{item}</span>
+                                            </li>
+                                        ))}
                                     </ul>
                                 </div>
                             </div>

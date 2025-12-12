@@ -38,11 +38,29 @@ export default function InstructorCoursesPage() {
     const handleSubmitCourse = async (courseId) => {
         try {
             setSubmitting(prev => ({ ...prev, [courseId]: true }));
-            await courseService.submitCourse(courseId);
+            console.log('=== SUBMIT COURSE DEBUG ===');
+            console.log('Course ID:', courseId);
+            const user = localStorage.getItem('user');
+            if (user) {
+                const userData = JSON.parse(user);
+                console.log('Current User ID:', userData._id);
+                console.log('Current User Email:', userData.email);
+                console.log('Current User Role:', userData.role);
+            }
+            const token = localStorage.getItem('token');
+            console.log('Token exists:', !!token);
+            console.log('=== END DEBUG ===');
+
+            const result = await courseService.submitCourse(courseId);
+            console.log('Submit response:', result);
             alert('Course submitted for approval! Admin will review it shortly.');
             fetchCourses();
         } catch (error) {
-            alert('Failed to submit course. Please try again.');
+            console.error('Full error object:', error);
+            console.error('Error response:', error.response);
+            console.error('Error data:', error.response?.data);
+            const errorMessage = error.response?.data?.message || error.message || 'Failed to submit course';
+            alert(`Failed to submit course: ${errorMessage}`);
         } finally {
             setSubmitting(prev => ({ ...prev, [courseId]: false }));
         }
@@ -51,6 +69,29 @@ export default function InstructorCoursesPage() {
     const getFilteredCourses = () => {
         if (filter === 'all') return instructorCourses;
         return instructorCourses.filter(c => c.status === filter);
+    };
+
+    const getTotalQuestions = (course) => {
+        let totalQuestions = 0;
+
+        // Count questions from modules
+        if (course?.modules?.length) {
+            course.modules.forEach((module) => {
+                // Count lesson questions
+                if (module.lessons?.length) {
+                    module.lessons.forEach((lesson) => {
+                        totalQuestions += lesson.questions?.length || 0;
+                    });
+                }
+                // Count module assessment questions
+                totalQuestions += module.moduleAssessment?.questions?.length || 0;
+            });
+        }
+
+        // Count final assessment questions
+        totalQuestions += course?.finalAssessment?.questions?.length || 0;
+
+        return totalQuestions;
     };
 
     return (
@@ -79,8 +120,8 @@ export default function InstructorCoursesPage() {
                         <button
                             onClick={() => setFilter('all')}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'all'
-                                    ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             All Courses ({instructorCourses.length})
@@ -88,8 +129,8 @@ export default function InstructorCoursesPage() {
                         <button
                             onClick={() => setFilter('published')}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'published'
-                                    ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Published ({instructorCourses.filter(c => c.status === 'published').length})
@@ -97,8 +138,8 @@ export default function InstructorCoursesPage() {
                         <button
                             onClick={() => setFilter('draft')}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'draft'
-                                    ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Drafts ({instructorCourses.filter(c => c.status === 'draft').length})
@@ -106,8 +147,8 @@ export default function InstructorCoursesPage() {
                         <button
                             onClick={() => setFilter('submitted')}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'submitted'
-                                    ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Pending Approval ({instructorCourses.filter(c => c.status === 'submitted').length})
@@ -115,8 +156,8 @@ export default function InstructorCoursesPage() {
                         <button
                             onClick={() => setFilter('approved')}
                             className={`px-4 py-2 rounded-lg font-medium transition-all ${filter === 'approved'
-                                    ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             Approved ({instructorCourses.filter(c => c.status === 'approved').length})
@@ -161,13 +202,12 @@ export default function InstructorCoursesPage() {
                                         <div className="w-full h-full bg-gradient-to-br from-emerald-100 to-emerald-50"></div>
                                     )}
                                     <div className="absolute top-3 right-3">
-                                        <span className={`px-3 py-1 text-white text-xs font-medium rounded-full ${
-                                            course.status === 'published' ? 'bg-green-500' :
-                                            course.status === 'submitted' ? 'bg-blue-500' :
-                                            course.status === 'approved' ? 'bg-emerald-500' :
-                                            course.status === 'rejected' ? 'bg-red-500' :
-                                            'bg-yellow-500'
-                                        }`}>
+                                        <span className={`px-3 py-1 text-white text-xs font-medium rounded-full ${course.status === 'published' ? 'bg-green-500' :
+                                                course.status === 'submitted' ? 'bg-blue-500' :
+                                                    course.status === 'approved' ? 'bg-emerald-500' :
+                                                        course.status === 'rejected' ? 'bg-red-500' :
+                                                            'bg-yellow-500'
+                                            }`}>
                                             {course.status ? course.status.charAt(0).toUpperCase() + course.status.slice(1) : 'Draft'}
                                         </span>
                                     </div>
@@ -202,6 +242,10 @@ export default function InstructorCoursesPage() {
                                             <Icons.BookOpen className="w-3 h-3" />
                                             {(course.modules?.length || 0)} modules
                                         </span>
+                                        <span className="flex items-center gap-1">
+                                            <Icons.HelpCircle className="w-3 h-3" />
+                                            {getTotalQuestions(course)} questions
+                                        </span>
                                     </div>
 
                                     {/* Rejection Reason if rejected */}
@@ -214,13 +258,14 @@ export default function InstructorCoursesPage() {
                                     {/* Actions */}
                                     <div className="flex gap-2">
                                         <button
-                                            onClick={() => router.push(`/courses/${course._id}`)}
+                                            onClick={() => router.push(`/instructor/courses/${course._id}`)}
                                             className="flex-1 px-4 py-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-100 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                                         >
                                             <Icons.Eye className="w-4 h-4" />
                                             View
                                         </button>
                                         <button
+                                            onClick={() => router.push(`/instructor/courses/${course._id}/edit`)}
                                             className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium flex items-center justify-center gap-2"
                                         >
                                             <Icons.Edit className="w-4 h-4" />

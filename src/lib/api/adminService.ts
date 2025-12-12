@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+// Admin API Service - Force rebuild
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
@@ -96,6 +97,24 @@ const adminService = {
   // Fellows
   sendFellowReminder: async (id: string, message: string) => {
     const { data } = await api.post(`/fellows/${id}/send-reminder`, { message });
+    return data;
+  },
+
+  // Courses
+  getPendingCourses: async (filters: { page?: number; limit?: number } = {}) => {
+    const { data } = await api.get('/courses/pending', { params: filters });
+    return data;
+  },
+  getAllCourses: async (filters: { status?: string | null; page?: number; limit?: number } = {}) => {
+    const { data } = await api.get('/courses', { params: filters });
+    return data;
+  },
+  approveCourse: async (id: string, feedback?: string) => {
+    const { data } = await api.put(`/courses/${id}/approve`, { feedback });
+    return data;
+  },
+  rejectCourse: async (id: string, reason: string) => {
+    const { data } = await api.put(`/courses/${id}/reject`, { reason });
     return data;
   },
 };

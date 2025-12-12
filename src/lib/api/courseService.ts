@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
@@ -35,6 +35,11 @@ const courseService = {
 
   getInstructorCourses: async () => {
     const response = await api.get('/courses/instructor/my-courses');
+    return response.data;
+  },
+
+  getInstructorCourseById: async (id) => {
+    const response = await api.get(`/courses/instructor/course/${id}`);
     return response.data;
   },
 
@@ -120,6 +125,56 @@ const courseService = {
 
   getStudentDashboard: async () => {
     const response = await api.get('/courses/dashboard/student');
+    return response.data;
+  },
+
+  // Final Assessment
+  createFinalAssessment: async (courseId, assessmentData) => {
+    const response = await api.post(`/courses/${courseId}/final-assessment`, assessmentData);
+    return response.data;
+  },
+
+  getFinalAssessment: async (courseId) => {
+    const response = await api.get(`/courses/${courseId}/final-assessment`);
+    return response.data;
+  },
+
+  updateFinalAssessment: async (courseId, assessmentData) => {
+    const response = await api.put(`/courses/${courseId}/final-assessment`, assessmentData);
+    return response.data;
+  },
+
+  // Module Assessment
+  submitModuleAssessment: async (enrollmentId, moduleIndex, answers) => {
+    const response = await api.post(`/courses/enrollment/${enrollmentId}/module/${moduleIndex}/assessment`, {
+      answers,
+    });
+    return response.data;
+  },
+
+  // Final Assessment Submission
+  submitFinalAssessment: async (enrollmentId, answers) => {
+    const response = await api.post(`/courses/enrollment/${enrollmentId}/final-assessment`, {
+      answers,
+    });
+    return response.data;
+  },
+
+  // Restart Course
+  restartCourse: async (enrollmentId) => {
+    const response = await api.post(`/courses/enrollment/${enrollmentId}/restart`);
+    return response.data;
+  },
+
+  // Get My Enrollments (alias for consistency)
+  getMyEnrollments: async () => {
+    const response = await api.get('/courses/student/my-enrollments');
+    return response.data;
+  },
+
+  // Get specific enrollment by courseId
+  getEnrollment: async (courseId) => {
+    const response = await api.get(`/courses/${courseId}/enrollment`);
     return response.data;
   },
 };

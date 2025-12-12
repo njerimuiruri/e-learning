@@ -72,6 +72,12 @@ export default function AdminSidebar() {
             path: '/admin/courses',
         },
         {
+            icon: 'Clock',
+            label: 'Pending Course Approvals',
+            path: '/admin/courses/pending',
+            badge: null, // Will be updated with count
+        },
+        {
             icon: 'UserCog',
             label: 'Instructor Approvals',
             path: '/admin/instructors',

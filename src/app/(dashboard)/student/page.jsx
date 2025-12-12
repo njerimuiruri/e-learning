@@ -12,6 +12,7 @@ function StudentDashboardContent() {
     const [dashboardData, setDashboardData] = useState(null);
     const [coursesInProgress, setCoursesInProgress] = useState([]);
     const [completedCourses, setCompletedCourses] = useState([]);
+    const [publishedCourses, setPublishedCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -23,30 +24,58 @@ function StudentDashboardContent() {
         try {
             setLoading(true);
             setError('');
-            const data = await courseService.getStudentDashboard();
+            const [data, published] = await Promise.all([
+                courseService.getStudentDashboard(),
+                courseService.getAllCourses({ page: 1, limit: 12 }),
+            ]);
             setDashboardData(data);
 
             const inProgress = data.enrollments
                 ?.filter(enrollment => !enrollment.isCompleted)
-                .map(enrollment => ({
-                    ...enrollment.course,
-                    enrollmentId: enrollment._id,
-                    progress: enrollment.progress || 0,
-                    lastActive: formatLastActive(enrollment.lastAccessedAt),
-                    completedModules: enrollment.completedModules?.length || 0,
-                })) || [];
+                .map(enrollment => {
+                    const courseData = enrollment.courseId || {};
+                    return {
+                        _id: courseData._id,
+                        title: courseData.title || 'Untitled Course',
+                        description: courseData.description || '',
+                        thumbnailUrl: courseData.thumbnailUrl || courseData.bannerImage || '/placeholder-course.png',
+                        modules: courseData.modules || [],
+                        enrollmentId: enrollment._id,
+                        progress: enrollment.progress || 0,
+                        lastActive: formatLastActive(enrollment.lastAccessedAt),
+                        completedModules: enrollment.completedModules?.length || 0,
+                        finalAssessmentAttempts: enrollment.finalAssessmentAttempts || 0,
+                        lastAccessedModule: enrollment.lastAccessedModule,
+                        lastAccessedLesson: enrollment.lastAccessedLesson,
+                    };
+                }) || [];
             setCoursesInProgress(inProgress);
 
             const completed = data.enrollments
                 ?.filter(enrollment => enrollment.isCompleted)
-                .map(enrollment => ({
-                    ...enrollment.course,
-                    enrollmentId: enrollment._id,
-                    completedDate: formatLastActive(enrollment.completedAt),
-                    hasCertificate: enrollment.certificateEarned,
-                    score: enrollment.totalScore || 0,
-                })) || [];
+                .map(enrollment => {
+                    const courseData = enrollment.courseId || {};
+                    return {
+                        _id: courseData._id,
+                        title: courseData.title || 'Untitled Course',
+                        description: courseData.description || '',
+                        thumbnailUrl: courseData.thumbnailUrl || courseData.bannerImage || '/placeholder-course.png',
+                        enrollmentId: enrollment._id,
+                        completedDate: formatLastActive(enrollment.completedAt),
+                        hasCertificate: enrollment.certificateEarned,
+                        certificateUrl: enrollment.certificateUrl,
+                        score: enrollment.finalAssessmentScore || enrollment.totalScore || 0,
+                    };
+                }) || [];
             setCompletedCourses(completed);
+
+            // Support both shapes: {courses, pagination} or direct array
+            const publishedList = Array.isArray(published)
+                ? published
+                : Array.isArray(published?.courses)
+                    ? published.courses
+                    : [];
+            setPublishedCourses(publishedList);
         } catch (err) {
             setError('Failed to load dashboard data');
             console.error(err);
@@ -81,9 +110,32 @@ function StudentDashboardContent() {
         return `${Math.floor(diffDays / 30)} months ago`;
     };
 
-    const handleContinueLearning = (course) => {
-        const lastLesson = getLastAccessedLesson(course.id);
-        router.push(`/courses/${course.id}/learn/${lastLesson.moduleId}/${lastLesson.lessonId}`);
+    const handleContinueLearning = async (course) => {
+        try {
+            // Fetch enrollment to get last accessed module/lesson
+            const enrollment = await courseService.getEnrollment(course._id);
+
+            // Get the last accessed module and lesson, or default to first
+            const lastModuleIndex = enrollment.lastAccessedModule || 0;
+            const lastLessonIndex = enrollment.lastAccessedLesson || 0;
+
+            // Get the actual module and lesson IDs from the course
+            const module = course.modules?.[lastModuleIndex];
+            const lesson = module?.lessons?.[lastLessonIndex];
+
+            const moduleId = module?._id || lastModuleIndex;
+            const lessonId = lesson?._id || lastLessonIndex;
+
+            router.push(`/courses/${course._id}/learn/${moduleId}/${lessonId}`);
+        } catch (err) {
+            console.error('Failed to get enrollment details:', err);
+            // Fallback to first module/lesson
+            const firstModule = course.modules?.[0];
+            const firstLesson = firstModule?.lessons?.[0];
+            const moduleId = firstModule?._id || 0;
+            const lessonId = firstLesson?._id || 0;
+            router.push(`/courses/${course._id}/learn/${moduleId}/${lessonId}`);
+        }
     };
 
     const stats = [
@@ -167,17 +219,17 @@ function StudentDashboardContent() {
 
                                 <div className="p-4 sm:p-5">
                                     {coursesInProgress.map((course) => (
-                                        <div key={course.id} className="flex flex-col sm:flex-row gap-4 pb-4 last:pb-0">
+                                        <div key={course._id} className="flex flex-col sm:flex-row gap-4 pb-4 last:pb-0 border-b last:border-b-0">
                                             <img
-                                                src={course.image}
+                                                src={course.thumbnailUrl || '/placeholder-course.png'}
                                                 alt={course.title}
                                                 className="w-full sm:w-36 h-24 sm:h-24 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0"
-                                                onClick={() => router.push(`/courses/${course.id}`)}
+                                                onClick={() => router.push(`/courses/${course._id}`)}
                                             />
                                             <div className="flex-1 min-w-0">
                                                 <h3
                                                     className="font-semibold text-gray-900 mb-2 cursor-pointer hover:text-orange-600 transition-colors text-base"
-                                                    onClick={() => router.push(`/courses/${course.id}`)}
+                                                    onClick={() => router.push(`/courses/${course._id}`)}
                                                 >
                                                     {course.title}
                                                 </h3>
@@ -189,7 +241,14 @@ function StudentDashboardContent() {
                                                             style={{ width: `${course.progress}%` }}
                                                         ></div>
                                                     </div>
-                                                    <span className="text-sm font-medium text-gray-700">{course.progress}% Complete</span>
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm font-medium text-gray-700">{course.progress}% Complete</span>
+                                                        {course.finalAssessmentAttempts > 0 && (
+                                                            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">
+                                                                Final Assessment: {course.finalAssessmentAttempts}/3 attempts
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 <div className="text-xs sm:text-sm text-blue-600 font-medium mb-3">
@@ -201,7 +260,6 @@ function StudentDashboardContent() {
                                                     className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg font-medium transition-colors text-sm inline-flex items-center justify-center"
                                                 >
                                                     Continue Learning
-                                                    <span className="ml-2 text-xs">{course.timeLeft}</span>
                                                 </button>
                                             </div>
                                         </div>
@@ -216,7 +274,7 @@ function StudentDashboardContent() {
                                 <div className="p-4 sm:p-5 border-b border-gray-200">
                                     <div className="flex items-center justify-between">
                                         <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                                            Your Completed Courses ({completedCourses.length}) & Claimed Certificates ({studentProgress.totalCertificates})
+                                            Your Completed Courses ({completedCourses.length}) & Claimed Certificates ({dashboardData?.certificates?.length || 0})
                                         </h2>
                                         <button
                                             onClick={() => router.push('/student/certificates')}
@@ -229,27 +287,39 @@ function StudentDashboardContent() {
 
                                 <div className="p-4 sm:p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {completedCourses.map((course) => (
-                                        <div key={course.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+                                        <div key={course._id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
                                             <img
-                                                src={course.image}
+                                                src={course.thumbnailUrl || '/placeholder-course.png'}
                                                 alt={course.title}
                                                 className="w-full h-32 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                                onClick={() => router.push(`/courses/${course.id}`)}
+                                                onClick={() => router.push(`/courses/${course._id}`)}
                                             />
                                             <div className="p-3">
-                                                <h3 className="font-semibold text-gray-900 mb-2 text-sm">{course.title}</h3>
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <button className="text-gray-600 hover:text-gray-900 flex items-center gap-1 text-xs">
-                                                        <Icons.ThumbsUp className="w-3 h-3" />
-                                                        Rate This Course
-                                                    </button>
+                                                <h3 className="font-semibold text-gray-900 mb-2 text-sm line-clamp-2">{course.title}</h3>
+                                                <div className="flex items-center gap-2 mb-2 text-xs text-gray-600">
+                                                    <Icons.Calendar className="w-3 h-3" />
+                                                    <span>Completed {course.completedDate}</span>
                                                 </div>
-                                                <button
-                                                    onClick={() => router.push('/student/certificates')}
-                                                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors text-sm"
-                                                >
-                                                    Claim Certificate
-                                                </button>
+                                                <div className="flex items-center gap-2 mb-3 text-xs">
+                                                    <Icons.Award className="w-3 h-3 text-green-600" />
+                                                    <span className="text-green-600 font-semibold">Score: {course.score.toFixed(1)}%</span>
+                                                </div>
+                                                {course.hasCertificate && course.certificateUrl ? (
+                                                    <button
+                                                        onClick={() => window.open(course.certificateUrl, '_blank')}
+                                                        className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition-colors text-sm flex items-center justify-center gap-2"
+                                                    >
+                                                        <Icons.Download className="w-4 h-4" />
+                                                        Download Certificate
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        disabled
+                                                        className="w-full bg-gray-300 text-gray-600 py-2 rounded-lg font-medium text-sm cursor-not-allowed"
+                                                    >
+                                                        Certificate Pending
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
@@ -257,19 +327,86 @@ function StudentDashboardContent() {
                             </div>
                         )}
 
-                        {/* No Courses Message */}
-                        {coursesInProgress.length === 0 && completedCourses.length === 0 && (
-                            <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-                                <Icons.BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                <h3 className="text-2xl font-bold text-gray-900 mb-2">No Courses Yet</h3>
-                                <p className="text-gray-600 mb-6">Start your learning journey by enrolling in a course</p>
-                                <button
-                                    onClick={() => router.push('/courses')}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition-colors"
-                                >
-                                    Browse Courses
-                                </button>
+                        {/* Show published courses when no enrollments, otherwise keep them available below */}
+                        {coursesInProgress.length === 0 && completedCourses.length === 0 ? (
+                            <div className="bg-white rounded-lg border border-gray-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Published Courses</h2>
+                                        <p className="text-sm text-gray-600">Start your learning journey by enrolling in a course</p>
+                                    </div>
+                                    <button
+                                        onClick={() => router.push('/courses')}
+                                        className="text-green-600 hover:text-green-700 font-medium text-sm"
+                                    >
+                                        View All →
+                                    </button>
+                                </div>
+                                {publishedCourses.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <Icons.BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                        <h3 className="text-2xl font-bold text-gray-900 mb-2">No Courses Yet</h3>
+                                        <p className="text-gray-600 mb-6">Check back soon for new published courses.</p>
+                                        <button
+                                            onClick={() => router.push('/courses')}
+                                            className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-medium transition-colors"
+                                        >
+                                            Browse Courses
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                        {publishedCourses.map((course) => (
+                                            <div key={course._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition">
+                                                <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{course.title}</h3>
+                                                <p className="text-sm text-gray-600 line-clamp-3 mb-3">{course.description}</p>
+                                                <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                                                    <span>{course.category}</span>
+                                                    <span className="capitalize">{course.level}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => router.push(`/courses/${course._id}`)}
+                                                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium text-sm"
+                                                >
+                                                    View & Enroll
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
+                        ) : (
+                            publishedCourses.length > 0 && (
+                                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h2 className="text-lg sm:text-xl font-bold text-gray-900">Published Courses</h2>
+                                        <button
+                                            onClick={() => router.push('/courses')}
+                                            className="text-green-600 hover:text-green-700 font-medium text-sm"
+                                        >
+                                            View All →
+                                        </button>
+                                    </div>
+                                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                                        {publishedCourses.map((course) => (
+                                            <div key={course._id} className="border border-gray-200 rounded-lg p-4 hover:shadow-sm transition">
+                                                <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">{course.title}</h3>
+                                                <p className="text-sm text-gray-600 line-clamp-3 mb-3">{course.description}</p>
+                                                <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
+                                                    <span>{course.category}</span>
+                                                    <span className="capitalize">{course.level}</span>
+                                                </div>
+                                                <button
+                                                    onClick={() => router.push(`/courses/${course._id}`)}
+                                                    className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium text-sm"
+                                                >
+                                                    View & Enroll
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )
                         )}
                     </div>
                 </main>
@@ -284,5 +421,4 @@ export default function StudentDashboardPage() {
             <StudentDashboardContent />
         </ProtectedStudentRoute>
     );
-}
 }

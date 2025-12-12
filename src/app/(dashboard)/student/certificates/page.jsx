@@ -27,8 +27,25 @@ export default function CertificatesPage() {
         try {
             setLoading(true);
             setError('');
-            const data = await courseService.getStudentCertificates();
-            setCertificates(data || []);
+            
+            // Get enrollments with certificates
+            const enrollmentData = await courseService.getMyEnrollments();
+            const completedWithCerts = enrollmentData.enrollments
+                ?.filter(e => e.isCompleted && e.certificateEarned)
+                .map(e => ({
+                    _id: e.certificateId || e._id,
+                    courseId: e.courseId._id || e.courseId,
+                    courseName: e.courseId.title || 'Unknown Course',
+                    studentName: `${e.studentId?.firstName || ''} ${e.studentId?.lastName || ''}`.trim() || 'Student',
+                    issueDate: e.certificateIssuedAt || e.completedAt,
+                    completionDate: e.completedAt,
+                    score: e.finalAssessmentScore || e.totalScore || 0,
+                    certificateUrl: e.certificateUrl,
+                    isValid: true,
+                    enrollmentId: e._id,
+                })) || [];
+            
+            setCertificates(completedWithCerts);
         } catch (err) {
             setError('Failed to load certificates');
             console.error(err);
@@ -62,24 +79,12 @@ export default function CertificatesPage() {
 
     const handleDownloadCertificate = async (certificate) => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/certificates/${certificate._id}/download`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) throw new Error('Failed to download certificate');
-
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `certificate-${certificate.certificateNumber}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            if (certificate.certificateUrl) {
+                // Open certificate URL in new tab
+                window.open(certificate.certificateUrl, '_blank');
+            } else {
+                alert('Certificate URL not available');
+            }
         } catch (err) {
             alert('Failed to download certificate');
             console.error(err);

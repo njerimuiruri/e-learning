@@ -19,13 +19,15 @@ export default function CourseUploadPage() {
         price: '',
         bannerImage: null,
         bannerImageUrl: null,
-        modules: []
+        modules: [],
+        finalAssessment: null
     });
 
     const [currentModule, setCurrentModule] = useState({
         title: '',
         description: '',
-        lessons: []
+        lessons: [],
+        moduleAssessment: null
     });
 
     const [currentLesson, setCurrentLesson] = useState({
@@ -35,8 +37,60 @@ export default function CourseUploadPage() {
         videoUrl: '',
         videoFile: null,
         duration: '',
-        topics: []
+        topics: [],
+        questions: []
     });
+
+    const [moduleAssessments, setModuleAssessments] = useState({}); // Store assessment for each module index
+    const [selectedModuleIdx, setSelectedModuleIdx] = useState(null); // Track which module is currently being edited
+
+    const [currentModuleAssessment, setCurrentModuleAssessment] = useState({
+        title: '',
+        description: '',
+        passingScore: 70,
+        questions: []
+    });
+
+    const [currentModuleQuestion, setCurrentModuleQuestion] = useState({
+        text: '',
+        type: 'multiple-choice',
+        points: 10,
+        options: ['', '', '', ''],
+        correctAnswer: '',
+        explanation: ''
+    });
+
+    const [finalAssessment, setFinalAssessment] = useState({
+        title: 'Final Course Assessment',
+        description: '',
+        passingScore: 70,
+        questions: []
+    });
+
+    const [currentQuestion, setCurrentQuestion] = useState({
+        text: '',
+        type: 'multiple-choice',
+        points: 10,
+        options: ['', '', '', ''],
+        correctAnswer: '',
+        explanation: ''
+    });
+
+    // Persist the currently edited module assessment into the map for its module index
+    const persistCurrentModuleAssessment = () => {
+        if (selectedModuleIdx === null) return;
+
+        const hasQuestions = currentModuleAssessment?.questions?.length > 0;
+        const hasMeta = (currentModuleAssessment?.title || currentModuleAssessment?.description);
+
+        // Only store if there is meaningful data
+        if (!hasQuestions && !hasMeta) return;
+
+        setModuleAssessments((prev) => ({
+            ...prev,
+            [selectedModuleIdx]: { ...currentModuleAssessment }
+        }));
+    };
 
     const categories = ['Marketing', 'Programming', 'Design', 'Business', 'Data Science', 'Other'];
     const levels = ['Beginner', 'Intermediate', 'Advanced', 'All Levels'];
@@ -85,7 +139,8 @@ export default function CourseUploadPage() {
                 videoUrl: '',
                 videoFile: null,
                 duration: '',
-                topics: []
+                topics: [],
+                questions: []
             });
         }
     };
@@ -99,10 +154,46 @@ export default function CourseUploadPage() {
             setCurrentModule({
                 title: '',
                 description: '',
-                lessons: []
+                lessons: [],
+                moduleAssessment: null
             });
             setCurrentStep(2);
         }
+    };
+
+    const addQuestionToFinalAssessment = () => {
+        if (!currentQuestion.text) {
+            alert('Question text is required');
+            return;
+        }
+
+        if (currentQuestion.type === 'multiple-choice') {
+            if (!currentQuestion.correctAnswer || currentQuestion.options.some(o => !o)) {
+                alert('Provide all options and select the correct answer');
+                return;
+            }
+        }
+
+        setFinalAssessment({
+            ...finalAssessment,
+            questions: [...finalAssessment.questions, { ...currentQuestion, id: Date.now() }]
+        });
+
+        setCurrentQuestion({
+            text: '',
+            type: 'multiple-choice',
+            points: 10,
+            options: ['', '', '', ''],
+            correctAnswer: '',
+            explanation: ''
+        });
+    };
+
+    const removeQuestionFromFinalAssessment = (questionId) => {
+        setFinalAssessment({
+            ...finalAssessment,
+            questions: finalAssessment.questions.filter(q => q.id !== questionId)
+        });
     };
 
     const handleSubmit = async () => {
@@ -110,7 +201,7 @@ export default function CourseUploadPage() {
             try {
                 setUploading(true);
                 // Transform modules to match backend format
-                const transformedModules = courseData.modules.map(module => ({
+                const transformedModules = courseData.modules.map((module, idx) => ({
                     title: module.title,
                     description: module.description,
                     content: module.description,
@@ -120,16 +211,44 @@ export default function CourseUploadPage() {
                         return sum + minutes;
                     }, 0),
                     videoUrl: module.lessons[0]?.videoUrl || '',
-                    questions: [] // Optional for now
+                    // Include lessons with their questions
+                    lessons: module.lessons.map(lesson => ({
+                        title: lesson.title,
+                        content: lesson.content,
+                        videoUrl: lesson.videoUrl,
+                        duration: lesson.duration,
+                        topics: lesson.topics || [],
+                        questions: lesson.questions.map(({ id, ...q }) => q) // Remove temp IDs
+                    })),
+                    questions: [], // Optional for now
+                    // Add module assessment if available
+                    ...(moduleAssessments[idx] && {
+                        moduleAssessment: {
+                            title: moduleAssessments[idx].title,
+                            description: moduleAssessments[idx].description,
+                            passingScore: moduleAssessments[idx].passingScore,
+                            questions: moduleAssessments[idx].questions.map(({ id, ...q }) => q)
+                        }
+                    })
                 }));
 
                 const coursePayload = {
                     title: courseData.title,
                     description: courseData.description,
                     category: courseData.category,
-                    level: courseData.level,
+                    level: courseData.level.toLowerCase(),
                     modules: transformedModules
                 };
+
+                // Add final assessment if questions were added
+                if (finalAssessment.questions.length > 0) {
+                    coursePayload.finalAssessment = {
+                        title: finalAssessment.title,
+                        description: finalAssessment.description,
+                        passingScore: finalAssessment.passingScore,
+                        questions: finalAssessment.questions.map(({ id, ...q }) => q)
+                    };
+                }
 
                 // Add thumbnail URL if image was uploaded
                 if (courseData.bannerImageUrl) {
@@ -163,29 +282,35 @@ export default function CourseUploadPage() {
                 {/* Steps Indicator */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                     <div className="flex items-center justify-between mb-4">
-                        {[1, 2, 3].map((step) => (
+                        {[1, 2, 3, 4, 5].map((step) => (
                             <div key={step} className="flex items-center flex-1">
                                 <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold ${currentStep >= step
-                                        ? 'bg-gradient-to-br from-[#16a34a] to-emerald-700 text-white'
-                                        : 'bg-gray-200 text-gray-600'
+                                    ? 'bg-gradient-to-br from-[#16a34a] to-emerald-700 text-white'
+                                    : 'bg-gray-200 text-gray-600'
                                     }`}>
                                     {step}
                                 </div>
-                                {step < 3 && (
+                                {step < 5 && (
                                     <div className={`flex-1 h-1 mx-2 ${currentStep > step ? 'bg-emerald-600' : 'bg-gray-200'
                                         }`} />
                                 )}
                             </div>
                         ))}
                     </div>
-                    <div className="flex justify-between text-sm">
-                        <span className={currentStep >= 1 ? 'text-emerald-600 font-medium' : 'text-gray-500'}>
+                    <div className="flex justify-between text-sm gap-1">
+                        <span className={currentStep >= 1 ? 'text-emerald-600 font-medium text-xs' : 'text-gray-500 text-xs'}>
                             Course Details
                         </span>
-                        <span className={currentStep >= 2 ? 'text-emerald-600 font-medium' : 'text-gray-500'}>
-                            Add Modules & Lessons
+                        <span className={currentStep >= 2 ? 'text-emerald-600 font-medium text-xs' : 'text-gray-500 text-xs'}>
+                            Modules & Lessons
                         </span>
-                        <span className={currentStep >= 3 ? 'text-emerald-600 font-medium' : 'text-gray-500'}>
+                        <span className={currentStep >= 3 ? 'text-emerald-600 font-medium text-xs' : 'text-gray-500 text-xs'}>
+                            Module Assessments
+                        </span>
+                        <span className={currentStep >= 4 ? 'text-emerald-600 font-medium text-xs' : 'text-gray-500 text-xs'}>
+                            Final Assessment
+                        </span>
+                        <span className={currentStep >= 5 ? 'text-emerald-600 font-medium text-xs' : 'text-gray-500 text-xs'}>
                             Review & Publish
                         </span>
                     </div>
@@ -305,17 +430,43 @@ export default function CourseUploadPage() {
                 {/* Step 2: Add Modules & Lessons */}
                 {currentStep === 2 && (
                     <div className="space-y-6">
+                        {/* Step Info */}
+                        <div className="bg-gradient-to-r from-emerald-50 to-cyan-50 border-2 border-emerald-200 rounded-xl p-6">
+                            <h2 className="text-lg font-bold text-emerald-900 mb-2 flex items-center gap-2">
+                                <Icons.FolderPlus className="w-5 h-5" />
+                                Add Multiple Modules to Your Course
+                            </h2>
+                            <p className="text-emerald-800 text-sm leading-relaxed">
+                                A course can have <span className="font-semibold">unlimited modules</span>. Each module can have multiple lessons followed by an assessment. Students must complete each module's assessment before unlocking the next module.
+                            </p>
+                        </div>
+
                         {/* Current Modules */}
                         {courseData.modules.length > 0 && (
-                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                                <h2 className="text-lg font-bold text-gray-900 mb-4">Added Modules ({courseData.modules.length})</h2>
+                            <div className="bg-white rounded-xl shadow-sm border border-emerald-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div>
+                                        <h2 className="text-lg font-bold text-gray-900">Modules Added ({courseData.modules.length})</h2>
+                                        <p className="text-sm text-gray-600 mt-1">You can add as many modules as needed</p>
+                                    </div>
+                                    <div className="text-2xl font-bold text-emerald-600">{courseData.modules.length}</div>
+                                </div>
                                 <div className="space-y-3">
                                     {courseData.modules.map((module, idx) => (
-                                        <div key={module.id} className="p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+                                        <div key={module.id} className="p-4 bg-emerald-50 rounded-lg border border-emerald-200 hover:shadow-md transition-shadow">
                                             <h3 className="font-semibold text-gray-900">Module {idx + 1}: {module.title}</h3>
-                                            <p className="text-sm text-gray-600">{module.lessons.length} lessons</p>
+                                            <p className="text-sm text-gray-600 mt-1">
+                                                <Icons.Video className="w-4 h-4 inline mr-1 text-emerald-600" />
+                                                {module.lessons.length} lesson{module.lessons.length !== 1 ? 's' : ''}
+                                            </p>
                                         </div>
                                     ))}
+                                </div>
+                                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <p className="text-sm text-blue-800">
+                                        <Icons.Info className="w-4 h-4 inline mr-2" />
+                                        Continue adding more modules below, or proceed to the next step
+                                    </p>
                                 </div>
                             </div>
                         )}
@@ -437,19 +588,28 @@ export default function CourseUploadPage() {
                                 </div>
                             </div>
 
-                            <div className="mt-6 pt-6 border-t">
+                            <div className="mt-6 pt-6 border-t space-y-4">
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                                    <h4 className="font-semibold text-emerald-900 mb-2 flex items-center gap-2">
+                                        <Icons.FolderPlus className="w-4 h-4" />
+                                        Multiple Modules Support
+                                    </h4>
+                                    <p className="text-sm text-emerald-800">
+                                        This course will have <span className="font-semibold">{currentModule.title || 'this module'}</span> as Module {courseData.modules.length + 1}. You can add more modules after this one.
+                                    </p>
+                                </div>
                                 <button
                                     onClick={addModule}
                                     disabled={!currentModule.title || currentModule.lessons.length === 0}
-                                    className="w-full px-6 py-3 bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                                    className="w-full px-6 py-3 bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-semibold"
                                 >
                                     <Icons.Check className="w-5 h-5" />
-                                    Save Module and Continue
+                                    Save This Module + Add Another
                                 </button>
                             </div>
                         </div>
 
-                        <div className="flex justify-between gap-3">
+                        <div className="flex justify-between gap-3 items-center">
                             <button
                                 onClick={() => setCurrentStep(1)}
                                 className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
@@ -457,10 +617,516 @@ export default function CourseUploadPage() {
                                 <Icons.ArrowLeft className="w-4 h-4" />
                                 Back
                             </button>
+                            <div className="flex-1 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 text-sm text-amber-800">
+                                <Icons.Info className="w-4 h-4 inline mr-2" />
+                                You have <span className="font-semibold">{courseData.modules.length}</span> module{courseData.modules.length !== 1 ? 's' : ''}. You can add more or proceed.
+                            </div>
                             <button
-                                onClick={() => setCurrentStep(3)}
+                                onClick={() => {
+                                    // Initialize module assessments for all modules if not already done
+                                    const assessments = { ...moduleAssessments };
+                                    courseData.modules.forEach((_, idx) => {
+                                        if (!assessments[idx]) {
+                                            assessments[idx] = null;
+                                        }
+                                    });
+                                    setModuleAssessments(assessments);
+                                    setCurrentStep(3);
+                                }}
                                 disabled={courseData.modules.length === 0}
-                                className="px-6 py-2 bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                className="px-6 py-2 bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-semibold"
+                            >
+                                Next: Add Module Assessments
+                                <Icons.ArrowRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 3: Module Assessments */}
+                {currentStep === 3 && (
+                    <div className="space-y-6">
+                        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+                            <h2 className="text-lg font-bold text-blue-900 mb-2 flex items-center gap-2">
+                                <Icons.Target className="w-5 h-5" />
+                                Module Assessments
+                            </h2>
+                            <p className="text-blue-800 text-sm">
+                                Create an assessment for each module. Students must pass each module's assessment before proceeding to the next module.
+                            </p>
+                        </div>
+
+                        {/* Module Selection */}
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h3 className="text-md font-bold text-gray-900 mb-4">Select Module to Add Assessment</h3>
+                            <div className="grid md:grid-cols-2 gap-3">
+                                {courseData.modules.map((module, idx) => (
+                                    <button
+                                        key={module.id}
+                                        onClick={() => {
+                                            // Save the assessment for the currently selected module before switching
+                                            persistCurrentModuleAssessment();
+
+                                            setSelectedModuleIdx(idx); // Track selected module
+                                            // Load existing assessment if available
+                                            const existing = moduleAssessments[idx];
+                                            setCurrentModuleAssessment(existing || {
+                                                title: `${module.title} Assessment`,
+                                                description: '',
+                                                passingScore: 70,
+                                                questions: []
+                                            });
+                                            setCurrentModuleQuestion({
+                                                text: '',
+                                                type: 'multiple-choice',
+                                                points: 10,
+                                                options: ['', '', '', ''],
+                                                correctAnswer: '',
+                                                explanation: ''
+                                            });
+                                        }}
+                                        className={`p-4 rounded-lg border-2 transition-all text-left ${moduleAssessments[idx]
+                                            ? 'border-green-500 bg-green-50'
+                                            : 'border-gray-200 bg-gray-50 hover:border-emerald-300'
+                                            }`}
+                                    >
+                                        <div className="font-semibold text-gray-900">Module {idx + 1}</div>
+                                        <div className="text-sm text-gray-600">{module.title}</div>
+                                        {moduleAssessments[idx] && (
+                                            <div className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                                                <Icons.Check className="w-3 h-3" />
+                                                {moduleAssessments[idx].questions?.length || 0} questions
+                                            </div>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Assessment Form */}
+                        {currentModuleAssessment && (
+                            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                                <h3 className="text-md font-bold text-gray-900 mb-4">Assessment Details</h3>
+
+                                <div className="space-y-4 mb-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Assessment Title</label>
+                                        <input
+                                            type="text"
+                                            value={currentModuleAssessment.title}
+                                            onChange={(e) => setCurrentModuleAssessment({ ...currentModuleAssessment, title: e.target.value })}
+                                            placeholder="e.g., Module 1 Assessment"
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                        <textarea
+                                            value={currentModuleAssessment.description}
+                                            onChange={(e) => setCurrentModuleAssessment({ ...currentModuleAssessment, description: e.target.value })}
+                                            placeholder="Describe the assessment..."
+                                            rows={2}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Passing Score (%)</label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            value={currentModuleAssessment.passingScore}
+                                            onChange={(e) => setCurrentModuleAssessment({ ...currentModuleAssessment, passingScore: parseInt(e.target.value) })}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Questions */}
+                                {currentModuleAssessment.questions && currentModuleAssessment.questions.length > 0 && (
+                                    <div className="mb-6">
+                                        <h4 className="font-semibold text-gray-900 mb-3">Questions Added</h4>
+                                        <div className="space-y-2">
+                                            {currentModuleAssessment.questions.map((q, qIdx) => (
+                                                <div key={q.id} className="p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-medium text-gray-900">{qIdx + 1}. {q.text?.substring(0, 50)}...</p>
+                                                        <p className="text-xs text-gray-500">{q.type} • {q.points} points</p>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => {
+                                                            setCurrentModuleAssessment({
+                                                                ...currentModuleAssessment,
+                                                                questions: currentModuleAssessment.questions.filter(qq => qq.id !== q.id)
+                                                            });
+                                                        }}
+                                                        className="text-red-500 hover:text-red-700 transition"
+                                                    >
+                                                        <Icons.Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Add Question Form */}
+                                <div className="border-t pt-6">
+                                    <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                        <Icons.Plus className="w-4 h-4 text-emerald-600" />
+                                        Add Question
+                                    </h4>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Question Text *</label>
+                                            <textarea
+                                                value={currentModuleQuestion.text}
+                                                onChange={(e) => setCurrentModuleQuestion({ ...currentModuleQuestion, text: e.target.value })}
+                                                placeholder="Enter the question..."
+                                                rows={2}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                            />
+                                        </div>
+
+                                        <div className="grid md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
+                                                <select
+                                                    value={currentModuleQuestion.type}
+                                                    onChange={(e) => setCurrentModuleQuestion({ ...currentModuleQuestion, type: e.target.value })}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                                >
+                                                    <option value="multiple-choice">Multiple Choice</option>
+                                                    <option value="true-false">True/False</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Points</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={currentModuleQuestion.points}
+                                                    onChange={(e) => setCurrentModuleQuestion({ ...currentModuleQuestion, points: parseInt(e.target.value) })}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Options */}
+                                        {currentModuleQuestion.type === 'multiple-choice' && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
+                                                <div className="space-y-2">
+                                                    {currentModuleQuestion.options.map((option, oIdx) => (
+                                                        <input
+                                                            key={oIdx}
+                                                            type="text"
+                                                            value={option}
+                                                            onChange={(e) => {
+                                                                const newOptions = [...currentModuleQuestion.options];
+                                                                newOptions[oIdx] = e.target.value;
+                                                                setCurrentModuleQuestion({ ...currentModuleQuestion, options: newOptions });
+                                                            }}
+                                                            placeholder={`Option ${oIdx + 1}`}
+                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                Correct Answer {currentModuleQuestion.type === 'multiple-choice' ? '(Option text or number)' : '(True/False)'}
+                                            </label>
+                                            {currentModuleQuestion.type === 'true-false' ? (
+                                                <select
+                                                    value={currentModuleQuestion.correctAnswer}
+                                                    onChange={(e) => setCurrentModuleQuestion({ ...currentModuleQuestion, correctAnswer: e.target.value })}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                                >
+                                                    <option value="">Select correct answer</option>
+                                                    <option value="true">True</option>
+                                                    <option value="false">False</option>
+                                                </select>
+                                            ) : (
+                                                <select
+                                                    value={currentModuleQuestion.correctAnswer}
+                                                    onChange={(e) => setCurrentModuleQuestion({ ...currentModuleQuestion, correctAnswer: e.target.value })}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                                >
+                                                    <option value="">Select correct option</option>
+                                                    {currentModuleQuestion.options.map((opt, idx) => (
+                                                        <option key={idx} value={opt}>
+                                                            {opt}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Explanation</label>
+                                            <textarea
+                                                value={currentModuleQuestion.explanation}
+                                                onChange={(e) => setCurrentModuleQuestion({ ...currentModuleQuestion, explanation: e.target.value })}
+                                                placeholder="Why is this the correct answer?"
+                                                rows={2}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                            />
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                if (!currentModuleQuestion.text) {
+                                                    alert('Question text is required');
+                                                    return;
+                                                }
+                                                if (!currentModuleQuestion.correctAnswer) {
+                                                    alert('Correct answer is required');
+                                                    return;
+                                                }
+                                                if (currentModuleQuestion.type === 'multiple-choice' && currentModuleQuestion.options.some(o => !o)) {
+                                                    alert('All options must be filled in');
+                                                    return;
+                                                }
+
+                                                setCurrentModuleAssessment({
+                                                    ...currentModuleAssessment,
+                                                    questions: [...(currentModuleAssessment.questions || []), { ...currentModuleQuestion, id: Date.now() }]
+                                                });
+
+                                                setCurrentModuleQuestion({
+                                                    text: '',
+                                                    type: 'multiple-choice',
+                                                    points: 10,
+                                                    options: ['', '', '', ''],
+                                                    correctAnswer: '',
+                                                    explanation: ''
+                                                });
+                                            }}
+                                            className="w-full px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors flex items-center justify-center gap-2"
+                                        >
+                                            <Icons.Plus className="w-4 h-4" />
+                                            Add Question
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="flex justify-between gap-3">
+                            <button
+                                onClick={() => setCurrentStep(2)}
+                                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                            >
+                                <Icons.ArrowLeft className="w-4 h-4" />
+                                Back
+                            </button>
+                            <button
+                                onClick={() => {
+                                    // Save current module assessment before moving on
+                                    persistCurrentModuleAssessment();
+                                    setCurrentStep(4);
+                                }}
+                                className="px-6 py-2 bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all flex items-center gap-2"
+                            >
+                                Continue to Final Assessment
+                                <Icons.ArrowRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Step 4: Final Assessment */}
+                {currentStep === 4 && (
+                    <div className="space-y-6">
+                        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                            <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <Icons.CheckCircle className="w-5 h-5 text-emerald-600" />
+                                Final Course Assessment (Required)
+                            </h2>
+
+                            <div className="space-y-4 mb-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Assessment Title</label>
+                                    <input
+                                        type="text"
+                                        value={finalAssessment.title}
+                                        onChange={(e) => setFinalAssessment({ ...finalAssessment, title: e.target.value })}
+                                        placeholder="e.g., Final Course Assessment"
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                                    <textarea
+                                        value={finalAssessment.description}
+                                        onChange={(e) => setFinalAssessment({ ...finalAssessment, description: e.target.value })}
+                                        placeholder="Describe the final assessment..."
+                                        rows={3}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        Passing Score (%) - Required for Certificate
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        value={finalAssessment.passingScore}
+                                        onChange={(e) => setFinalAssessment({ ...finalAssessment, passingScore: Number(e.target.value) })}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="border-t pt-6">
+                                <h3 className="font-bold text-gray-900 mb-4">Add Questions</h3>
+
+                                <div className="bg-gray-50 rounded-lg p-4 space-y-4 mb-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Question Text *</label>
+                                        <textarea
+                                            value={currentQuestion.text}
+                                            onChange={(e) => setCurrentQuestion({ ...currentQuestion, text: e.target.value })}
+                                            placeholder="Enter the question..."
+                                            rows={2}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                        />
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Question Type</label>
+                                            <select
+                                                value={currentQuestion.type}
+                                                onChange={(e) => setCurrentQuestion({ ...currentQuestion, type: e.target.value })}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                            >
+                                                <option value="multiple-choice">Multiple Choice</option>
+                                                <option value="true-false">True/False</option>
+                                                <option value="essay">Essay</option>
+                                            </select>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Points</label>
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                value={currentQuestion.points}
+                                                onChange={(e) => setCurrentQuestion({ ...currentQuestion, points: Number(e.target.value) })}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {currentQuestion.type === 'multiple-choice' && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
+                                            <div className="space-y-2">
+                                                {currentQuestion.options.map((option, idx) => (
+                                                    <div key={idx} className="flex items-center gap-2">
+                                                        <input
+                                                            type="radio"
+                                                            name="correctAnswer"
+                                                            checked={currentQuestion.correctAnswer === `${idx}`}
+                                                            onChange={() => setCurrentQuestion({ ...currentQuestion, correctAnswer: `${idx}` })}
+                                                            className="w-4 h-4 text-emerald-600"
+                                                        />
+                                                        <input
+                                                            type="text"
+                                                            value={option}
+                                                            onChange={(e) => {
+                                                                const newOptions = [...currentQuestion.options];
+                                                                newOptions[idx] = e.target.value;
+                                                                setCurrentQuestion({ ...currentQuestion, options: newOptions });
+                                                            }}
+                                                            placeholder={`Option ${idx + 1}`}
+                                                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {currentQuestion.type === 'true-false' && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-2">Correct Answer</label>
+                                            <select
+                                                value={currentQuestion.correctAnswer}
+                                                onChange={(e) => setCurrentQuestion({ ...currentQuestion, correctAnswer: e.target.value })}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                            >
+                                                <option value="">Select answer</option>
+                                                <option value="true">True</option>
+                                                <option value="false">False</option>
+                                            </select>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Explanation (Optional)</label>
+                                        <textarea
+                                            value={currentQuestion.explanation}
+                                            onChange={(e) => setCurrentQuestion({ ...currentQuestion, explanation: e.target.value })}
+                                            placeholder="Explain the correct answer..."
+                                            rows={2}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                        />
+                                    </div>
+
+                                    <button
+                                        onClick={addQuestionToFinalAssessment}
+                                        className="w-full px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Icons.Plus className="w-4 h-4" />
+                                        Add Question
+                                    </button>
+                                </div>
+
+                                {finalAssessment.questions.length > 0 && (
+                                    <div className="space-y-3">
+                                        <h4 className="font-semibold text-gray-900">Questions ({finalAssessment.questions.length})</h4>
+                                        {finalAssessment.questions.map((question, idx) => (
+                                            <div key={question.id} className="p-3 bg-gray-50 rounded-lg flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-medium text-gray-900">{idx + 1}. {question.text}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">{question.type} • {question.points} points</p>
+                                                </div>
+                                                <button
+                                                    onClick={() => removeQuestionFromFinalAssessment(question.id)}
+                                                    className="ml-2 text-red-600 hover:text-red-700"
+                                                >
+                                                    <Icons.X className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between gap-3">
+                            <button
+                                onClick={() => setCurrentStep(2)}
+                                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+                            >
+                                <Icons.ArrowLeft className="w-4 h-4" />
+                                Back
+                            </button>
+                            <button
+                                onClick={() => setCurrentStep(5)}
+                                className="px-6 py-2 bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white rounded-lg hover:from-emerald-600 hover:to-emerald-700 transition-all flex items-center gap-2"
                             >
                                 Review Course
                                 <Icons.ArrowRight className="w-4 h-4" />
@@ -469,8 +1135,8 @@ export default function CourseUploadPage() {
                     </div>
                 )}
 
-                {/* Step 3: Review & Publish */}
-                {currentStep === 3 && (
+                {/* Step 5: Review & Publish */}
+                {currentStep === 5 && (
                     <div className="space-y-6">
                         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                             <h2 className="text-lg font-bold text-gray-900 mb-4">Review Your Course</h2>
@@ -522,6 +1188,7 @@ export default function CourseUploadPage() {
                                         <li>• Your course will be reviewed by the admin team</li>
                                         <li>• Review typically takes 1-2 business days</li>
                                         <li>• You'll receive an email notification once approved</li>
+                                        <li>• Students must score {finalAssessment.passingScore}% on the final assessment to get a certificate</li>
                                         <li>• You can edit your course after submission</li>
                                     </ul>
                                 </div>
@@ -530,7 +1197,7 @@ export default function CourseUploadPage() {
 
                         <div className="flex justify-between gap-3">
                             <button
-                                onClick={() => setCurrentStep(2)}
+                                onClick={() => setCurrentStep(3)}
                                 className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
                             >
                                 <Icons.ArrowLeft className="w-4 h-4" />

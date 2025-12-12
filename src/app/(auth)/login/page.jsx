@@ -80,22 +80,38 @@ export default function LoginPage() {
             const userName = `${response.user.firstName} ${response.user.lastName}`;
             showToast(`🎉 Welcome back, ${userName}!`, 'success');
 
+            // Check for pending enrollment
+            const pendingEnrollment = localStorage.getItem('pendingEnrollment');
+
+            if (pendingEnrollment && response.user.role === 'student') {
+                // Clear the pending enrollment
+                localStorage.removeItem('pendingEnrollment');
+
+                // Enroll the student and redirect to the course
+                setTimeout(async () => {
+                    try {
+                        const courseService = (await import('@/lib/api/courseService')).default;
+                        await courseService.enrollCourse(pendingEnrollment);
+
+                        // Redirect to first lesson using index 0 (learning page will handle actual IDs)
+                        router.replace(`/courses/${pendingEnrollment}/learn/0/0`);
+                    } catch (err) {
+                        console.error('Auto-enrollment failed:', err);
+                        // Fallback to course detail page if enrollment fails
+                        router.replace(`/courses/${pendingEnrollment}`);
+                    }
+                }, 500);
+                return;
+            }
+
             // Redirect based on role
             setTimeout(() => {
                 if (response.user.role === 'student') {
                     router.replace('/student');
                 } else if (response.user.role === 'instructor') {
-                    // Check if instructor is approved before redirecting to dashboard
-                    const instructorStatus = response.user.instructorStatus;
-                    if (instructorStatus === 'approved') {
-                        router.replace('/instructor');
-                    } else if (instructorStatus === 'pending') {
-                        router.replace('/instructor/pending-approval');
-                    } else if (instructorStatus === 'rejected') {
-                        router.replace('/instructor/application-rejected');
-                    } else {
-                        router.replace('/login');
-                    }
+                    // Allow instructors to access dashboard regardless of approval status
+                    // They can create courses in draft status while pending approval
+                    router.replace('/instructor');
                 } else if (response.user.role === 'admin') {
                     router.replace('/admin');
                 } else {
@@ -134,7 +150,7 @@ export default function LoginPage() {
             <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50">
                 <div className="w-full max-w-md">
                     {/* Back to Home Button */}
-                    <Link 
+                    <Link
                         href="/"
                         className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
                     >
