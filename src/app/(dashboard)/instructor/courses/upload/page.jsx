@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import courseService from '@/lib/api/courseService';
@@ -40,6 +40,9 @@ export default function CourseUploadPage() {
         topics: [],
         questions: []
     });
+
+    const editorRef = useRef(null);
+    const imageInputRef = useRef(null);
 
     const [moduleAssessments, setModuleAssessments] = useState({}); // Store assessment for each module index
     const [selectedModuleIdx, setSelectedModuleIdx] = useState(null); // Track which module is currently being edited
@@ -126,11 +129,118 @@ export default function CourseUploadPage() {
         }
     };
 
+    const focusEditor = () => {
+        if (editorRef.current) {
+            editorRef.current.focus();
+        }
+    };
+
+    const syncEditorContent = () => {
+        const rawContent = editorRef.current?.innerHTML || '';
+        const cleanedContent = cleanHtmlContent(rawContent);
+        setCurrentLesson(prev => ({ ...prev, content: cleanedContent }));
+    };
+
+    const applyEditorCommand = (command, value = null) => {
+        focusEditor();
+        document.execCommand(command, false, value);
+        syncEditorContent();
+    };
+
+    const insertHtmlIntoEditor = (html) => {
+        if (!editorRef.current) return;
+        focusEditor();
+        document.execCommand('insertHTML', false, html);
+        syncEditorContent();
+    };
+
+    const handleAddLink = () => {
+        const url = window.prompt('Enter URL to link');
+        if (url) {
+            applyEditorCommand('createLink', url);
+        }
+    };
+
+    const handleInlineImageUpload = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            const imageUrl = await uploadService.uploadImage(file);
+            insertHtmlIntoEditor(`<img src="${imageUrl}" alt="Lesson media" class="rounded-lg my-2" />`);
+        } catch (error) {
+            alert('Failed to upload image. Please try again.');
+            console.error('Lesson image upload error:', error);
+        } finally {
+            setUploading(false);
+            if (imageInputRef.current) {
+                imageInputRef.current.value = '';
+            }
+        }
+    };
+
+    const getVideoEmbedMarkup = (url) => {
+        if (!url) return '';
+        if (url.includes('youtube.com/watch?v=')) {
+            const videoId = new URL(url).searchParams.get('v');
+            if (videoId) {
+                return `<div class="my-3 overflow-hidden rounded-lg"><iframe width="100%" height="320" src="https://www.youtube.com/embed/${videoId}" allowfullscreen class="w-full"></iframe></div>`;
+            }
+        }
+        if (url.includes('youtu.be/')) {
+            const videoId = url.split('youtu.be/')[1];
+            if (videoId) {
+                return `<div class="my-3 overflow-hidden rounded-lg"><iframe width="100%" height="320" src="https://www.youtube.com/embed/${videoId}" allowfullscreen class="w-full"></iframe></div>`;
+            }
+        }
+        if (url.includes('vimeo.com/')) {
+            const videoId = url.split('vimeo.com/')[1];
+            if (videoId) {
+                return `<div class="my-3 overflow-hidden rounded-lg"><iframe src="https://player.vimeo.com/video/${videoId}" width="100%" height="320" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe></div>`;
+            }
+        }
+        return `<video controls class="w-full rounded-lg my-3"><source src="${url}"></video>`;
+    };
+
+    const handleInlineVideoEmbed = () => {
+        const url = window.prompt('Paste video URL (YouTube, Vimeo, or direct link)');
+        if (!url) return;
+        insertHtmlIntoEditor(getVideoEmbedMarkup(url));
+    };
+
+    const stripHtml = (html) => (html || '').replace(/<[^>]+>/g, '').trim();
+
+    // Remove unwanted data-* attributes injected by some browsers/editors
+    const cleanHtmlContent = (html) => {
+        if (!html) return '';
+        return html
+            .replace(/\s*data-start="[^"]*"/g, '')
+            .replace(/\s*data-end="[^"]*"/g, '')
+            .trim();
+    };
+
+    useEffect(() => {
+        // Only update innerHTML when switching lessons or clearing (not during typing)
+        if (editorRef.current) {
+            const isClearing = currentLesson.content === '' && editorRef.current.innerHTML !== '';
+            const isSwitching = currentLesson.content && !editorRef.current.innerHTML;
+            
+            if (isClearing || isSwitching) {
+                editorRef.current.innerHTML = currentLesson.content || '';
+            }
+        }
+    }, [currentLesson.title]); // Only run when lesson changes, not on every content update
+
     const addLesson = () => {
-        if (currentLesson.title && (currentLesson.videoUrl || currentLesson.videoFile)) {
+        const hasRichContent = stripHtml(currentLesson.content).length > 0;
+        if (currentLesson.title && (currentLesson.videoUrl || currentLesson.videoFile || hasRichContent)) {
+            const cleanedLesson = {
+                ...currentLesson,
+                content: cleanHtmlContent(currentLesson.content)
+            };
             setCurrentModule({
                 ...currentModule,
-                lessons: [...currentModule.lessons, { ...currentLesson, id: Date.now() }]
+                lessons: [...currentModule.lessons, { ...cleanedLesson, id: Date.now() }]
             });
             setCurrentLesson({
                 title: '',
@@ -142,6 +252,9 @@ export default function CourseUploadPage() {
                 topics: [],
                 questions: []
             });
+            if (editorRef.current) {
+                editorRef.current.innerHTML = '';
+            }
         }
     };
 
@@ -569,17 +682,97 @@ export default function CourseUploadPage() {
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Lesson Content/Description</label>
-                                        <textarea
-                                            value={currentLesson.content}
-                                            onChange={(e) => setCurrentLesson({ ...currentLesson, content: e.target.value })}
-                                            placeholder="Lesson overview and learning objectives..."
-                                            rows={4}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
+                                        <div className="border border-gray-300 rounded-lg">
+                                            <div className="flex flex-wrap gap-2 p-2 border-b bg-gray-50 rounded-t-lg">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => applyEditorCommand('bold')}
+                                                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 rounded"
+                                                >
+                                                    Bold
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => applyEditorCommand('italic')}
+                                                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 rounded"
+                                                >
+                                                    Italic
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => applyEditorCommand('underline')}
+                                                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 rounded"
+                                                >
+                                                    Underline
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => applyEditorCommand('insertUnorderedList')}
+                                                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 rounded"
+                                                >
+                                                    Bullets
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => applyEditorCommand('insertOrderedList')}
+                                                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 rounded"
+                                                >
+                                                    Numbered
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddLink}
+                                                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 rounded"
+                                                >
+                                                    Link
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => imageInputRef.current?.click()}
+                                                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 rounded flex items-center gap-1"
+                                                >
+                                                    <Icons.Image className="w-4 h-4" />
+                                                    Image
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleInlineVideoEmbed}
+                                                    className="px-2 py-1 text-sm text-gray-700 hover:bg-gray-200 rounded flex items-center gap-1"
+                                                >
+                                                    <Icons.Video className="w-4 h-4" />
+                                                    Video
+                                                </button>
+                                            </div>
+                                            <div
+                                                ref={editorRef}
+                                                contentEditable
+                                                className="min-h-[160px] w-full px-3 py-2 focus:outline-none"
+                                                data-placeholder="Lesson overview, learning objectives, and inline media..."
+                                                onInput={syncEditorContent}
+                                                suppressContentEditableWarning
+                                            />
+                                        </div>
+                                        <input
+                                            type="file"
+                                            ref={imageInputRef}
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={handleInlineImageUpload}
                                         />
+                                        <p className="text-xs text-gray-500 mt-2">
+                                            Format text, add links, and drop inline images or embedded videos directly inside your lesson content.
+                                        </p>
+                                        <style jsx>{`
+                                            [contenteditable][data-placeholder]:empty:before {
+                                                content: attr(data-placeholder);
+                                                color: #9ca3af;
+                                                pointer-events: none;
+                                            }
+                                        `}</style>
                                     </div>
                                     <button
                                         onClick={addLesson}
-                                        disabled={!currentLesson.title || (!currentLesson.videoUrl && !currentLesson.videoFile)}
+                                        disabled={!currentLesson.title || (!currentLesson.videoUrl && !currentLesson.videoFile && !stripHtml(currentLesson.content).length)}
                                         className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                                     >
                                         <Icons.Plus className="w-4 h-4" />

@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { Menu, X, Search, User, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen, ChevronDown } from 'lucide-react';
 import authService from '@/lib/api/authService';
-import { getStudentProgress, getLastAccessedLesson } from '@/data/courses/courses';
+import courseService from '@/lib/api/courseService';
 
 const Navbar = () => {
     const router = useRouter();
@@ -56,10 +56,15 @@ const Navbar = () => {
                 setIsLoggedIn(true);
                 setUserRole(user.role);
 
-                // Load student-specific data
+                // Load student-specific data from API
                 if (user.role === 'student') {
-                    const data = getStudentProgress();
-                    setStudentData(data);
+                    try {
+                        const enrollments = await courseService.getStudentEnrollments();
+                        setStudentData(enrollments);
+                    } catch (error) {
+                        console.error('Error fetching enrollments:', error);
+                        setStudentData([]);
+                    }
                 }
             } else if (isDashboard) {
                 // User is on dashboard but not logged in - redirect
@@ -117,14 +122,19 @@ const Navbar = () => {
         { name: 'Contact', href: '#contact' }
     ];
 
-    const handleLoginSuccess = (user) => {
+    const handleLoginSuccess = async (user) => {
         setCurrentUser(user);
         setIsLoggedIn(true);
         setUserRole(user.role);
 
         if (user.role === 'student') {
-            const data = getStudentProgress();
-            setStudentData(data);
+            try {
+                const enrollments = await courseService.getStudentEnrollments();
+                setStudentData(enrollments);
+            } catch (error) {
+                console.error('Error fetching enrollments:', error);
+                setStudentData([]);
+            }
         }
     };
 
@@ -138,14 +148,17 @@ const Navbar = () => {
     };
 
     const handleContinueLearning = () => {
-        if (studentData && studentData.enrolledCourses.length > 0) {
-            const firstCourse = studentData.enrolledCourses.find(ec => ec.status === 'in_progress');
-            if (firstCourse) {
-                const lastLesson = getLastAccessedLesson(firstCourse.courseId);
-                router.push(`/courses/${firstCourse.courseId}/learn/${lastLesson.moduleId}/${lastLesson.lessonId}`);
-            } else {
-                router.push('/courses');
-            }
+        // studentData is now an array of enrollments from the backend
+        if (studentData && Array.isArray(studentData) && studentData.length > 0) {
+            // Get the first enrollment (most recently accessed due to sorting by lastAccessedAt)
+            const firstEnrollment = studentData[0];
+
+            // Use the lastAccessedModule and lastAccessedLesson from the enrollment
+            const courseId = firstEnrollment.courseId._id || firstEnrollment.courseId;
+            const moduleIndex = firstEnrollment.lastAccessedModule || 0;
+            const lessonIndex = firstEnrollment.lastAccessedLesson || 0;
+
+            router.push(`/courses/${courseId}/learn/${moduleIndex}/${lessonIndex}`);
         } else {
             router.push('/courses');
         }

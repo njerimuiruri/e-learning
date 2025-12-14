@@ -227,11 +227,11 @@ export default function AdminDashboardPage() {
                                 View Reports
                             </button>
                             <button
-                                onClick={() => router.push('/admin/settings')}
-                                className="bg-white hover:bg-blue-50 text-gray-700 px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 border border-gray-200 hover:border-blue-300"
+                                onClick={() => router.push('/admin/reminders')}
+                                className="bg-white hover:bg-green-50 text-gray-700 px-4 py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 border border-gray-200 hover:border-green-300"
                             >
-                                <Icons.Settings className="w-4 h-4 text-blue-600" />
-                                System Settings
+                                <Icons.Mail className="w-4 h-4 text-green-600" />
+                                Send Reminders
                             </button>
                         </div>
                     </div>

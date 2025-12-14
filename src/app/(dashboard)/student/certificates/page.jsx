@@ -27,13 +27,14 @@ export default function CertificatesPage() {
         try {
             setLoading(true);
             setError('');
-            
+
             // Get enrollments with certificates
             const enrollmentData = await courseService.getMyEnrollments();
             const completedWithCerts = enrollmentData.enrollments
                 ?.filter(e => e.isCompleted && e.certificateEarned)
                 .map(e => ({
                     _id: e.certificateId || e._id,
+                    publicId: e.certificatePublicId, // Secure UUID for sharing
                     courseId: e.courseId._id || e.courseId,
                     courseName: e.courseId.title || 'Unknown Course',
                     studentName: `${e.studentId?.firstName || ''} ${e.studentId?.lastName || ''}`.trim() || 'Student',
@@ -44,7 +45,7 @@ export default function CertificatesPage() {
                     isValid: true,
                     enrollmentId: e._id,
                 })) || [];
-            
+
             setCertificates(completedWithCerts);
         } catch (err) {
             setError('Failed to load certificates');
@@ -79,12 +80,37 @@ export default function CertificatesPage() {
 
     const handleDownloadCertificate = async (certificate) => {
         try {
-            if (certificate.certificateUrl) {
-                // Open certificate URL in new tab
-                window.open(certificate.certificateUrl, '_blank');
-            } else {
-                alert('Certificate URL not available');
+            const token = localStorage.getItem('token');
+            const certificateId = certificate._id || certificate.enrollmentId;
+
+            if (!certificateId) {
+                alert('Certificate ID not available');
+                return;
             }
+
+            // Download the certificate PDF
+            const response = await fetch(
+                `http://localhost:5000/api/certificates/${certificateId}/download`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to download certificate');
+            }
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `certificate-${certificate.courseName.replace(/\s+/g, '-')}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
         } catch (err) {
             alert('Failed to download certificate');
             console.error(err);
@@ -92,7 +118,9 @@ export default function CertificatesPage() {
     };
 
     const handleShareCertificate = (certificate, platform) => {
-        const shareUrl = `${window.location.origin}/certificates/${certificate.certificateNumber}`;
+        // Use secure public ID for sharing instead of database ID
+        const publicId = certificate.publicId || certificate._id;
+        const shareUrl = `${window.location.origin}/certificates/${publicId}`;
         const shareText = `I've earned a certificate for ${certificate.courseName}!`;
 
         const shareUrls = {

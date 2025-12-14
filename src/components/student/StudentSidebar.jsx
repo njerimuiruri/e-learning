@@ -150,6 +150,16 @@ export default function StudentSidebar() {
             path: '/student',
         },
         {
+            icon: 'FileText',
+            label: 'My Notes',
+            path: '/student/../notes',
+        },
+        {
+            icon: 'MessageCircle',
+            label: 'Messages',
+            path: '/student/messages',
+        },
+        {
             icon: 'Trophy',
             label: 'Your Achievements',
             path: '/student/achievements',
@@ -158,6 +168,11 @@ export default function StudentSidebar() {
             icon: 'Award',
             label: 'Claim Your Certificates',
             path: '/student/certificates',
+        },
+        {
+            icon: 'Settings',
+            label: 'Account Settings',
+            path: '/student/account-settings',
         },
     ];
 

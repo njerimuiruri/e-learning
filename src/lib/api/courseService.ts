@@ -90,6 +90,16 @@ const courseService = {
     return response.data;
   },
 
+  // Lesson-level progress + resume pointer
+  updateLessonProgress: async (enrollmentId, moduleIndex, lessonIndex, completed = false) => {
+    const response = await api.post(`/courses/enrollment/${enrollmentId}/lesson-progress`, {
+      moduleIndex,
+      lessonIndex,
+      completed,
+    });
+    return response.data;
+  },
+
   getProgress: async (enrollmentId) => {
     const response = await api.get(`/courses/enrollment/${enrollmentId}/progress`);
     return response.data;
@@ -177,6 +187,27 @@ const courseService = {
     const response = await api.get(`/courses/${courseId}/enrollment`);
     return response.data;
   },
+
+  // Get final assessment submissions for a course (instructor)
+  getCourseSubmissions: async (courseId) => {
+    const response = await api.get(`/courses/${courseId}/submissions`);
+    return response.data;
+  },
+
+  // Submit assessment review with essay grades and feedback (instructor)
+  submitAssessmentReview: async (reviewData) => {
+    const response = await api.post('/courses/assessment/review', reviewData);
+    return response.data;
+  },
+
+  // Download certificate
+  downloadCertificate: async (certificateId) => {
+    const response = await api.get(`/certificates/${certificateId}/download`, {
+      responseType: 'blob',
+    });
+    return response.data;
+  },
 };
 
 export default courseService;
+

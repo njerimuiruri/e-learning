@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
     ChevronRight,
@@ -22,6 +22,8 @@ import {
     ChevronDown,
 } from "lucide-react";
 import courseService from "@/lib/api/courseService";
+import { noteService } from "@/lib/api/noteService";
+import messageService from "@/lib/api/messageService";
 import ModuleProgressionGuard from "@/components/ModuleProgressionGuard";
 import FinalAssessmentGuard from "@/components/FinalAssessmentGuard";
 import { canAccessModule, canAccessFinalAssessment } from "@/lib/utils/courseProgressionLogic";
@@ -42,7 +44,9 @@ const CourseLearningPage = () => {
     const [answers, setAnswers] = useState({});
     const [note, setNote] = useState("");
     const [showNoteModal, setShowNoteModal] = useState(false);
-    const [showQuestion, setShowQuestion] = useState(false);
+    const [showMessageModal, setShowMessageModal] = useState(false);
+    const [sendingMessage, setSendingMessage] = useState(false);
+    const [messageError, setMessageError] = useState("");
     const [completedLessons, setCompletedLessons] = useState([]);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [showXPBoost, setShowXPBoost] = useState(false);
@@ -66,6 +70,12 @@ const CourseLearningPage = () => {
                 try {
                     const enrollmentData = await courseService.getEnrollment(courseId);
                     setEnrollment(enrollmentData);
+                    // Seed completed lessons from enrollment.lessonProgress
+                    const lessonProgress = enrollmentData?.lessonProgress || [];
+                    const completed = lessonProgress
+                        .filter((lp) => lp.isCompleted && lp.moduleIndex === Number(moduleParam))
+                        .map((lp) => lp.lessonIndex);
+                    setCompletedLessons(completed);
                 } catch (err) {
                     console.log("Not enrolled in this course yet or error fetching enrollment");
                 }
@@ -79,9 +89,11 @@ const CourseLearningPage = () => {
     }, [courseId, moduleParam, lessonParam]);
 
     const modules = course?.modules || [];
-    const moduleIndex = modules.findIndex(
-        (m, idx) => `${m._id || idx}` === moduleParam || `${idx}` === moduleParam
+    const moduleIndex = useMemo(
+        () => modules.findIndex((m, idx) => `${m._id || idx}` === moduleParam || `${idx}` === moduleParam),
+        [modules, moduleParam]
     );
+
     const activeModule = modules[moduleIndex >= 0 ? moduleIndex : 0];
     const lessons = activeModule
         ? activeModule.lessons && activeModule.lessons.length > 0
@@ -96,38 +108,87 @@ const CourseLearningPage = () => {
                 },
             ]
         : [];
-    const lessonIndex = lessons.findIndex(
-        (l, idx) => `${l._id || idx}` === lessonParam || `${idx}` === lessonParam
+
+    const lessonIndex = useMemo(
+        () => lessons.findIndex((l, idx) => `${l._id || idx}` === lessonParam || `${idx}` === lessonParam),
+        [lessons, lessonParam]
     );
+
     const activeLesson = lessons[lessonIndex >= 0 ? lessonIndex : 0];
 
     useEffect(() => {
         setCurrentPage("lesson");
     }, [lessonParam]);
 
-    // Check module access and show guard if needed
+    // Keep only the active module expanded
     useEffect(() => {
-        if (!enrollment || !course) return;
-
-        // Check if can access this module
-        if (moduleIndex >= 0) {
-            const access = canAccessModule(moduleIndex, enrollment.moduleProgress || []);
-            if (!access.canAccess) {
-                setShowModuleGuard(true);
-            } else {
-                setShowModuleGuard(false);
-            }
+        if (moduleParam) {
+            setExpandedModules([`${moduleParam}`]);
         }
-    }, [enrollment, course, moduleIndex]);
+    }, [moduleParam]);
+
+    // Refresh enrollment when module changes to check if it's now unlocked
+    useEffect(() => {
+        const refreshEnrollmentForModule = async () => {
+            if (!enrollment?._id) return;
+            try {
+                const refreshed = await courseService.getEnrollment(courseId);
+                setEnrollment(refreshed);
+            } catch (err) {
+                console.error("Failed to refresh enrollment on module change", err);
+            }
+        };
+        if (moduleParam && moduleIndex >= 0) {
+            refreshEnrollmentForModule();
+        }
+    }, [moduleParam, courseId, enrollment?._id]);
+
+    // Check module access and show guard if needed
+    // Only show guard after enrollment data is available and checked
+    useEffect(() => {
+        if (!course) return;
+        if (moduleIndex < 0) return;
+        if (!enrollment) return; // Don't check until enrollment is loaded
+
+        // First module always accessible; others require previous module assessment passed
+        const moduleProgress = enrollment?.moduleProgress || [];
+        const previousModuleProgress = moduleProgress.find(mp => mp.moduleIndex === moduleIndex - 1);
+        const canAccessCurrent = moduleIndex === 0 || (previousModuleProgress?.assessmentPassed === true);
+
+        console.log(`Module ${moduleIndex} access check:`, {
+            canAccessCurrent,
+            previousModuleIndex: moduleIndex - 1,
+            previousModuleProgress,
+            previousAssessmentPassed: previousModuleProgress?.assessmentPassed,
+            previousIsCompleted: previousModuleProgress?.isCompleted,
+            allModuleProgress: moduleProgress,
+        });
+
+        setShowModuleGuard(!canAccessCurrent);
+    }, [course, moduleIndex, enrollment]);
+
+    const persistLessonProgress = async ({ moduleIdx, lessonIdx, completed = false }) => {
+        try {
+            if (!enrollment?._id) return;
+            await courseService.updateLessonProgress(enrollment._id, moduleIdx, lessonIdx, completed);
+            // refresh enrollment snapshot to reflect updated lessonProgress/progress
+            const refreshed = await courseService.getEnrollment(courseId);
+            setEnrollment(refreshed);
+        } catch (err) {
+            console.error("Failed to update lesson progress", err);
+        }
+    };
+
+    useEffect(() => {
+        // Record visit to this lesson for resume pointer
+        if (enrollment && moduleIndex >= 0 && lessonIndex >= 0) {
+            persistLessonProgress({ moduleIdx: moduleIndex, lessonIdx: lessonIndex, completed: false });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [enrollment?._id, moduleIndex, lessonIndex]);
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
-                <div className="text-center bg-white p-12 rounded-2xl shadow-xl">
-                    <p className="text-gray-600">Loading course...</p>
-                </div>
-            </div>
-        );
+        return <div className="min-h-screen flex items-center justify-center text-gray-700">Loading course...</div>;
     }
 
     if (!course || !activeModule || !activeLesson) {
@@ -156,7 +217,7 @@ const CourseLearningPage = () => {
         setAnswers({ ...answers, [questionId]: answer });
     };
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (!completedLessons.includes(lessonIndex)) {
             const newCompletedLessons = [...completedLessons, lessonIndex];
             setCompletedLessons(newCompletedLessons);
@@ -164,7 +225,7 @@ const CourseLearningPage = () => {
             const newXP = totalXP + (activeLesson?.xpReward || 50);
             setTotalXP(newXP);
 
-            setShowXPBoost(true);
+            await persistLessonProgress({ moduleIdx: moduleIndex, lessonIdx: lessonIndex, completed: true });
         }
 
         const currentLessonIndex = lessonIndex;
@@ -190,8 +251,9 @@ const CourseLearningPage = () => {
         }
     };
 
-    const handleLessonClick = (clickedLessonId) => {
-        router.push(`/courses/${courseId}/learn/${moduleParam}/${clickedLessonId}`);
+    const handleLessonClick = (clickedLessonId, clickedModuleId) => {
+        const modId = clickedModuleId ?? moduleParam;
+        router.push(`/courses/${courseId}/learn/${modId}/${clickedLessonId}`);
         setCurrentPage("lesson");
     };
 
@@ -204,16 +266,12 @@ const CourseLearningPage = () => {
     };
 
     const toggleModule = (modId) => {
-        setExpandedModules((prev) =>
-            prev.includes(modId)
-                ? prev.filter((id) => id !== modId)
-                : [...prev, modId]
-        );
+        setExpandedModules([modId]);
     };
 
     const calculateProgress = () => {
-        const totalLessons = lessons.length || 1;
-        const completed = completedLessons.filter((id) => id < totalLessons).length;
+        const totalLessons = modules.reduce((sum, m) => sum + (m?.lessons?.length || 0), 0) || 1;
+        const completed = enrollment?.lessonProgress?.filter((lp) => lp.isCompleted)?.length ?? 0;
         return Math.round((completed / totalLessons) * 100);
     };
 
@@ -241,6 +299,40 @@ const CourseLearningPage = () => {
         alert(
             "Certificate download would start here. In production, this would generate a PDF certificate."
         );
+    };
+
+    const instructorId = course?.instructorId?._id || course?.instructorId?.id || course?.instructorId;
+    const instructor = typeof course?.instructorId === 'object' ? course.instructorId : null;
+
+    const handleSendInstructorMessage = async (content) => {
+        if (!content?.trim()) {
+            setMessageError("Message cannot be empty");
+            return;
+        }
+        if (!instructorId) {
+            setMessageError("Instructor information not available");
+            return;
+        }
+
+        setMessageError("");
+        setSendingMessage(true);
+        try {
+            const result = await messageService.sendMessage({
+                receiverId: instructorId,
+                content,
+                courseId,
+                moduleIndex,
+            });
+            console.log("Message sent successfully:", result);
+            setShowMessageModal(false);
+            alert("Message sent successfully!");
+        } catch (err) {
+            const msg = err?.response?.data?.message || err?.message || "Failed to send message";
+            console.error("Error sending message:", err);
+            setMessageError(msg);
+        } finally {
+            setSendingMessage(false);
+        }
     };
 
     return (
@@ -363,9 +455,16 @@ const CourseLearningPage = () => {
                                 Add Note
                             </button>
                             <button
-                                onClick={() => setShowQuestion(true)}
+                                onClick={() => {
+                                    if (instructor && instructorId) {
+                                        setShowMessageModal(true);
+                                    } else {
+                                        alert("Instructor information not available. Please refresh the page.");
+                                    }
+                                }}
                                 className="p-2 hover:bg-gray-100 rounded-lg transition"
-                                title="Ask Instructor"
+                                title="Message Instructor"
+                                disabled={!instructor || !instructorId}
                             >
                                 <MessageCircle className="w-5 h-5 text-gray-600" />
                             </button>
@@ -468,86 +567,118 @@ const CourseLearningPage = () => {
                             </div>
 
                             <div className="space-y-3">
-                                {course.modules.map((m, moduleIndex) => (
-                                    <div
-                                        key={m.id}
-                                        className="border border-gray-200 rounded-xl overflow-hidden"
-                                    >
-                                        <button
-                                            onClick={() => toggleModule(m.id)}
-                                            className={`w-full flex items-center gap-3 p-4 transition-all ${moduleParam === m.id || moduleIndex === 0
-                                                ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                                                : "hover:bg-gray-50 bg-gray-50"
-                                                }`}
+                                {course.modules.map((m, mIdx) => {
+                                    const modId = `${m._id || mIdx}`;
+                                    const isCurrentModule = modId === `${moduleParam}`;
+                                    const moduleLessons = m.lessons || [];
+                                    const moduleProgress = enrollment?.moduleProgress || [];
+                                    const currentModuleProg = moduleProgress.find(mp => mp.moduleIndex === mIdx);
+                                    const previousModuleProgress = moduleProgress.find(mp => mp.moduleIndex === mIdx - 1);
+                                    const moduleCompleted = currentModuleProg?.assessmentPassed === true;
+                                    const moduleStatus = {
+                                        canAccess: mIdx === 0 || (previousModuleProgress?.assessmentPassed === true),
+                                    };
+
+                                    return (
+                                        <div
+                                            key={modId}
+                                            className="border border-gray-200 rounded-xl overflow-hidden"
                                         >
-                                            <ChevronDown
-                                                className={`w-5 h-5 transition-transform ${expandedModules.includes(m.id)
-                                                    ? "rotate-0"
-                                                    : "-rotate-90"
-                                                    }`}
-                                            />
-                                            <span
-                                                className={`text-sm font-bold ${moduleParam === m.id || moduleIndex === 0 ? "text-white" : "text-gray-900"
+                                            <button
+                                                onClick={() => toggleModule(modId)}
+                                                className={`w-full flex items-center gap-3 p-4 transition-all ${isCurrentModule
+                                                    ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
+                                                    : "hover:bg-gray-50 bg-gray-50"
                                                     }`}
                                             >
-                                                Module {moduleIndex + 1}: {m.title}
-                                            </span>
-                                        </button>
+                                                <ChevronDown
+                                                    className={`w-5 h-5 transition-transform ${expandedModules.includes(modId)
+                                                        ? "rotate-0"
+                                                        : "-rotate-90"
+                                                        }`}
+                                                />
+                                                <span
+                                                    className={`text-sm font-bold ${isCurrentModule ? "text-white" : "text-gray-900"
+                                                        }`}
+                                                >
+                                                    Module {mIdx + 1}: {m.title}
+                                                </span>
+                                                {moduleCompleted && (
+                                                    <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
+                                                        <CheckCircle2 className="w-4 h-4" /> Done
+                                                    </span>
+                                                )}
+                                                {!moduleStatus.canAccess && !isCurrentModule && (
+                                                    <span className="ml-auto text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">Locked</span>
+                                                )}
+                                            </button>
 
-                                        {expandedModules.includes(m.id) && (
-                                            <div className="bg-white space-y-1 p-2 border-t border-gray-200">
-                                                {m.lessons.map((l, idx) => {
-                                                    const isCompleted = completedLessons.includes(l.id);
-                                                    const isCurrent =
-                                                        l.id === lessonParam && m.id === moduleParam;
+                                            {expandedModules.includes(modId) && (
+                                                <div className="bg-white space-y-1 p-2 border-t border-gray-200">
+                                                    {moduleLessons.map((l, lIdx) => {
+                                                        const lessonId = `${l._id || lIdx}`;
+                                                        const isCompleted = (enrollment?.lessonProgress?.some(
+                                                            (lp) => lp.moduleIndex === mIdx && lp.lessonIndex === lIdx && lp.isCompleted,
+                                                        )) || (mIdx === moduleIndex && completedLessons.includes(lIdx));
+                                                        const isCurrent = lessonId === `${lessonParam}` && modId === `${moduleParam}`;
+                                                        const locked = !moduleStatus.canAccess && !isCompleted && !isCurrent;
 
-                                                    return (
-                                                        <button
-                                                            key={l.id}
-                                                            onClick={() => handleModuleClick(m.id, l.id)}
-                                                            className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${isCurrent
-                                                                ? "bg-orange-100 border-l-4 border-orange-500"
-                                                                : isCompleted
-                                                                    ? "hover:bg-green-50 border-l-4 border-green-500"
-                                                                    : "hover:bg-gray-50 border-l-4 border-gray-200"
-                                                                }`}
-                                                        >
-                                                            <div
-                                                                className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isCompleted
-                                                                    ? "bg-green-500 text-white"
-                                                                    : isCurrent
-                                                                        ? "bg-orange-500 text-white"
-                                                                        : "bg-gray-300 text-gray-600"
+                                                        return (
+                                                            <button
+                                                                key={lessonId}
+                                                                onClick={() => !locked && handleLessonClick(lessonId, modId)}
+                                                                className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${isCurrent
+                                                                    ? "bg-orange-50 border-2 border-orange-500"
+                                                                    : isCompleted
+                                                                        ? "hover:bg-green-50 border-l-4 border-green-500"
+                                                                        : locked
+                                                                            ? "opacity-50 cursor-not-allowed border-l-4 border-gray-200"
+                                                                            : "hover:bg-gray-50 border-l-4 border-gray-200"
                                                                     }`}
+                                                                disabled={locked}
                                                             >
-                                                                {isCompleted ? (
-                                                                    <CheckCircle2 className="w-4 h-4" />
-                                                                ) : (
-                                                                    idx + 1
-                                                                )}
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <span
-                                                                    className={`text-xs block truncate font-medium ${isCurrent
-                                                                        ? "text-orange-900 font-bold"
-                                                                        : "text-gray-700"
+                                                                <div
+                                                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isCompleted
+                                                                        ? "bg-green-500 text-white"
+                                                                        : isCurrent
+                                                                            ? "bg-orange-500 text-white"
+                                                                            : locked
+                                                                                ? "bg-gray-200 text-gray-500"
+                                                                                : "bg-gray-300 text-gray-600"
                                                                         }`}
                                                                 >
-                                                                    {l.title}
-                                                                </span>
-                                                            </div>
-                                                            {l.questions?.length > 0 && (
-                                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded flex-shrink-0">
-                                                                    {l.questions.length}Q
-                                                                </span>
-                                                            )}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                                                    {isCompleted ? (
+                                                                        <CheckCircle2 className="w-4 h-4" />
+                                                                    ) : (
+                                                                        lIdx + 1
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <span
+                                                                        className={`text-xs block truncate font-medium ${isCurrent
+                                                                            ? "text-orange-900 font-bold"
+                                                                            : "text-gray-700"
+                                                                            }`}
+                                                                    >
+                                                                        {l.title}
+                                                                    </span>
+                                                                </div>
+                                                                {locked && (
+                                                                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">Locked</span>
+                                                                )}
+                                                                {l.questions?.length > 0 && (
+                                                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded flex-shrink-0">
+                                                                        {l.questions.length}Q
+                                                                    </span>
+                                                                )}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
 
                             {module.assessment && (
@@ -586,15 +717,26 @@ const CourseLearningPage = () => {
                         {currentPage === "assessment" && (
                             <AssessmentSection
                                 module={activeModule}
-                                onComplete={(passed) => {
+                                moduleIndex={moduleIndex}
+                                enrollmentId={enrollment?._id}
+                                onComplete={async (passed) => {
                                     handleModuleComplete(passed);
                                     if (passed) {
-                                        const nextModule = course.modules.find(
-                                            (m, idx) => `${idx}` === `${moduleIndex + 1}`
-                                        );
+                                        // Refresh enrollment to get updated moduleProgress
+                                        try {
+                                            const refreshed = await courseService.getEnrollment(courseId);
+                                            setEnrollment(refreshed);
+                                        } catch (err) {
+                                            console.error("Failed to refresh enrollment", err);
+                                        }
+
+                                        const nextModuleIdx = moduleIndex + 1;
+                                        const nextModule = course.modules[nextModuleIdx];
                                         if (nextModule) {
+                                            const nextModuleId = nextModule._id || nextModuleIdx;
+                                            const firstLessonId = nextModule.lessons?.[0]?._id || 0;
                                             router.push(
-                                                `/courses/${courseId}/learn/${moduleIndex + 1}/0`
+                                                `/courses/${courseId}/learn/${nextModuleId}/${firstLessonId}`
                                             );
                                         } else {
                                             router.push(`/courses/${courseId}/final-assessment`);
@@ -641,15 +783,36 @@ const CourseLearningPage = () => {
                     note={note}
                     setNote={setNote}
                     onClose={() => setShowNoteModal(false)}
-                    onSave={(newNote) => setNotes([...notes, newNote])}
+                    onSave={async (noteData) => {
+                        try {
+                            const savedNote = await noteService.createNote(noteData);
+                            setNotes([...notes, {
+                                _id: savedNote._id,
+                                content: savedNote.content,
+                                lesson: savedNote.lessonName,
+                                timestamp: new Date(savedNote.createdAt).toLocaleString(),
+                            }]);
+                            alert("✓ Note saved successfully!");
+                        } catch (err) {
+                            throw err;
+                        }
+                    }}
                     currentLesson={activeLesson?.title}
+                    courseId={courseId}
+                    courseName={course?.title}
+                    moduleIndex={moduleIndex}
+                    moduleName={activeModule?.title}
+                    lessonIndex={lessonIndex}
                 />
             )}
 
-            {showQuestion && (
-                <AskQuestionModal
-                    onClose={() => setShowQuestion(false)}
-                    instructor={course.instructor}
+            {showMessageModal && instructor && (
+                <MessageInstructorModal
+                    onClose={() => setShowMessageModal(false)}
+                    instructor={instructor}
+                    onSend={handleSendInstructorMessage}
+                    loading={sendingMessage}
+                    error={messageError}
                 />
             )}
         </div>
@@ -896,10 +1059,13 @@ const LessonSection = ({ lesson }) => (
             </div>
 
             {lesson.content && (
-                <div className="mb-8">
-                    <p className="text-gray-700 text-lg leading-relaxed">
-                        {lesson.content}
-                    </p>
+                <div className="mb-8 prose prose-lg max-w-none">
+                    <div
+                        className="lesson-content"
+                        dangerouslySetInnerHTML={{
+                            __html: formatLessonContent(lesson.content),
+                        }}
+                    />
                 </div>
             )}
 
@@ -961,6 +1127,15 @@ const LessonSection = ({ lesson }) => (
         </div>
     </div>
 );
+
+const formatLessonContent = (content) => {
+    if (!content) return "";
+
+    return content
+        .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+        .replace(/\sdata-(start|end)="[^"]*"/g, "")
+        .trim();
+};
 
 const formatLessonNotes = (notes) => {
     if (!notes) return "";
@@ -1100,9 +1275,10 @@ const QuestionsSection = ({ lesson, answers, onAnswer }) => {
     );
 };
 
-const AssessmentSection = ({ module, onComplete }) => {
+const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) => {
     const [assessmentAnswers, setAssessmentAnswers] = useState({});
     const [submitted, setSubmitted] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
     // Guard against missing module or assessment - check both assessment and moduleAssessment
     const assessment = module?.moduleAssessment || module?.assessment;
@@ -1120,45 +1296,52 @@ const AssessmentSection = ({ module, onComplete }) => {
         setAssessmentAnswers({ ...assessmentAnswers, [questionId]: { value: answer, index } });
     };
 
-    const handleSubmit = () => {
-        let correct = 0;
+    const handleSubmit = async () => {
+        if (submitting) return;
+        setSubmitting(true);
 
-        const normalize = (val) => (val === undefined || val === null ? '' : String(val).trim().toLowerCase());
+        try {
+            // Prepare answers array for backend (prefer actual option text/value to avoid index mismatches)
+            const answersArray = assessment.questions.map((q, idx) => {
+                const questionId = q.id || q._id || idx;
+                const selected = assessmentAnswers[questionId];
+                const selectedValue = typeof selected === 'object' && selected !== null ? selected.value : selected;
+                const selectedIndex = typeof selected === 'object' && selected !== null ? selected.index : selected;
 
-        assessment.questions.forEach((q, idx) => {
-            const questionId = q.id || q._id || idx;
-            const selected = assessmentAnswers[questionId];
+                if (selectedValue !== undefined && selectedValue !== null) {
+                    return selectedValue; // send the option text / typed answer
+                }
+                if (selectedIndex !== undefined && selectedIndex !== null) {
+                    return selectedIndex; // fallback to index if no text captured
+                }
+                return null;
+            });
 
-            const selectedValue = typeof selected === 'object' && selected !== null ? selected.value : selected;
-            const selectedIndex = typeof selected === 'object' && selected !== null ? selected.index : selected;
+            // Submit to backend
+            const result = await courseService.submitModuleAssessment(enrollmentId, moduleIndex, answersArray);
 
-            const correctVal = normalize(q.correctAnswer);
-            const selectedValNormalized = normalize(selectedValue);
+            // Allow retry on fail; lock on success
+            setSubmitted(result.passed);
 
-            const matchesByValue = selectedValNormalized === correctVal;
-            const matchesByIndex = String(selectedIndex) === String(q.correctAnswer);
-
-            if (matchesByValue || matchesByIndex) {
-                correct++;
-            }
-        });
-        const score = Math.round(
-            (correct / assessment.questions.length) * 100
-        );
-        const passed = score >= (assessment.passingScore || 70);
-
-        setSubmitted(true);
-
-        setTimeout(() => {
-            if (passed) {
-                alert(`🎉 Congratulations! You passed with ${score}%`);
+            if (result.passed) {
+                alert(`🎉 Congratulations! You passed with ${result.score}%`);
             } else {
-                alert(
-                    `You scored ${score}%. You need ${assessment.passingScore}% to pass. Please review and try again.`
-                );
+                const attemptsRemaining = result.attemptsRemaining || 0;
+                if (result.mustRestartCourse) {
+                    alert(`You scored ${result.score}%. You've used all 3 attempts. Please restart the course.`);
+                } else {
+                    alert(`You scored ${result.score}%. You need ${result.passingScore}% to pass. You have ${attemptsRemaining} attempt(s) remaining.`);
+                }
             }
-            onComplete(passed);
-        }, 500);
+
+            onComplete(result.passed);
+        } catch (error) {
+            console.error("Error submitting assessment:", error);
+            alert("Failed to submit assessment. Please try again.");
+        } finally {
+            // Re-enable button if not passed; keep disabled when passed
+            setSubmitting(false);
+        }
     };
 
     return (
@@ -1296,10 +1479,15 @@ const AssessmentSection = ({ module, onComplete }) => {
 
             <button
                 onClick={handleSubmit}
-                disabled={submitted}
+                disabled={submitted || submitting}
                 className="w-full mt-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-5 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             >
-                {submitted ? (
+                {submitting ? (
+                    <>
+                        <Clock className="w-6 h-6 animate-spin" />
+                        Submitting...
+                    </>
+                ) : submitted ? (
                     <>
                         <CheckCircle2 className="w-6 h-6" />
                         Submitted
@@ -1315,16 +1503,29 @@ const AssessmentSection = ({ module, onComplete }) => {
     );
 };
 
-const NoteModal = ({ note, setNote, onClose, onSave, currentLesson }) => {
-    const handleSave = () => {
-        if (note.trim()) {
-            onSave({
+const NoteModal = ({ note, setNote, onClose, onSave, currentLesson, courseId, courseName, moduleIndex, moduleName, lessonIndex }) => {
+    const [saving, setSaving] = useState(false);
+
+    const handleSave = async () => {
+        if (!note.trim()) return;
+
+        setSaving(true);
+        try {
+            await onSave({
+                courseId,
+                courseName,
+                lessonName: currentLesson,
                 content: note,
-                lesson: currentLesson,
-                timestamp: new Date().toLocaleString(),
+                moduleIndex,
+                moduleName,
+                lessonIndex,
             });
             setNote("");
             onClose();
+        } catch (error) {
+            alert("Failed to save note: " + error.message);
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -1343,9 +1544,13 @@ const NoteModal = ({ note, setNote, onClose, onSave, currentLesson }) => {
                         <X className="w-6 h-6" />
                     </button>
                 </div>
-                <div className="mb-4">
-                    <label className="text-sm text-gray-600 mb-2 block">
-                        Current Lesson:{" "}
+                <div className="mb-4 space-y-2">
+                    <label className="text-sm text-gray-600 block">
+                        Course:{" "}
+                        <span className="font-semibold text-gray-900">{courseName}</span>
+                    </label>
+                    <label className="text-sm text-gray-600 block">
+                        Lesson:{" "}
                         <span className="font-semibold text-gray-900">{currentLesson}</span>
                     </label>
                 </div>
@@ -1360,16 +1565,17 @@ const NoteModal = ({ note, setNote, onClose, onSave, currentLesson }) => {
                 <div className="flex gap-4">
                     <button
                         onClick={onClose}
-                        className="flex-1 py-3 px-4 border-2 border-gray-300 rounded-xl hover:bg-gray-50 font-semibold transition"
+                        disabled={saving}
+                        className="flex-1 py-3 px-4 border-2 border-gray-300 rounded-xl hover:bg-gray-50 font-semibold transition disabled:opacity-50"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleSave}
-                        disabled={!note.trim()}
+                        disabled={!note.trim() || saving}
                         className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 font-semibold transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Save Note
+                        {saving ? "Saving..." : "Save Note"}
                     </button>
                 </div>
             </div>
@@ -1377,15 +1583,21 @@ const NoteModal = ({ note, setNote, onClose, onSave, currentLesson }) => {
     );
 };
 
-const AskQuestionModal = ({ onClose, instructor }) => {
-    const [question, setQuestion] = useState("");
+const MessageInstructorModal = ({ onClose, instructor, onSend, loading, error }) => {
+    const [message, setMessage] = useState("");
+    const instructorName = instructor?.name || instructor?.firstName || "Instructor";
 
-    const handleSend = () => {
-        if (question.trim()) {
-            alert(
-                `✉️ Your question has been sent to ${instructor.name}. You'll receive a response within 24 hours.`
-            );
-            onClose();
+    const handleSend = async () => {
+        if (!message.trim()) {
+            alert("Please type a message");
+            return;
+        }
+        try {
+            await onSend(message);
+            setMessage("");
+        } catch (err) {
+            console.error("Failed to send message:", err);
+            // Error will be displayed by parent via error prop
         }
     };
 
@@ -1396,10 +1608,10 @@ const AskQuestionModal = ({ onClose, instructor }) => {
                     <div>
                         <h3 className="font-black text-gray-900 text-2xl flex items-center gap-2">
                             <MessageCircle className="w-6 h-6 text-orange-500" />
-                            Ask {instructor.name}
+                            Message {instructorName}
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">
-                            Response within 24 hours
+                            Send a message to your instructor
                         </p>
                     </div>
                     <button
@@ -1409,25 +1621,33 @@ const AskQuestionModal = ({ onClose, instructor }) => {
                         <X className="w-6 h-6" />
                     </button>
                 </div>
+                {error && (
+                    <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <p className="text-sm text-red-700">{error}</p>
+                    </div>
+                )}
                 <textarea
-                    placeholder="Type your question..."
-                    value={question}
-                    onChange={(e) => setQuestion(e.target.value)}
+                    placeholder="Type your message..."
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
                     className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 mb-6"
                     rows="6"
+                    disabled={loading}
                 />
                 <div className="flex gap-4">
                     <button
                         onClick={onClose}
-                        className="flex-1 py-3 px-4 border-2 border-gray-300 rounded-xl hover:bg-gray-50 font-semibold transition"
+                        disabled={loading}
+                        className="flex-1 py-3 px-4 border-2 border-gray-300 rounded-xl hover:bg-gray-50 font-semibold transition disabled:opacity-50"
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleSend}
-                        className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 font-semibold transition shadow-lg"
+                        disabled={loading || !message.trim()}
+                        className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 font-semibold transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        Send Question
+                        {loading ? "Sending..." : "Send Message"}
                     </button>
                 </div>
             </div>

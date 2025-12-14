@@ -400,7 +400,10 @@ export default function InstructorCourseViewPage() {
                                                 {/* Module Description */}
                                                 {module.description && (
                                                     <div className="bg-blue-50 rounded-lg p-3">
-                                                        <p className="text-sm text-gray-700">{module.description}</p>
+                                                        <div 
+                                                            className="text-sm text-gray-700 prose prose-sm max-w-none"
+                                                            dangerouslySetInnerHTML={{ __html: module.description }}
+                                                        />
                                                     </div>
                                                 )}
 
@@ -457,7 +460,10 @@ export default function InstructorCourseViewPage() {
                                                                                 {lesson.content && (
                                                                                     <div className="bg-white rounded p-3">
                                                                                         <p className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wide">Content</p>
-                                                                                        <p className="text-sm text-gray-700 leading-relaxed">{lesson.content}</p>
+                                                                                        <div 
+                                                                                            className="text-sm text-gray-700 leading-relaxed prose prose-sm max-w-none"
+                                                                                            dangerouslySetInnerHTML={{ __html: lesson.content }}
+                                                                                        />
                                                                                     </div>
                                                                                 )}
                                                                                 {lesson.videoUrl && (

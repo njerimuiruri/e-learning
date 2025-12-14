@@ -38,6 +38,40 @@ const CourseDetailPage = () => {
     const computeResumeDestination = (courseData, enrollmentData) => {
         if (!courseData?.modules?.length) return null;
         const modules = courseData.modules;
+
+        // Prefer explicit last-accessed pointers
+        const hasLast = typeof enrollmentData?.lastAccessedModule === 'number' && typeof enrollmentData?.lastAccessedLesson === 'number';
+        if (hasLast) {
+            const mIdx = enrollmentData.lastAccessedModule;
+            const lIdx = enrollmentData.lastAccessedLesson;
+            const targetModule = modules[mIdx] || modules[0];
+            const targetLesson = targetModule?.lessons?.[lIdx] || targetModule?.lessons?.[0];
+            return {
+                moduleId: targetModule?._id || `${mIdx}`,
+                lessonId: targetLesson?._id || `${lIdx}`,
+            };
+        }
+
+        // Next best: most recently completed lesson
+        const lessonProgress = enrollmentData?.lessonProgress || [];
+        if (lessonProgress.length > 0) {
+            const sorted = [...lessonProgress].sort((a, b) => {
+                const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+                const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+                return bTime - aTime;
+            });
+            const latest = sorted[0];
+            const mIdx = latest?.moduleIndex ?? 0;
+            const lIdx = latest?.lessonIndex ?? 0;
+            const targetModule = modules[mIdx] || modules[0];
+            const targetLesson = targetModule?.lessons?.[lIdx] || targetModule?.lessons?.[0];
+            return {
+                moduleId: targetModule?._id || `${mIdx}`,
+                lessonId: targetLesson?._id || `${lIdx}`,
+            };
+        }
+
+        // Fallback to first incomplete module logic
         const moduleProgress = enrollmentData?.moduleProgress || [];
         const firstIncomplete = moduleProgress.find((mp) => !mp.assessmentPassed);
         const allCompleted = moduleProgress.length > 0 && moduleProgress.every((mp) => mp.assessmentPassed);

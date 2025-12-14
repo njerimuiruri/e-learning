@@ -9,6 +9,7 @@ export default function InstructorSidebar() {
     const pathname = usePathname();
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [instructorUser, setInstructorUser] = useState(null);
+    const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
     useEffect(() => {
         // Load instructor user details from localStorage
@@ -20,6 +21,41 @@ export default function InstructorSidebar() {
                 console.error('Error parsing user data:', error);
             }
         }
+    }, []);
+
+    useEffect(() => {
+        // Fetch unread messages count
+        const fetchUnreadCount = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) return;
+
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                const response = await fetch(`${API_URL}/api/messages/unread-count`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    const count = data?.data?.count ?? data?.count ?? 0;
+                    setUnreadMessagesCount(count);
+                }
+            } catch (error) {
+                // Silently fail - don't show error to user for polling
+                console.error('Error fetching unread messages:', error.message);
+            }
+        };
+
+        fetchUnreadCount();
+        
+        // Poll every 30 seconds
+        const interval = setInterval(fetchUnreadCount, 30000);
+        
+        return () => clearInterval(interval);
     }, []);
 
     const handleLogout = () => {
@@ -80,15 +116,20 @@ export default function InstructorSidebar() {
             path: '/instructor/assessments',
         },
         {
+            icon: 'FileCheck',
+            label: 'Review Submissions',
+            path: '/instructor/submissions',
+        },
+        {
             icon: 'Users',
             label: 'Student Responses',
             path: '/instructor/students',
         },
         {
-            icon: 'MessageSquare',
-            label: 'Discussions',
-            path: '/instructor/discussions',
-            badge: 5,
+            icon: 'MessageCircle',
+            label: 'Messages',
+            path: '/instructor/messages',
+            badge: unreadMessagesCount,
         },
         {
             icon: 'BarChart3',

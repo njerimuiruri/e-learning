@@ -13,6 +13,7 @@ const CoursesPage = () => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [enrollmentsMap, setEnrollmentsMap] = useState({});
 
     useEffect(() => {
         let mounted = true;
@@ -36,6 +37,33 @@ const CoursesPage = () => {
         };
     }, []);
 
+    // Fetch current user's enrollments to decide between Continue vs Enroll
+    useEffect(() => {
+        let mounted = true;
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+        if (!token) return;
+
+        const fetchEnrollments = async () => {
+            try {
+                const data = await courseService.getStudentEnrollments();
+                if (!mounted) return;
+                const map = {};
+                (data || []).forEach((en) => {
+                    const id = en.courseId?._id || en.courseId;
+                    if (id) map[id] = en;
+                });
+                setEnrollmentsMap(map);
+            } catch (err) {
+                console.log('Unable to load enrollments for continue CTA', err);
+            }
+        };
+
+        fetchEnrollments();
+        return () => {
+            mounted = false;
+        };
+    }, []);
+
     const categories = useMemo(() => {
         const unique = new Set(courses.map((c) => c.category).filter(Boolean));
         return ['All', ...Array.from(unique)];
@@ -49,6 +77,62 @@ const CoursesPage = () => {
     // Navigate to course detail page by ID
     const handleEnrollClick = (course) => {
         router.push(`/courses/${course._id}`);
+    };
+
+    const computeResume = (course, enrollment) => {
+        if (!course?.modules?.length || !enrollment) return null;
+        const modules = course.modules;
+
+        const hasLast = typeof enrollment.lastAccessedModule === 'number' && typeof enrollment.lastAccessedLesson === 'number';
+        if (hasLast) {
+            const mIdx = enrollment.lastAccessedModule;
+            const lIdx = enrollment.lastAccessedLesson;
+            const mod = modules[mIdx] || modules[0];
+            const lesson = mod?.lessons?.[lIdx] || mod?.lessons?.[0];
+            return {
+                moduleId: mod?._id || `${mIdx}`,
+                lessonId: lesson?._id || `${lIdx}`,
+            };
+        }
+
+        const lessonProgress = enrollment.lessonProgress || [];
+        if (lessonProgress.length > 0) {
+            const sorted = [...lessonProgress].sort((a, b) => {
+                const aTime = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+                const bTime = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+                return bTime - aTime;
+            });
+            const latest = sorted[0];
+            const mIdx = latest?.moduleIndex ?? 0;
+            const lIdx = latest?.lessonIndex ?? 0;
+            const mod = modules[mIdx] || modules[0];
+            const lesson = mod?.lessons?.[lIdx] || mod?.lessons?.[0];
+            return {
+                moduleId: mod?._id || `${mIdx}`,
+                lessonId: lesson?._id || `${lIdx}`,
+            };
+        }
+
+        const mod = modules[0];
+        const lesson = mod?.lessons?.[0];
+        return {
+            moduleId: mod?._id || '0',
+            lessonId: lesson?._id || '0',
+        };
+    };
+
+    const handlePrimaryClick = (course) => {
+        const enrollment = enrollmentsMap[course._id];
+        if (enrollment) {
+            const dest = computeResume(course, enrollment);
+            if (dest) {
+                router.push(`/courses/${course._id}/learn/${dest.moduleId}/${dest.lessonId}`);
+            } else {
+                router.push(`/courses/${course._id}`);
+            }
+            return;
+        }
+        handleEnrollClick(course);
     };
 
     return (
@@ -147,10 +231,10 @@ const CoursesPage = () => {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => handleEnrollClick(course)}
+                                                onClick={() => handlePrimaryClick(course)}
                                                 className="w-full bg-[#f65e14] hover:bg-[#e54d03] text-white py-3.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg mt-4"
                                             >
-                                                Enroll And Begin
+                                                {enrollmentsMap[course._id] ? 'Continue Learning' : 'Enroll And Begin'}
                                                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                             </button>
                                         </div>

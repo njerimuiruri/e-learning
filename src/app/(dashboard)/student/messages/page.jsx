@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
+import messageService from '@/lib/api/messageService';
 
 export default function StudentMessagesPage() {
     const router = useRouter();
@@ -20,8 +21,8 @@ export default function StudentMessagesPage() {
     }, []);
 
     useEffect(() => {
-        if (selectedConversation) {
-            fetchMessages(selectedConversation.user._id);
+        if (selectedConversation?.instructorIdValue) {
+            fetchMessages(selectedConversation.instructorIdValue);
         }
     }, [selectedConversation]);
 
@@ -33,20 +34,32 @@ export default function StudentMessagesPage() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    const getIdValue = (val) => {
+        if (!val) return '';
+        if (typeof val === 'string') return val;
+        if (typeof val === 'object') {
+            if (val._id) return val._id.toString();
+            if (val.id) return val.id.toString();
+            if (val.toString) return val.toString();
+        }
+        return '';
+    };
+
     const fetchConversations = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/messages/conversations', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const data = await messageService.getConversations();
+            const raw = Array.isArray(data) ? data : data?.conversations || [];
+            const normalized = raw.map((conv) => {
+                const instructor = conv.instructorId || conv.user || {};
+                const instructorIdValue = getIdValue(instructor) || getIdValue(conv.instructorId) || getIdValue(conv.user);
+                return {
+                    ...conv,
+                    instructorId: instructor,
+                    instructorIdValue,
+                };
             });
-
-            if (!response.ok) throw new Error('Failed to fetch conversations');
-
-            const data = await response.json();
-            setConversations(data.data || []);
+            setConversations(normalized);
         } catch (err) {
             console.error('Error fetching conversations:', err);
         } finally {
@@ -56,25 +69,11 @@ export default function StudentMessagesPage() {
 
     const fetchMessages = async (userId) => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/messages/conversation/${userId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) throw new Error('Failed to fetch messages');
-
-            const data = await response.json();
-            setMessages(data.data || []);
+            const data = await messageService.getConversation(userId, 100);
+            setMessages(Array.isArray(data) ? data : data?.messages || []);
 
             // Mark conversation as read
-            await fetch(`http://localhost:5000/api/messages/conversation/${userId}/read`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            await messageService.markConversationAsRead(userId);
 
             // Update conversation list
             fetchConversations();
@@ -89,25 +88,13 @@ export default function StudentMessagesPage() {
 
         try {
             setSending(true);
-            const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/messages', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    receiverId: selectedConversation.user._id,
-                    content: newMessage
-                })
+            const instructorId = selectedConversation.instructorIdValue;
+            await messageService.sendMessage({
+                receiverId: instructorId,
+                content: newMessage
             });
-
-            if (!response.ok) throw new Error('Failed to send message');
-
-            const data = await response.json();
-            setMessages([...messages, data.data]);
             setNewMessage('');
-            fetchConversations();
+            await fetchMessages(instructorId);
         } catch (err) {
             console.error('Error sending message:', err);
             alert('Failed to send message');
@@ -116,10 +103,12 @@ export default function StudentMessagesPage() {
         }
     };
 
-    const filteredConversations = conversations.filter(conv =>
-        `${conv.user?.firstName} ${conv.user?.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        conv.lastMessage?.content.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredConversations = conversations.filter(conv => {
+        const instructor = conv.instructorId || {};
+        const instructorName = `${instructor.firstName || ''} ${instructor.lastName || ''}`.toLowerCase();
+        const lastContent = conv.lastMessage?.content?.toLowerCase() || '';
+        return instructorName.includes(searchQuery.toLowerCase()) || lastContent.includes(searchQuery.toLowerCase());
+    });
 
     const formatTime = (date) => {
         const d = new Date(date);
@@ -162,40 +151,44 @@ export default function StudentMessagesPage() {
                         ) : filteredConversations.length === 0 ? (
                             <div className="p-4 text-center text-gray-500">No conversations yet</div>
                         ) : (
-                            filteredConversations.map((conv) => (
-                                <div
-                                    key={conv.user._id}
-                                    onClick={() => setSelectedConversation(conv)}
-                                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${selectedConversation?.user._id === conv.user._id ? 'bg-blue-50' : ''
+                            filteredConversations.map((conv) => {
+                                const instructorId = conv.instructorIdValue;
+                                return (
+                                    <div
+                                        key={instructorId}
+                                        onClick={() => setSelectedConversation(conv)}
+                                        className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
+                                            selectedConversation?.instructorIdValue === instructorId ? 'bg-blue-50' : ''
                                         }`}
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                                            {conv.user?.firstName?.[0]}{conv.user?.lastName?.[0]}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <h3 className="font-semibold text-gray-900 truncate">
-                                                    {conv.user?.firstName} {conv.user?.lastName}
-                                                </h3>
-                                                <span className="text-xs text-gray-500">
-                                                    {formatTime(conv.lastMessage?.createdAt)}
-                                                </span>
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                                                {conv.instructorId?.firstName?.[0]}{conv.instructorId?.lastName?.[0]}
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-sm text-gray-600 truncate flex-1">
-                                                    {conv.lastMessage?.content}
-                                                </p>
-                                                {conv.unreadCount > 0 && (
-                                                    <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                                        {conv.unreadCount}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <h3 className="font-semibold text-gray-900 truncate">
+                                                        {conv.instructorId?.firstName} {conv.instructorId?.lastName}
+                                                    </h3>
+                                                    <span className="text-xs text-gray-500">
+                                                        {formatTime(conv.lastMessage?.createdAt)}
                                                     </span>
-                                                )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm text-gray-600 truncate flex-1">
+                                                        {conv.lastMessage?.content}
+                                                    </p>
+                                                    {conv.unreadCount > 0 && (
+                                                        <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                                            {conv.unreadCount}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>
@@ -208,13 +201,13 @@ export default function StudentMessagesPage() {
                             <div className="p-4 border-b border-gray-200 bg-white">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                                        {selectedConversation.user?.firstName?.[0]}{selectedConversation.user?.lastName?.[0]}
+                                        {selectedConversation.instructorId?.firstName?.[0]}{selectedConversation.instructorId?.lastName?.[0]}
                                     </div>
                                     <div>
                                         <h2 className="font-semibold text-gray-900">
-                                            {selectedConversation.user?.firstName} {selectedConversation.user?.lastName}
+                                            {selectedConversation.instructorId?.firstName} {selectedConversation.instructorId?.lastName}
                                         </h2>
-                                        <p className="text-sm text-gray-600 capitalize">{selectedConversation.user?.role}</p>
+                                        <p className="text-sm text-gray-600 capitalize">Instructor</p>
                                     </div>
                                 </div>
                             </div>
@@ -222,7 +215,9 @@ export default function StudentMessagesPage() {
                             {/* Messages */}
                             <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
                                 {messages.map((message) => {
-                                    const isOwn = message.senderId._id === localStorage.getItem('userId');
+                                    const currentUserId = localStorage.getItem('userId');
+                                    const senderIdValue = typeof message.senderId === 'string' ? message.senderId : message.senderId?._id;
+                                    const isOwn = senderIdValue === currentUserId;
                                     return (
                                         <div key={message._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                                             <div className={`max-w-md ${isOwn ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'} rounded-lg px-4 py-2 shadow-sm`}>
