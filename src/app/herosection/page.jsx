@@ -29,16 +29,24 @@ const HeroSection = () => {
                         </div>
 
                         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                            Master Research,
+                            Strengthening Africa's
                             <br />
-                            <span className="text-[#f65e14]">Data Analysis</span>
+                            <span className="text-[#f65e14]">Research, Writing</span>
                             <br />
-                            & Publishing
+                            & Policy Translation
                         </h1>
 
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <span className="font-medium">An ARIN Press Initiative</span>
+                            <span className="text-gray-400">|</span>
+                            <span>In Collaboration with Taylor & Francis</span>
+                        </div>
+
                         <p className="text-lg text-gray-600 leading-relaxed max-w-xl">
-                            Learn how to conduct quality research, analyze data effectively, and write
-                            impactful research papers from expert academics and published researchers.
+                            Recognizing the urgent need to enhance the visibility of African research and 
+                            strengthen scholarly communication, ARIN proposes the establishment of the 
+                            ARIN Publishing Academy—a continental initiative to support both emerging and 
+                            established scholars in producing high-quality academic and policy-relevant outputs.
                         </p>
 
                         {/* Features List */}
@@ -47,25 +55,25 @@ const HeroSection = () => {
                                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <Lightbulb className="w-5 h-5 text-green-600" />
                                 </div>
-                                <span className="text-gray-700 font-medium">Research Methods</span>
+                                <span className="text-gray-700 font-medium">Scholarly Writing</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <BarChart3 className="w-5 h-5 text-blue-600" />
                                 </div>
-                                <span className="text-gray-700 font-medium">Data Analysis</span>
+                                <span className="text-gray-700 font-medium">Publishing Support</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <FileText className="w-5 h-5 text-purple-600" />
                                 </div>
-                                <span className="text-gray-700 font-medium">Academic Writing</span>
+                                <span className="text-gray-700 font-medium">Policy Communication</span>
                             </div>
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <Award className="w-5 h-5 text-orange-600" />
                                 </div>
-                                <span className="text-gray-700 font-medium">Publication Support</span>
+                                <span className="text-gray-700 font-medium">Mentorship & Coaching</span>
                             </div>
                         </div>
 
@@ -83,34 +91,21 @@ const HeroSection = () => {
                                 Join Community
                             </button>
                         </div>
-
-                        {/* Stats */}
-                        {/* <div className="flex flex-wrap gap-8 pt-8 border-t border-gray-200">
-                            <div>
-                                <div className="text-3xl font-bold text-gray-900">50+</div>
-                                <div className="text-sm text-gray-600">Expert Researchers</div>
-                            </div>
-                            <div>
-                                <div className="text-3xl font-bold text-gray-900">500+</div>
-                                <div className="text-sm text-gray-600">Published Papers</div>
-                            </div>
-                            <div>
-                                <div className="text-3xl font-bold text-gray-900">2k+</div>
-                                <div className="text-sm text-gray-600">Active Students</div>
-                            </div>
-                        </div> */}
                     </div>
 
+                    {/* Right Content - Image */}
                     <div className="relative flex justify-center lg:justify-end">
                         <div className="relative h-full">
                             {/* Main Image Container with Thin Black Border */}
                             <div className="relative bg-white p-1 rounded-[3rem] shadow-2xl border-2 border-black w-full lg:w-[550px] h-[600px]">
-                                <div className="rounded-[2.8rem] overflow-hidden h-full">
+                                <div className="rounded-[2.8rem] overflow-hidden h-full relative">
                                     <img
-                                        src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&q=80"
-                                        alt="Students researching and learning"
-                                        className="w-full h-full object-cover"
+                                        src="/image/poster-launch.jpg"
+                                        alt="ARIN Publishing Academy Launch Event"
+                                        className="w-full h-full object-contain bg-gradient-to-br from-slate-50 to-slate-100"
                                     />
+                                    {/* Subtle gradient overlay */}
+                                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-blue-500/5 mix-blend-overlay pointer-events-none"></div>
                                 </div>
                             </div>
 
@@ -130,8 +125,6 @@ const HeroSection = () => {
 
                 </div>
             </div>
-
-
         </div>
     );
 };

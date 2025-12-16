@@ -7,28 +7,28 @@ const WhyChooseUsSection = () => {
 
     const accordionData = [
         {
-            title: 'Master Research From Anywhere, Anytime',
-            content: 'Access expert-led research training flexibly from any device, at your own pace, ensuring learning never stops regardless of your schedule or location.',
+            title: 'Peer Review & Collaborative Learning',
+            content: 'Engage in structured peer review sessions where you critique and improve manuscripts in a supportive environment. Build confidence with editorial standards while enhancing the quality of your scholarly work through collaborative feedback.',
             image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&q=80'
         },
         {
-            title: 'Expert Researchers Guiding Your Journey',
-            content: 'Learn from published academics and experienced researchers who provide personalized mentorship and real-world insights into conducting impactful research.',
+            title: 'Publication Incentives & Recognition',
+            content: 'Benefit from awards, fellowships, and visibility campaigns for successful publications in peer-reviewed journals or policy-relevant outputs. The Academy recognizes and celebrates your scholarly achievements.',
             image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=400&q=80'
         },
         {
-            title: 'Interactive Learning That Drives Results',
-            content: 'Engage with hands-on research projects, data analysis exercises, and collaborative peer reviews that make learning practical and immediately applicable.',
+            title: 'Iterative Feedback Mechanisms',
+            content: 'Receive continuous, constructive feedback throughout your writing process. This iterative approach supports manuscript improvement and enhances readiness for submission to reputable journals.',
             image: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=400&q=80'
         },
         {
-            title: 'Publication Skills For Academic Success',
-            content: 'Develop the critical skills needed to write, review, and publish research papers in reputable journals, advancing your academic career.',
+            title: 'Interdisciplinary Research Collaboration',
+            content: 'Collaborate across disciplines and cohorts, promoting diverse perspectives and fostering innovative, solution-oriented research that addresses complex development challenges facing Africa.',
             image: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=400&q=80'
         },
         {
-            title: 'Affordable Excellence That Inspires Growth',
-            content: 'Access world-class research training at competitive prices, with flexible payment options and scholarships to support your academic ambitions.',
+            title: 'Strategic Partnership with Taylor & Francis',
+            content: 'Access joint publishing initiatives, co-designed training modules, and editorial mentorship pipelines. Benefit from institutional support that promotes inclusive journal access and open publishing practices.',
             image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?w=400&q=80'
         }
     ];
@@ -48,13 +48,15 @@ const WhyChooseUsSection = () => {
                 {/* Section Header */}
                 <div className="text-center lg:text-left mb-12 lg:mb-16">
                     <span className="text-[#f65e14] font-semibold text-sm uppercase tracking-wider">
-                        Why Choose Us
+                        Why Choose the Academy
                     </span>
                     <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mt-4 leading-tight max-w-3xl">
-                        We Make Research Accessible, Flexible, And Truly Impactful
+                        Driving Research Quality Through Targeted Programming
                     </h2>
                     <p className="text-lg text-gray-600 mt-6 leading-relaxed max-w-2xl">
-                        Our platform ensures researchers can learn anywhere, anytime, with expert guidance and interactive resources that make every lesson engaging, practical, and transformative.
+                        The ARIN Publishing Academy embeds targeted mechanisms that improve the quality, 
+                        visibility, and volume of African scholarly outputs through comprehensive support systems 
+                        and strategic partnerships.
                     </p>
                 </div>
 
@@ -67,8 +69,8 @@ const WhyChooseUsSection = () => {
                             {/* Custom Shape Background */}
                             <div className="relative bg-white rounded-[3rem] rounded-tr-[8rem] shadow-2xl overflow-hidden h-[500px] lg:h-[600px]">
                                 <img
-                                    src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800&q=80"
-                                    alt="Research students collaborating"
+                                    src="/image/poster-launch.jpg"
+                                    alt="African researchers collaborating"
                                     className="w-full h-full object-cover"
                                 />
                             </div>
@@ -76,15 +78,15 @@ const WhyChooseUsSection = () => {
                             {/* Orange Floating Card */}
                             <div className="absolute bottom-8 left-8 bg-[#f65e14] rounded-3xl p-6 shadow-2xl max-w-xs transform hover:scale-105 transition-transform duration-300">
                                 <h3 className="text-white text-2xl font-bold mb-2">
-                                    Research Smarter.
+                                    Amplify African
                                     <br />
-                                    Publish Faster.
+                                    Research Voices
                                 </h3>
                                 <p className="text-orange-100 text-sm mb-4">
-                                    Empowering your growth through every research journey.
+                                    A springboard for African researchers to confidently publish impactful work.
                                 </p>
                                 <button className="bg-white text-[#f65e14] px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 flex items-center gap-2 group">
-                                    Start Learning
+                                    Join Academy
                                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </button>
                             </div>
@@ -136,7 +138,7 @@ const WhyChooseUsSection = () => {
                                                     {item.content}
                                                 </p>
                                                 <button className="mt-3 text-[#f65e14] font-semibold hover:underline text-sm">
-                                                    Click here
+                                                    Learn more
                                                 </button>
                                             </div>
                                         </div>

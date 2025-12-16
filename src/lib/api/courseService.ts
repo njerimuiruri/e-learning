@@ -117,8 +117,15 @@ const courseService = {
     return response.data;
   },
 
-  getDiscussions: async (courseId) => {
-    const response = await api.get(`/courses/${courseId}/discussions`);
+  getDiscussions: async (courseId, moduleIndex) => {
+    const response = await api.get(`/courses/${courseId}/discussions`, {
+      params: moduleIndex !== undefined ? { moduleIndex } : {},
+    });
+    return response.data;
+  },
+
+  markDiscussionRead: async (discussionId) => {
+    const response = await api.post(`/courses/discussions/${discussionId}/read`);
     return response.data;
   },
 

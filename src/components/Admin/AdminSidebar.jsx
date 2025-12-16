@@ -88,6 +88,11 @@ export default function AdminSidebar() {
             label: 'Certificates',
             path: '/admin/certificates',
         },
+        {
+            icon: 'Tags',
+            label: 'Categories',
+            path: '/admin/categories',
+        },
         // {
         //     icon: 'MessageSquare',
         //     label: 'Discussions',

@@ -172,10 +172,24 @@ const Navbar = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16 md:h-20">
                         <div className="flex-shrink-0">
-                            <Link href="/" className="flex items-center gap-2">
-                                <img src="/logo.png" alt="Arin Elearning Platform" className="w-10 h-10 rounded-lg object-cover" />
-                                <div className="hidden sm:flex flex-col">
-                                    <span className="font-bold text-xl text-gray-900">Arin Elearning Platform</span>
+                            <Link href="/" className="flex items-center gap-3">
+                                <div className="relative w-14 h-14 flex items-center justify-center bg-white rounded-xl shadow-lg border-2 border-orange-400 p-1">
+                                    <img 
+                                        src="/Arin.png" 
+                                        alt="Logo" 
+                                        className="w-full h-full object-contain" 
+                                    />
+                                </div>
+                                                              <div className="hidden sm:flex flex-col">
+                                    <span className="font-bold text-2xl">
+                                        <span className="text-gray-800">ARIN </span>
+                                        <span className="text-[#f65e14]">E</span>
+                                        <span className="text-gray-800">-</span>
+                                        <span className="text-[#1e40af]">L</span>
+                                        <span className="text-gray-800">earning </span>
+                                        <span className="text-[#16a34a]">P</span>
+                                        <span className="text-gray-800">latform</span>
+                                    </span>
                                 </div>
                             </Link>
                         </div>

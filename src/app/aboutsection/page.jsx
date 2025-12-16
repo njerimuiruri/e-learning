@@ -1,32 +1,32 @@
 "use client";
 import React from 'react';
-import { BookOpen, TrendingUp, Award, Clock } from 'lucide-react';
+import { BookOpen, TrendingUp, Award, Users } from 'lucide-react';
 
 const AboutSection = () => {
     const features = [
         {
             icon: BookOpen,
             color: 'bg-orange-500',
-            title: 'Expert Researchers',
-            description: 'Learn from published academics with proven research expertise'
+            title: 'Scholarly Writing Training',
+            description: 'Structured programs on academic writing, peer-reviewed publishing, and policy-oriented communication'
         },
         {
             icon: TrendingUp,
             color: 'bg-purple-500',
-            title: 'Advanced Methodology',
-            description: 'Master cutting-edge research methods and data analysis techniques'
+            title: 'Editorial Support',
+            description: 'Continuous feedback and editorial mentorship to improve manuscript quality and readiness'
         },
         {
             icon: Award,
             color: 'bg-green-500',
-            title: 'Publication Ready',
-            description: 'Develop skills to write and publish impactful research papers'
+            title: 'Publication Pathways',
+            description: 'Strategic partnership with Taylor & Francis to amplify African voices and promote open-access knowledge'
         },
         {
-            icon: Clock,
+            icon: Users,
             color: 'bg-pink-500',
-            title: 'Self-Paced Learning',
-            description: 'Study and conduct research on your own schedule with complete flexibility'
+            title: 'Mentorship & Coaching',
+            description: 'Connecting early-career researchers with experienced academics, editors, and published scholars'
         }
     ];
 
@@ -39,16 +39,17 @@ const AboutSection = () => {
                     {/* Left - About Badge + Title + Description */}
                     <div className="lg:max-w-2xl">
                         <span className="text-[#f65e14] font-semibold text-sm uppercase tracking-wider">
-                            About Us
+                            About the Academy
                         </span>
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mt-4 leading-tight">
-                            Committed To Excellence
+                            A Continental Platform for
                             <br />
-                            In Research Education
+                            African Research Excellence
                         </h2>
                         <p className="text-lg text-gray-600 mt-6 leading-relaxed">
-                            Our academy is built on academic rigor, innovation, and mentorship, ensuring
-                            researchers everywhere develop skills that truly advance knowledge and drive impact.
+                            Building on ARIN's robust foundation, including its Science-Policy Fellowship Program 
+                            and strategic partnership with Taylor & Francis Group, the Academy aligns with ARIN's 
+                            broader mission of strengthening the science-policy-practice interface.
                         </p>
                     </div>
 
@@ -71,8 +72,8 @@ const AboutSection = () => {
                             <div className="bg-white p-1 rounded-[3rem] shadow-xl border-2 border-black h-[450px] lg:h-[520px]">
                                 <div className="rounded-[2.8rem] overflow-hidden h-full">
                                     <img
-                                        src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=800&q=80"
-                                        alt="Research students collaborating"
+                                        src="/image/poster-launch.jpg"
+                                        alt="African researchers collaborating"
                                         className="w-full h-full object-cover"
                                     />
                                 </div>

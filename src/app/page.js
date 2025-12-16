@@ -5,6 +5,7 @@ import Image from "next/image";
 import AboutSection from "./aboutsection/page";
 import HeroSection from "./herosection/page";
 import WhyChooseUsSection from "./whyus/page";
+import TeamSection from "./teamsection/page";
 import CoursesSection from "./coursessection/page";
 import Navbar from "../components/navbar/navbar";
 import Footer from "../components/Footer/Footer";
@@ -96,6 +97,7 @@ export default function Home() {
       <CoursesSection />
       <AboutSection />
       <WhyChooseUsSection />
+      <TeamSection />
       <Footer />
     </>
   );

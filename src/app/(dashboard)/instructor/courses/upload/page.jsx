@@ -5,11 +5,14 @@ import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import courseService from '@/lib/api/courseService';
 import uploadService from '@/lib/api/uploadService';
+import categoryService from '@/lib/api/categoryService';
 
 export default function CourseUploadPage() {
     const router = useRouter();
     const [currentStep, setCurrentStep] = useState(1);
     const [uploading, setUploading] = useState(false);
+    const [categories, setCategories] = useState([]);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [courseData, setCourseData] = useState({
         title: '',
         description: '',
@@ -79,6 +82,23 @@ export default function CourseUploadPage() {
         explanation: ''
     });
 
+    // Fetch categories on component mount
+    useEffect(() => {
+        const fetchCategories = async () => {
+            try {
+                setCategoriesLoading(true);
+                const data = await categoryService.getAllCategories();
+                setCategories(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error('Failed to load categories:', error);
+                setCategories([]);
+            } finally {
+                setCategoriesLoading(false);
+            }
+        };
+        fetchCategories();
+    }, []);
+
     // Persist the currently edited module assessment into the map for its module index
     const persistCurrentModuleAssessment = () => {
         if (selectedModuleIdx === null) return;
@@ -95,7 +115,6 @@ export default function CourseUploadPage() {
         }));
     };
 
-    const categories = ['Marketing', 'Programming', 'Design', 'Business', 'Data Science', 'Other'];
     const levels = ['Beginner', 'Intermediate', 'Advanced', 'All Levels'];
 
     const handleImageUpload = async (e) => {
@@ -224,7 +243,7 @@ export default function CourseUploadPage() {
         if (editorRef.current) {
             const isClearing = currentLesson.content === '' && editorRef.current.innerHTML !== '';
             const isSwitching = currentLesson.content && !editorRef.current.innerHTML;
-            
+
             if (isClearing || isSwitching) {
                 editorRef.current.innerHTML = currentLesson.content || '';
             }
@@ -461,16 +480,22 @@ export default function CourseUploadPage() {
                                 <div className="grid md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Category *</label>
-                                        <select
-                                            value={courseData.category}
-                                            onChange={(e) => setCourseData({ ...courseData, category: e.target.value })}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                                        >
-                                            <option value="">Select category</option>
-                                            {categories.map(cat => (
-                                                <option key={cat} value={cat}>{cat}</option>
-                                            ))}
-                                        </select>
+                                        {categoriesLoading ? (
+                                            <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                                                Loading categories...
+                                            </div>
+                                        ) : (
+                                            <select
+                                                value={courseData.category}
+                                                onChange={(e) => setCourseData({ ...courseData, category: e.target.value })}
+                                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                            >
+                                                <option value="">Select category</option>
+                                                {categories.map(cat => (
+                                                    <option key={cat._id || cat.name} value={cat.name}>{cat.name}</option>
+                                                ))}
+                                            </select>
+                                        )}
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Level *</label>

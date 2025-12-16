@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Clock, Users, Star, ArrowRight, Layers } from 'lucide-react';
 import courseService from '@/lib/api/courseService';
+import categoryService from '@/lib/api/categoryService';
 
 const placeholderGradient = 'bg-gradient-to-br from-orange-100 via-white to-orange-50';
 
@@ -11,33 +12,45 @@ const CoursesSection = () => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [dynamicCategories, setDynamicCategories] = useState([]);
 
     useEffect(() => {
         let mounted = true;
-        const fetchCourses = async () => {
+        const fetchData = async () => {
             try {
                 setLoading(true);
-                const data = await courseService.getAllCourses({ status: 'published' });
+                // Fetch categories and courses in parallel
+                const [coursesData, categoriesData] = await Promise.all([
+                    courseService.getAllCourses({ status: 'published' }),
+                    categoryService.getAllCategories()
+                ]);
+
                 if (mounted) {
-                    setCourses(Array.isArray(data) ? data : data?.courses || []);
+                    setCourses(Array.isArray(coursesData) ? coursesData : coursesData?.courses || []);
+                    setDynamicCategories(Array.isArray(categoriesData) ? categoriesData : []);
                 }
             } catch (err) {
-                console.error('Failed to load courses', err);
+                console.error('Failed to load data', err);
                 if (mounted) setError('Unable to load courses right now.');
             } finally {
                 if (mounted) setLoading(false);
             }
         };
-        fetchCourses();
+        fetchData();
         return () => {
             mounted = false;
         };
     }, []);
 
     const categories = useMemo(() => {
+        // Use dynamic categories from database, fallback to derived categories from courses
+        if (dynamicCategories.length > 0) {
+            return ['All', ...dynamicCategories.map(cat => cat.name)];
+        }
+
         const unique = new Set(courses.map((c) => c.category).filter(Boolean));
         return ['All', ...Array.from(unique)];
-    }, [courses]);
+    }, [dynamicCategories, courses]);
 
     const filteredCourses = useMemo(() => {
         if (activeCategory === 'All') return courses;
