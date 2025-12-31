@@ -962,7 +962,7 @@ const CertificateModal = ({
                                 </div>
                                 <div className="border-t-2 border-gray-800 pt-2 w-48">
                                     <p className="font-bold text-gray-900">
-                                        {course.instructor.name}
+                                        {course?.instructor?.name || "Instructor"}
                                     </p>
                                     <p className="text-sm text-gray-600">Course Instructor</p>
                                 </div>
