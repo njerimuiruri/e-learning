@@ -13,11 +13,13 @@ import { useEffect } from 'react';
 import courseService from '@/lib/api/courseService';
 import Navbar from '../../../components/navbar/navbar';
 import Footer from '../../../components/Footer/Footer';
+import { useToast } from '@/components/ui/ToastProvider';
 
 const CourseDetailPage = () => {
     const router = useRouter();
     const params = useParams();
     const courseId = params.id;
+    const { showToast } = useToast();
 
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -160,7 +162,7 @@ const CourseDetailPage = () => {
 
             router.push(`/courses/${courseId}/learn/${targetModuleId}/${targetLessonId}`);
         } catch (err) {
-            alert('Enrollment failed. Please try again.');
+            showToast('Enrollment failed. Please try again.', { type: 'error', title: 'Enrollment issue' });
         } finally {
             setEnrolling(false);
         }
@@ -174,7 +176,7 @@ const CourseDetailPage = () => {
             <div className="min-h-screen bg-gradient-to-br from-orange-50 to-blue-50 flex items-center justify-center p-8">
                 <div className="text-center bg-white p-12 rounded-2xl shadow-xl">
                     <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <BookOpen className="w-10 h-10 text-[#f65e14]" />
+                        <BookOpen className="w-10 h-10 text-[#021d49]" />
                     </div>
                     <h1 className="text-4xl font-bold text-gray-900 mb-4">
                         Course Not Found
@@ -184,7 +186,7 @@ const CourseDetailPage = () => {
                     </p>
                     <button
                         onClick={() => router.push("/courses")}
-                        className="bg-[#f65e14] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#e54d03] transition-all duration-300 shadow-lg hover:shadow-xl"
+                        className="bg-[#021d49] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#03275f] transition-all duration-300 shadow-lg hover:shadow-xl"
                     >
                         Browse All Courses
                     </button>
@@ -198,7 +200,7 @@ const CourseDetailPage = () => {
             <Navbar />
             <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-blue-50">
                 {/* Hero Section - Enhanced E-Learning Layout */}
-                <section className="bg-gradient-to-r from-[#f65e14] to-[#ff8243] text-white">
+                <section className="bg-gradient-to-r from-[#021d49] to-[#ff8243] text-white">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                         {/* Breadcrumb */}
                         <div className="flex items-center gap-2 text-sm text-orange-100 mb-8">
@@ -291,7 +293,7 @@ const CourseDetailPage = () => {
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-center justify-center group-hover:from-black/70 transition-all duration-300">
                                             <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-2xl transform group-hover:scale-110 transition-transform">
-                                                <Play className="w-7 h-7 text-[#f65e14] ml-1" />
+                                                <Play className="w-7 h-7 text-[#021d49] ml-1" />
                                             </div>
                                         </div>
                                         <div className="absolute top-4 right-4 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-semibold">
@@ -311,7 +313,7 @@ const CourseDetailPage = () => {
                                     <button
                                         onClick={handleEnrollClick}
                                         disabled={enrolling}
-                                        className={`w-full bg-gradient-to-r from-[#f65e14] to-[#ff8243] hover:from-[#e54d03] hover:to-[#f65e14] text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 mb-4 ${enrolling ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                        className={`w-full bg-gradient-to-r from-[#021d49] to-[#ff8243] hover:from-[#e54d03] hover:to-[#021d49] text-white py-4 rounded-xl font-bold text-lg transition-all duration-300 shadow-lg hover:shadow-2xl transform hover:scale-105 mb-4 ${enrolling ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     >
                                         <span className="flex items-center justify-center gap-2">
                                             <Zap className="w-5 h-5" />
@@ -326,25 +328,25 @@ const CourseDetailPage = () => {
                                         </p>
                                         <div className="space-y-2 text-sm text-gray-700">
                                             <div className="flex items-center gap-2">
-                                                <Video className="w-4 h-4 text-[#f65e14]" />
+                                                <Video className="w-4 h-4 text-[#021d49]" />
                                                 <span>{course.duration} video content</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <BookOpen className="w-4 h-4 text-[#f65e14]" />
+                                                <BookOpen className="w-4 h-4 text-[#021d49]" />
                                                 <span>
                                                     {course.modules?.length || 0} comprehensive modules
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Download className="w-4 h-4 text-[#f65e14]" />
+                                                <Download className="w-4 h-4 text-[#021d49]" />
                                                 <span>Downloadable resources</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Award className="w-4 h-4 text-[#f65e14]" />
+                                                <Award className="w-4 h-4 text-[#021d49]" />
                                                 <span>Certificate of completion</span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Laptop className="w-4 h-4 text-[#f65e14]" />
+                                                <Laptop className="w-4 h-4 text-[#021d49]" />
                                                 <span>Access on mobile and desktop</span>
                                             </div>
                                         </div>
@@ -352,11 +354,11 @@ const CourseDetailPage = () => {
 
                                     {/* Action Buttons */}
                                     <div className="grid grid-cols-2 gap-3">
-                                        <button className="flex items-center justify-center gap-2 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-[#f65e14] hover:text-[#f65e14] transition-all duration-300 font-medium">
+                                        <button className="flex items-center justify-center gap-2 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-[#021d49] hover:text-[#021d49] transition-all duration-300 font-medium">
                                             <Heart className="w-4 h-4" />
                                             <span className="text-sm">Save</span>
                                         </button>
-                                        <button className="flex items-center justify-center gap-2 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-[#f65e14] hover:text-[#f65e14] transition-all duration-300 font-medium">
+                                        <button className="flex items-center justify-center gap-2 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-50 hover:border-[#021d49] hover:text-[#021d49] transition-all duration-300 font-medium">
                                             <Share2 className="w-4 h-4" />
                                             <span className="text-sm">Share</span>
                                         </button>
@@ -374,7 +376,7 @@ const CourseDetailPage = () => {
                             <button
                                 onClick={() => setActiveTab("overview")}
                                 className={`py-4 px-2 font-semibold border-b-2 transition-all whitespace-nowrap ${activeTab === "overview"
-                                    ? "border-[#f65e14] text-[#f65e14]"
+                                    ? "border-[#021d49] text-[#021d49]"
                                     : "border-transparent text-gray-600 hover:text-gray-900"
                                     }`}
                             >
@@ -383,7 +385,7 @@ const CourseDetailPage = () => {
                             <button
                                 onClick={() => setActiveTab("curriculum")}
                                 className={`py-4 px-2 font-semibold border-b-2 transition-all whitespace-nowrap ${activeTab === "curriculum"
-                                    ? "border-[#f65e14] text-[#f65e14]"
+                                    ? "border-[#021d49] text-[#021d49]"
                                     : "border-transparent text-gray-600 hover:text-gray-900"
                                     }`}
                             >
@@ -392,7 +394,7 @@ const CourseDetailPage = () => {
                             <button
                                 onClick={() => setActiveTab("instructor")}
                                 className={`py-4 px-2 font-semibold border-b-2 transition-all whitespace-nowrap ${activeTab === "instructor"
-                                    ? "border-[#f65e14] text-[#f65e14]"
+                                    ? "border-[#021d49] text-[#021d49]"
                                     : "border-transparent text-gray-600 hover:text-gray-900"
                                     }`}
                             >
@@ -401,7 +403,7 @@ const CourseDetailPage = () => {
                             <button
                                 onClick={() => setActiveTab("reviews")}
                                 className={`py-4 px-2 font-semibold border-b-2 transition-all whitespace-nowrap ${activeTab === "reviews"
-                                    ? "border-[#f65e14] text-[#f65e14]"
+                                    ? "border-[#021d49] text-[#021d49]"
                                     : "border-transparent text-gray-600 hover:text-gray-900"
                                     }`}
                             >
@@ -424,7 +426,7 @@ const CourseDetailPage = () => {
                                         <div className="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
                                             <div className="flex items-center gap-3 mb-6">
                                                 <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-                                                    <Target className="w-6 h-6 text-[#f65e14]" />
+                                                    <Target className="w-6 h-6 text-[#021d49]" />
                                                 </div>
                                                 <h2 className="text-2xl font-bold text-gray-900">
                                                     What You'll Learn
@@ -482,7 +484,7 @@ const CourseDetailPage = () => {
                                                     lessons
                                                 </p>
                                             </div>
-                                            <button className="text-[#f65e14] font-semibold text-sm hover:text-[#e54d03] transition-colors">
+                                            <button className="text-[#021d49] font-semibold text-sm hover:text-[#e54d03] transition-colors">
                                                 Expand All
                                             </button>
                                         </div>
@@ -492,7 +494,7 @@ const CourseDetailPage = () => {
                                                 course.modules.map((module, index) => (
                                                     <div
                                                         key={module.id}
-                                                        className="border-2 border-gray-200 rounded-xl overflow-hidden hover:border-[#f65e14] transition-all duration-300"
+                                                        className="border-2 border-gray-200 rounded-xl overflow-hidden hover:border-[#021d49] transition-all duration-300"
                                                     >
                                                         {/* Module Header */}
                                                         <button
@@ -501,7 +503,7 @@ const CourseDetailPage = () => {
                                                         >
                                                             <div className="flex-1 pr-4">
                                                                 <div className="flex items-center gap-3 mb-3">
-                                                                    <span className="bg-[#f65e14] text-white text-sm font-bold px-3 py-1 rounded-full">
+                                                                    <span className="bg-[#021d49] text-white text-sm font-bold px-3 py-1 rounded-full">
                                                                         Module {index + 1}
                                                                     </span>
                                                                     <span className="text-xs bg-orange-100 text-orange-700 px-3 py-1 rounded-full font-semibold">
@@ -516,7 +518,7 @@ const CourseDetailPage = () => {
                                                                 </p>
                                                             </div>
                                                             {expandedModule === module.id ? (
-                                                                <ChevronUp className="w-6 h-6 text-[#f65e14] flex-shrink-0" />
+                                                                <ChevronUp className="w-6 h-6 text-[#021d49] flex-shrink-0" />
                                                             ) : (
                                                                 <ChevronDown className="w-6 h-6 text-gray-400 flex-shrink-0" />
                                                             )}
@@ -533,15 +535,15 @@ const CourseDetailPage = () => {
                                                                                 className="p-5 hover:bg-orange-50 transition-all duration-200 group"
                                                                             >
                                                                                 <div className="flex gap-4">
-                                                                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 text-[#f65e14] flex items-center justify-center text-sm font-bold shadow-sm group-hover:shadow-md transition-shadow">
+                                                                                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 text-[#021d49] flex items-center justify-center text-sm font-bold shadow-sm group-hover:shadow-md transition-shadow">
                                                                                         {lessonIndex + 1}
                                                                                     </div>
                                                                                     <div className="flex-1">
                                                                                         <div className="flex items-start justify-between mb-2">
-                                                                                            <h4 className="font-semibold text-gray-900 group-hover:text-[#f65e14] transition-colors">
+                                                                                            <h4 className="font-semibold text-gray-900 group-hover:text-[#021d49] transition-colors">
                                                                                                 {lesson.title}
                                                                                             </h4>
-                                                                                            <PlayCircle className="w-5 h-5 text-gray-400 group-hover:text-[#f65e14] transition-colors" />
+                                                                                            <PlayCircle className="w-5 h-5 text-gray-400 group-hover:text-[#021d49] transition-colors" />
                                                                                         </div>
                                                                                         <div className="flex items-center gap-4 text-xs text-gray-600 mb-3">
                                                                                             <div className="flex items-center gap-1 bg-gray-100 px-2 py-1 rounded">
@@ -681,7 +683,7 @@ const CourseDetailPage = () => {
                                 {/* Features Card */}
                                 <div className="bg-gradient-to-br from-orange-50 to-blue-50 rounded-2xl p-6 shadow-lg border border-orange-100">
                                     <h3 className="font-bold text-gray-900 mb-4 text-lg flex items-center gap-2">
-                                        <Sparkles className="w-5 h-5 text-[#f65e14]" />
+                                        <Sparkles className="w-5 h-5 text-[#021d49]" />
                                         Course Features
                                     </h3>
                                     <div className="space-y-3 text-sm">
@@ -715,7 +717,7 @@ const CourseDetailPage = () => {
                                 {/* Requirements */}
                                 <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
                                     <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                        <CheckCircle className="w-5 h-5 text-[#f65e14]" />
+                                        <CheckCircle className="w-5 h-5 text-[#021d49]" />
                                         Requirements
                                     </h3>
                                     <ul className="space-y-2 text-sm text-gray-700">
@@ -764,7 +766,7 @@ const CourseDetailPage = () => {
                                 {otherCourses.map((otherCourse) => (
                                     <div
                                         key={otherCourse.id}
-                                        className="bg-white border-2 border-gray-200 rounded-2xl overflow-hidden hover:shadow-2xl hover:border-[#f65e14] transition-all duration-300 cursor-pointer group"
+                                        className="bg-white border-2 border-gray-200 rounded-2xl overflow-hidden hover:shadow-2xl hover:border-[#021d49] transition-all duration-300 cursor-pointer group"
                                         onClick={() => router.push(`/courses/${otherCourse.id}`)}
                                     >
                                         <div className="relative h-48 overflow-hidden">
@@ -780,7 +782,7 @@ const CourseDetailPage = () => {
                                         </div>
 
                                         <div className="p-6">
-                                            <h3 className="font-bold text-gray-900 text-lg mb-3 line-clamp-2 group-hover:text-[#f65e14] transition-colors">
+                                            <h3 className="font-bold text-gray-900 text-lg mb-3 line-clamp-2 group-hover:text-[#021d49] transition-colors">
                                                 {otherCourse.title}
                                             </h3>
 
@@ -799,7 +801,7 @@ const CourseDetailPage = () => {
                                                 </div>
                                             </div>
 
-                                            <button className="w-full bg-gradient-to-r from-gray-100 to-gray-200 group-hover:from-[#f65e14] group-hover:to-[#ff8243] group-hover:text-white text-gray-900 py-3 rounded-lg font-bold transition-all duration-300 text-sm shadow-sm group-hover:shadow-lg">
+                                            <button className="w-full bg-gradient-to-r from-gray-100 to-gray-200 group-hover:from-[#021d49] group-hover:to-[#ff8243] group-hover:text-white text-gray-900 py-3 rounded-lg font-bold transition-all duration-300 text-sm shadow-sm group-hover:shadow-lg">
                                                 View Course
                                             </button>
                                         </div>

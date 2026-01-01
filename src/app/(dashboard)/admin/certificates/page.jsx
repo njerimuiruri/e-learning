@@ -228,7 +228,7 @@ export default function CertificateManagementPage() {
     );
 
     const stats = [
-        { label: 'Pending', value: studentsData.filter(s => s.status === 'pending').length, icon: 'Clock', gradient: 'from-yellow-500 to-orange-500' },
+        { label: 'Pending', value: studentsData.filter(s => s.status === 'pending').length, icon: 'Clock', gradient: 'from-yellow-500 to-blue-500' },
         { label: 'Issued This Month', value: studentsData.filter(s => s.status === 'issued').length, icon: 'Award', gradient: 'from-green-500 to-emerald-500' },
         { label: 'Total Issued', value: '127', icon: 'CheckCircle', gradient: 'from-blue-500 to-indigo-500' },
         { label: 'Avg. Score', value: '93%', icon: 'TrendingUp', gradient: 'from-purple-500 to-pink-500' },

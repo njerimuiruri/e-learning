@@ -6,7 +6,7 @@ const AboutSection = () => {
     const features = [
         {
             icon: BookOpen,
-            color: 'bg-orange-500',
+            color: 'bg-[#021d49]',
             title: 'Scholarly Writing Training',
             description: 'Structured programs on academic writing, peer-reviewed publishing, and policy-oriented communication'
         },
@@ -31,14 +31,14 @@ const AboutSection = () => {
     ];
 
     return (
-        <section className="py-16 lg:py-24 bg-gradient-to-b from-white to-orange-50">
+        <section className="py-16 lg:py-24 bg-gradient-to-b from-white to-blue-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                 {/* Top Section - Title and Description */}
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-8 mb-12 lg:mb-16">
                     {/* Left - About Badge + Title + Description */}
                     <div className="lg:max-w-2xl">
-                        <span className="text-[#f65e14] font-semibold text-sm uppercase tracking-wider">
+                        <span className="text-[#021d49] font-semibold text-sm uppercase tracking-wider">
                             About the Academy
                         </span>
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mt-4 leading-tight">
@@ -47,15 +47,15 @@ const AboutSection = () => {
                             African Research Excellence
                         </h2>
                         <p className="text-lg text-gray-600 mt-6 leading-relaxed">
-                            Building on ARIN's robust foundation, including its Science-Policy Fellowship Program 
-                            and strategic partnership with Taylor & Francis Group, the Academy aligns with ARIN's 
+                            Building on ARIN's robust foundation, including its Science-Policy Fellowship Program
+                            and strategic partnership with Taylor & Francis Group, the Academy aligns with ARIN's
                             broader mission of strengthening the science-policy-practice interface.
                         </p>
                     </div>
 
                     {/* Right - Learn More Button */}
                     <div className="lg:pt-8">
-                        <button className="bg-[#f65e14] hover:bg-[#e54d03] text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2">
+                        <button className="bg-[#021d49] hover:bg-[#03275f] text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl flex items-center gap-2">
                             Learn More
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />

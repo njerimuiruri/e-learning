@@ -99,8 +99,7 @@ export default function AdminRemindersPage() {
 
             const data = await response.json();
             setSuccessMessage(
-                `Reminders sent successfully! ${data.sent} email(s) sent${
-                    data.failed > 0 ? `, ${data.failed} failed` : ''
+                `Reminders sent successfully! ${data.sent} email(s) sent${data.failed > 0 ? `, ${data.failed} failed` : ''
                 }`
             );
 
@@ -152,8 +151,7 @@ export default function AdminRemindersPage() {
 
             const data = await response.json();
             setSuccessMessage(
-                `Reminders sent to all students! ${data.sent} email(s) sent${
-                    data.failed > 0 ? `, ${data.failed} failed` : ''
+                `Reminders sent to all students! ${data.sent} email(s) sent${data.failed > 0 ? `, ${data.failed} failed` : ''
                 }`
             );
 
@@ -318,7 +316,7 @@ export default function AdminRemindersPage() {
                                                     <div className="flex items-center gap-2">
                                                         <div className="w-24 bg-gray-200 rounded-full h-2">
                                                             <div
-                                                                className="bg-orange-500 h-2 rounded-full"
+                                                                className="bg-[#021d49] h-2 rounded-full"
                                                                 style={{ width: `${student.progress}%` }}
                                                             ></div>
                                                         </div>

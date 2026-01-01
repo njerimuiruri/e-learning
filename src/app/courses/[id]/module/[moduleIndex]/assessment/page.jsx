@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, AlertCircle, RotateCcw, ArrowRight } from 'lucide-react';
 import courseService from '@/lib/api/courseService';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function ModuleAssessmentPage() {
   const params = useParams();
   const router = useRouter();
   const { id: courseId, moduleIndex } = params;
+  const { showToast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [course, setCourse] = useState(null);
@@ -33,7 +35,7 @@ export default function ModuleAssessmentPage() {
       ]);
 
       setCourse(courseData);
-      
+
       const moduleIdx = parseInt(moduleIndex);
       const currentModule = courseData.modules?.[moduleIdx];
       setModule(currentModule);
@@ -80,30 +82,30 @@ export default function ModuleAssessmentPage() {
 
   const handleSubmit = async () => {
     const assessment = module.moduleAssessment;
-    const allAnswered = assessment.questions.every((_, idx) => 
+    const allAnswered = assessment.questions.every((_, idx) =>
       answers[idx] && answers[idx].trim() !== ''
     );
-    
+
     if (!allAnswered) {
-      alert('Please answer all questions before submitting');
+      showToast('Please answer all questions before submitting', { type: 'warning', title: 'Complete all questions' });
       return;
     }
 
     try {
       setLoading(true);
-      
+
       const answersArray = assessment.questions.map((_, idx) => answers[idx]);
       const result = await courseService.submitModuleAssessment(
-        enrollment._id, 
-        parseInt(moduleIndex), 
+        enrollment._id,
+        parseInt(moduleIndex),
         answersArray
       );
-      
+
       setResults(result);
       setSubmitted(true);
     } catch (err) {
       console.error('Error submitting assessment:', err);
-      alert(err.message || 'Failed to submit assessment');
+      showToast(err.message || 'Failed to submit assessment', { type: 'error', title: 'Submission failed' });
     } finally {
       setLoading(false);
     }
@@ -112,7 +114,7 @@ export default function ModuleAssessmentPage() {
   const handleRetry = () => {
     setSubmitted(false);
     setResults(null);
-    
+
     const initialAnswers = {};
     module.moduleAssessment.questions?.forEach((_, index) => {
       initialAnswers[index] = '';
@@ -128,11 +130,11 @@ export default function ModuleAssessmentPage() {
     try {
       setLoading(true);
       await courseService.restartCourse(enrollment._id);
-      alert('Course restarted successfully. Redirecting...');
+      showToast('Course restarted successfully. Redirecting...', { type: 'success', title: 'Course restarted' });
       router.push(`/courses/${courseId}`);
     } catch (err) {
       console.error('Error restarting course:', err);
-      alert('Failed to restart course');
+      showToast('Failed to restart course', { type: 'error', title: 'Restart failed' });
     } finally {
       setLoading(false);
     }
@@ -185,9 +187,8 @@ export default function ModuleAssessmentPage() {
     return (
       <div className="min-h-screen bg-gray-50 py-8 px-4">
         <div className="max-w-4xl mx-auto">
-          <div className={`rounded-lg p-8 mb-6 text-center ${
-            passed ? 'bg-green-50 border-2 border-green-500' : 'bg-red-50 border-2 border-red-500'
-          }`}>
+          <div className={`rounded-lg p-8 mb-6 text-center ${passed ? 'bg-green-50 border-2 border-green-500' : 'bg-red-50 border-2 border-red-500'
+            }`}>
             {passed ? (
               <>
                 <CheckCircle className="w-20 h-20 text-green-600 mx-auto mb-4" />
@@ -263,9 +264,8 @@ export default function ModuleAssessmentPage() {
               {results.results.map((result, idx) => (
                 <div
                   key={idx}
-                  className={`border-2 rounded-lg p-4 ${
-                    result.isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
-                  }`}
+                  className={`border-2 rounded-lg p-4 ${result.isCorrect ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'
+                    }`}
                 >
                   <div className="flex items-start gap-3">
                     <div className="flex-shrink-0">
@@ -351,8 +351,8 @@ export default function ModuleAssessmentPage() {
                   <div className="flex-1">
                     <p className="text-lg font-semibold text-gray-800 mb-2">{question.text}</p>
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                      {question.type === 'multiple-choice' ? 'Multiple Choice' : 
-                       question.type === 'true-false' ? 'True/False' : 'Essay'}
+                      {question.type === 'multiple-choice' ? 'Multiple Choice' :
+                        question.type === 'true-false' ? 'True/False' : 'Essay'}
                     </span>
                   </div>
                 </div>

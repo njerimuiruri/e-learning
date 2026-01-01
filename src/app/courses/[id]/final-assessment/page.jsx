@@ -20,12 +20,14 @@ import {
 import courseService from "@/lib/api/courseService";
 import FinalAssessmentGuard from "@/components/FinalAssessmentGuard";
 import { canAccessFinalAssessment } from "@/lib/utils/courseProgressionLogic";
+import { useToast } from "@/components/ui/ToastProvider";
 
 
 const FinalAssessmentPage = () => {
     const router = useRouter();
     const params = useParams();
     const courseId = params.id;
+    const { showToast } = useToast();
 
     const [course, setCourse] = useState(null);
     const [enrollment, setEnrollment] = useState(null);
@@ -86,13 +88,13 @@ const FinalAssessmentPage = () => {
     useEffect(() => {
         const fetchAssessmentStatus = async () => {
             if (!enrollment?._id || !course?.finalAssessment) return;
-            
+
             try {
                 // Check enrollment data for final assessment submission
                 if (enrollment.finalAssessmentAttempts > 0) {
                     // Student has submitted at least once
                     const results = enrollment.finalAssessmentResults || [];
-                    
+
                     // Reconstruct answers from results
                     const reconstructedAnswers = {};
                     results.forEach((result, idx) => {
@@ -102,7 +104,7 @@ const FinalAssessmentPage = () => {
                             reconstructedAnswers[questionId] = result.studentAnswer || result.userAnswer;
                         }
                     });
-                    
+
                     setAnswers(reconstructedAnswers);
                     setScore(enrollment.finalAssessmentScore ?? null);
                     setPassed(enrollment.finalAssessmentPassed ?? null);
@@ -116,7 +118,7 @@ const FinalAssessmentPage = () => {
                 console.warn("Failed to fetch assessment status", err);
             }
         };
-        
+
         if (enrollment && course?.finalAssessment) {
             fetchAssessmentStatus();
         }
@@ -160,7 +162,7 @@ const FinalAssessmentPage = () => {
             // Re-fetch enrollment to get latest grading status
             const enrollmentData = await courseService.getEnrollment(courseId);
             setEnrollment(enrollmentData);
-            
+
             // Update UI based on new enrollment data
             if (enrollmentData.finalAssessmentAttempts > 0) {
                 setScore(enrollmentData.finalAssessmentScore ?? score);
@@ -169,7 +171,7 @@ const FinalAssessmentPage = () => {
             }
         } catch (err) {
             console.error('Failed to refresh status:', err);
-            alert('Could not refresh status. Please try again.');
+            showToast('Could not refresh status. Please try again.', { type: 'error', title: 'Refresh failed' });
         } finally {
             setRefreshing(false);
         }
@@ -248,9 +250,9 @@ const FinalAssessmentPage = () => {
                 console.log('   API Endpoint: /api/courses/enrollment/' + enrollment._id + '/final-assessment');
                 console.log('   Answers count:', answersArray.length);
                 console.log('   Has essays:', hasEssay);
-                
+
                 const response = await courseService.submitFinalAssessment(enrollment._id, answersArray);
-                
+
                 console.log('✅ Submission response:', response);
             } else {
                 console.warn('⚠️ No enrollment ID, submission may not save to backend');
@@ -259,7 +261,7 @@ const FinalAssessmentPage = () => {
             console.error("❌ Failed to submit to backend", err);
             console.error("   Error message:", err.message);
             console.error("   Error response:", err.response?.data);
-            alert("Warning: Your submission may not have been saved. Please contact support.");
+            showToast("Warning: Your submission may not have been saved. Please contact support.", { type: 'warning', title: 'Submission warning' });
         }
 
         // Save to localStorage as backup
@@ -289,7 +291,7 @@ const FinalAssessmentPage = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-red-50 to-orange-50">
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-red-50 to-blue-50">
                 <p className="text-lg text-gray-700">Loading final assessment...</p>
             </div>
         );
@@ -306,7 +308,7 @@ const FinalAssessmentPage = () => {
     // Intro screen
     if (!started && !submitted) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-orange-50">
+            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-blue-50">
                 <div className="max-w-5xl mx-auto px-4 py-16">
                     <div className="bg-white rounded-3xl shadow-2xl p-10 border-4 border-orange-200">
                         <div className="flex items-start gap-4 mb-6">
@@ -362,7 +364,7 @@ const FinalAssessmentPage = () => {
 
                             <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-6 border-2 border-orange-200 shadow-sm">
                                 <div className="flex items-center gap-4">
-                                    <div className="bg-orange-500 text-white p-4 rounded-xl shadow-lg">
+                                    <div className="bg-[#021d49] text-white p-4 rounded-xl shadow-lg">
                                         <Award className="w-8 h-8" />
                                     </div>
                                     <div>
@@ -409,14 +411,14 @@ const FinalAssessmentPage = () => {
     // Results screen
     const handleDownloadCertificate = async () => {
         if (!enrollment?.certificateId) {
-            alert("Certificate ID not available. Please contact support.");
+            showToast("Certificate ID not available. Please contact support.", { type: 'error', title: 'Certificate unavailable' });
             return;
         }
 
         try {
             // Download the certificate PDF using courseService
             const blob = await courseService.downloadCertificate(enrollment.certificateId);
-            
+
             // Create blob and download
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -428,13 +430,13 @@ const FinalAssessmentPage = () => {
             window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error('Failed to download certificate:', err);
-            alert('Failed to download certificate. Please try again.');
+            showToast('Failed to download certificate. Please try again.', { type: 'error', title: 'Download failed' });
         }
     };
 
     if (submitted) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-orange-50">
+            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-blue-50">
                 {showCertificate && (
                     <CertificateModal
                         course={course}
@@ -524,7 +526,7 @@ const FinalAssessmentPage = () => {
                                         <div className="flex-1">
                                             <p className="font-bold text-amber-900">⏳ Awaiting Instructor Feedback</p>
                                             <p className="text-amber-800 text-sm">
-                                                Your essay responses are being reviewed by your instructor. 
+                                                Your essay responses are being reviewed by your instructor.
                                                 You'll receive your final grade and certificate once the review is complete.
                                             </p>
                                             <p className="text-amber-700 text-xs mt-2">
@@ -542,7 +544,7 @@ const FinalAssessmentPage = () => {
                                     </button>
                                 </div>
                             )}
-                            
+
                             {enrollment?.certificateEarned && enrollment?.certificateUrl && (
                                 <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-4 mb-6 flex gap-3 items-start">
                                     <Award className="w-6 h-6 text-green-600 mt-1" />
@@ -572,9 +574,9 @@ const FinalAssessmentPage = () => {
                                             {assessment.questions.map((q, idx) => {
                                                 const userAnswer = answers[q.id || q._id || idx];
                                                 const resultFromBackend = enrollment?.finalAssessmentResults?.[idx];
-                                                
+
                                                 // Use backend result if available, otherwise calculate
-                                                const isCorrect = resultFromBackend 
+                                                const isCorrect = resultFromBackend
                                                     ? resultFromBackend.isCorrect
                                                     : (() => {
                                                         if (q.type === 'essay') return null;
@@ -635,7 +637,7 @@ const FinalAssessmentPage = () => {
                                                             <div className={`${gradedAt ? 'bg-blue-50 border-l-4 border-blue-400' : 'bg-yellow-50 border-l-4 border-yellow-400'} p-3 rounded`}>
                                                                 <p className="text-sm text-gray-600 font-semibold mb-1">Status:</p>
                                                                 <p className="text-gray-700">
-                                                                    {gradedAt 
+                                                                    {gradedAt
                                                                         ? `Graded by instructor - ${isCorrect ? '✓ Correct' : '✗ Incorrect'}`
                                                                         : 'Awaiting instructor feedback'}
                                                                 </p>
@@ -741,7 +743,7 @@ const FinalAssessmentPage = () => {
     })();
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-orange-50">
+        <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-blue-50">
             <div className="max-w-6xl mx-auto px-4 py-8">
                 <div className="bg-white rounded-2xl shadow-xl p-6 mb-6 border-2 border-orange-200">
                     <div className="flex items-center justify-between mb-4">

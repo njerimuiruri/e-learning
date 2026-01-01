@@ -5,7 +5,7 @@ import { Clock, Users, Star, ArrowRight, Layers } from 'lucide-react';
 import courseService from '@/lib/api/courseService';
 import categoryService from '@/lib/api/categoryService';
 
-const placeholderGradient = 'bg-gradient-to-br from-orange-100 via-white to-orange-50';
+const placeholderGradient = 'bg-gradient-to-br from-orange-100 via-white to-blue-50';
 
 const CoursesSection = () => {
     const [activeCategory, setActiveCategory] = useState('All');
@@ -84,7 +84,7 @@ const CoursesSection = () => {
 
                 {/* Section Header */}
                 <div className="text-center mb-12">
-                    <span className="text-[#f65e14] font-semibold text-sm uppercase tracking-wider">
+                    <span className="text-[#021d49] font-semibold text-sm uppercase tracking-wider">
                         Our Courses
                     </span>
                     <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mt-4 mb-6">
@@ -102,7 +102,7 @@ const CoursesSection = () => {
                             key={category}
                             onClick={() => setActiveCategory(category)}
                             className={`px-6 py-2.5 rounded-full font-medium transition-all duration-300 ${activeCategory === category
-                                ? 'bg-[#f65e14] text-white shadow-lg transform scale-105'
+                                ? 'bg-[#021d49] text-white shadow-lg transform scale-105'
                                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
@@ -138,7 +138,7 @@ const CoursesSection = () => {
                                 >
                                     {/* Course Image */}
                                     <div className="relative overflow-hidden h-64">
-                                        <div className={`absolute top-4 left-4 bg-orange-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold z-10`}>
+                                        <div className={`absolute top-4 left-4 bg-[#021d49] text-white px-4 py-1.5 rounded-full text-sm font-semibold z-10`}>
                                             {category}
                                         </div>
                                         {course.thumbnailUrl ? (
@@ -157,17 +157,17 @@ const CoursesSection = () => {
                                         {/* Meta Info */}
                                         <div className="flex items-center gap-4 text-sm text-gray-600">
                                             <div className="flex items-center gap-1">
-                                                <Clock className="w-4 h-4 text-[#f65e14]" />
+                                                <Clock className="w-4 h-4 text-[#021d49]" />
                                                 <span>{modules.length} modules</span>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <Users className="w-4 h-4 text-[#f65e14]" />
+                                                <Users className="w-4 h-4 text-[#021d49]" />
                                                 <span className="text-xs">{enrollmentCount.toLocaleString()} enrolled</span>
                                             </div>
                                         </div>
 
                                         {/* Title */}
-                                        <h3 className="text-xl font-bold text-gray-900 group-hover:text-[#f65e14] transition-colors">
+                                        <h3 className="text-xl font-bold text-gray-900 group-hover:text-[#021d49] transition-colors">
                                             {course.title}
                                         </h3>
 
@@ -205,11 +205,11 @@ const CoursesSection = () => {
                                         {/* Modules / Questions */}
                                         <div className="flex items-center gap-3 text-sm text-gray-600">
                                             <div className="flex items-center gap-1">
-                                                <Layers className="w-4 h-4 text-[#f65e14]" />
+                                                <Layers className="w-4 h-4 text-[#021d49]" />
                                                 <span>{modules.length} modules</span>
                                             </div>
                                             <div className="flex items-center gap-1">
-                                                <ArrowRight className="w-4 h-4 text-[#f65e14]" />
+                                                <ArrowRight className="w-4 h-4 text-[#021d49]" />
                                                 <span>{totalQuestions} questions</span>
                                             </div>
                                         </div>
@@ -217,7 +217,7 @@ const CoursesSection = () => {
                                         {/* CTA Button */}
                                         <Link
                                             href={`/courses/${course._id}`}
-                                            className="w-full bg-[#f65e14] hover:bg-[#e54d03] text-white py-3.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg mt-4"
+                                            className="w-full bg-[#021d49] hover:bg-[#03275f] text-white py-3.5 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 group-hover:shadow-lg mt-4"
                                         >
                                             View Course
                                             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -235,7 +235,7 @@ const CoursesSection = () => {
                 {/* Bottom CTA */}
                 <div className="text-center">
                     <p className="text-gray-600 mb-4">Explore Endless Knowledge With Us</p>
-                    <Link href="/courses" className="text-[#f65e14] font-semibold hover:underline inline-flex items-center gap-2">
+                    <Link href="/courses" className="text-[#021d49] font-semibold hover:underline inline-flex items-center gap-2">
                         More Courses Features
                         <ArrowRight className="w-5 h-5" />
                     </Link>

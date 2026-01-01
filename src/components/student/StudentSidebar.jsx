@@ -5,10 +5,12 @@ import { useRouter, usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import authService from '@/lib/api/authService';
 import { getStudentProgress, getLastAccessedLesson } from '@/data/courses/courses';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function StudentSidebar() {
     const router = useRouter();
     const pathname = usePathname();
+    const { showToast } = useToast();
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [showPhotoModal, setShowPhotoModal] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
@@ -82,13 +84,13 @@ export default function StudentSidebar() {
 
         // Validate file type
         if (!file.type.match(/image\/(jpeg|jpg|png|gif)/)) {
-            alert('Please upload a valid image file (JPEG, PNG, or GIF)');
+            showToast('Please upload a valid image file (JPEG, PNG, or GIF)', { type: 'warning', title: 'Invalid file type' });
             return;
         }
 
         // Validate file size (max 5MB)
         if (file.size > 5 * 1024 * 1024) {
-            alert('File size must be less than 5MB');
+            showToast('File size must be less than 5MB', { type: 'warning', title: 'File too large' });
             return;
         }
 
@@ -113,7 +115,7 @@ export default function StudentSidebar() {
             setShowPhotoModal(false);
         } catch (error) {
             console.error('Error uploading photo:', error);
-            alert('Failed to upload photo. Please try again.');
+            showToast('Failed to upload photo. Please try again.', { type: 'error', title: 'Upload failed' });
         } finally {
             setUploadingPhoto(false);
         }
@@ -271,7 +273,7 @@ export default function StudentSidebar() {
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-1.5">
                                     <div
-                                        className="bg-orange-500 h-1.5 rounded-full transition-all duration-500"
+                                        className="bg-[#021d49] h-1.5 rounded-full transition-all duration-500"
                                         style={{ width: `${profileCompletion}%` }}
                                     ></div>
                                 </div>

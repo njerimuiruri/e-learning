@@ -8,11 +8,13 @@ import {
 import coursesData from '../../../../data/courses/courses';
 import Navbar from '../../../../components/navbar/navbar';
 import Footer from '../../../../components/Footer/Footer';
+import { useToast } from '@/components/ui/ToastProvider';
 
 const CourseEnrollmentPage = () => {
     const router = useRouter();
     const params = useParams();
     const courseId = parseInt(params.id);
+    const { showToast } = useToast();
 
     const course = coursesData.find(c => c.id === courseId);
     const [enrolled, setEnrolled] = useState(false);
@@ -20,7 +22,7 @@ const CourseEnrollmentPage = () => {
 
     if (!course) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50 flex items-center justify-center">
                 <div className="text-center">
                     <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
                     <h1 className="text-2xl font-bold text-gray-900">Course Not Found</h1>
@@ -31,7 +33,7 @@ const CourseEnrollmentPage = () => {
 
     const handleEnroll = () => {
         if (!agreedToTerms) {
-            alert('Please agree to the terms and conditions to enroll');
+            showToast('Please agree to the terms and conditions to enroll', { type: 'warning', title: 'Action needed' });
             return;
         }
         setEnrolled(true);
@@ -69,13 +71,13 @@ const CourseEnrollmentPage = () => {
                     <div className="mb-8">
                         <div className="flex items-center justify-center gap-2 mb-4">
                             <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-bold">
+                                <div className="w-8 h-8 rounded-full bg-[#021d49] text-white flex items-center justify-center text-sm font-bold">
                                     ✓
                                 </div>
-                                <div className="w-20 h-1 bg-orange-500"></div>
+                                <div className="w-20 h-1 bg-[#021d49]"></div>
                             </div>
                             <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-bold">
+                                <div className="w-8 h-8 rounded-full bg-[#021d49] text-white flex items-center justify-center text-sm font-bold">
                                     2
                                 </div>
                                 <div className="w-20 h-1 bg-gray-200"></div>
@@ -143,7 +145,7 @@ const CourseEnrollmentPage = () => {
                             </div>
 
                             {/* What You'll Get */}
-                            <div className="bg-gradient-to-br from-white to-orange-50 rounded-2xl p-8 shadow-lg border border-orange-100">
+                            <div className="bg-gradient-to-br from-white to-blue-50 rounded-2xl p-8 shadow-lg border border-orange-100">
                                 <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                                     <Trophy className="w-6 h-6 text-orange-500" />
                                     What's Included in Your Enrollment

@@ -3,10 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import axios from 'axios';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function CertificatePage() {
     const params = useParams();
     const router = useRouter();
+    const { showToast } = useToast();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [pdfUrl, setPdfUrl] = useState(null);
@@ -109,7 +111,7 @@ export default function CertificatePage() {
             window.URL.revokeObjectURL(url);
         } catch (err) {
             console.error('Error downloading certificate:', err);
-            alert('Failed to download certificate');
+            showToast('Failed to download certificate', { type: 'error', title: 'Download failed' });
         }
     };
 

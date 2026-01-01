@@ -2,11 +2,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Clock, Users, Star, ArrowRight, Loader } from 'lucide-react';
+import { useToast } from '@/components/ui/ToastProvider';
 import courseService from '@/lib/api/courseService';
 import { useRouter } from 'next/navigation';
 
 export default function FeaturedCoursesComponent() {
     const router = useRouter();
+    const { showToast } = useToast();
     const [courses, setCourses] = useState([]);
     const [filteredCourses, setFilteredCourses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -60,7 +62,7 @@ export default function FeaturedCoursesComponent() {
         if (user.role === 'student') {
             router.push(`/student/courses/${courseId}`);
         } else {
-            alert('Only students can enroll in courses');
+            showToast('Only students can enroll in courses', { type: 'warning', title: 'Heads up' });
         }
     };
 
@@ -77,7 +79,7 @@ export default function FeaturedCoursesComponent() {
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Section Header */}
                 <div className="text-center mb-12">
-                    <span className="text-[#f65e14] font-semibold text-sm uppercase tracking-wider">Featured Courses</span>
+                    <span className="text-[#021d49] font-semibold text-sm uppercase tracking-wider">Featured Courses</span>
                     <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mt-4 mb-6">
                         Explore Our Courses
                     </h2>
@@ -93,8 +95,8 @@ export default function FeaturedCoursesComponent() {
                             key={category}
                             onClick={() => handleCategoryFilter(category)}
                             className={`px-6 py-2 rounded-full font-medium transition-all ${activeCategory === category
-                                    ? 'bg-[#f65e14] text-white shadow-lg'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                ? 'bg-[#021d49] text-white shadow-lg'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                                 }`}
                         >
                             {category}
@@ -105,7 +107,7 @@ export default function FeaturedCoursesComponent() {
                 {/* Loading State */}
                 {loading ? (
                     <div className="flex items-center justify-center py-12">
-                        <Loader size={40} className="animate-spin text-[#f65e14]" />
+                        <Loader size={40} className="animate-spin text-[#021d49]" />
                     </div>
                 ) : filteredCourses.length > 0 ? (
                     <>
@@ -131,7 +133,7 @@ export default function FeaturedCoursesComponent() {
                                                 </span>
                                             </div>
                                         )}
-                                        <div className="absolute top-4 right-4 bg-[#f65e14] text-white px-3 py-1 rounded-full text-xs font-semibold">
+                                        <div className="absolute top-4 right-4 bg-[#021d49] text-white px-3 py-1 rounded-full text-xs font-semibold">
                                             {course.level}
                                         </div>
                                     </div>
@@ -166,7 +168,7 @@ export default function FeaturedCoursesComponent() {
                                         {/* Instructor Info */}
                                         {course.instructorId && (
                                             <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-200">
-                                                <div className="w-10 h-10 bg-[#f65e14] rounded-full flex items-center justify-center text-white font-bold">
+                                                <div className="w-10 h-10 bg-[#021d49] rounded-full flex items-center justify-center text-white font-bold">
                                                     {course.instructorId.firstName?.charAt(0)}
                                                 </div>
                                                 <div>
@@ -181,7 +183,7 @@ export default function FeaturedCoursesComponent() {
                                         {/* Action Button */}
                                         <button
                                             onClick={() => handleEnrollClick(course._id)}
-                                            className="w-full bg-[#f65e14] hover:bg-orange-700 text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2 group"
+                                            className="w-full bg-[#021d49] hover:bg-orange-700 text-white font-semibold py-3 rounded-lg transition-all flex items-center justify-center gap-2 group"
                                         >
                                             Explore Course
                                             <ArrowRight
@@ -199,7 +201,7 @@ export default function FeaturedCoursesComponent() {
                             <div className="text-center">
                                 <button
                                     onClick={() => router.push('/courses')}
-                                    className="inline-flex items-center gap-2 px-8 py-3 bg-[#f65e14] text-white rounded-lg font-semibold hover:bg-orange-700 transition-all"
+                                    className="inline-flex items-center gap-2 px-8 py-3 bg-[#021d49] text-white rounded-lg font-semibold hover:bg-orange-700 transition-all"
                                 >
                                     View All Courses
                                     <ArrowRight size={20} />

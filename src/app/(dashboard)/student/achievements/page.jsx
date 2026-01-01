@@ -35,7 +35,7 @@ export default function AchievementsPage() {
         (sum, e) => sum + (e.completedModules?.length || 0),
         0
     ) || 0;
-    
+
     const inProgressCourses = dashboardData?.enrollments?.filter(e => !e.isCompleted).map(e => ({
         _id: e._id,
         title: e.courseId?.title || 'Untitled Course',
@@ -84,7 +84,7 @@ export default function AchievementsPage() {
                             <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-yellow-400 to-blue-500 flex items-center justify-center">
                                             <Icons.Zap className="w-6 h-6 text-white" />
                                         </div>
                                         <div>
@@ -98,7 +98,7 @@ export default function AchievementsPage() {
                                         <span className="text-4xl font-black text-gray-900">{totalLessonsCompleted * 10}</span>
                                         <span className="text-lg text-gray-600">XP</span>
                                     </div>
-                                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-lg p-3 border border-yellow-200">
+                                    <div className="bg-gradient-to-r from-yellow-50 to-blue-50 rounded-lg p-3 border border-yellow-200">
                                         <div className="flex items-center justify-between text-sm mb-1">
                                             <span className="text-gray-700 font-medium">Modules Completed</span>
                                             <span className="text-gray-900 font-bold">{totalLessonsCompleted}</span>

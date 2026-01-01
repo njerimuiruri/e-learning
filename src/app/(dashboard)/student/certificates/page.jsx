@@ -5,18 +5,18 @@ import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import courseService from '@/lib/api/courseService';
 import Navbar from '@/components/navbar/navbar';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function CertificatesPage() {
     const router = useRouter();
+    const { showToast } = useToast();
     const [certificates, setCertificates] = useState([]);
     const [selectedTab, setSelectedTab] = useState('earned');
     const [selectedCertificate, setSelectedCertificate] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    // Claimed certificates: those that are valid (already filtered as earnedCertificates)
     const claimedCertificates = certificates.filter(c => c.isValid);
-    // Completed courses: unique courseIds from claimed certificates
     const completedCourses = [...new Set(claimedCertificates.map(c => c.courseId))];
 
     useEffect(() => {
@@ -71,9 +71,9 @@ export default function CertificatesPage() {
             if (!response.ok) throw new Error('Failed to claim certificate');
 
             await fetchCertificates();
-            alert('Certificate claimed successfully!');
+            showToast('Certificate claimed successfully!', { type: 'success', title: 'Certificate claimed' });
         } catch (err) {
-            alert('Failed to claim certificate');
+            showToast('Failed to claim certificate', { type: 'error', title: 'Claim failed' });
             console.error(err);
         }
     };
@@ -84,7 +84,7 @@ export default function CertificatesPage() {
             const certificateId = certificate._id || certificate.enrollmentId;
 
             if (!certificateId) {
-                alert('Certificate ID not available');
+                showToast('Certificate ID not available', { type: 'error', title: 'Certificate unavailable' });
                 return;
             }
 
@@ -112,7 +112,7 @@ export default function CertificatesPage() {
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         } catch (err) {
-            alert('Failed to download certificate');
+            showToast('Failed to download certificate', { type: 'error', title: 'Download failed' });
             console.error(err);
         }
     };

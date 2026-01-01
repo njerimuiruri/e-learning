@@ -182,7 +182,7 @@ export default function PendingCoursesPage() {
                                                     className="w-24 h-24 rounded-lg object-cover"
                                                 />
                                             ) : (
-                                                <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-orange-100 to-orange-50 flex items-center justify-center">
+                                                <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-orange-100 to-blue-50 flex items-center justify-center">
                                                     <Icons.BookOpen className="w-8 h-8 text-orange-600" />
                                                 </div>
                                             )}
@@ -270,8 +270,8 @@ export default function PendingCoursesPage() {
                                     key={p}
                                     onClick={() => setPage(p)}
                                     className={`px-3 py-2 rounded-lg font-medium transition-colors ${page === p
-                                            ? 'bg-orange-600 text-white'
-                                            : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+                                        ? 'bg-orange-600 text-white'
+                                        : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
                                         }`}
                                 >
                                     {p}
@@ -500,8 +500,8 @@ export default function PendingCoursesPage() {
                                 onClick={handleSubmitAction}
                                 disabled={submitting || (actionType === 'reject' && !feedback.trim())}
                                 className={`flex-1 px-4 py-2 rounded-lg transition-colors font-medium text-white disabled:opacity-50 flex items-center justify-center gap-2 ${actionType === 'approve'
-                                        ? 'bg-green-600 hover:bg-green-700'
-                                        : 'bg-red-600 hover:bg-red-700'
+                                    ? 'bg-green-600 hover:bg-green-700'
+                                    : 'bg-red-600 hover:bg-red-700'
                                     }`}
                             >
                                 {submitting && <Icons.Loader className="w-4 h-4 animate-spin" />}

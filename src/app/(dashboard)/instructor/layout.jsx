@@ -73,7 +73,7 @@ export default function InstructorLayout({ children }) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-teal-50 flex items-center justify-center p-4">
                 <div className="max-w-2xl w-full bg-white rounded-2xl shadow-xl p-8 md:p-12 text-center">
-                    <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full mx-auto mb-6 flex items-center justify-center">
+                    <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-blue-500 rounded-full mx-auto mb-6 flex items-center justify-center">
                         <Icons.Clock className="w-10 h-10 text-white" />
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900 mb-4">

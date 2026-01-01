@@ -23,7 +23,7 @@ export const coursesData = [
     },
     badge: "Marketing",
     bgColor: "bg-blue-100",
-    accentColor: "bg-orange-500",
+    accentColor: "bg-[#021d49]",
     description:
       "Master the essential digital marketing skills needed to succeed in today's competitive landscape.",
     bonuses: [

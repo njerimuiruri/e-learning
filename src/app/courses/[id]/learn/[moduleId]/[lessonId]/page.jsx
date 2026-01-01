@@ -204,7 +204,7 @@ const CourseLearningPage = () => {
                     </p>
                     <button
                         onClick={() => router.push(`/courses/${courseId}`)}
-                        className="bg-orange-500 text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition"
+                        className="bg-[#021d49] text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition"
                     >
                         Back to Course
                     </button>
@@ -441,7 +441,7 @@ const CourseLearningPage = () => {
                             >
                                 <FileText className="w-5 h-5 text-orange-600" />
                                 {notes.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                                    <span className="absolute -top-1 -right-1 bg-[#021d49] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                                         {notes.length}
                                     </span>
                                 )}
@@ -488,7 +488,7 @@ const CourseLearningPage = () => {
                                 </h3>
                                 <button
                                     onClick={() => setShowNoteModal(true)}
-                                    className="text-sm bg-orange-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
+                                    className="text-sm bg-[#021d49] text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
                                 >
                                     + Add New Note
                                 </button>
@@ -559,7 +559,7 @@ const CourseLearningPage = () => {
                                 </div>
                             </div>
 
-                            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-4 mb-6 border border-orange-200">
+                            <div className="bg-gradient-to-r from-yellow-50 to-blue-50 rounded-xl p-4 mb-6 border border-orange-200">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <Zap className="w-5 h-5 text-orange-600" />
@@ -648,7 +648,7 @@ const CourseLearningPage = () => {
                                                                     className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isCompleted
                                                                         ? "bg-green-500 text-white"
                                                                         : isCurrent
-                                                                            ? "bg-orange-500 text-white"
+                                                                            ? "bg-[#021d49] text-white"
                                                                             : locked
                                                                                 ? "bg-gray-200 text-gray-500"
                                                                                 : "bg-gray-300 text-gray-600"
@@ -1235,7 +1235,7 @@ const QuestionsSection = ({ lesson, answers, onAnswer }) => {
                         className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white"
                     >
                         <p className="font-bold text-gray-900 mb-4 text-lg flex items-start gap-3">
-                            <span className="bg-orange-500 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
+                            <span className="bg-[#021d49] text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
                                 {idx + 1}
                             </span>
                             {question.question || question.text || 'Question text not available'}
@@ -1371,7 +1371,7 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
                 </p>
             </div>
 
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 mb-8 border border-orange-200">
+            <div className="bg-gradient-to-r from-yellow-50 to-blue-50 rounded-xl p-6 mb-8 border border-orange-200">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Award className="w-8 h-8 text-orange-600" />

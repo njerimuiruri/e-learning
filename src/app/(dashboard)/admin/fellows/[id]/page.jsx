@@ -160,7 +160,7 @@ export default function FellowDetailPage() {
 
     const getProgressColor = (progress) => {
         if (progress < 30) return 'bg-rose-500';
-        if (progress < 50) return 'bg-orange-500';
+        if (progress < 50) return 'bg-[#021d49]';
         if (progress < 80) return 'bg-amber-500';
         if (progress < 100) return 'bg-blue-500';
         return 'bg-emerald-500';

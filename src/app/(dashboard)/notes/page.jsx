@@ -120,7 +120,7 @@ const NotesPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-orange-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center p-4">
         <div className="text-center">
           <div className="w-12 h-12 rounded-full border-4 border-orange-200 border-t-orange-500 animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading your notes...</p>
@@ -213,9 +213,8 @@ const NotesPage = () => {
                           expandedCourse === course.courseId ? null : course.courseId
                         )
                       }
-                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-orange-50 transition ${
-                        expandedCourse === course.courseId ? "bg-orange-50" : ""
-                      }`}
+                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-orange-50 transition ${expandedCourse === course.courseId ? "bg-orange-50" : ""
+                        }`}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -355,11 +354,10 @@ const NotesPage = () => {
                             className="p-2 hover:bg-orange-100 rounded-lg transition flex-shrink-0"
                           >
                             <Star
-                              className={`w-5 h-5 ${
-                                note.isBookmarked
+                              className={`w-5 h-5 ${note.isBookmarked
                                   ? "fill-orange-500 text-orange-500"
                                   : "text-gray-400"
-                              }`}
+                                }`}
                             />
                           </button>
                         </div>

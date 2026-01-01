@@ -245,7 +245,7 @@ export default function AdminDashboardPage() {
                                         <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                             <Icons.UserCog className="w-6 h-6 text-orange-600" />
                                             Pending Instructor Approvals
-                                            <span className="ml-2 bg-orange-500 text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
+                                            <span className="ml-2 bg-[#021d49] text-white text-sm font-bold px-3 py-1 rounded-full animate-pulse">
                                                 {pendingInstructors.length} Pending
                                             </span>
                                         </h2>

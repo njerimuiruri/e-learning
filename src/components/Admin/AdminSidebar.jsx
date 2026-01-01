@@ -3,10 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function AdminSidebar() {
     const router = useRouter();
     const pathname = usePathname();
+    const { showToast } = useToast();
     const [showPhotoModal, setShowPhotoModal] = useState(false);
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [adminUser, setAdminUser] = useState(null);
@@ -234,7 +236,7 @@ export default function AdminSidebar() {
                                         <button
                                             onClick={() => {
                                                 setShowUserDropdown(false);
-                                                alert('Help Center opened');
+                                                showToast('Help Center opened', { type: 'info', title: 'Support' });
                                             }}
                                             className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 transition-colors text-left"
                                         >

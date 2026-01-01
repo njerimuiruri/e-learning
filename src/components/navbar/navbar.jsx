@@ -1,22 +1,32 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
 import { Menu, X, Search, User, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen, ChevronDown } from 'lucide-react';
-import authService from '@/lib/api/authService';
-import courseService from '@/lib/api/courseService';
 
 const Navbar = () => {
-    const router = useRouter();
-    const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [userRole, setUserRole] = useState('student');
-    const [currentUser, setCurrentUser] = useState(null);
-    const [studentData, setStudentData] = useState(null);
+    const [currentUser, setCurrentUser] = useState({
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john.doe@example.com',
+        profilePhotoUrl: null,
+        totalPoints: 1250,
+        bio: 'Student',
+        phoneNumber: '+254712345678',
+        country: 'Kenya',
+        emailVerified: true
+    });
+    const [studentData, setStudentData] = useState([
+        {
+            courseId: { _id: '123' },
+            lastAccessedModule: 2,
+            lastAccessedLesson: 3
+        }
+    ]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -38,47 +48,6 @@ const Navbar = () => {
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [isSearchOpen, showProfileMenu]);
-
-    // Check authentication and load user data
-    useEffect(() => {
-        checkAuth();
-    }, [pathname]);
-
-    const checkAuth = async () => {
-        try {
-            const user = authService.getCurrentUser();
-            const isDashboard = pathname?.startsWith('/student') ||
-                pathname?.startsWith('/instructor') ||
-                pathname?.startsWith('/admin');
-
-            if (user) {
-                setCurrentUser(user);
-                setIsLoggedIn(true);
-                setUserRole(user.role);
-
-                // Load student-specific data from API
-                if (user.role === 'student') {
-                    try {
-                        const enrollments = await courseService.getStudentEnrollments();
-                        setStudentData(enrollments);
-                    } catch (error) {
-                        console.error('Error fetching enrollments:', error);
-                        setStudentData([]);
-                    }
-                }
-            } else if (isDashboard) {
-                // User is on dashboard but not logged in - redirect
-                router.push('/');
-            } else {
-                setIsLoggedIn(false);
-                setCurrentUser(null);
-            }
-        } catch (error) {
-            console.error('Auth check error:', error);
-            setIsLoggedIn(false);
-            setCurrentUser(null);
-        }
-    };
 
     const getInitials = () => {
         if (currentUser) {
@@ -122,45 +91,18 @@ const Navbar = () => {
         { name: 'Contact', href: '#contact' }
     ];
 
-    const handleLoginSuccess = async (user) => {
-        setCurrentUser(user);
-        setIsLoggedIn(true);
-        setUserRole(user.role);
-
-        if (user.role === 'student') {
-            try {
-                const enrollments = await courseService.getStudentEnrollments();
-                setStudentData(enrollments);
-            } catch (error) {
-                console.error('Error fetching enrollments:', error);
-                setStudentData([]);
-            }
-        }
-    };
-
     const handleLogout = () => {
-        authService.logout();
         setIsLoggedIn(false);
-        setCurrentUser(null);
-        setStudentData(null);
         setShowProfileMenu(false);
-        router.push('/');
     };
 
     const handleContinueLearning = () => {
-        // studentData is now an array of enrollments from the backend
         if (studentData && Array.isArray(studentData) && studentData.length > 0) {
-            // Get the first enrollment (most recently accessed due to sorting by lastAccessedAt)
             const firstEnrollment = studentData[0];
-
-            // Use the lastAccessedModule and lastAccessedLesson from the enrollment
             const courseId = firstEnrollment.courseId._id || firstEnrollment.courseId;
             const moduleIndex = firstEnrollment.lastAccessedModule || 0;
             const lessonIndex = firstEnrollment.lastAccessedLesson || 0;
-
-            router.push(`/courses/${courseId}/learn/${moduleIndex}/${lessonIndex}`);
-        } else {
-            router.push('/courses');
+            console.log(`Navigate to: /courses/${courseId}/learn/${moduleIndex}/${lessonIndex}`);
         }
     };
 
@@ -172,18 +114,16 @@ const Navbar = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16 md:h-20">
                         <div className="flex-shrink-0">
-                            <Link href="/" className="flex items-center gap-3">
-                                <div className="relative w-14 h-14 flex items-center justify-center bg-white rounded-xl shadow-lg border-2 border-orange-400 p-1">
-                                    <img 
-                                        src="/Arin.png" 
-                                        alt="Logo" 
-                                        className="w-full h-full object-contain" 
-                                    />
+                            <a href="/" className="flex items-center gap-3">
+                                <div className="relative w-14 h-14 flex items-center justify-center bg-white rounded-xl shadow-lg border-2 border-[#021d49] p-1">
+                                    <div className="w-full h-full bg-[#021d49] rounded-lg flex items-center justify-center text-white font-bold text-xl">
+                                        A
+                                    </div>
                                 </div>
-                                                              <div className="hidden sm:flex flex-col">
+                                <div className="hidden sm:flex flex-col">
                                     <span className="font-bold text-2xl">
                                         <span className="text-gray-800">ARIN </span>
-                                        <span className="text-[#f65e14]">E</span>
+                                        <span className="text-[#021d49]">E</span>
                                         <span className="text-gray-800">-</span>
                                         <span className="text-[#1e40af]">L</span>
                                         <span className="text-gray-800">earning </span>
@@ -191,7 +131,7 @@ const Navbar = () => {
                                         <span className="text-gray-800">latform</span>
                                     </span>
                                 </div>
-                            </Link>
+                            </a>
                         </div>
 
                         <div className="hidden lg:flex items-center space-x-8">
@@ -199,10 +139,10 @@ const Navbar = () => {
                                 <a
                                     key={link.name}
                                     href={link.href}
-                                    className="text-gray-700 hover:text-[#f65e14] font-medium transition-colors duration-200 relative group"
+                                    className="text-gray-700 hover:text-[#021d49] font-medium transition-colors duration-200 relative group"
                                 >
                                     {link.name}
-                                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#f65e14] group-hover:w-full transition-all duration-300"></span>
+                                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#021d49] group-hover:w-full transition-all duration-300"></span>
                                 </a>
                             ))}
                         </div>
@@ -210,7 +150,7 @@ const Navbar = () => {
                         <div className="hidden lg:flex items-center space-x-4">
                             <button
                                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                                className="p-2 text-gray-700 hover:text-[#f65e14] hover:bg-orange-50 rounded-lg transition-all duration-200"
+                                className="p-2 text-gray-700 hover:text-[#021d49] hover:bg-blue-50 rounded-lg transition-all duration-200"
                             >
                                 <Search size={22} />
                             </button>
@@ -230,16 +170,16 @@ const Navbar = () => {
                                     <div className="relative profile-menu">
                                         <button
                                             onClick={() => setShowProfileMenu(!showProfileMenu)}
-                                            className="flex items-center gap-2 p-2 hover:bg-orange-50 rounded-lg transition-all duration-200"
+                                            className="flex items-center gap-2 p-2 hover:bg-blue-50 rounded-lg transition-all duration-200"
                                         >
                                             {currentUser?.profilePhotoUrl ? (
                                                 <img
                                                     src={currentUser.profilePhotoUrl}
                                                     alt={getFullName()}
-                                                    className="w-10 h-10 rounded-full object-cover border-2 border-orange-400"
+                                                    className="w-10 h-10 rounded-full object-cover border-2 border-[#021d49]"
                                                 />
                                             ) : (
-                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold">
+                                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#021d49] to-[#1e40af] flex items-center justify-center text-white font-bold">
                                                     {getInitials()}
                                                 </div>
                                             )}
@@ -253,10 +193,10 @@ const Navbar = () => {
                                                             <img
                                                                 src={currentUser.profilePhotoUrl}
                                                                 alt={getFullName()}
-                                                                className="w-16 h-16 rounded-full object-cover border-2 border-orange-400"
+                                                                className="w-16 h-16 rounded-full object-cover border-2 border-[#021d49]"
                                                             />
                                                         ) : (
-                                                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-pink-500 flex items-center justify-center text-white font-bold text-xl">
+                                                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#021d49] to-[#1e40af] flex items-center justify-center text-white font-bold text-xl">
                                                                 {getInitials()}
                                                             </div>
                                                         )}
@@ -279,7 +219,7 @@ const Navbar = () => {
                                                         </div>
                                                     )}
 
-                                                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-orange-200 rounded-lg p-3">
+                                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-[#021d49] rounded-lg p-3">
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-2">
                                                                 <div className="w-8 h-8 rounded-full bg-yellow-400 flex items-center justify-center">
@@ -287,7 +227,7 @@ const Navbar = () => {
                                                                 </div>
                                                                 <span className="text-sm font-semibold text-gray-700">XP</span>
                                                             </div>
-                                                            <span className="text-2xl font-black text-orange-600">
+                                                            <span className="text-2xl font-black text-[#021d49]">
                                                                 {currentUser?.totalPoints || 0}
                                                             </span>
                                                         </div>
@@ -299,10 +239,9 @@ const Navbar = () => {
                                                         <>
                                                             <button
                                                                 onClick={() => {
-                                                                    router.push('/student/certificates');
                                                                     setShowProfileMenu(false);
                                                                 }}
-                                                                className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
+                                                                className="w-full px-6 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors text-left"
                                                             >
                                                                 <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
                                                                     <Award className="w-5 h-5 text-purple-600" />
@@ -312,13 +251,12 @@ const Navbar = () => {
 
                                                             <button
                                                                 onClick={() => {
-                                                                    router.push('/student/achievements');
                                                                     setShowProfileMenu(false);
                                                                 }}
-                                                                className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
+                                                                className="w-full px-6 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors text-left"
                                                             >
-                                                                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                                                                    <Trophy className="w-5 h-5 text-orange-600" />
+                                                                <div className="w-8 h-8 rounded-lg bg-[#021d49] flex items-center justify-center">
+                                                                    <Trophy className="w-5 h-5 text-white" />
                                                                 </div>
                                                                 <span className="font-medium text-gray-700">Your Achievements</span>
                                                             </button>
@@ -327,12 +265,9 @@ const Navbar = () => {
 
                                                     <button
                                                         onClick={() => {
-                                                            const dashboardPath = userRole === 'student' ? '/student' :
-                                                                userRole === 'instructor' ? '/instructor' : '/admin';
-                                                            router.push(dashboardPath);
                                                             setShowProfileMenu(false);
                                                         }}
-                                                        className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
+                                                        className="w-full px-6 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors text-left"
                                                     >
                                                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                                                             <LayoutDashboard className="w-5 h-5 text-blue-600" />
@@ -342,10 +277,9 @@ const Navbar = () => {
 
                                                     <button
                                                         onClick={() => {
-                                                            router.push(`/${userRole}/settings`);
                                                             setShowProfileMenu(false);
                                                         }}
-                                                        className="w-full px-6 py-3 flex items-center gap-3 hover:bg-orange-50 transition-colors text-left"
+                                                        className="w-full px-6 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors text-left"
                                                     >
                                                         <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                                                             <Settings className="w-5 h-5 text-gray-600" />
@@ -371,19 +305,19 @@ const Navbar = () => {
                                 </>
                             ) : (
                                 <>
-                                    <Link
+                                    <a
                                         href="/login"
-                                        className="text-gray-700 hover:text-[#f65e14] font-medium px-4 py-2 rounded-lg hover:bg-orange-50 transition-all duration-200"
+                                        className="text-gray-700 hover:text-[#021d49] font-medium px-4 py-2 rounded-lg hover:bg-blue-50 transition-all duration-200"
                                     >
                                         Sign In
-                                    </Link>
+                                    </a>
 
-                                    <Link
+                                    <a
                                         href="/register"
-                                        className="bg-[#f65e14] hover:bg-[#e54d03] text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
+                                        className="bg-[#021d49] hover:bg-[#03275f] text-white px-6 py-2.5 rounded-lg font-medium transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
                                     >
                                         Join Now
-                                    </Link>
+                                    </a>
                                 </>
                             )}
                         </div>
@@ -391,19 +325,52 @@ const Navbar = () => {
                         <div className="flex lg:hidden items-center space-x-2">
                             <button
                                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                                className="p-2 text-gray-700 hover:text-[#f65e14] transition-colors duration-200"
+                                className="p-2 text-gray-700 hover:text-[#021d49] transition-colors duration-200"
                             >
                                 <Search size={22} />
                             </button>
                             <button
                                 onClick={() => setIsOpen(!isOpen)}
-                                className="text-gray-700 hover:text-[#f65e14] focus:outline-none transition-colors duration-200"
+                                className="text-gray-700 hover:text-[#021d49] focus:outline-none transition-colors duration-200"
                             >
                                 {isOpen ? <X size={28} /> : <Menu size={28} />}
                             </button>
                         </div>
                     </div>
                 </div>
+
+                {/* Mobile Menu */}
+                {isOpen && (
+                    <div className="lg:hidden bg-white border-t border-gray-200">
+                        <div className="px-4 py-4 space-y-3">
+                            {navLinks.map((link) => (
+                                <a
+                                    key={link.name}
+                                    href={link.href}
+                                    className="block text-gray-700 hover:text-[#021d49] font-medium py-2"
+                                >
+                                    {link.name}
+                                </a>
+                            ))}
+                            {!isLoggedIn && (
+                                <div className="space-y-2 pt-4 border-t border-gray-200">
+                                    <a
+                                        href="/login"
+                                        className="block text-center text-gray-700 hover:text-[#021d49] font-medium px-4 py-2 rounded-lg hover:bg-blue-50"
+                                    >
+                                        Sign In
+                                    </a>
+                                    <a
+                                        href="/register"
+                                        className="block text-center bg-[#021d49] hover:bg-[#03275f] text-white px-6 py-2.5 rounded-lg font-medium"
+                                    >
+                                        Join Now
+                                    </a>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </nav>
 
             <style jsx>{`

@@ -4,9 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import courseService from '@/lib/api/courseService';
+import { useToast } from '@/components/ui/ToastProvider';
 
 export default function SubmissionsPage() {
     const router = useRouter();
+    const { showToast } = useToast();
     const [courses, setCourses] = useState([]);
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [submissions, setSubmissions] = useState([]);
@@ -39,14 +41,14 @@ export default function SubmissionsPage() {
             const response = await courseService.getCourseSubmissions(courseId);
             console.log('Submissions response:', response);
             setSubmissions(response || []);
-            
+
             if (!response || response.length === 0) {
                 console.log('No submissions found for this course');
             }
         } catch (err) {
             console.error('Error fetching submissions:', err);
             console.error('Error details:', err.response?.data || err.message);
-            alert('Failed to fetch submissions: ' + (err.response?.data?.message || err.message));
+            showToast('Failed to fetch submissions: ' + (err.response?.data?.message || err.message), { type: 'error', title: 'Load failed' });
             setSubmissions([]);
         } finally {
             setLoading(false);
@@ -61,13 +63,13 @@ export default function SubmissionsPage() {
     const handleReviewSubmission = (submission) => {
         setSelectedSubmission(submission);
         setReviewModal(true);
-        
+
         // Initialize feedback state for each essay question
         const initialFeedback = {};
         submission.answers?.forEach((answer, idx) => {
             const question = submission.questions?.[idx];
             const answerType = answer?.questionType || question?.type;
-            
+
             // Include essay questions that need grading
             if (answerType === 'essay' || answer?.requiresManualGrading) {
                 initialFeedback[idx] = {
@@ -84,23 +86,23 @@ export default function SubmissionsPage() {
 
         try {
             setSaving(true);
-            
+
             // Calculate final score including essay grades
             const autoGradedQuestions = selectedSubmission.questions.filter(q => q.type !== 'essay');
             const essayQuestions = selectedSubmission.questions.filter(q => q.type === 'essay');
-            
+
             const autoScore = selectedSubmission.autoGradedScore || 0;
             const autoGradedWeight = autoGradedQuestions.length;
             const essayWeight = essayQuestions.length;
-            
+
             let essayCorrect = 0;
             Object.values(feedback).forEach(fb => {
                 if (fb.isCorrect) essayCorrect++;
             });
-            
+
             const totalQuestions = autoGradedWeight + essayWeight;
             const essayScore = essayWeight > 0 ? (essayCorrect / essayWeight) * 100 : 0;
-            
+
             // Weighted average of auto-graded and essay scores
             let finalScore;
             if (totalQuestions > 0) {
@@ -110,9 +112,9 @@ export default function SubmissionsPage() {
             } else {
                 finalScore = autoScore;
             }
-            
+
             const passed = finalScore >= (selectedSubmission.passingScore || 70);
-            
+
             const reviewData = {
                 enrollmentId: selectedSubmission.enrollmentId,
                 submissionId: selectedSubmission._id,
@@ -121,16 +123,16 @@ export default function SubmissionsPage() {
                 passed,
                 reviewedAt: new Date().toISOString(),
             };
-            
+
             // Mock API call - replace with actual endpoint
             await courseService.submitAssessmentReview(reviewData);
-            
-            alert(`Review saved! Final score: ${finalScore}% - ${passed ? 'PASSED' : 'FAILED'}`);
+
+            showToast(`Review saved! Final score: ${finalScore}% - ${passed ? 'PASSED' : 'FAILED'}`, { type: 'success', title: 'Review saved' });
             setReviewModal(false);
             fetchSubmissions(selectedCourse._id);
         } catch (err) {
             console.error('Error saving review', err);
-            alert('Failed to save review. Please try again.');
+            showToast('Failed to save review. Please try again.', { type: 'error', title: 'Save failed' });
         } finally {
             setSaving(false);
         }
@@ -171,11 +173,10 @@ export default function SubmissionsPage() {
                                 <button
                                     key={course._id}
                                     onClick={() => handleCourseSelect(course)}
-                                    className={`text-left p-4 border-2 rounded-lg transition-all ${
-                                        selectedCourse?._id === course._id
+                                    className={`text-left p-4 border-2 rounded-lg transition-all ${selectedCourse?._id === course._id
                                             ? 'border-blue-500 bg-blue-50'
                                             : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
-                                    }`}
+                                        }`}
                                 >
                                     <h3 className="font-semibold text-gray-900 mb-1">{course.title}</h3>
                                     <p className="text-sm text-gray-600">{course.category}</p>
@@ -223,11 +224,10 @@ export default function SubmissionsPage() {
                                                         Auto-graded: {submission.autoGradedScore || 0}%
                                                     </span>
                                                     <span
-                                                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                                            submission.status === 'reviewed'
+                                                        className={`px-2 py-1 rounded-full text-xs font-semibold ${submission.status === 'reviewed'
                                                                 ? 'bg-green-100 text-green-700'
                                                                 : 'bg-amber-100 text-amber-700'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {submission.status === 'reviewed' ? 'Reviewed' : 'Pending Review'}
                                                     </span>
@@ -273,7 +273,7 @@ export default function SubmissionsPage() {
                                 {selectedSubmission.answers?.map((answer, idx) => {
                                     const question = selectedSubmission.questions?.[idx];
                                     if (!question) return null;
-                                    
+
                                     const answerType = answer?.questionType || question.type || 'multiple-choice';
                                     const isEssay = answerType === 'essay' || answer?.requiresManualGrading;
                                     const isAutoGraded = !isEssay;
@@ -282,17 +282,16 @@ export default function SubmissionsPage() {
                                     return (
                                         <div
                                             key={idx}
-                                            className={`border-2 rounded-lg p-4 ${
-                                                isEssay
-                                                    ? answer?.gradedAt 
-                                                        ? answer?.isCorrect 
+                                            className={`border-2 rounded-lg p-4 ${isEssay
+                                                    ? answer?.gradedAt
+                                                        ? answer?.isCorrect
                                                             ? 'border-green-300 bg-green-50'
                                                             : 'border-red-300 bg-red-50'
                                                         : 'border-amber-300 bg-amber-50'
                                                     : answer?.isCorrect
-                                                    ? 'border-green-300 bg-green-50'
-                                                    : 'border-red-300 bg-red-50'
-                                            }`}
+                                                        ? 'border-green-300 bg-green-50'
+                                                        : 'border-red-300 bg-red-50'
+                                                }`}
                                         >
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex-1">

@@ -52,12 +52,12 @@ const testimonialssections = () => {
     return (
         <>
             {/* Testimonials Section */}
-            <section className="py-16 lg:py-24 bg-gradient-to-b from-white to-orange-50">
+            <section className="py-16 lg:py-24 bg-gradient-to-b from-white to-blue-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
                     {/* Section Header */}
                     <div className="text-center mb-12">
-                        <span className="text-[#f65e14] font-semibold text-sm uppercase tracking-wider">
+                        <span className="text-[#021d49] font-semibold text-sm uppercase tracking-wider">
                             Our Feedback
                         </span>
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mt-4 mb-4">
@@ -115,7 +115,7 @@ const testimonialssections = () => {
                                     key={index}
                                     onClick={() => setCurrentTestimonial(index)}
                                     className={`transition-all duration-300 rounded-full ${currentTestimonial === index
-                                        ? 'w-8 h-2 bg-[#f65e14]'
+                                        ? 'w-8 h-2 bg-[#021d49]'
                                         : 'w-2 h-2 bg-gray-300 hover:bg-gray-400'
                                         }`}
                                     aria-label={`Go to testimonial ${index + 1}`}
@@ -167,7 +167,7 @@ const testimonialssections = () => {
 
                         {/* Content */}
                         <div className="relative text-center py-16 lg:py-24 px-6">
-                            <span className="text-[#f65e14] font-semibold text-sm uppercase tracking-wider">
+                            <span className="text-[#021d49] font-semibold text-sm uppercase tracking-wider">
                                 Get Started
                             </span>
                             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mt-4 mb-6">
@@ -179,7 +179,7 @@ const testimonialssections = () => {
 
                             {/* CTA Buttons */}
                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                <button className="bg-[#f65e14] hover:bg-[#e54d03] text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg">
+                                <button className="bg-[#021d49] hover:bg-[#03275f] text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 shadow-lg">
                                     Start Learning Now
                                 </button>
                                 <button className="bg-white/10 hover:bg-white/20 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 backdrop-blur-sm border-2 border-white/30">

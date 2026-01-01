@@ -47,15 +47,15 @@ const WhyChooseUsSection = () => {
 
                 {/* Section Header */}
                 <div className="text-center lg:text-left mb-12 lg:mb-16">
-                    <span className="text-[#f65e14] font-semibold text-sm uppercase tracking-wider">
+                    <span className="text-[#021d49] font-semibold text-sm uppercase tracking-wider">
                         Why Choose the Academy
                     </span>
                     <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mt-4 leading-tight max-w-3xl">
                         Driving Research Quality Through Targeted Programming
                     </h2>
                     <p className="text-lg text-gray-600 mt-6 leading-relaxed max-w-2xl">
-                        The ARIN Publishing Academy embeds targeted mechanisms that improve the quality, 
-                        visibility, and volume of African scholarly outputs through comprehensive support systems 
+                        The ARIN Publishing Academy embeds targeted mechanisms that improve the quality,
+                        visibility, and volume of African scholarly outputs through comprehensive support systems
                         and strategic partnerships.
                     </p>
                 </div>
@@ -76,7 +76,7 @@ const WhyChooseUsSection = () => {
                             </div>
 
                             {/* Orange Floating Card */}
-                            <div className="absolute bottom-8 left-8 bg-[#f65e14] rounded-3xl p-6 shadow-2xl max-w-xs transform hover:scale-105 transition-transform duration-300">
+                            <div className="absolute bottom-8 left-8 bg-[#021d49] rounded-3xl p-6 shadow-2xl max-w-xs transform hover:scale-105 transition-transform duration-300">
                                 <h3 className="text-white text-2xl font-bold mb-2">
                                     Amplify African
                                     <br />
@@ -85,7 +85,7 @@ const WhyChooseUsSection = () => {
                                 <p className="text-orange-100 text-sm mb-4">
                                     A springboard for African researchers to confidently publish impactful work.
                                 </p>
-                                <button className="bg-white text-[#f65e14] px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 flex items-center gap-2 group">
+                                <button className="bg-white text-[#021d49] px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 flex items-center gap-2 group">
                                     Join Academy
                                     <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </button>
@@ -106,7 +106,7 @@ const WhyChooseUsSection = () => {
                                     className="w-full px-6 py-5 flex items-center justify-between bg-white hover:bg-orange-50 transition-colors duration-200"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <span className="text-2xl font-bold text-[#f65e14]">+</span>
+                                        <span className="text-2xl font-bold text-[#021d49]">+</span>
                                         <h3 className="text-left text-lg font-bold text-gray-900">
                                             {item.title}
                                         </h3>
@@ -137,7 +137,7 @@ const WhyChooseUsSection = () => {
                                                 <p className="text-gray-600 leading-relaxed">
                                                     {item.content}
                                                 </p>
-                                                <button className="mt-3 text-[#f65e14] font-semibold hover:underline text-sm">
+                                                <button className="mt-3 text-[#021d49] font-semibold hover:underline text-sm">
                                                     Learn more
                                                 </button>
                                             </div>
