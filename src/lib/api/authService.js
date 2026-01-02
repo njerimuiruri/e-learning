@@ -89,6 +89,23 @@ class AuthService {
   }
 
   /**
+   * Google OAuth login
+   * @param {Object} data - Google login data with idToken
+   * @returns {Promise<Object>} Login response with token and user
+   */
+  async googleLogin(data) {
+    try {
+      const response = await api.post("/api/auth/google", {
+        idToken: data.idToken,
+        role: data.role || "student",
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || "Google login failed");
+    }
+  }
+
+  /**
    * Logout user - Clear all stored data
    */
   logout() {

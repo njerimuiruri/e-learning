@@ -336,34 +336,3 @@ const DiscussionPage = () => {
 }
 
 export default DiscussionPage;
-
-<div className="mt-3 flex items-start gap-2">
-  <CornerDownRight className="w-4 h-4 text-gray-400 mt-2" />
-  <div className="flex-1 space-y-2">
-    <textarea
-      rows={2}
-      placeholder="Reply to this discussion..."
-      value={replyMap[d._id] || ""}
-      onChange={(e) => setReplyMap((prev) => ({ ...prev, [d._id]: e.target.value }))}
-      className="w-full border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-orange-400"
-    />
-    <button
-      onClick={() => handleReply(d._id)}
-      disabled={postingReplyId === d._id || !(replyMap[d._id] || "").trim()}
-      className="inline-flex items-center gap-2 bg-gray-900 hover:bg-black text-white px-3 py-2 rounded-lg disabled:opacity-60"
-    >
-      {postingReplyId === d._id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Send reply
-    </button>
-  </div>
-</div>
-        </div >
-      ))}
-    </div >
-  </div >
-        </div >
-      </div >
-    </div >
-  );
-};
-
-export default DiscussionPage;

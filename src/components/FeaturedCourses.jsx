@@ -166,14 +166,14 @@ export default function FeaturedCoursesComponent() {
                                         </div>
 
                                         {/* Instructor Info */}
-                                        {course.instructorId && (
+                                        {(course.instructorIds?.[0] || course.instructorId) && (
                                             <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-200">
                                                 <div className="w-10 h-10 bg-[#021d49] rounded-full flex items-center justify-center text-white font-bold">
-                                                    {course.instructorId.firstName?.charAt(0)}
+                                                    {(course.instructorIds?.[0]?.firstName || course.instructorId?.firstName || 'U')?.charAt(0)}
                                                 </div>
                                                 <div>
                                                     <p className="text-sm font-semibold text-gray-900">
-                                                        {course.instructorId.firstName} {course.instructorId.lastName}
+                                                        {course.instructorIds?.[0]?.firstName || course.instructorId?.firstName || 'Unknown'} {course.instructorIds?.[0]?.lastName || course.instructorId?.lastName || 'Instructor'}
                                                     </p>
                                                     <p className="text-xs text-gray-600">Instructor</p>
                                                 </div>

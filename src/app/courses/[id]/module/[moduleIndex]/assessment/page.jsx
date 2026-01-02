@@ -150,6 +150,13 @@ export default function ModuleAssessmentPage() {
     }
   };
 
+  useEffect(() => {
+    const nextModuleIndex = parseInt(moduleIndex) + 1;
+    if (submitted && results?.passed && course?.modules && !course.modules[nextModuleIndex]) {
+      router.push(`/courses/${courseId}/final-assessment`);
+    }
+  }, [submitted, results?.passed, course?.modules, moduleIndex, courseId, router]);
+
   if (loading && !module) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -230,7 +237,7 @@ export default function ModuleAssessmentPage() {
                   onClick={handleContinue}
                   className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
                 >
-                  Continue to Next Module
+                  {course?.modules?.[parseInt(moduleIndex) + 1] ? 'Continue to Next Module' : 'Go to Final Assessment'}
                   <ArrowRight className="w-5 h-5" />
                 </button>
               )}

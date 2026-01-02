@@ -48,6 +48,29 @@ const FinalAssessmentPage = () => {
     const storageKey = typeof window !== "undefined" ? `final_assessment_${courseId}` : null;
 
     useEffect(() => {
+        const ensureEnrollment = async () => {
+            try {
+                const enrollmentData = await courseService.getEnrollment(courseId);
+                setEnrollment(enrollmentData);
+                return enrollmentData;
+            } catch (err) {
+                // Auto-enroll if the student somehow lost enrollment but is trying to take the final
+                if (err?.response?.status === 404 || err?.status === 404) {
+                    try {
+                        const newEnrollment = await courseService.enrollCourse(courseId);
+                        setEnrollment(newEnrollment);
+                        return newEnrollment;
+                    } catch (enrollErr) {
+                        console.error("Failed to auto-enroll for final assessment", enrollErr);
+                        showToast('Error accessing course enrollment. Please try again.', { type: 'error', title: 'Enrollment Error' });
+                    }
+                } else {
+                    console.log("Could not fetch enrollment data:", err?.message);
+                }
+                return null;
+            }
+        };
+
         const fetchCourse = async () => {
             try {
                 setLoading(true);
@@ -56,14 +79,13 @@ const FinalAssessmentPage = () => {
 
                 if (!data.finalAssessment || !data.finalAssessment.questions.length) {
                     router.push(`/courses/${courseId}`);
+                    return;
                 }
 
                 // Fetch enrollment data to check progression
-                try {
-                    const enrollmentData = await courseService.getEnrollment(courseId);
-                    setEnrollment(enrollmentData);
+                const enrollmentData = await ensureEnrollment();
 
-                    // Check if can access final assessment
+                if (enrollmentData) {
                     const totalModules = data.modules?.length || 0;
                     const moduleProgress = enrollmentData.moduleProgress || [];
                     const access = canAccessFinalAssessment(totalModules, moduleProgress);
@@ -71,11 +93,10 @@ const FinalAssessmentPage = () => {
                     if (!access.canAccess) {
                         setShowGuard(true);
                     }
-                } catch (err) {
-                    console.log("Could not fetch enrollment data");
                 }
             } catch (err) {
                 console.error("Failed to load course", err);
+                showToast('Failed to load course. Please try again.', { type: 'error', title: 'Load Error' });
             } finally {
                 setLoading(false);
             }

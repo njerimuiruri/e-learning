@@ -1,32 +1,17 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Search, User, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen, ChevronDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Menu, X, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen } from 'lucide-react';
 
 const Navbar = () => {
+    const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
-    const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [userRole, setUserRole] = useState('student');
-    const [currentUser, setCurrentUser] = useState({
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john.doe@example.com',
-        profilePhotoUrl: null,
-        totalPoints: 1250,
-        bio: 'Student',
-        phoneNumber: '+254712345678',
-        country: 'Kenya',
-        emailVerified: true
-    });
-    const [studentData, setStudentData] = useState([
-        {
-            courseId: { _id: '123' },
-            lastAccessedModule: 2,
-            lastAccessedLesson: 3
-        }
-    ]);
+    const [currentUser, setCurrentUser] = useState(null);
+    const [studentData, setStudentData] = useState([]);
 
     useEffect(() => {
         const handleScroll = () => {
@@ -36,18 +21,40 @@ const Navbar = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // Load user from localStorage on mount
+    useEffect(() => {
+        const loadUserData = () => {
+            try {
+                const token = localStorage.getItem('token');
+                const userData = localStorage.getItem('user');
+                
+                if (token && userData) {
+                    const user = JSON.parse(userData);
+                    setCurrentUser(user);
+                    setIsLoggedIn(true);
+                    setUserRole(user.role || 'student');
+                } else {
+                    setIsLoggedIn(false);
+                    setCurrentUser(null);
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+                setIsLoggedIn(false);
+            }
+        };
+
+        loadUserData();
+    }, []);
+
     useEffect(() => {
         const handleClickOutside = (e) => {
-            if (isSearchOpen && !e.target.closest('.search-container')) {
-                setIsSearchOpen(false);
-            }
             if (showProfileMenu && !e.target.closest('.profile-menu')) {
                 setShowProfileMenu(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isSearchOpen, showProfileMenu]);
+    }, [showProfileMenu]);
 
     const getInitials = () => {
         if (currentUser) {
@@ -60,7 +67,7 @@ const Navbar = () => {
 
     const getFullName = () => {
         if (currentUser) {
-            return `${currentUser.firstName} ${currentUser.lastName}`;
+            return `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
         }
         return 'User';
     };
@@ -85,15 +92,24 @@ const Navbar = () => {
 
     const navLinks = [
         { name: 'Home', href: '/' },
-        { name: 'About', href: '#about' },
+        { name: 'About', href: '/about' },
         { name: 'Courses', href: '/courses' },
         { name: 'Community', href: '#community' },
         { name: 'Contact', href: '#contact' }
     ];
 
     const handleLogout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
         setIsLoggedIn(false);
+        setCurrentUser(null);
         setShowProfileMenu(false);
+        router.push('/login');
+    };
+
+    const handleDashboardClick = () => {
+        setShowProfileMenu(false);
+        router.push('/student');
     };
 
     const handleContinueLearning = () => {
@@ -116,13 +132,15 @@ const Navbar = () => {
                         <div className="flex-shrink-0">
                             <a href="/" className="flex items-center gap-3">
                                 <div className="relative w-14 h-14 flex items-center justify-center bg-white rounded-xl shadow-lg border-2 border-[#021d49] p-1">
-                                    <div className="w-full h-full bg-[#021d49] rounded-lg flex items-center justify-center text-white font-bold text-xl">
-                                        A
-                                    </div>
+                                    <img
+                                        src="/Arin.png"
+                                        alt="ARIN Logo"
+                                        className="w-full h-full object-contain"
+                                    />
                                 </div>
                                 <div className="hidden sm:flex flex-col">
                                     <span className="font-bold text-2xl">
-                                        <span className="text-gray-800">ARIN </span>
+                                        {/* <span className="text-gray-800">ARIN </span> */}
                                         <span className="text-[#021d49]">E</span>
                                         <span className="text-gray-800">-</span>
                                         <span className="text-[#1e40af]">L</span>
@@ -148,22 +166,15 @@ const Navbar = () => {
                         </div>
 
                         <div className="hidden lg:flex items-center space-x-4">
-                            <button
-                                onClick={() => setIsSearchOpen(!isSearchOpen)}
-                                className="p-2 text-gray-700 hover:text-[#021d49] hover:bg-blue-50 rounded-lg transition-all duration-200"
-                            >
-                                <Search size={22} />
-                            </button>
-
                             {isLoggedIn ? (
                                 <>
                                     {userRole === 'student' && (
                                         <button
-                                            onClick={handleContinueLearning}
-                                            className="flex items-center gap-2 text-gray-700 hover:text-[#16a34a] font-medium px-4 py-2 rounded-lg hover:bg-green-50 transition-all duration-200 border-2 border-green-500"
+                                            onClick={handleDashboardClick}
+                                            className="flex items-center gap-2 text-gray-700 hover:text-[#021d49] font-medium px-4 py-2 rounded-lg hover:bg-blue-50 transition-all duration-200"
                                         >
-                                            <BookOpen size={20} className="text-green-600" />
-                                            Continue Learning
+                                            <LayoutDashboard size={20} />
+                                            Dashboard
                                         </button>
                                     )}
 
@@ -183,6 +194,7 @@ const Navbar = () => {
                                                     {getInitials()}
                                                 </div>
                                             )}
+                                            <span className="text-gray-700 font-medium hidden sm:inline">{currentUser?.firstName || 'User'}</span>
                                         </button>
 
                                         {showProfileMenu && (
@@ -264,9 +276,7 @@ const Navbar = () => {
                                                     )}
 
                                                     <button
-                                                        onClick={() => {
-                                                            setShowProfileMenu(false);
-                                                        }}
+                                                        onClick={handleDashboardClick}
                                                         className="w-full px-6 py-3 flex items-center gap-3 hover:bg-blue-50 transition-colors text-left"
                                                     >
                                                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -322,13 +332,7 @@ const Navbar = () => {
                             )}
                         </div>
 
-                        <div className="flex lg:hidden items-center space-x-2">
-                            <button
-                                onClick={() => setIsSearchOpen(!isSearchOpen)}
-                                className="p-2 text-gray-700 hover:text-[#021d49] transition-colors duration-200"
-                            >
-                                <Search size={22} />
-                            </button>
+                        <div className="flex lg:hidden items-center">
                             <button
                                 onClick={() => setIsOpen(!isOpen)}
                                 className="text-gray-700 hover:text-[#021d49] focus:outline-none transition-colors duration-200"

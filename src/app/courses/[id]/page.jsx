@@ -30,7 +30,7 @@ const CourseDetailPage = () => {
     const [enrolled, setEnrolled] = useState(false);
     const [resumeDestination, setResumeDestination] = useState(null);
     const [otherCourses, setOtherCourses] = useState([]);
-    const instructor = course?.instructorId || course?.instructor || {};
+    const instructor = course?.instructorIds?.[0] || course?.instructorId || course?.instructor || {};
     const instructorName = `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || instructor.name || 'Unknown Instructor';
     const instructorAvatar = instructor.profilePhotoUrl || instructor.avatar || 'https://via.placeholder.com/96';
     const instructorEmail = instructor.email || '';

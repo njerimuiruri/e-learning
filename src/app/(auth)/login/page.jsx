@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
@@ -42,6 +42,7 @@ export default function LoginPage() {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
     const [toast, setToast] = useState(null);
     const [formData, setFormData] = useState({
@@ -50,9 +51,81 @@ export default function LoginPage() {
         rememberMe: false,
     });
 
+    useEffect(() => {
+        // Initialize Google Sign-In
+        if (window.google && window.google.accounts) {
+            window.google.accounts.id.initialize({
+                client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+                callback: handleGoogleLogin,
+            });
+        }
+    }, []);
+
     const showToast = (message, type) => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 5000);
+    };
+
+    const handleGoogleLogin = async (response) => {
+        if (!response.credential) {
+            setError('Failed to get Google credentials');
+            return;
+        }
+
+        setGoogleLoading(true);
+        setError('');
+
+        try {
+            const result = await authService.googleLogin({
+                idToken: response.credential,
+                role: 'student',
+            });
+
+            if (result.token) {
+                localStorage.setItem('token', result.token);
+                localStorage.setItem('user', JSON.stringify(result.user));
+            }
+
+            const userName = `${result.user.firstName} ${result.user.lastName}`;
+            showToast(`🎉 Welcome, ${userName}!`, 'success');
+
+            // Check for pending enrollment
+            const pendingEnrollment = localStorage.getItem('pendingEnrollment');
+
+            if (pendingEnrollment && result.user.role === 'student') {
+                localStorage.removeItem('pendingEnrollment');
+                setTimeout(async () => {
+                    try {
+                        const courseService = (await import('@/lib/api/courseService')).default;
+                        await courseService.enrollCourse(pendingEnrollment);
+                        router.replace(`/courses/${pendingEnrollment}/learn/0/0`);
+                    } catch (err) {
+                        console.error('Auto-enrollment failed:', err);
+                        router.replace(`/courses/${pendingEnrollment}`);
+                    }
+                }, 500);
+                return;
+            }
+
+            // Redirect based on role
+            setTimeout(() => {
+                if (result.user.role === 'student') {
+                    router.replace('/student');
+                } else if (result.user.role === 'instructor') {
+                    router.replace('/instructor');
+                } else if (result.user.role === 'admin') {
+                    router.replace('/admin');
+                } else {
+                    router.replace('/');
+                }
+            }, 500);
+        } catch (err) {
+            console.error('Google login error:', err);
+            setError(err.message || 'Google login failed. Please try again.');
+            showToast(err.message || 'Google login failed. Please try again.', 'error');
+        } finally {
+            setGoogleLoading(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -176,11 +249,38 @@ export default function LoginPage() {
 
                         <button
                             type="button"
-                            className="w-full h-12 border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 flex items-center justify-center gap-2 transition-all mb-6"
+                            onClick={() => {
+                                const gsiButton = document.querySelector('[data-google-login-button]');
+                                if (gsiButton) {
+                                    gsiButton.click();
+                                } else if (window.google?.accounts?.id) {
+                                    window.google.accounts.id.prompt();
+                                }
+                            }}
+                            disabled={googleLoading}
+                            className="w-full h-12 border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 flex items-center justify-center gap-2 transition-all mb-6 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <GoogleIcon />
-                            <span className="font-medium text-gray-700">Continue with Google</span>
+                            {googleLoading ? (
+                                <>
+                                    <svg className="animate-spin h-5 w-5 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span className="font-medium text-gray-700">Signing in...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <GoogleIcon />
+                                    <span className="font-medium text-gray-700">Continue with Google</span>
+                                </>
+                            )}
                         </button>
+
+                        <div 
+                            id="google-signin-button" 
+                            data-google-login-button
+                            className="hidden"
+                        ></div>
 
                         <div className="relative mb-6">
                             <div className="absolute inset-0 flex items-center">

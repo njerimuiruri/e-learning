@@ -72,7 +72,7 @@ const AboutSection = () => {
                             <div className="bg-white p-1 rounded-[3rem] shadow-xl border-2 border-black h-[450px] lg:h-[520px]">
                                 <div className="rounded-[2.8rem] overflow-hidden h-full">
                                     <img
-                                        src="/image/poster-launch.jpg"
+                                        src="/image/1.png"
                                         alt="African researchers collaborating"
                                         className="w-full h-full object-cover"
                                     />

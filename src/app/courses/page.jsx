@@ -163,11 +163,12 @@ const CoursesPage = () => {
                         )}
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
                             {!loading && !error && filteredCourses.map((course) => {
-                                const rating = course.instructorId?.avgRating ?? course.avgRating ?? 0;
+                                const rating = course.instructorId?.avgRating ?? course.instructorIds?.[0]?.avgRating ?? course.avgRating ?? 0;
                                 const modules = course.modules || [];
                                 const enrollmentCount = course.enrollmentCount ?? 0;
-                                const instructorName = course.instructorId
-                                    ? `${course.instructorId.firstName || ''} ${course.instructorId.lastName || ''}`.trim()
+                                const instructor = course.instructorIds?.[0] || course.instructorId;
+                                const instructorName = instructor
+                                    ? `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim()
                                     : 'Unknown Instructor';
                                 return (
                                     <div

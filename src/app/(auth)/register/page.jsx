@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, User, Mail, Lock, AlertCircle, Phone, Upload, Building, Globe, CheckCircle, ArrowLeft } from 'lucide-react';
@@ -44,6 +44,7 @@ export default function RegisterPage() {
     const [showPassword, setShowPassword] = useState(false);
     const [userRole, setUserRole] = useState('student');
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
     const [toast, setToast] = useState(null);
     const [formData, setFormData] = useState({
@@ -60,9 +61,58 @@ export default function RegisterPage() {
         cvFile: null,
     });
 
+    useEffect(() => {
+        // Initialize Google Sign-In
+        if (window.google && window.google.accounts) {
+            window.google.accounts.id.initialize({
+                client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+                callback: handleGoogleLogin,
+            });
+        }
+    }, []);
+
     const showToast = (message, type) => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 5000);
+    };
+
+    const handleGoogleLogin = async (response) => {
+        if (!response.credential) {
+            setError('Failed to get Google credentials');
+            return;
+        }
+
+        setGoogleLoading(true);
+        setError('');
+
+        try {
+            const result = await authService.googleLogin({
+                idToken: response.credential,
+                role: userRole,
+            });
+
+            if (result.token) {
+                localStorage.setItem('token', result.token);
+                localStorage.setItem('user', JSON.stringify(result.user));
+            }
+
+            const userName = `${result.user.firstName} ${result.user.lastName}`;
+            showToast(`🎉 Welcome, ${userName}!`, 'success');
+
+            setTimeout(() => {
+                if (userRole === 'student') {
+                    router.replace('/student');
+                } else if (userRole === 'instructor') {
+                    router.replace('/login');
+                }
+            }, 500);
+        } catch (err) {
+            console.error('Google login error:', err);
+            setError(err.message || 'Google registration failed. Please try again.');
+            showToast(err.message || 'Google registration failed. Please try again.', 'error');
+        } finally {
+            setGoogleLoading(false);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -221,11 +271,38 @@ export default function RegisterPage() {
 
                         <button
                             type="button"
-                            className="w-full h-10 border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 flex items-center justify-center gap-2 transition-all mb-4"
+                            onClick={() => {
+                                const gsiButton = document.querySelector('[data-google-register-button]');
+                                if (gsiButton) {
+                                    gsiButton.click();
+                                } else if (window.google?.accounts?.id) {
+                                    window.google.accounts.id.prompt();
+                                }
+                            }}
+                            disabled={googleLoading}
+                            className="w-full h-10 border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 flex items-center justify-center gap-2 transition-all mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            <GoogleIcon />
-                            <span className="text-sm font-medium text-gray-700">Continue with Google</span>
+                            {googleLoading ? (
+                                <>
+                                    <svg className="animate-spin h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span className="text-xs font-medium text-gray-700">Signing up...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <GoogleIcon />
+                                    <span className="text-sm font-medium text-gray-700">Continue with Google</span>
+                                </>
+                            )}
                         </button>
+
+                        <div 
+                            id="google-signin-button-register" 
+                            data-google-register-button
+                            className="hidden"
+                        ></div>
 
                         <div className="relative mb-4">
                             <div className="absolute inset-0 flex items-center">

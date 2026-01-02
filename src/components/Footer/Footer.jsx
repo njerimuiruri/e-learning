@@ -13,9 +13,13 @@ const Footer = () => {
 
                     {/* Brand Column */}
                     <div className="lg:col-span-1">
-                        <div className="flex items-center gap-2 mb-6">
-                            <div className="bg-[#021d49] rounded-lg p-2 w-12 h-12 flex items-center justify-center">
-                                <span className="text-white font-bold text-xl">P</span>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="relative w-14 h-14 flex items-center justify-center bg-white rounded-xl shadow-lg border-2 border-[#021d49] p-1">
+                                <img
+                                    src="/Arin.png"
+                                    alt="ARIN Logo"
+                                    className="w-full h-full object-contain"
+                                />
                             </div>
                             <div className="flex flex-col">
                                 <span className="font-bold text-xl">Arin Elearning Platform</span>
@@ -26,7 +30,7 @@ const Footer = () => {
                             Our platform is built on trust, quality, and innovation, ensuring researchers everywhere access knowledge that truly empowers and inspires.
                         </p>
                         <div className="flex items-center gap-2 text-sm">
-                            <Mail className="w-4 h-4 text-[#021d49]" />
+                            <Mail className="w-4 h-4 text-white" />
                             <a href="mailto:info@arin-africa.org" className="text-gray-300 hover:text-[#021d49] transition-colors">
                                 info@arin-africa.org
                             </a>
@@ -50,15 +54,15 @@ const Footer = () => {
                         <h3 className="text-xl font-bold mb-6">Get in touch</h3>
                         <div className="space-y-2 text-sm">
                             <div className="flex items-start gap-2">
-                                <MapPin className="w-4 h-4 text-[#021d49] mt-1 flex-shrink-0" />
+                                <MapPin className="w-4 h-4 text-white mt-1 flex-shrink-0" />
                                 <span className="text-gray-400">ACK Gardens House, Bishop Road, 1St Ngong Ave, Upperhill, Nairobi. P.O Box 53358 – 00200. Nairobi, Kenya</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Phone className="w-4 h-4 text-[#021d49]" />
+                                <Phone className="w-4 h-4 text-white" />
                                 <span className="text-gray-400">+254 746 130 873</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Mail className="w-4 h-4 text-[#021d49]" />
+                                <Mail className="w-4 h-4 text-white" />
                                 <span className="text-gray-400">info@arin-africa.org</span>
                             </div>
                         </div>
@@ -68,18 +72,25 @@ const Footer = () => {
 
                 {/* Footer Bottom */}
                 <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-gray-400 text-sm">
-                        Arin Elearning Platform, {currentYear} © All Rights Reserved
-                    </p>
+                    <div className="flex items-center gap-3">
+                        <div className="relative w-14 h-14 flex items-center justify-center bg-white rounded-xl shadow-lg border-2 border-[#021d49] p-1">
+                            <img
+                                src="/Arin.png"
+                                alt="ARIN Logo"
+                                className="w-full h-full object-contain"
+                            />
+                        </div>
+                        <span className="text-gray-400 text-sm">© {currentYear} Arin Publishing Academy</span>
+                    </div>
                     <div className="flex gap-3">
                         <a href="#" className="w-10 h-10 bg-[#021d49] hover:bg-[#03275f] rounded-full flex items-center justify-center transition-colors">
-                            <Facebook className="w-5 h-5" />
+                            <Facebook className="w-5 h-5 text-white" />
                         </a>
                         <a href="#" className="w-10 h-10 bg-[#021d49] hover:bg-[#03275f] rounded-full flex items-center justify-center transition-colors">
-                            <Twitter className="w-5 h-5" />
+                            <Twitter className="w-5 h-5 text-white" />
                         </a>
                         <a href="#" className="w-10 h-10 bg-[#021d49] hover:bg-[#03275f] rounded-full flex items-center justify-center transition-colors">
-                            <Youtube className="w-5 h-5" />
+                            <Youtube className="w-5 h-5 text-white" />
                         </a>
                     </div>
                 </div>

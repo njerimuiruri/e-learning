@@ -38,10 +38,10 @@ const WhyChooseUsSection = () => {
     };
 
     return (
-        <section className="py-16 lg:py-24 bg-gradient-to-b from-orange-50 to-white relative overflow-hidden">
+        <section className="py-16 lg:py-24 bg-gradient-to-b from-blue-50 to-white relative overflow-hidden">
             {/* Background Decorative Elements */}
-            <div className="absolute top-20 right-10 w-32 h-32 bg-orange-200 rounded-full opacity-20 blur-3xl"></div>
-            <div className="absolute bottom-20 left-10 w-40 h-40 bg-red-200 rounded-full opacity-20 blur-3xl"></div>
+            <div className="absolute top-20 right-10 w-32 h-32 bg-blue-200 rounded-full opacity-20 blur-3xl"></div>
+            <div className="absolute bottom-20 left-10 w-40 h-40 bg-slate-200 rounded-full opacity-20 blur-3xl"></div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
@@ -62,7 +62,7 @@ const WhyChooseUsSection = () => {
 
                 <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
 
-                    {/* Left Side - Image with Unique Shape & Orange Card */}
+                    {/* Left Side - Image with Unique Shape & Blue Card */}
                     <div className="relative order-2 lg:order-1">
                         {/* Main Image Container with Custom Shape */}
                         <div className="relative">
@@ -75,14 +75,14 @@ const WhyChooseUsSection = () => {
                                 />
                             </div>
 
-                            {/* Orange Floating Card */}
+                            {/* Blue Floating Card */}
                             <div className="absolute bottom-8 left-8 bg-[#021d49] rounded-3xl p-6 shadow-2xl max-w-xs transform hover:scale-105 transition-transform duration-300">
                                 <h3 className="text-white text-2xl font-bold mb-2">
                                     Amplify African
                                     <br />
                                     Research Voices
                                 </h3>
-                                <p className="text-orange-100 text-sm mb-4">
+                                <p className="text-blue-100 text-sm mb-4">
                                     A springboard for African researchers to confidently publish impactful work.
                                 </p>
                                 <button className="bg-white text-[#021d49] px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300 flex items-center gap-2 group">
@@ -98,12 +98,12 @@ const WhyChooseUsSection = () => {
                         {accordionData.map((item, index) => (
                             <div
                                 key={index}
-                                className="border-2 border-gray-200 rounded-2xl overflow-hidden transition-all duration-300 hover:border-orange-300"
+                                className="border-2 border-gray-200 rounded-2xl overflow-hidden transition-all duration-300 hover:border-blue-300"
                             >
                                 {/* Accordion Header */}
                                 <button
                                     onClick={() => toggleAccordion(index)}
-                                    className="w-full px-6 py-5 flex items-center justify-between bg-white hover:bg-orange-50 transition-colors duration-200"
+                                    className="w-full px-6 py-5 flex items-center justify-between bg-white hover:bg-blue-50 transition-colors duration-200"
                                 >
                                     <div className="flex items-center gap-4">
                                         <span className="text-2xl font-bold text-[#021d49]">+</span>

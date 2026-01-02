@@ -20,13 +20,18 @@ import {
     Rocket,
     Menu,
     ChevronDown,
+    Play,
+    Lock,
+    Download,
+    FileDown,
+    Home,
+    ArrowLeft,
 } from "lucide-react";
 import courseService from "@/lib/api/courseService";
 import { noteService } from "@/lib/api/noteService";
 import messageService from "@/lib/api/messageService";
 import ModuleProgressionGuard from "@/components/ModuleProgressionGuard";
 import FinalAssessmentGuard from "@/components/FinalAssessmentGuard";
-import { canAccessModule, canAccessFinalAssessment } from "@/lib/utils/courseProgressionLogic";
 
 const CourseLearningPage = () => {
     const router = useRouter();
@@ -56,6 +61,7 @@ const CourseLearningPage = () => {
     const [notes, setNotes] = useState([]);
     const [showNotesList, setShowNotesList] = useState(false);
     const [showCertificate, setShowCertificate] = useState(false);
+    const [activeTab, setActiveTab] = useState("outline"); // outline or resources
 
     useEffect(() => {
         const fetchCourse = async () => {
@@ -144,25 +150,14 @@ const CourseLearningPage = () => {
     }, [moduleParam, courseId, enrollment?._id]);
 
     // Check module access and show guard if needed
-    // Only show guard after enrollment data is available and checked
     useEffect(() => {
         if (!course) return;
         if (moduleIndex < 0) return;
-        if (!enrollment) return; // Don't check until enrollment is loaded
+        if (!enrollment) return;
 
-        // First module always accessible; others require previous module assessment passed
         const moduleProgress = enrollment?.moduleProgress || [];
         const previousModuleProgress = moduleProgress.find(mp => mp.moduleIndex === moduleIndex - 1);
         const canAccessCurrent = moduleIndex === 0 || (previousModuleProgress?.assessmentPassed === true);
-
-        console.log(`Module ${moduleIndex} access check:`, {
-            canAccessCurrent,
-            previousModuleIndex: moduleIndex - 1,
-            previousModuleProgress,
-            previousAssessmentPassed: previousModuleProgress?.assessmentPassed,
-            previousIsCompleted: previousModuleProgress?.isCompleted,
-            allModuleProgress: moduleProgress,
-        });
 
         setShowModuleGuard(!canAccessCurrent);
     }, [course, moduleIndex, enrollment]);
@@ -171,7 +166,6 @@ const CourseLearningPage = () => {
         try {
             if (!enrollment?._id) return;
             await courseService.updateLessonProgress(enrollment._id, moduleIdx, lessonIdx, completed);
-            // refresh enrollment snapshot to reflect updated lessonProgress/progress
             const refreshed = await courseService.getEnrollment(courseId);
             setEnrollment(refreshed);
         } catch (err) {
@@ -180,7 +174,6 @@ const CourseLearningPage = () => {
     };
 
     useEffect(() => {
-        // Record visit to this lesson for resume pointer
         if (enrollment && moduleIndex >= 0 && lessonIndex >= 0) {
             persistLessonProgress({ moduleIdx: moduleIndex, lessonIdx: lessonIndex, completed: false });
         }
@@ -193,7 +186,7 @@ const CourseLearningPage = () => {
 
     if (!course || !activeModule || !activeLesson) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-50 flex items-center justify-center">
                 <div className="text-center bg-white p-12 rounded-2xl shadow-xl">
                     <AlertCircle className="w-20 h-20 text-red-500 mx-auto mb-6" />
                     <h1 className="text-3xl font-bold text-gray-900 mb-4">
@@ -204,7 +197,7 @@ const CourseLearningPage = () => {
                     </p>
                     <button
                         onClick={() => router.push(`/courses/${courseId}`)}
-                        className="bg-[#021d49] text-white px-8 py-3 rounded-lg font-semibold hover:bg-orange-600 transition"
+                        className="bg-[#021d49] text-white px-8 py-3 rounded-lg font-semibold hover:bg-[#032e6b] transition"
                     >
                         Back to Course
                     </button>
@@ -257,14 +250,6 @@ const CourseLearningPage = () => {
         setCurrentPage("lesson");
     };
 
-    const handleModuleClick = (clickedModuleId, clickedModuleLessonId) => {
-        router.push(
-            `/courses/${courseId}/learn/${clickedModuleId}/${clickedModuleLessonId}`
-        );
-        setCurrentPage("lesson");
-        setAnswers({});
-    };
-
     const toggleModule = (modId) => {
         setExpandedModules([modId]);
     };
@@ -280,12 +265,11 @@ const CourseLearningPage = () => {
             const newCompletedModules = [...completedModules, moduleParam];
             setCompletedModules(newCompletedModules);
 
-            const newXP = totalXP + (module.xpReward || 310);
+            const newXP = totalXP + (activeModule.xpReward || 310);
             setTotalXP(newXP);
 
             setShowXPBoost(true);
 
-            // Check if all modules are completed
             if (newCompletedModules.length === course.modules.length) {
                 setTimeout(() => {
                     setShowCertificate(true);
@@ -295,7 +279,6 @@ const CourseLearningPage = () => {
     };
 
     const handleDownloadCertificate = () => {
-        // In a real app, this would generate a PDF
         alert(
             "Certificate download would start here. In production, this would generate a PDF certificate."
         );
@@ -336,7 +319,7 @@ const CourseLearningPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-orange-50 to-gray-50">
+        <div className="min-h-screen bg-gray-100">
             {/* Module Progression Guard */}
             {showModuleGuard && (
                 <ModuleProgressionGuard
@@ -348,7 +331,6 @@ const CourseLearningPage = () => {
                         router.push(`/courses/${courseId}`);
                     }}
                     onProceed={() => {
-                        // Navigate to previous module
                         if (moduleIndex > 0) {
                             const previousModule = modules[moduleIndex - 1];
                             const previousModuleId = previousModule._id || (moduleIndex - 1);
@@ -393,324 +375,281 @@ const CourseLearningPage = () => {
                 />
             )}
 
-            {/* Header */}
-            <div className="bg-white border-b border-gray-200 sticky top-0 z-40 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 py-4">
+            {/* Top Navigation Bar */}
+            <div className="bg-[#021d49] text-white shadow-lg sticky top-0 z-50">
+                <div className="px-6 py-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
                             <button
-                                onClick={() => setSidebarOpen(!sidebarOpen)}
-                                className="lg:hidden p-2 hover:bg-gray-100 rounded-lg transition"
-                            >
-                                <Menu className="w-5 h-5 text-gray-600" />
-                            </button>
-                            <button
                                 onClick={() => router.push(`/courses/${courseId}`)}
-                                className="text-gray-600 hover:text-gray-900 transition flex items-center gap-2"
+                                className="flex items-center gap-2 hover:bg-white/10 px-3 py-2 rounded-lg transition"
                             >
-                                <ChevronLeft className="w-5 h-5" />
-                                <span className="hidden sm:inline">Back</span>
+                                <ArrowLeft className="w-5 h-5" />
+                                <span className="hidden md:inline font-medium">Exit Course</span>
                             </button>
-                            <div className="border-l border-gray-300 pl-4">
-                                <h2 className="text-sm text-gray-600 truncate max-w-xs">
-                                    {course?.title}
-                                </h2>
-                                <p className="text-sm font-semibold text-gray-900 truncate max-w-xs">
-                                    {activeModule?.title}
-                                </p>
+                            <div className="hidden md:block border-l border-white/20 pl-4">
+                                <h1 className="text-lg font-bold truncate max-w-md">{course?.title}</h1>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => router.push('/student')}
-                                className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-blue-600 hover:to-indigo-600 transition shadow-md"
-                                title="Go to Dashboard"
-                            >
-                                <BookOpen className="w-4 h-4" />
-                                Dashboard
-                            </button>
-                            <div className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-yellow-100 to-orange-100 px-4 py-2 rounded-full">
-                                <Trophy className="w-5 h-5 text-orange-600" />
-                                <span className="font-bold text-orange-900">{totalXP} XP</span>
+                            <div className="hidden sm:flex items-center gap-2 bg-white/10 px-4 py-2 rounded-lg">
+                                <Target className="w-5 h-5" />
+                                <span className="font-semibold">{calculateProgress()}% Complete</span>
                             </div>
                             <button
-                                onClick={() => setShowNotesList(!showNotesList)}
-                                className="relative p-2 hover:bg-orange-100 rounded-lg transition bg-orange-50 border-2 border-orange-200"
-                                title="View Notes"
+                                onClick={() => router.push('/student')}
+                                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-lg transition"
+                                title="Dashboard"
                             >
-                                <FileText className="w-5 h-5 text-orange-600" />
-                                {notes.length > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-[#021d49] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                                        {notes.length}
-                                    </span>
-                                )}
-                            </button>
-
-                            <button
-                                onClick={() => setShowNoteModal(true)}
-                                className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-2 rounded-lg font-semibold hover:from-orange-600 hover:to-red-600 transition shadow-md"
-                            >
-                                <FileText className="w-4 h-4" />
-                                Add Note
-                            </button>
-                            <button
-                                onClick={() => router.push(`/courses/${courseId}/discussion?module=${moduleIndex}`)}
-                                className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-purple-500 to-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-purple-600 hover:to-indigo-700 transition shadow-md"
-                            >
-                                <MessageCircle className="w-4 h-4" />
-                                Module Discussion
-                            </button>
-                            <button
-                                onClick={() => {
-                                    if (instructor && instructorId) {
-                                        setShowMessageModal(true);
-                                    } else {
-                                        alert("Instructor information not available. Please refresh the page.");
-                                    }
-                                }}
-                                className="p-2 hover:bg-gray-100 rounded-lg transition"
-                                title="Message Instructor"
-                                disabled={!instructor || !instructorId}
-                            >
-                                <MessageCircle className="w-5 h-5 text-gray-600" />
+                                <Home className="w-5 h-5" />
+                                <span className="hidden md:inline font-medium">Dashboard</span>
                             </button>
                         </div>
                     </div>
                 </div>
-                {showNotesList && (
-                    <div className="border-t border-gray-200 bg-gray-50 max-w-7xl mx-auto">
-                        <div className="p-4">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                                    <FileText className="w-5 h-5 text-orange-500" />
-                                    My Notes ({notes.length})
-                                </h3>
-                                <button
-                                    onClick={() => setShowNoteModal(true)}
-                                    className="text-sm bg-[#021d49] text-white px-4 py-2 rounded-lg font-semibold hover:bg-orange-600 transition"
-                                >
-                                    + Add New Note
-                                </button>
-                            </div>
-
-                            {notes.length === 0 ? (
-                                <div className="text-center py-8 text-gray-500">
-                                    <FileText className="w-12 h-12 mx-auto mb-2 opacity-30" />
-                                    <p>No notes yet. Add your first note!</p>
-                                </div>
-                            ) : (
-                                <div className="space-y-3 max-h-96 overflow-y-auto">
-                                    {notes.map((note, idx) => (
-                                        <div
-                                            key={idx}
-                                            className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
-                                        >
-                                            <div className="flex items-start justify-between mb-2">
-                                                <span className="text-xs text-gray-500">
-                                                    {note.lesson} • {note.timestamp}
-                                                </span>
-                                                <button
-                                                    onClick={() => {
-                                                        const newNotes = notes.filter((_, i) => i !== idx);
-                                                        setNotes(newNotes);
-                                                    }}
-                                                    className="text-gray-400 hover:text-red-500 transition"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                            <p className="text-gray-700 whitespace-pre-wrap">
-                                                {note.content}
-                                            </p>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
             </div>
 
-            <div className="max-w-7xl mx-auto px-4 py-8">
-                <div className="grid lg:grid-cols-4 gap-8">
-                    {/* Sidebar */}
-                    <div
-                        className={`lg:col-span-1 ${sidebarOpen ? "block" : "hidden lg:block"
-                            }`}
-                    >
-                        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-lg sticky top-24 max-h-[calc(100vh-120px)] overflow-y-auto">
-                            <div className="flex items-center justify-between mb-6 pb-6 border-b border-gray-200">
-                                <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                                    <Target className="w-5 h-5 text-orange-500" />
-                                    Progress
-                                </h3>
-                                <span className="text-lg font-bold text-orange-600">
-                                    {calculateProgress()}%
-                                </span>
-                            </div>
-
-                            <div className="relative w-full bg-gray-200 rounded-full h-3 mb-6 overflow-hidden">
-                                <div
-                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-500 to-red-500 rounded-full transition-all duration-500 shadow-lg"
-                                    style={{ width: `${calculateProgress()}%` }}
+            {/* Main Content Area */}
+            <div className="flex h-[calc(100vh-72px)]">
+                {/* Left Sidebar - Course Outline */}
+                <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 bg-white border-r border-gray-200 overflow-hidden flex-shrink-0`}>
+                    <div className="h-full overflow-y-auto">
+                        {/* Tabs */}
+                        <div className="sticky top-0 bg-white border-b border-gray-200 z-10">
+                            <div className="flex">
+                                <button
+                                    onClick={() => setActiveTab("outline")}
+                                    className={`flex-1 py-4 px-4 font-semibold text-sm transition ${activeTab === "outline"
+                                        ? "text-[#021d49] border-b-2 border-[#021d49] bg-blue-50"
+                                        : "text-gray-600 hover:text-gray-900"
+                                        }`}
                                 >
-                                    <div className="absolute inset-0 bg-white/30 animate-pulse"></div>
-                                </div>
+                                    <BookOpen className="w-4 h-4 inline mr-2" />
+                                    Course Outline
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab("resources")}
+                                    className={`flex-1 py-4 px-4 font-semibold text-sm transition ${activeTab === "resources"
+                                        ? "text-[#021d49] border-b-2 border-[#021d49] bg-blue-50"
+                                        : "text-gray-600 hover:text-gray-900"
+                                        }`}
+                                >
+                                    <FileDown className="w-4 h-4 inline mr-2" />
+                                    Resources
+                                </button>
                             </div>
+                        </div>
 
-                            <div className="bg-gradient-to-r from-yellow-50 to-blue-50 rounded-xl p-4 mb-6 border border-orange-200">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <Zap className="w-5 h-5 text-orange-600" />
-                                        <span className="text-sm font-semibold text-gray-700">
-                                            Total XP
-                                        </span>
+                        {/* Course Outline Tab */}
+                        {activeTab === "outline" && (
+                            <div className="p-4">
+                                <div className="mb-4">
+                                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-sm font-semibold text-gray-700">Your Progress</span>
+                                            <span className="text-lg font-bold text-[#021d49]">{calculateProgress()}%</span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div
+                                                className="bg-gradient-to-r from-[#021d49] to-blue-600 h-2 rounded-full transition-all duration-500"
+                                                style={{ width: `${calculateProgress()}%` }}
+                                            ></div>
+                                        </div>
                                     </div>
-                                    <span className="text-xl font-bold text-orange-600">
-                                        {totalXP}
-                                    </span>
                                 </div>
-                            </div>
 
-                            <div className="space-y-3">
-                                {course.modules.map((m, mIdx) => {
-                                    const modId = `${m._id || mIdx}`;
-                                    const isCurrentModule = modId === `${moduleParam}`;
-                                    const moduleLessons = m.lessons || [];
-                                    const moduleProgress = enrollment?.moduleProgress || [];
-                                    const currentModuleProg = moduleProgress.find(mp => mp.moduleIndex === mIdx);
-                                    const previousModuleProgress = moduleProgress.find(mp => mp.moduleIndex === mIdx - 1);
-                                    const moduleCompleted = currentModuleProg?.assessmentPassed === true;
-                                    const moduleStatus = {
-                                        canAccess: mIdx === 0 || (previousModuleProgress?.assessmentPassed === true),
-                                    };
+                                <div className="space-y-2">
+                                    {course.modules.map((m, mIdx) => {
+                                        const modId = `${m._id || mIdx}`;
+                                        const isCurrentModule = modId === `${moduleParam}`;
+                                        const moduleLessons = m.lessons || [];
+                                        const moduleProgress = enrollment?.moduleProgress || [];
+                                        const currentModuleProg = moduleProgress.find(mp => mp.moduleIndex === mIdx);
+                                        const previousModuleProgress = moduleProgress.find(mp => mp.moduleIndex === mIdx - 1);
+                                        const moduleCompleted = currentModuleProg?.assessmentPassed === true;
+                                        const moduleStatus = {
+                                            canAccess: mIdx === 0 || (previousModuleProgress?.assessmentPassed === true),
+                                        };
 
-                                    return (
-                                        <div
-                                            key={modId}
-                                            className="border border-gray-200 rounded-xl overflow-hidden"
-                                        >
-                                            <button
-                                                onClick={() => toggleModule(modId)}
-                                                className={`w-full flex items-center gap-3 p-4 transition-all ${isCurrentModule
-                                                    ? "bg-gradient-to-r from-orange-500 to-red-500 text-white"
-                                                    : "hover:bg-gray-50 bg-gray-50"
-                                                    }`}
+                                        return (
+                                            <div
+                                                key={modId}
+                                                className={`border rounded-lg overflow-hidden ${isCurrentModule ? 'border-[#021d49] ring-2 ring-[#021d49]/20' : 'border-gray-200'}`}
                                             >
-                                                <ChevronDown
-                                                    className={`w-5 h-5 transition-transform ${expandedModules.includes(modId)
-                                                        ? "rotate-0"
-                                                        : "-rotate-90"
-                                                        }`}
-                                                />
-                                                <span
-                                                    className={`text-sm font-bold ${isCurrentModule ? "text-white" : "text-gray-900"
+                                                <button
+                                                    onClick={() => toggleModule(modId)}
+                                                    className={`w-full flex items-center gap-3 p-3 transition-all ${isCurrentModule
+                                                        ? "bg-[#021d49] text-white"
+                                                        : "hover:bg-gray-50 bg-white text-gray-900"
                                                         }`}
                                                 >
-                                                    Module {mIdx + 1}: {m.title}
-                                                </span>
-                                                {moduleCompleted && (
-                                                    <span className="ml-auto text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
-                                                        <CheckCircle2 className="w-4 h-4" /> Done
-                                                    </span>
-                                                )}
-                                                {!moduleStatus.canAccess && !isCurrentModule && (
-                                                    <span className="ml-auto text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">Locked</span>
-                                                )}
-                                            </button>
+                                                    <div className={`flex items-center justify-center w-8 h-8 rounded-full flex-shrink-0 ${isCurrentModule ? 'bg-white/20' : 'bg-gray-100'}`}>
+                                                        {moduleCompleted ? (
+                                                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                                        ) : (
+                                                            <span className={`text-sm font-bold ${isCurrentModule ? 'text-white' : 'text-gray-600'}`}>
+                                                                {mIdx + 1}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 text-left">
+                                                        <div className="text-xs font-semibold opacity-75 mb-1">
+                                                            Module {mIdx + 1}
+                                                        </div>
+                                                        <div className="text-sm font-bold line-clamp-2">
+                                                            {m.title}
+                                                        </div>
+                                                    </div>
+                                                    <ChevronDown
+                                                        className={`w-5 h-5 transition-transform ${expandedModules.includes(modId) ? "rotate-0" : "-rotate-90"}`}
+                                                    />
+                                                </button>
 
-                                            {expandedModules.includes(modId) && (
-                                                <div className="bg-white space-y-1 p-2 border-t border-gray-200">
-                                                    {moduleLessons.map((l, lIdx) => {
-                                                        const lessonId = `${l._id || lIdx}`;
-                                                        const isCompleted = (enrollment?.lessonProgress?.some(
-                                                            (lp) => lp.moduleIndex === mIdx && lp.lessonIndex === lIdx && lp.isCompleted,
-                                                        )) || (mIdx === moduleIndex && completedLessons.includes(lIdx));
-                                                        const isCurrent = lessonId === `${lessonParam}` && modId === `${moduleParam}`;
-                                                        const locked = !moduleStatus.canAccess && !isCompleted && !isCurrent;
+                                                {expandedModules.includes(modId) && (
+                                                    <div className="bg-gray-50 border-t border-gray-200">
+                                                        {moduleLessons.map((l, lIdx) => {
+                                                            const lessonId = `${l._id || lIdx}`;
+                                                            const isCompleted = (enrollment?.lessonProgress?.some(
+                                                                (lp) => lp.moduleIndex === mIdx && lp.lessonIndex === lIdx && lp.isCompleted,
+                                                            )) || (mIdx === moduleIndex && completedLessons.includes(lIdx));
+                                                            const isCurrent = lessonId === `${lessonParam}` && modId === `${moduleParam}`;
+                                                            const locked = !moduleStatus.canAccess && !isCompleted && !isCurrent;
 
-                                                        return (
-                                                            <button
-                                                                key={lessonId}
-                                                                onClick={() => !locked && handleLessonClick(lessonId, modId)}
-                                                                className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all ${isCurrent
-                                                                    ? "bg-orange-50 border-2 border-orange-500"
-                                                                    : isCompleted
-                                                                        ? "hover:bg-green-50 border-l-4 border-green-500"
-                                                                        : locked
-                                                                            ? "opacity-50 cursor-not-allowed border-l-4 border-gray-200"
-                                                                            : "hover:bg-gray-50 border-l-4 border-gray-200"
-                                                                    }`}
-                                                                disabled={locked}
-                                                            >
-                                                                <div
-                                                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isCompleted
-                                                                        ? "bg-green-500 text-white"
-                                                                        : isCurrent
-                                                                            ? "bg-[#021d49] text-white"
+                                                            return (
+                                                                <button
+                                                                    key={lessonId}
+                                                                    onClick={() => !locked && handleLessonClick(lessonId, modId)}
+                                                                    className={`w-full flex items-center gap-3 p-3 text-left transition-all border-l-4 ${isCurrent
+                                                                        ? "bg-blue-50 border-[#021d49]"
+                                                                        : isCompleted
+                                                                            ? "hover:bg-white border-green-500"
                                                                             : locked
-                                                                                ? "bg-gray-200 text-gray-500"
-                                                                                : "bg-gray-300 text-gray-600"
+                                                                                ? "opacity-50 cursor-not-allowed border-transparent"
+                                                                                : "hover:bg-white border-transparent"
                                                                         }`}
+                                                                    disabled={locked}
                                                                 >
-                                                                    {isCompleted ? (
-                                                                        <CheckCircle2 className="w-4 h-4" />
-                                                                    ) : (
-                                                                        lIdx + 1
-                                                                    )}
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <span
-                                                                        className={`text-xs block truncate font-medium ${isCurrent
-                                                                            ? "text-orange-900 font-bold"
-                                                                            : "text-gray-700"
+                                                                    <div
+                                                                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${isCompleted
+                                                                            ? "bg-green-100 text-green-700"
+                                                                            : isCurrent
+                                                                                ? "bg-[#021d49] text-white"
+                                                                                : locked
+                                                                                    ? "bg-gray-200 text-gray-500"
+                                                                                    : "bg-gray-200 text-gray-600"
                                                                             }`}
                                                                     >
-                                                                        {l.title}
-                                                                    </span>
-                                                                </div>
-                                                                {locked && (
-                                                                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded">Locked</span>
-                                                                )}
-                                                                {l.questions?.length > 0 && (
-                                                                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded flex-shrink-0">
-                                                                        {l.questions.length}Q
-                                                                    </span>
-                                                                )}
-                                                            </button>
-                                                        );
-                                                    })}
-                                                </div>
-                                            )}
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            {module.assessment && (
-                                <div className="mt-6 pt-6 border-t border-gray-200">
-                                    <div className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200">
-                                        <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0">
-                                            <Award className="w-6 h-6" />
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <span className="text-sm font-bold text-gray-900 block">
-                                                Module Assessment
-                                            </span>
-                                            <span className="text-xs text-gray-600">
-                                                {module.assessment.questions.length} questions •{" "}
-                                                {module.assessment.passingScore}% to pass
-                                            </span>
-                                        </div>
-                                    </div>
+                                                                        {isCompleted ? (
+                                                                            <CheckCircle2 className="w-4 h-4" />
+                                                                        ) : locked ? (
+                                                                            <Lock className="w-3 h-3" />
+                                                                        ) : (
+                                                                            <Play className="w-3 h-3" />
+                                                                        )}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <div className={`text-sm font-medium truncate ${isCurrent ? 'text-[#021d49]' : 'text-gray-700'}`}>
+                                                                            {l.title}
+                                                                        </div>
+                                                                        {l.duration && (
+                                                                            <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
+                                                                                <Clock className="w-3 h-3" />
+                                                                                {l.duration}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            )}
-                        </div>
-                    </div>
+                            </div>
+                        )}
 
-                    {/* Main Content */}
-                    <div className="lg:col-span-3">
+                        {/* Resources Tab */}
+                        {activeTab === "resources" && (
+                            <div className="p-4">
+                                <div className="space-y-3">
+                                    <h3 className="font-bold text-gray-900 mb-4">Course Resources</h3>
+
+                                    <button
+                                        onClick={() => setShowNoteModal(true)}
+                                        className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg hover:shadow-md transition"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-[#021d49] text-white flex items-center justify-center">
+                                            <FileText className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <div className="font-semibold text-gray-900">Add Note</div>
+                                            <div className="text-xs text-gray-600">Take notes as you learn</div>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => router.push(`/courses/${courseId}/discussion?module=${moduleIndex}`)}
+                                        className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg hover:shadow-md transition"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-purple-600 text-white flex items-center justify-center">
+                                            <MessageCircle className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <div className="font-semibold text-gray-900">Discussion</div>
+                                            <div className="text-xs text-gray-600">Ask questions & discuss</div>
+                                        </div>
+                                    </button>
+
+                                    <button
+                                        onClick={() => setShowNotesList(true)}
+                                        className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg hover:shadow-md transition"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-green-600 text-white flex items-center justify-center">
+                                            <BookOpen className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <div className="font-semibold text-gray-900">My Notes ({notes.length})</div>
+                                            <div className="text-xs text-gray-600">View all your notes</div>
+                                        </div>
+                                    </button>
+
+                                    {activeLesson?.documentUrl && (
+                                        <a
+                                            href={activeLesson.documentUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg hover:shadow-md transition"
+                                        >
+                                            <div className="w-10 h-10 rounded-full bg-orange-600 text-white flex items-center justify-center">
+                                                <Download className="w-5 h-5" />
+                                            </div>
+                                            <div className="flex-1 text-left">
+                                                <div className="font-semibold text-gray-900">Lesson Materials</div>
+                                                <div className="text-xs text-gray-600">Download resources</div>
+                                            </div>
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Toggle Sidebar Button */}
+                <button
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="fixed left-0 top-1/2 transform -translate-y-1/2 bg-[#021d49] text-white p-2 rounded-r-lg shadow-lg z-40 hover:bg-[#032e6b] transition"
+                    style={{ left: sidebarOpen ? '320px' : '0' }}
+                >
+                    <ChevronRight className={`w-5 h-5 transition-transform ${sidebarOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Main Content */}
+                <div className="flex-1 overflow-y-auto bg-gray-50">
+                    <div className="max-w-5xl mx-auto p-6">
                         {currentPage === "lesson" && <LessonSection lesson={activeLesson} />}
 
                         {currentPage === "questions" && (
@@ -729,7 +668,6 @@ const CourseLearningPage = () => {
                                 onComplete={async (passed) => {
                                     handleModuleComplete(passed);
                                     if (passed) {
-                                        // Refresh enrollment to get updated moduleProgress
                                         try {
                                             const refreshed = await courseService.getEnrollment(courseId);
                                             setEnrollment(refreshed);
@@ -758,7 +696,7 @@ const CourseLearningPage = () => {
                                 <button
                                     onClick={handlePrevious}
                                     disabled={lessonIndex <= 0}
-                                    className="flex-1 py-4 px-6 bg-white border-2 border-gray-200 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all flex items-center justify-center gap-2 shadow-sm"
+                                    className="flex-1 py-4 px-6 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all flex items-center justify-center gap-2 shadow-sm"
                                 >
                                     <ChevronLeft className="w-5 h-5" />
                                     Previous
@@ -774,9 +712,9 @@ const CourseLearningPage = () => {
                                             handleNext();
                                         }
                                     }}
-                                    className="flex-1 py-4 px-6 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 font-semibold transition-all flex items-center justify-center gap-2 shadow-lg"
+                                    className="flex-1 py-4 px-6 bg-gradient-to-r from-[#021d49] to-blue-700 text-white rounded-xl hover:from-[#032e6b] hover:to-blue-800 font-semibold transition-all flex items-center justify-center gap-2 shadow-lg"
                                 >
-                                    Next
+                                    {lessonIndex < lessons.length - 1 ? 'Next Lesson' : 'Complete Module'}
                                     <ChevronRight className="w-5 h-5" />
                                 </button>
                             </div>
@@ -820,6 +758,17 @@ const CourseLearningPage = () => {
                     onSend={handleSendInstructorMessage}
                     loading={sendingMessage}
                     error={messageError}
+                />
+            )}
+
+            {showNotesList && (
+                <NotesListModal
+                    notes={notes}
+                    onClose={() => setShowNotesList(false)}
+                    onDelete={(idx) => {
+                        const newNotes = notes.filter((_, i) => i !== idx);
+                        setNotes(newNotes);
+                    }}
                 />
             )}
         </div>
@@ -892,15 +841,15 @@ const CertificateModal = ({
                     <X className="w-6 h-6 text-gray-700" />
                 </button>
 
-                <div className="p-12 bg-gradient-to-br from-orange-50 via-white to-red-50">
-                    <div className="border-8 border-double border-orange-500 rounded-2xl p-12 bg-white relative">
-                        <div className="absolute top-4 left-4 w-16 h-16 border-t-4 border-l-4 border-orange-400"></div>
-                        <div className="absolute top-4 right-4 w-16 h-16 border-t-4 border-r-4 border-orange-400"></div>
-                        <div className="absolute bottom-4 left-4 w-16 h-16 border-b-4 border-l-4 border-orange-400"></div>
-                        <div className="absolute bottom-4 right-4 w-16 h-16 border-b-4 border-r-4 border-orange-400"></div>
+                <div className="p-12 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+                    <div className="border-8 border-double border-[#021d49] rounded-2xl p-12 bg-white relative">
+                        <div className="absolute top-4 left-4 w-16 h-16 border-t-4 border-l-4 border-blue-400"></div>
+                        <div className="absolute top-4 right-4 w-16 h-16 border-t-4 border-r-4 border-blue-400"></div>
+                        <div className="absolute bottom-4 left-4 w-16 h-16 border-b-4 border-l-4 border-blue-400"></div>
+                        <div className="absolute bottom-4 right-4 w-16 h-16 border-b-4 border-r-4 border-blue-400"></div>
 
                         <div className="text-center mb-8">
-                            <div className="inline-block bg-gradient-to-r from-orange-500 to-red-500 text-white px-6 py-2 rounded-full mb-4">
+                            <div className="inline-block bg-gradient-to-r from-[#021d49] to-blue-700 text-white px-6 py-2 rounded-full mb-4">
                                 <Trophy className="w-6 h-6 inline mr-2" />
                                 <span className="font-bold text-lg">
                                     Certificate of Completion
@@ -909,13 +858,13 @@ const CertificateModal = ({
                             <h1 className="text-5xl font-black text-gray-900 mb-2">
                                 Congratulations!
                             </h1>
-                            <div className="w-32 h-1 bg-gradient-to-r from-orange-500 to-red-500 mx-auto rounded-full"></div>
+                            <div className="w-32 h-1 bg-gradient-to-r from-[#021d49] to-blue-700 mx-auto rounded-full"></div>
                         </div>
 
                         <div className="text-center mb-8 space-y-6">
                             <p className="text-gray-600 text-lg">This is to certify that</p>
 
-                            <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border-2 border-orange-200">
+                            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border-2 border-blue-200">
                                 <p className="text-4xl font-black text-gray-900 mb-2">
                                     {userName || "Student Name"}
                                 </p>
@@ -936,17 +885,17 @@ const CertificateModal = ({
 
                             <div className="flex items-center justify-center gap-8 mt-8">
                                 <div className="text-center">
-                                    <Clock className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                                    <Clock className="w-8 h-8 text-[#021d49] mx-auto mb-2" />
                                     <p className="text-sm text-gray-600">Duration</p>
                                     <p className="font-bold text-gray-900">{course.duration}</p>
                                 </div>
                                 <div className="text-center">
-                                    <Award className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                                    <Award className="w-8 h-8 text-[#021d49] mx-auto mb-2" />
                                     <p className="text-sm text-gray-600">Level</p>
                                     <p className="font-bold text-gray-900">{course.level}</p>
                                 </div>
                                 <div className="text-center">
-                                    <Star className="w-8 h-8 text-orange-500 mx-auto mb-2" />
+                                    <Star className="w-8 h-8 text-[#021d49] mx-auto mb-2" />
                                     <p className="text-sm text-gray-600">Rating</p>
                                     <p className="font-bold text-gray-900">{course.rating}/5.0</p>
                                 </div>
@@ -957,7 +906,7 @@ const CertificateModal = ({
                             <div className="text-center">
                                 <div className="mb-2">
                                     <div className="h-16 flex items-center justify-center">
-                                        <Sparkles className="w-12 h-12 text-orange-500" />
+                                        <Sparkles className="w-12 h-12 text-[#021d49]" />
                                     </div>
                                 </div>
                                 <div className="border-t-2 border-gray-800 pt-2 w-48">
@@ -970,7 +919,7 @@ const CertificateModal = ({
                             <div className="text-center">
                                 <div className="mb-2">
                                     <div className="h-16 flex items-center justify-center">
-                                        <Award className="w-12 h-12 text-orange-500" />
+                                        <Award className="w-12 h-12 text-[#021d49]" />
                                     </div>
                                 </div>
                                 <div className="border-t-2 border-gray-800 pt-2 w-48">
@@ -997,7 +946,7 @@ const CertificateModal = ({
                 <div className="bg-gray-50 px-12 py-6 flex gap-4">
                     <button
                         onClick={onDownload}
-                        className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-4 rounded-xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-lg flex items-center justify-center gap-2"
+                        className="flex-1 bg-gradient-to-r from-[#021d49] to-blue-700 text-white py-4 rounded-xl font-bold text-lg hover:from-[#032e6b] hover:to-blue-800 transition-all shadow-lg flex items-center justify-center gap-2"
                     >
                         <FileText className="w-6 h-6" />
                         Download Certificate
@@ -1018,12 +967,44 @@ const CertificateModal = ({
 // Lesson Section Component
 const LessonSection = ({ lesson }) => (
     <div className="space-y-6">
+        {/* Lesson Header */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <div className="flex items-start justify-between mb-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                        {lesson.title}
+                    </h1>
+                    <div className="flex flex-wrap items-center gap-4 text-sm">
+                        {lesson.duration && (
+                            <div className="flex items-center gap-2 text-gray-600">
+                                <Clock className="w-4 h-4" />
+                                <span>{lesson.duration}</span>
+                            </div>
+                        )}
+                        {lesson.questions?.length > 0 && (
+                            <div className="flex items-center gap-2 text-gray-600">
+                                <BookOpen className="w-4 h-4" />
+                                <span>{lesson.questions.length} questions</span>
+                            </div>
+                        )}
+                        {lesson.xpReward && (
+                            <div className="flex items-center gap-2 bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full">
+                                <Zap className="w-4 h-4" />
+                                <span className="font-semibold">+{lesson.xpReward} XP</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Video Player */}
         {lesson.type === "video" && lesson.videoUrl && (
-            <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-lg">
-                <div className="bg-gray-900 aspect-video">
+            <div className="bg-gray-900 rounded-xl overflow-hidden shadow-lg">
+                <div className="aspect-video">
                     <iframe
                         width="100%"
-                        height="500"
+                        height="100%"
                         src={lesson.videoUrl}
                         title={lesson.title}
                         frameBorder="0"
@@ -1035,38 +1016,10 @@ const LessonSection = ({ lesson }) => (
             </div>
         )}
 
-        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
-            <div className="mb-6 pb-6 border-b border-gray-200">
-                <h2 className="text-3xl font-black text-gray-900 mb-4">
-                    {lesson.title}
-                </h2>
-
-                <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-full">
-                        <Clock className="w-4 h-4 text-orange-500" />
-                        <span className="font-semibold text-gray-700">
-                            {lesson.duration}
-                        </span>
-                    </div>
-                    <div className="flex items-center gap-2 bg-gray-50 px-4 py-2 rounded-full">
-                        <BookOpen className="w-4 h-4 text-orange-500" />
-                        <span className="font-semibold text-gray-700">
-                            {lesson.questions?.length || 0} questions
-                        </span>
-                    </div>
-                    {lesson.xpReward && (
-                        <div className="flex items-center gap-2 bg-yellow-50 px-4 py-2 rounded-full">
-                            <Zap className="w-4 h-4 text-yellow-600" />
-                            <span className="font-bold text-yellow-900">
-                                +{lesson.xpReward} XP
-                            </span>
-                        </div>
-                    )}
-                </div>
-            </div>
-
+        {/* Lesson Content */}
+        <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
             {lesson.content && (
-                <div className="mb-8 prose prose-lg max-w-none">
+                <div className="prose prose-lg max-w-none mb-8">
                     <div
                         className="lesson-content"
                         dangerouslySetInnerHTML={{
@@ -1077,15 +1030,15 @@ const LessonSection = ({ lesson }) => (
             )}
 
             {lesson.topics && lesson.topics.length > 0 && (
-                <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-xl p-6 border border-orange-200 mb-8">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200 mb-8">
                     <h3 className="font-bold text-gray-900 text-xl mb-4 flex items-center gap-2">
-                        <Star className="w-5 h-5 text-orange-600" />
+                        <Star className="w-5 h-5 text-[#021d49]" />
                         Key Topics Covered
                     </h3>
                     <ul className="space-y-3">
                         {lesson.topics.map((topic, idx) => (
                             <li key={idx} className="flex gap-3 text-gray-700">
-                                <span className="text-orange-500 font-bold text-xl flex-shrink-0">
+                                <span className="text-[#021d49] font-bold text-xl flex-shrink-0">
                                     ✓
                                 </span>
                                 <span className="text-base">{topic}</span>
@@ -1103,32 +1056,6 @@ const LessonSection = ({ lesson }) => (
                             __html: formatLessonNotes(lesson.notes),
                         }}
                     />
-                </div>
-            )}
-
-            {lesson.type === "document" && lesson.documentUrl && (
-                <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mt-8">
-                    <div className="flex items-start gap-4">
-                        <FileText className="w-12 h-12 text-blue-600 flex-shrink-0" />
-                        <div className="flex-1">
-                            <h3 className="font-bold text-lg text-gray-900 mb-2">
-                                Additional Resources
-                            </h3>
-                            <p className="text-gray-600 mb-4">
-                                Download or view the lesson document for more detailed
-                                information.
-                            </p>
-                            <a
-                                href={lesson.documentUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-                            >
-                                <FileText className="w-5 h-5" />
-                                Open Document
-                            </a>
-                        </div>
-                    </div>
                 </div>
             )}
         </div>
@@ -1202,25 +1129,24 @@ const formatLessonNotes = (notes) => {
 };
 
 const QuestionsSection = ({ lesson, answers, onAnswer }) => {
-    // Guard against missing questions
     if (!lesson?.questions || lesson.questions.length === 0) {
         return (
-            <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
                 <p className="text-gray-600 text-center">No questions available for this lesson.</p>
             </div>
         );
     }
 
     return (
-        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+        <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-4">
-                    <span className="inline-block bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-sm px-4 py-2 rounded-full font-bold">
+                    <span className="inline-block bg-gradient-to-r from-[#021d49] to-blue-700 text-white text-sm px-4 py-2 rounded-full font-bold">
                         <Star className="w-4 h-4 inline mr-1" />
                         Knowledge Check
                     </span>
                 </div>
-                <h2 className="text-3xl font-black text-gray-900 mb-2">
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">
                     Check Your Understanding
                 </h2>
                 <p className="text-gray-600 text-lg">
@@ -1232,7 +1158,7 @@ const QuestionsSection = ({ lesson, answers, onAnswer }) => {
                 {lesson.questions.map((question, idx) => (
                     <div
                         key={question.id || question._id || idx}
-                        className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white"
+                        className="border-2 border-gray-200 rounded-xl p-6 bg-gray-50"
                     >
                         <p className="font-bold text-gray-900 mb-4 text-lg flex items-start gap-3">
                             <span className="bg-[#021d49] text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
@@ -1249,8 +1175,8 @@ const QuestionsSection = ({ lesson, answers, onAnswer }) => {
                                         <label
                                             key={optIdx}
                                             className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${answers[questionId] == optIdx
-                                                ? "border-orange-500 bg-orange-50"
-                                                : "border-gray-200 hover:border-orange-300 hover:bg-gray-50"
+                                                ? "border-[#021d49] bg-blue-50"
+                                                : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
                                                 }`}
                                         >
                                             <input
@@ -1259,7 +1185,7 @@ const QuestionsSection = ({ lesson, answers, onAnswer }) => {
                                                 value={optIdx}
                                                 onChange={(e) => onAnswer(questionId, e.target.value)}
                                                 checked={answers[questionId] == optIdx}
-                                                className="w-5 h-5 mt-0.5 text-orange-500 focus:ring-orange-500"
+                                                className="w-5 h-5 mt-0.5 text-[#021d49] focus:ring-[#021d49]"
                                             />
                                             <span className="text-gray-700 flex-1">{option}</span>
                                         </label>
@@ -1271,7 +1197,7 @@ const QuestionsSection = ({ lesson, answers, onAnswer }) => {
                                 placeholder="Type your answer here..."
                                 value={answers[question.id || question._id || idx] || ""}
                                 onChange={(e) => onAnswer(question.id || question._id || idx, e.target.value)}
-                                className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-orange-500 transition-all"
+                                className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#021d49] transition-all"
                                 rows="5"
                             />
                         )}
@@ -1287,19 +1213,17 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
     const [submitted, setSubmitted] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
-    // Guard against missing module or assessment - check both assessment and moduleAssessment
     const assessment = module?.moduleAssessment || module?.assessment;
 
     if (!module || !assessment || !assessment.questions || assessment.questions.length === 0) {
         return (
-            <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
                 <p className="text-gray-600">No assessment available for this module.</p>
             </div>
         );
     }
 
     const handleAssessmentAnswer = (questionId, answer, index) => {
-        // Store both the selected value and its index to support string/number comparisons
         setAssessmentAnswers({ ...assessmentAnswers, [questionId]: { value: answer, index } });
     };
 
@@ -1308,7 +1232,6 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
         setSubmitting(true);
 
         try {
-            // Prepare answers array for backend (prefer actual option text/value to avoid index mismatches)
             const answersArray = assessment.questions.map((q, idx) => {
                 const questionId = q.id || q._id || idx;
                 const selected = assessmentAnswers[questionId];
@@ -1316,18 +1239,16 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
                 const selectedIndex = typeof selected === 'object' && selected !== null ? selected.index : selected;
 
                 if (selectedValue !== undefined && selectedValue !== null) {
-                    return selectedValue; // send the option text / typed answer
+                    return selectedValue;
                 }
                 if (selectedIndex !== undefined && selectedIndex !== null) {
-                    return selectedIndex; // fallback to index if no text captured
+                    return selectedIndex;
                 }
                 return null;
             });
 
-            // Submit to backend
             const result = await courseService.submitModuleAssessment(enrollmentId, moduleIndex, answersArray);
 
-            // Allow retry on fail; lock on success
             setSubmitted(result.passed);
 
             if (result.passed) {
@@ -1346,41 +1267,40 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
             console.error("Error submitting assessment:", error);
             alert("Failed to submit assessment. Please try again.");
         } finally {
-            // Re-enable button if not passed; keep disabled when passed
             setSubmitting(false);
         }
     };
 
     return (
-        <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
+        <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-4">
-                    <span className="inline-block bg-gradient-to-r from-blue-500 to-purple-600 text-white text-sm px-4 py-2 rounded-full font-bold shadow-lg">
+                    <span className="inline-block bg-gradient-to-r from-[#021d49] to-blue-700 text-white text-sm px-4 py-2 rounded-full font-bold shadow-lg">
                         <Trophy className="w-4 h-4 inline mr-1" />
                         Module Assessment
                     </span>
                 </div>
-                <h2 className="text-4xl font-black text-gray-900 mb-3">
+                <h2 className="text-4xl font-bold text-gray-900 mb-3">
                     {assessment?.title || "Module Assessment"}
                 </h2>
                 <p className="text-gray-600 text-lg">
                     Complete all questions to finish this module. Passing score:{" "}
-                    <span className="font-bold text-orange-600">
+                    <span className="font-bold text-[#021d49]">
                         {assessment?.passingScore || 70}%
                     </span>
                 </p>
             </div>
 
-            <div className="bg-gradient-to-r from-yellow-50 to-blue-50 rounded-xl p-6 mb-8 border border-orange-200">
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 mb-8 border border-yellow-200">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Award className="w-8 h-8 text-orange-600" />
+                        <Award className="w-8 h-8 text-[#021d49]" />
                         <div>
                             <p className="font-bold text-gray-900">Module XP Reward</p>
                             <p className="text-sm text-gray-600">Complete to earn XP</p>
                         </div>
                     </div>
-                    <span className="text-3xl font-black text-orange-600">
+                    <span className="text-3xl font-black text-[#021d49]">
                         +{module?.xpReward || 0} XP
                     </span>
                 </div>
@@ -1391,56 +1311,35 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
                     const questionId = question.id || question._id || idx;
                     const questionText = question.question || question.text || `Question ${idx + 1}`;
 
-                    // Log question data for debugging
-                    console.log('=== QUESTION DEBUG ===');
-                    console.log('Question:', question);
-                    console.log('Type:', question.type);
-                    console.log('Options:', question.options);
-                    console.log('Options is array:', Array.isArray(question.options));
-                    console.log('Options length:', question.options?.length);
-
-                    // Handle different option formats (force valid visible options)
                     let options = [];
                     const questionType = (question.type || '').toLowerCase().trim();
 
-                    console.log('Question type (normalized):', questionType);
-
-                    // If it's a boolean/true-false style question, ignore provided options and force True/False
                     if (questionType.includes('true') || questionType.includes('false') || questionType === 'boolean') {
                         options = ['True', 'False'];
-                        console.log('Setting True/False options based on type');
                     } else {
-                        // Otherwise, try to use provided options if they are non-empty
                         if (question.options && Array.isArray(question.options) && question.options.length > 0) {
                             const validOptions = question.options.filter(opt => typeof opt === 'string' && opt.trim() !== '');
                             if (validOptions.length > 0) {
                                 options = validOptions;
-                                console.log('Using provided options:', options);
                             }
                         }
 
-                        // Fallbacks
                         if (options.length === 0) {
                             if (questionType === 'mcq' || questionType === 'multiple_choice' || questionType === 'multiple choice') {
                                 options = ['Option A', 'Option B', 'Option C', 'Option D'];
-                                console.log('Setting default MCQ options');
                             } else {
                                 options = ['True', 'False'];
-                                console.log('Setting default True/False options');
                             }
                         }
                     }
 
-                    console.log('Final options:', options);
-                    console.log('======================');
-
                     return (
                         <div
                             key={questionId}
-                            className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-white"
+                            className="border-2 border-gray-200 rounded-xl p-6 bg-gray-50"
                         >
                             <p className="font-bold text-gray-900 mb-4 text-lg flex items-start gap-3">
-                                <span className="bg-blue-500 text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
+                                <span className="bg-[#021d49] text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
                                     {idx + 1}
                                 </span>
                                 {questionText}
@@ -1451,8 +1350,8 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
                                     {options.map((option, optIdx) => (
                                         <label
                                             key={optIdx}
-                                            className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${assessmentAnswers[questionId] == optIdx
-                                                ? "border-blue-500 bg-blue-50"
+                                            className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${assessmentAnswers[questionId]?.index == optIdx
+                                                ? "border-[#021d49] bg-blue-50"
                                                 : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
                                                 }`}
                                         >
@@ -1464,7 +1363,7 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
                                                     handleAssessmentAnswer(questionId, option, optIdx)
                                                 }
                                                 checked={assessmentAnswers[questionId]?.index == optIdx}
-                                                className="w-5 h-5 mt-0.5 text-blue-500 focus:ring-blue-500"
+                                                className="w-5 h-5 mt-0.5 text-[#021d49] focus:ring-[#021d49]"
                                             />
                                             <span className="text-gray-700 flex-1">{option}</span>
                                         </label>
@@ -1475,7 +1374,7 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
                                     placeholder="Type your answer here..."
                                     value={assessmentAnswers[questionId]?.value || ""}
                                     onChange={(e) => handleAssessmentAnswer(questionId, e.target.value, null)}
-                                    className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 transition-all"
+                                    className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#021d49] transition-all"
                                     rows="4"
                                 />
                             )}
@@ -1487,7 +1386,7 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
             <button
                 onClick={handleSubmit}
                 disabled={submitted || submitting}
-                className="w-full mt-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white py-5 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                className="w-full mt-8 bg-gradient-to-r from-[#021d49] to-blue-700 hover:from-[#032e6b] hover:to-blue-800 text-white py-5 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
             >
                 {submitting ? (
                     <>
@@ -1541,7 +1440,7 @@ const NoteModal = ({ note, setNote, onClose, onSave, currentLesson, courseId, co
             <div className="bg-white rounded-2xl max-w-2xl w-full p-8 shadow-2xl">
                 <div className="flex items-center justify-between mb-6">
                     <h3 className="font-black text-gray-900 text-2xl flex items-center gap-2">
-                        <FileText className="w-6 h-6 text-orange-500" />
+                        <FileText className="w-6 h-6 text-[#021d49]" />
                         Add Note
                     </h3>
                     <button
@@ -1565,7 +1464,7 @@ const NoteModal = ({ note, setNote, onClose, onSave, currentLesson, courseId, co
                     placeholder="Write your notes here... (Tip: Take notes on key concepts, questions, or ideas to remember)"
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 mb-6 resize-none"
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#021d49] mb-6 resize-none"
                     rows="10"
                     autoFocus
                 />
@@ -1580,7 +1479,7 @@ const NoteModal = ({ note, setNote, onClose, onSave, currentLesson, courseId, co
                     <button
                         onClick={handleSave}
                         disabled={!note.trim() || saving}
-                        className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 font-semibold transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 py-3 px-4 bg-gradient-to-r from-[#021d49] to-blue-700 text-white rounded-xl hover:from-[#032e6b] hover:to-blue-800 font-semibold transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {saving ? "Saving..." : "Save Note"}
                     </button>
@@ -1604,7 +1503,6 @@ const MessageInstructorModal = ({ onClose, instructor, onSend, loading, error })
             setMessage("");
         } catch (err) {
             console.error("Failed to send message:", err);
-            // Error will be displayed by parent via error prop
         }
     };
 
@@ -1614,7 +1512,7 @@ const MessageInstructorModal = ({ onClose, instructor, onSend, loading, error })
                 <div className="flex items-center justify-between mb-6">
                     <div>
                         <h3 className="font-black text-gray-900 text-2xl flex items-center gap-2">
-                            <MessageCircle className="w-6 h-6 text-orange-500" />
+                            <MessageCircle className="w-6 h-6 text-[#021d49]" />
                             Message {instructorName}
                         </h3>
                         <p className="text-sm text-gray-600 mt-1">
@@ -1637,7 +1535,7 @@ const MessageInstructorModal = ({ onClose, instructor, onSend, loading, error })
                     placeholder="Type your message..."
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-orange-500 mb-6"
+                    className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:border-[#021d49] mb-6"
                     rows="6"
                     disabled={loading}
                 />
@@ -1652,10 +1550,71 @@ const MessageInstructorModal = ({ onClose, instructor, onSend, loading, error })
                     <button
                         onClick={handleSend}
                         disabled={loading || !message.trim()}
-                        className="flex-1 py-3 px-4 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl hover:from-orange-600 hover:to-red-600 font-semibold transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex-1 py-3 px-4 bg-gradient-to-r from-[#021d49] to-blue-700 text-white rounded-xl hover:from-[#032e6b] hover:to-blue-800 font-semibold transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {loading ? "Sending..." : "Send Message"}
                     </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const NotesListModal = ({ notes, onClose, onDelete }) => {
+    return (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl max-w-3xl w-full max-h-[80vh] overflow-hidden shadow-2xl">
+                <div className="p-6 border-b border-gray-200">
+                    <div className="flex items-center justify-between">
+                        <h3 className="font-black text-gray-900 text-2xl flex items-center gap-2">
+                            <BookOpen className="w-6 h-6 text-[#021d49]" />
+                            My Notes ({notes.length})
+                        </h3>
+                        <button
+                            onClick={onClose}
+                            className="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-lg transition"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-6 overflow-y-auto max-h-[60vh]">
+                    {notes.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500">
+                            <FileText className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                            <p>No notes yet. Start taking notes as you learn!</p>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {notes.map((note, idx) => (
+                                <div
+                                    key={idx}
+                                    className="bg-gray-50 p-4 rounded-lg border border-gray-200 hover:shadow-md transition"
+                                >
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div className="flex-1">
+                                            <span className="text-sm font-semibold text-[#021d49]">
+                                                {note.lesson}
+                                            </span>
+                                            <span className="text-xs text-gray-500 ml-2">
+                                                {note.timestamp}
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={() => onDelete(idx)}
+                                            className="text-gray-400 hover:text-red-500 transition p-1"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                                        {note.content}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
