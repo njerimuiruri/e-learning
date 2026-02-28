@@ -46,6 +46,7 @@ const CourseLearningPage = () => {
     const [showModuleGuard, setShowModuleGuard] = useState(false);
     const [showFinalAssessmentGuard, setShowFinalAssessmentGuard] = useState(false);
     const [currentPage, setCurrentPage] = useState("lesson");
+    const [autoOpenAssessment, setAutoOpenAssessment] = useState(false);
     const [answers, setAnswers] = useState({});
     const [note, setNote] = useState("");
     const [showNoteModal, setShowNoteModal] = useState(false);
@@ -76,6 +77,12 @@ const CourseLearningPage = () => {
                 try {
                     const enrollmentData = await courseService.getEnrollment(courseId);
                     setEnrollment(enrollmentData);
+
+                    // Check if student was in middle of assessment
+                    if (enrollmentData.inModuleAssessment && enrollmentData.lastActivityType === 'module_assessment') {
+                        setAutoOpenAssessment(true);
+                    }
+
                     // Seed completed lessons from enrollment.lessonProgress
                     const lessonProgress = enrollmentData?.lessonProgress || [];
                     const completed = lessonProgress
@@ -93,6 +100,14 @@ const CourseLearningPage = () => {
         };
         fetchCourse();
     }, [courseId, moduleParam, lessonParam]);
+
+    // Auto-open assessment if student was in the middle of one
+    useEffect(() => {
+        if (autoOpenAssessment && !loading && course) {
+            setCurrentPage("assessment");
+            setAutoOpenAssessment(false);
+        }
+    }, [autoOpenAssessment, loading, course]);
 
     const modules = course?.modules || [];
     const moduleIndex = useMemo(
@@ -1255,10 +1270,15 @@ const AssessmentSection = ({ module, moduleIndex, enrollmentId, onComplete }) =>
                 alert(`🎉 Congratulations! You passed with ${result.score}%`);
             } else {
                 const attemptsRemaining = result.attemptsRemaining || 0;
-                if (result.mustRestartCourse) {
-                    alert(`You scored ${result.score}%. You've used all 3 attempts. Please restart the course.`);
+                if (result.mustRestartCourse && result.autoRestarted) {
+                    // Auto-restart occurred - redirect to the failed module's first lesson
+                    alert(`You scored ${result.score}%.\n\n${result.message || 'Your course has been automatically restarted. Your previous progress has been saved for review. You can now start fresh from this module.'}\n\nYou can now begin again with a fresh start!`);
+                    // Redirect to the failed module's first lesson
+                    window.location.href = `/courses/${courseId}/learn/${moduleParam}/0`;
+                } else if (result.mustRestartCourse) {
+                    alert(`You scored ${result.score}%. You've used all 3 attempts.\n\nYour course will be automatically restarted to give you another chance. Your previous attempt has been saved for analytics.`);
                 } else {
-                    alert(`You scored ${result.score}%. You need ${result.passingScore}% to pass. You have ${attemptsRemaining} attempt(s) remaining.`);
+                    alert(`You scored ${result.score}%. You need ${result.passingScore}% to pass.\n\nYou have ${attemptsRemaining} attempt(s) remaining. Keep trying!`);
                 }
             }
 

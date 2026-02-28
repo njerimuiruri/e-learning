@@ -18,13 +18,18 @@ export function middleware(request) {
     (route) => pathname === route || pathname.startsWith(route + "/")
   );
 
+  // Get user cookie
+  const userCookie = request.cookies.get("user");
+
   if (isPublicRoute) {
     return NextResponse.next();
   }
 
-  // For protected routes, token validation would happen client-side
-  // since we're using localStorage (client-side only)
-  // Middleware here can add additional security headers or logging
+  // For protected routes, check if user has valid cookie
+  if (!userCookie && !isPublicRoute) {
+    // Redirect to login if no user cookie and trying to access protected route
+    return NextResponse.redirect(new URL("/login", request.url));
+  }
 
   return NextResponse.next();
 }
@@ -34,7 +39,8 @@ export const config = {
     "/admin/:path*",
     "/instructor/:path*",
     "/student/:path*",
-    "/auth/:path*",
+    "/login",
+    "/register",
     "/courses/:path*",
   ],
 };

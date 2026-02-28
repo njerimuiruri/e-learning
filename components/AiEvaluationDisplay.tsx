@@ -5,7 +5,7 @@ import {
     formatAiEvaluation,
     getConfidenceBadge,
     getPlagiarismRiskDescription,
-} from '@/lib/assessment-security';
+} from '../lib/assessment-security';
 
 interface AiEvaluationDisplayProps {
     result: any;

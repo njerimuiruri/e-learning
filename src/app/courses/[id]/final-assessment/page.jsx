@@ -38,6 +38,8 @@ const FinalAssessmentPage = () => {
     const [score, setScore] = useState(null);
     const [passed, setPassed] = useState(null);
     const [pendingReview, setPendingReview] = useState(false);
+    const [assessmentDetails, setAssessmentDetails] = useState(null);
+    const [userCertificates, setUserCertificates] = useState([]);
     const [showGuard, setShowGuard] = useState(false);
     const [started, setStarted] = useState(false);
     const [currentQuestion, setCurrentQuestion] = useState(0);
@@ -54,18 +56,14 @@ const FinalAssessmentPage = () => {
                 setEnrollment(enrollmentData);
                 return enrollmentData;
             } catch (err) {
-                // Auto-enroll if the student somehow lost enrollment but is trying to take the final
+                // If not enrolled, redirect to course page to enroll properly
                 if (err?.response?.status === 404 || err?.status === 404) {
-                    try {
-                        const newEnrollment = await courseService.enrollCourse(courseId);
-                        setEnrollment(newEnrollment);
-                        return newEnrollment;
-                    } catch (enrollErr) {
-                        console.error("Failed to auto-enroll for final assessment", enrollErr);
-                        showToast('Error accessing course enrollment. Please try again.', { type: 'error', title: 'Enrollment Error' });
-                    }
+                    showToast('Please enroll in the course first to access the assessment.', { type: 'error', title: 'Not Enrolled' });
+                    router.push(`/courses/${courseId}`);
+                    return null;
                 } else {
                     console.log("Could not fetch enrollment data:", err?.message);
+                    showToast('Error accessing course enrollment. Please try again.', { type: 'error', title: 'Enrollment Error' });
                 }
                 return null;
             }
@@ -142,6 +140,33 @@ const FinalAssessmentPage = () => {
 
         if (enrollment && course?.finalAssessment) {
             fetchAssessmentStatus();
+            // If student has submitted, fetch merged assessment details and certificates
+            if (enrollment.finalAssessmentAttempts > 0) {
+                courseService.getAssessmentForEnrollment(enrollment._id).then((res) => {
+                    if (res && res.course && res.course.finalAssessment) {
+                        setAssessmentDetails(res.course.finalAssessment);
+                        // Rebuild answers mapping from merged questions
+                        const reconstructed = {};
+                        (res.course.finalAssessment.questions || []).forEach((q) => {
+                            const qIdx = q.questionIndex ?? null;
+                            if (qIdx !== null && q.studentAnswer !== undefined) {
+                                reconstructed[qIdx] = q.studentAnswer;
+                            }
+                        });
+                        // Support id-based keys as fallback
+                        (res.course.finalAssessment.questions || []).forEach((q, i) => {
+                            const key = q.id || q._id || i;
+                            if (q.studentAnswer !== undefined) reconstructed[key] = q.studentAnswer;
+                        });
+                        setAnswers((prev) => ({ ...prev, ...reconstructed }));
+                    }
+                    if (res && Array.isArray(res.certificates)) {
+                        setUserCertificates(res.certificates);
+                    }
+                }).catch((e) => {
+                    console.warn('Failed to load assessment details', e);
+                });
+            }
         }
     }, [enrollment, course?.finalAssessment]);
 
@@ -305,7 +330,7 @@ const FinalAssessmentPage = () => {
         }
     };
 
-    const assessment = course?.finalAssessment;
+    const assessment = assessmentDetails || course?.finalAssessment;
     const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
     const progress = assessment ? Math.round(((currentQuestion + 1) / assessment.questions.length) * 100) : 0;
 
@@ -323,7 +348,13 @@ const FinalAssessmentPage = () => {
     }
 
     if (showGuard) {
-        return <FinalAssessmentGuard course={course} />;
+        return (
+            <FinalAssessmentGuard
+                course={course}
+                enrollment={enrollment}
+                onClose={() => router.push(`/courses/${courseId}`)}
+            />
+        );
     }
 
     // Intro screen
@@ -407,20 +438,41 @@ const FinalAssessmentPage = () => {
                                 <li>For essay questions, your responses will be reviewed by the instructor.</li>
                                 <li>You can navigate back and forth between questions.</li>
                                 <li>Submit when ready; you cannot change answers after submission.</li>
+                                <li><strong>Maximum 3 attempts allowed.</strong> {enrollment?.finalAssessmentAttempts > 0 && `You have used ${enrollment.finalAssessmentAttempts} attempt${enrollment.finalAssessmentAttempts !== 1 ? 's' : ''}.`}</li>
                             </ul>
                         </div>
+
+                        {enrollment?.finalAssessmentAttempts >= 3 && !enrollment?.finalAssessmentPassed && (
+                            <div className="w-full bg-red-50 border-2 border-red-300 text-red-900 py-4 px-6 rounded-2xl font-semibold mb-4">
+                                <div className="flex items-center gap-3">
+                                    <X className="w-6 h-6 flex-shrink-0" />
+                                    <div>
+                                        <p className="font-bold">Maximum Attempts Reached</p>
+                                        <p className="text-sm text-red-700">You have used all 3 attempts. Please contact your instructor for further assistance.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {submitted ? (
                             <div className="w-full bg-green-50 border-2 border-green-200 text-green-800 py-4 rounded-2xl font-semibold text-center">
                                 You already submitted this assessment. View your results below.
                             </div>
+                        ) : enrollment?.finalAssessmentAttempts >= 3 && !enrollment?.finalAssessmentPassed ? (
+                            <button
+                                disabled
+                                className="w-full bg-gray-300 text-gray-500 py-6 rounded-2xl font-black text-2xl cursor-not-allowed border-2 border-gray-400 flex items-center justify-center gap-3"
+                            >
+                                <X className="w-8 h-8" />
+                                Assessment Locked - Contact Instructor
+                            </button>
                         ) : (
                             <button
                                 onClick={handleStart}
                                 className="w-full bg-gradient-to-r from-orange-500 to-red-500 text-white py-6 rounded-2xl font-black text-2xl hover:from-orange-600 hover:to-red-600 transition-all shadow-xl flex items-center justify-center gap-3"
                             >
                                 <Sparkles className="w-8 h-8" />
-                                Begin Assessment
+                                {enrollment?.finalAssessmentAttempts > 0 ? `Retry Assessment (Attempt ${(enrollment?.finalAssessmentAttempts || 0) + 1}/3)` : 'Begin Assessment'}
                             </button>
                         )}
                     </div>
@@ -566,14 +618,60 @@ const FinalAssessmentPage = () => {
                                 </div>
                             )}
 
-                            {enrollment?.certificateEarned && enrollment?.certificateUrl && (
-                                <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-4 mb-6 flex gap-3 items-start">
-                                    <Award className="w-6 h-6 text-green-600 mt-1" />
-                                    <div>
-                                        <p className="font-bold text-green-900">🎉 Certificate Earned!</p>
+                            {!pendingReview && passed && enrollment?.certificateEarned && (
+                                <div className="bg-green-50 border-2 border-green-300 rounded-2xl p-6 mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                                    <Award className="w-8 h-8 text-green-600 flex-shrink-0" />
+                                    <div className="flex-1">
+                                        <p className="font-bold text-green-900 text-lg mb-1">🎉 Certificate Earned!</p>
                                         <p className="text-green-800 text-sm">
                                             Congratulations! Your instructor has reviewed your work and you've passed the course.
                                         </p>
+                                    </div>
+                                    <button
+                                        onClick={handleDownloadCertificate}
+                                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 px-6 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl flex items-center gap-2 whitespace-nowrap"
+                                    >
+                                        <FileText className="w-5 h-5" />
+                                        Download Certificate
+                                    </button>
+                                </div>
+                            )}
+
+                            {userCertificates && userCertificates.length > 0 && (
+                                <div className="mb-6">
+                                    <h3 className="text-lg font-bold text-gray-900 mb-3">Your Certificates</h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {userCertificates.map((c) => (
+                                            <div key={c._id} className="bg-white border rounded-xl p-4 flex items-center justify-between">
+                                                <div>
+                                                    <p className="font-semibold text-gray-900">{c.courseName || (c.courseId && c.courseId.title) || 'Certificate'}</p>
+                                                    <p className="text-sm text-gray-600">Issued: {new Date(c.issuedDate || c.issuedAt || c.issuedAt || Date.now()).toLocaleDateString()}</p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={async () => {
+                                                            try {
+                                                                const blob = await courseService.downloadCertificate(c._id || c.id);
+                                                                const url = window.URL.createObjectURL(blob);
+                                                                const link = document.createElement('a');
+                                                                link.href = url;
+                                                                link.download = `certificate-${c._id}.pdf`;
+                                                                document.body.appendChild(link);
+                                                                link.click();
+                                                                document.body.removeChild(link);
+                                                                window.URL.revokeObjectURL(url);
+                                                            } catch (err) {
+                                                                console.error('Failed to download certificate:', err);
+                                                                showToast('Failed to download certificate. Please try again.', { type: 'error', title: 'Download failed' });
+                                                            }
+                                                        }}
+                                                        className="bg-gradient-to-r from-green-600 to-emerald-600 text-white py-2 px-4 rounded-lg font-bold"
+                                                    >
+                                                        Download
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
@@ -594,7 +692,7 @@ const FinalAssessmentPage = () => {
                                         <div className="space-y-4">
                                             {assessment.questions.map((q, idx) => {
                                                 const userAnswer = answers[q.id || q._id || idx];
-                                                const resultFromBackend = enrollment?.finalAssessmentResults?.[idx];
+                                                const resultFromBackend = enrollment?.finalAssessmentResults?.[idx] || q;
 
                                                 // Use backend result if available, otherwise calculate
                                                 const isCorrect = resultFromBackend
@@ -696,6 +794,30 @@ const FinalAssessmentPage = () => {
                                             Back to Course
                                         </button>
                                     </>
+                                ) : passed && enrollment?.certificateEarned ? (
+                                    <>
+                                        <button
+                                            onClick={handleDownloadCertificate}
+                                            className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-5 rounded-2xl font-bold text-lg hover:from-green-700 hover:to-emerald-700 transition-all shadow-xl flex items-center justify-center gap-3"
+                                        >
+                                            <FileText className="w-6 h-6" />
+                                            Download Certificate
+                                        </button>
+                                        <button
+                                            onClick={() => setShowCertificate(true)}
+                                            className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-5 rounded-2xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-xl flex items-center justify-center gap-3"
+                                        >
+                                            <Award className="w-6 h-6" />
+                                            View Certificate
+                                        </button>
+                                        <button
+                                            onClick={() => router.push(`/courses/${courseId}`)}
+                                            className="flex-1 bg-white border-3 border-gray-300 text-gray-700 py-5 rounded-2xl font-bold text-lg hover:bg-gray-50 transition-all shadow-lg flex items-center justify-center gap-3"
+                                        >
+                                            <Home className="w-6 h-6" />
+                                            Back to Course
+                                        </button>
+                                    </>
                                 ) : passed ? (
                                     <>
                                         <button
@@ -715,24 +837,47 @@ const FinalAssessmentPage = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <button
-                                            onClick={() => {
-                                                setSubmitted(false);
-                                                setStarted(true);
-                                                setTimeRemaining(3600);
-                                            }}
-                                            className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-5 rounded-2xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-xl flex items-center justify-center gap-3"
-                                        >
-                                            <Sparkles className="w-6 h-6" />
-                                            Try Again
-                                        </button>
-                                        <button
-                                            onClick={() => router.push(`/courses/${courseId}`)}
-                                            className="flex-1 bg-white border-3 border-gray-300 text-gray-700 py-5 rounded-2xl font-bold text-lg hover:bg-gray-50 transition-all shadow-lg flex items-center justify-center gap-3"
-                                        >
-                                            <BookOpen className="w-6 h-6" />
-                                            Review Course
-                                        </button>
+                                        {enrollment?.finalAssessmentAttempts < 3 ? (
+                                            <>
+                                                <button
+                                                    onClick={() => {
+                                                        setSubmitted(false);
+                                                        setStarted(true);
+                                                        setTimeRemaining(3600);
+                                                    }}
+                                                    className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 text-white py-5 rounded-2xl font-bold text-lg hover:from-orange-600 hover:to-red-600 transition-all shadow-xl flex items-center justify-center gap-3"
+                                                >
+                                                    <RefreshCw className="w-6 h-6" />
+                                                    Try Again (Attempt {(enrollment?.finalAssessmentAttempts || 0) + 1}/3)
+                                                </button>
+                                                <button
+                                                    onClick={() => router.push(`/courses/${courseId}`)}
+                                                    className="flex-1 bg-white border-3 border-gray-300 text-gray-700 py-5 rounded-2xl font-bold text-lg hover:bg-gray-50 transition-all shadow-lg flex items-center justify-center gap-3"
+                                                >
+                                                    <BookOpen className="w-6 h-6" />
+                                                    Review Course
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <div className="flex-1 bg-red-50 border-2 border-red-300 rounded-2xl p-6">
+                                                    <div className="flex items-center gap-3 mb-3">
+                                                        <X className="w-8 h-8 text-red-600" />
+                                                        <div>
+                                                            <p className="font-bold text-red-900 text-lg">All Attempts Used</p>
+                                                            <p className="text-red-700 text-sm">You've used all 3 attempts. Please contact your instructor for guidance.</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => router.push(`/courses/${courseId}`)}
+                                                    className="flex-1 bg-white border-3 border-gray-300 text-gray-700 py-5 rounded-2xl font-bold text-lg hover:bg-gray-50 transition-all shadow-lg flex items-center justify-center gap-3"
+                                                >
+                                                    <Home className="w-6 h-6" />
+                                                    Back to Course
+                                                </button>
+                                            </>
+                                        )}
                                     </>
                                 )}
                             </div>

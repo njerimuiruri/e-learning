@@ -18,6 +18,10 @@ export default function AdminDashboardPage() {
     const [pendingInstructors, setPendingInstructors] = useState([]);
     const [fellowsAtRisk, setFellowsAtRisk] = useState([]);
     const [recentActivity, setRecentActivity] = useState([]);
+    const [activityFilter, setActivityFilter] = useState('all');
+    const [activityPage, setActivityPage] = useState(1);
+    const [totalActivities, setTotalActivities] = useState(0);
+    const activitiesPerPage = 10;
 
     useEffect(() => {
         fetchDashboardData();
@@ -32,7 +36,7 @@ export default function AdminDashboardPage() {
                 adminService.getDashboardStats(),
                 adminService.getPendingInstructors(),
                 adminService.getFellowsAtRisk(),
-                adminService.getRecentActivity(4),
+                adminService.getRecentActivity(50), // Fetch more for better pagination
             ]);
 
             // Process stats
@@ -103,6 +107,7 @@ export default function AdminDashboardPage() {
 
             // Set recent activity
             setRecentActivity(activityData.activities || []);
+            setTotalActivities(activityData.total || 0);
 
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
@@ -173,6 +178,40 @@ export default function AdminDashboardPage() {
                             Admin Dashboard
                         </h1>
                         <p className="text-gray-600">Platform overview and management</p>
+                    </div>
+
+                    {/* Key Links */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <button
+                            onClick={() => router.push('/admin/analytics')}
+                            className="group w-full bg-white border border-gray-200 rounded-xl p-6 text-left hover:shadow-md transition-all"
+                        >
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 rounded-lg bg-blue-50 text-blue-700">
+                                    <Icons.BarChart3 className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-semibold text-gray-900">Analytics & Reports</h3>
+                                    <p className="text-sm text-gray-600 mt-1">Track student progress, instructor activity, and course completion rates.</p>
+                                </div>
+                                <Icons.ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
+                            </div>
+                        </button>
+                        <button
+                            onClick={() => router.push('/admin/reminders')}
+                            className="group w-full bg-white border border-gray-200 rounded-xl p-6 text-left hover:shadow-md transition-all"
+                        >
+                            <div className="flex items-start gap-4">
+                                <div className="p-3 rounded-lg bg-green-50 text-green-700">
+                                    <Icons.Mail className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-lg font-semibold text-gray-900">Student Reminders</h3>
+                                    <p className="text-sm text-gray-600 mt-1">Send manual reminders and manage automatic email notifications.</p>
+                                </div>
+                                <Icons.ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-green-600" />
+                            </div>
+                        </button>
                     </div>
 
                     {/* Stats Grid */}
@@ -329,36 +368,166 @@ export default function AdminDashboardPage() {
                     )}
 
                     {/* Recent Activity */}
-                    {recentActivity.length > 0 && (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
-                            <div className="p-5 border-b border-gray-200">
-                                <div className="flex items-center justify-between">
-                                    <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                                        <Icons.Activity className="w-5 h-5 text-blue-600" />
-                                        Recent Activity
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
+                        <div className="p-6 border-b border-gray-200">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                                <div>
+                                    <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                        <Icons.ActivitySquare className="w-6 h-6 text-blue-600" />
+                                        Recent Activities
                                     </h2>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        Track instructor logins, course approvals, rejections, and user registrations
+                                    </p>
                                 </div>
                             </div>
-                            <div className="p-5 space-y-4">
-                                {recentActivity.map((activity, index) => {
-                                    const IconComponent = Icons[activity.icon] || Icons.Activity;
-                                    return (
-                                        <div key={index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
-                                            <div className="p-2 rounded-lg bg-white shadow-sm border border-gray-200">
-                                                <IconComponent className="w-5 h-5 text-blue-600" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-sm text-gray-700">{activity.message}</p>
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    {new Date(activity.timestamp).toLocaleString()}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                        </div>
+
+                        {/* Filter Section */}
+                        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                            <div className="flex flex-wrap gap-2">
+                                <button
+                                    onClick={() => {
+                                        setActivityFilter('all');
+                                        setActivityPage(1);
+                                    }}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activityFilter === 'all'
+                                        ? 'bg-blue-600 text-white'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    All Activities
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setActivityFilter('user_registration');
+                                        setActivityPage(1);
+                                    }}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${activityFilter === 'user_registration'
+                                        ? 'bg-green-600 text-white'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <Icons.UserPlus className="w-4 h-4" />
+                                    Registrations
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setActivityFilter('instructor_approved');
+                                        setActivityPage(1);
+                                    }}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${activityFilter === 'instructor_approved'
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <Icons.CheckCircle className="w-4 h-4" />
+                                    Approved
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setActivityFilter('instructor_rejected');
+                                        setActivityPage(1);
+                                    }}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${activityFilter === 'instructor_rejected'
+                                        ? 'bg-red-600 text-white'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:border-gray-300'
+                                        }`}
+                                >
+                                    <Icons.XCircle className="w-4 h-4" />
+                                    Rejected
+                                </button>
                             </div>
                         </div>
-                    )}
+
+                        {/* Activities List */}
+                        <div className="p-6">
+                            {recentActivity.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <Icons.Inbox className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-600 font-medium">No activities recorded yet</p>
+                                    <p className="text-sm text-gray-500 mt-2">Activities will appear here as instructors register, courses are submitted, and approvals are made.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {recentActivity.map((activity) => {
+                                        const IconComponent = Icons[activity.icon] || Icons.Activity;
+                                        const activityTypeColors = {
+                                            user_registration: 'bg-green-50 border-green-200',
+                                            instructor_approved: 'bg-emerald-50 border-emerald-200',
+                                            instructor_rejected: 'bg-red-50 border-red-200',
+                                            course_approved: 'bg-blue-50 border-blue-200',
+                                            course_rejected: 'bg-orange-50 border-orange-200',
+                                        };
+                                        const typeColor = activityTypeColors[activity.type] || 'bg-gray-50 border-gray-200';
+
+                                        return (
+                                            <div
+                                                key={activity._id}
+                                                className={`border rounded-lg p-5 transition-all hover:shadow-md ${typeColor}`}
+                                            >
+                                                <div className="flex gap-4">
+                                                    <div className="p-3 rounded-lg bg-white shadow-sm border border-gray-200 flex-shrink-0">
+                                                        <IconComponent className="w-5 h-5 text-blue-600" />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium text-gray-900">
+                                                                    {activity.message}
+                                                                </p>
+                                                                {activity.performedBy && (
+                                                                    <p className="text-xs text-gray-600 mt-1">
+                                                                        Performed by: <strong>{activity.performedBy.name}</strong>
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-xs text-gray-600 whitespace-nowrap">
+                                                                {new Date(activity.timestamp).toLocaleString()}
+                                                            </span>
+                                                        </div>
+                                                        {activity.metadata?.reason && (
+                                                            <p className="text-xs text-gray-700 mt-2 p-2 bg-white bg-opacity-50 rounded border border-gray-300">
+                                                                <strong>Reason:</strong> {activity.metadata.reason}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+
+                            {/* Pagination */}
+                            {totalActivities > activitiesPerPage && (
+                                <div className="mt-6 flex items-center justify-between border-t pt-4">
+                                    <p className="text-sm text-gray-600">
+                                        Showing {Math.min((activityPage - 1) * activitiesPerPage + 1, totalActivities)} to{' '}
+                                        {Math.min(activityPage * activitiesPerPage, totalActivities)} of {totalActivities} activities
+                                    </p>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setActivityPage(Math.max(1, activityPage - 1))}
+                                            disabled={activityPage === 1}
+                                            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <Icons.ChevronLeft className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() =>
+                                                setActivityPage(Math.min(Math.ceil(totalActivities / activitiesPerPage), activityPage + 1))
+                                            }
+                                            disabled={activityPage >= Math.ceil(totalActivities / activitiesPerPage)}
+                                            className="p-2 rounded-lg border border-gray-200 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        >
+                                            <Icons.ChevronRight className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     {/* Fellowship Monitoring */}
                     {fellowsAtRisk.length > 0 && (

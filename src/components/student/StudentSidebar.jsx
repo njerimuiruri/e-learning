@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import authService from '@/lib/api/authService';
-import { getStudentProgress, getLastAccessedLesson } from '@/data/courses/courses';
+import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import { useToast } from '@/components/ui/ToastProvider';
 
 export default function StudentSidebar() {
@@ -30,9 +30,6 @@ export default function StudentSidebar() {
 
             if (user) {
                 setCurrentUser(user);
-                // Fetch student progress data
-                const progress = getStudentProgress();
-                setStudentData(progress);
             } else {
                 // If no user found, redirect to home
                 router.push('/');
@@ -134,15 +131,28 @@ export default function StudentSidebar() {
     };
 
     const handleLogout = () => {
-        // Clear auth data
+        // Mark that we're logging out to prevent redirect loops
+        if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('isLoggingOut', 'true');
+        }
+
+        // Clear auth data using authService (synchronous)
         authService.logout();
 
         // Clear any other local data
         setCurrentUser(null);
         setStudentData(null);
 
-        // Redirect to home page
-        router.push('/');
+        // Use router.push for clean navigation
+        setTimeout(() => {
+            router.push('/login');
+            // Clear the logout flag after a delay to allow redirect to complete
+            setTimeout(() => {
+                if (typeof sessionStorage !== 'undefined') {
+                    sessionStorage.removeItem('isLoggingOut');
+                }
+            }, 500);
+        }, 50);
     };
 
     const menuItems = [
@@ -150,6 +160,11 @@ export default function StudentSidebar() {
             icon: 'LayoutDashboard',
             label: 'Dashboard',
             path: '/student',
+        },
+        {
+            icon: 'BookOpen',
+            label: 'Browse Modules',
+            path: '/student/modules',
         },
         {
             icon: 'FileText',
@@ -168,7 +183,7 @@ export default function StudentSidebar() {
         },
         {
             icon: 'Award',
-            label: 'Claim Your Certificates',
+            label: 'Certificates',
             path: '/student/certificates',
         },
         {
@@ -182,23 +197,23 @@ export default function StudentSidebar() {
         router.push(path);
     };
 
-    const handleContinueLearning = () => {
-        if (studentData && studentData.enrolledCourses.length > 0) {
-            const inProgressCourse = studentData.enrolledCourses.find(
-                course => course.status === 'in_progress'
-            );
+    const handleContinueLearning = async () => {
+        try {
+            const enrollments = await moduleEnrollmentService.getMyEnrollments();
 
-            if (inProgressCourse) {
-                const lastLesson = getLastAccessedLesson(inProgressCourse.courseId);
-                router.push(`/courses/${inProgressCourse.courseId}/learn/${lastLesson.moduleId}/${lastLesson.lessonId}`);
+            if (enrollments && enrollments.length > 0) {
+                const inProgress = enrollments.find(e => !e.isCompleted);
+                if (inProgress) {
+                    router.push(`/student/modules/${inProgress._id}`);
+                } else {
+                    router.push('/student/modules');
+                }
             } else {
-                // Go to first course
-                const firstCourse = studentData.enrolledCourses[0];
-                router.push(`/courses/${firstCourse.courseId}`);
+                router.push('/student/modules');
             }
-        } else {
-            // No courses enrolled, go to courses page
-            router.push('/courses');
+        } catch (error) {
+            console.error('Failed to continue learning:', error);
+            router.push('/student/modules');
         }
     };
 
@@ -308,17 +323,6 @@ export default function StudentSidebar() {
                                 );
                             })}
                         </ul>
-
-                        {/* Additional Options */}
-                        <div className="mt-6 pt-6 border-t border-gray-200">
-                            <button
-                                onClick={() => router.push('/student/settings')}
-                                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors text-sm"
-                            >
-                                <Icons.Settings className="w-5 h-5 text-gray-500" />
-                                <span>Account Settings</span>
-                            </button>
-                        </div>
                     </nav>
 
                     {/* Logout Button */}
@@ -412,12 +416,12 @@ export default function StudentSidebar() {
                         <span className="text-xs">Dashboard</span>
                     </button>
                     <button
-                        onClick={() => handleNavigation('/courses')}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg ${pathname === '/courses' ? 'text-green-600' : 'text-gray-600'
+                        onClick={() => handleNavigation('/student/modules')}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg ${pathname === '/student/modules' ? 'text-green-600' : 'text-gray-600'
                             }`}
                     >
                         <Icons.BookOpen className="w-5 h-5" />
-                        <span className="text-xs">Courses</span>
+                        <span className="text-xs">Modules</span>
                     </button>
                     <button
                         onClick={() => handleNavigation('/student/achievements')}

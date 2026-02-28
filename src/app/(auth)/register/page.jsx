@@ -1,21 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Eye, EyeOff, User, Mail, Lock, AlertCircle, Phone, Upload, Building, Globe, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Lock, AlertCircle, Phone, Upload, Building, Globe, CheckCircle, ArrowLeft, BookOpen, GraduationCap, Award, Briefcase, Link2, FileText, Calendar } from 'lucide-react';
 import authService from '@/lib/api/authService';
+import Navbar from '@/components/navbar/navbar';
+import Footer from '@/components/Footer/Footer';
 
-const GoogleIcon = () => (
-    <svg viewBox="0 0 24 24" className="w-5 h-5">
-        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-    </svg>
-);
-
-// Toast Notification Component
 const Toast = ({ message, type, onClose }) => {
     const bgColor = type === 'success' ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500';
     const textColor = type === 'success' ? 'text-green-800' : 'text-red-800';
@@ -23,7 +15,7 @@ const Toast = ({ message, type, onClose }) => {
     const iconColor = type === 'success' ? 'text-green-500' : 'text-red-500';
 
     return (
-        <div className={`fixed top-20 right-4 z-[60] ${bgColor} border-l-4 rounded-lg shadow-2xl p-4 min-w-[320px] max-w-md animate-slideIn`}>
+        <div className={`fixed top-6 right-6 z-[60] ${bgColor} border-l-4 rounded-lg shadow-2xl p-4 min-w-[320px] max-w-md animate-slideIn`}>
             <div className="flex items-start gap-3">
                 <Icon className={`w-5 h-5 ${iconColor} flex-shrink-0 mt-0.5`} />
                 <div className="flex-1">
@@ -43,96 +35,61 @@ export default function RegisterPage() {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
     const [userRole, setUserRole] = useState('student');
+    const [currentStep, setCurrentStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState('');
     const [toast, setToast] = useState(null);
+    const [showOtherOrg, setShowOtherOrg] = useState(false);
+
     const [formData, setFormData] = useState({
+        // Common fields
         firstName: '',
         lastName: '',
         email: '',
         password: '',
-        phoneNumber: '',
         country: '',
-        institution: '',
-        bio: '',
+        organization: '',
+        otherOrganization: '',
         agreedToTerms: false,
-        profileImage: null,
-        cvFile: null,
+
+        // Instructor specific
+        phoneNumber: '',
+        profilePicture: null,
+        bio: '',
+        qualifications: '',
+        expertise: '',
+        linkedIn: '',
+        portfolio: '',
+        teachingExperience: '',
+        yearsOfExperience: '',
+        cv: null,
+        institution: '',
     });
 
-    useEffect(() => {
-        // Initialize Google Sign-In
-        if (window.google && window.google.accounts) {
-            window.google.accounts.id.initialize({
-                client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
-                callback: handleGoogleLogin,
-            });
-        }
-    }, []);
+    const organizationOptions = [
+        'University',
+        'Research Institute',
+        'NGO',
+        'Government Agency',
+        'Private Company',
+        'Consulting Firm',
+        'Individual/Freelance',
+        'Other'
+    ];
+
+    const totalSteps = userRole === 'student' ? 2 : 3;
 
     const showToast = (message, type) => {
         setToast({ message, type });
         setTimeout(() => setToast(null), 5000);
     };
 
-    const handleGoogleLogin = async (response) => {
-        if (!response.credential) {
-            setError('Failed to get Google credentials');
-            return;
-        }
-
-        setGoogleLoading(true);
-        setError('');
-
-        try {
-            const result = await authService.googleLogin({
-                idToken: response.credential,
-                role: userRole,
-            });
-
-            if (result.token) {
-                localStorage.setItem('token', result.token);
-                localStorage.setItem('user', JSON.stringify(result.user));
-            }
-
-            const userName = `${result.user.firstName} ${result.user.lastName}`;
-            showToast(`🎉 Welcome, ${userName}!`, 'success');
-
-            setTimeout(() => {
-                if (userRole === 'student') {
-                    router.replace('/student');
-                } else if (userRole === 'instructor') {
-                    router.replace('/login');
-                }
-            }, 500);
-        } catch (err) {
-            console.error('Google login error:', err);
-            setError(err.message || 'Google registration failed. Please try again.');
-            showToast(err.message || 'Google registration failed. Please try again.', 'error');
-        } finally {
-            setGoogleLoading(false);
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        if (e) e.preventDefault();
+    const handleSubmit = async () => {
         setError('');
 
         if (!formData.agreedToTerms) {
             setError('Please agree to the terms and conditions');
             return;
-        }
-
-        if (userRole === 'instructor') {
-            if (!formData.phoneNumber || !formData.institution || !formData.bio) {
-                setError('Please fill in all required fields');
-                return;
-            }
-            if (!formData.cvFile) {
-                setError('CV/Resume is required for instructors');
-                return;
-            }
         }
 
         setLoading(true);
@@ -145,6 +102,7 @@ export default function RegisterPage() {
                     email: formData.email,
                     password: formData.password,
                     country: formData.country,
+                    organization: formData.organization === 'Other' ? formData.otherOrganization : formData.organization,
                 });
 
                 if (response.token) {
@@ -153,10 +111,7 @@ export default function RegisterPage() {
                 }
 
                 showToast('🎉 Registration successful! Welcome to the platform.', 'success');
-
-                setTimeout(() => {
-                    router.push('/student');
-                }, 1500);
+                setTimeout(() => router.push('/student'), 1500);
 
             } else if (userRole === 'instructor') {
                 const response = await authService.registerInstructor({
@@ -165,18 +120,22 @@ export default function RegisterPage() {
                     email: formData.email,
                     password: formData.password,
                     phoneNumber: formData.phoneNumber,
-                    institution: formData.institution,
-                    bio: formData.bio,
                     country: formData.country,
-                    profileImage: formData.profileImage,
-                    cvFile: formData.cvFile,
+                    organization: formData.organization === 'Other' ? formData.otherOrganization : formData.organization,
+                    institution: formData.institution,
+                    profilePicture: formData.profilePicture,
+                    bio: formData.bio,
+                    qualifications: formData.qualifications,
+                    expertise: formData.expertise,
+                    linkedIn: formData.linkedIn,
+                    portfolio: formData.portfolio,
+                    teachingExperience: formData.teachingExperience,
+                    yearsOfExperience: formData.yearsOfExperience,
+                    cv: formData.cv,
                 });
 
                 showToast('✅ Instructor request submitted! You will be notified once approved.', 'success');
-
-                setTimeout(() => {
-                    router.push('/login');
-                }, 2000);
+                setTimeout(() => router.push('/login'), 2000);
             }
         } catch (err) {
             console.error('Registration error:', err);
@@ -195,25 +154,504 @@ export default function RegisterPage() {
         } else if (type === 'checkbox') {
             setFormData({ ...formData, [name]: checked });
         } else {
+            if (name === 'organization') {
+                setShowOtherOrg(value === 'Other');
+            }
             setFormData({ ...formData, [name]: value });
         }
     };
 
     const handleRoleChange = (role) => {
         setUserRole(role);
+        setCurrentStep(1);
         setError('');
     };
 
+    const nextStep = () => {
+        // Validation for each step
+        if (currentStep === 1) {
+            if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+                setError('Please fill in all required fields');
+                return;
+            }
+            if (formData.password.length < 6) {
+                setError('Password must be at least 6 characters');
+                return;
+            }
+        }
 
+        if (currentStep === 2 && userRole === 'student') {
+            if (!formData.country) {
+                setError('Please fill in all required fields');
+                return;
+            }
+        }
+
+        if (currentStep === 2 && userRole === 'instructor') {
+            if (!formData.phoneNumber || !formData.country) {
+                setError('Please fill in all required fields');
+                return;
+            }
+        }
+
+        if (currentStep === 3 && userRole === 'instructor') {
+            if (!formData.bio || !formData.qualifications || !formData.expertise || !formData.cv) {
+                setError('Please fill in all required fields and upload your CV');
+                return;
+            }
+        }
+
+        setError('');
+        setCurrentStep(currentStep + 1);
+    };
+
+    const prevStep = () => {
+        setError('');
+        setCurrentStep(currentStep - 1);
+    };
+
+    const renderStepIndicator = () => (
+        <div className="flex items-center justify-center mb-8">
+            {[...Array(totalSteps)].map((_, index) => (
+                <div key={index} className="flex items-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all ${index + 1 === currentStep
+                        ? 'bg-gradient-to-br from-[#021d49] to-[#032a66] text-white shadow-lg scale-110'
+                        : index + 1 < currentStep
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-200 text-gray-500'
+                        }`}>
+                        {index + 1 < currentStep ? '✓' : index + 1}
+                    </div>
+                    {index < totalSteps - 1 && (
+                        <div className={`w-16 h-1 mx-2 transition-all ${index + 1 < currentStep ? 'bg-green-500' : 'bg-gray-200'
+                            }`}></div>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+
+    const renderStep1 = () => (
+        <div className="space-y-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Basic Information</h3>
+
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
+                    <div className="relative">
+                        <User className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            name="firstName"
+                            placeholder="John"
+                            value={formData.firstName}
+                            onChange={handleInputChange}
+                            className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                            required
+                        />
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
+                    <div className="relative">
+                        <User className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                        <input
+                            type="text"
+                            name="lastName"
+                            placeholder="Doe"
+                            value={formData.lastName}
+                            onChange={handleInputChange}
+                            className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                            required
+                        />
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email Address *</label>
+                <div className="relative">
+                    <Mail className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type="email"
+                        name="email"
+                        placeholder="you@example.com"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                        required
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+                <div className="relative">
+                    <Lock className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        placeholder="Minimum 6 characters"
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-12 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                        required
+                        minLength={6}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-3.5 text-gray-400 hover:text-gray-600"
+                    >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderStep2Student = () => (
+        <div className="space-y-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Additional Details</h3>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
+                <div className="relative">
+                    <Globe className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        name="country"
+                        placeholder="Your country"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                        required
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Organization (Optional)</label>
+                <div className="relative">
+                    <Building className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <select
+                        name="organization"
+                        value={formData.organization}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors appearance-none bg-white"
+                    >
+                        <option value="">Select organization type</option>
+                        {organizationOptions.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {showOtherOrg && (
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Specify Organization</label>
+                    <input
+                        type="text"
+                        name="otherOrganization"
+                        placeholder="Enter your organization"
+                        value={formData.otherOrganization}
+                        onChange={handleInputChange}
+                        className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                    />
+                </div>
+            )}
+
+            <div className="flex items-start space-x-2 pt-4">
+                <input
+                    type="checkbox"
+                    id="terms"
+                    name="agreedToTerms"
+                    checked={formData.agreedToTerms}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 mt-0.5 text-[#021d49] border-gray-300 rounded focus:ring-[#021d49]"
+                    required
+                />
+                <label htmlFor="terms" className="text-sm text-gray-600">
+                    I agree to the{' '}
+                    <a href="#" className="text-[#021d49] hover:underline font-medium">Terms & Conditions</a>
+                    {' '}and{' '}
+                    <a href="#" className="text-[#021d49] hover:underline font-medium">Privacy Policy</a>
+                </label>
+            </div>
+        </div>
+    );
+
+    const renderStep2Instructor = () => (
+        <div className="space-y-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Contact & Organization</h3>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number *</label>
+                <div className="relative">
+                    <Phone className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type="tel"
+                        name="phoneNumber"
+                        placeholder="+1234567890"
+                        value={formData.phoneNumber}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                        required
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Country *</label>
+                <div className="relative">
+                    <Globe className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        name="country"
+                        placeholder="Your country"
+                        value={formData.country}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                        required
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Organization Type</label>
+                <div className="relative">
+                    <Building className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <select
+                        name="organization"
+                        value={formData.organization}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors appearance-none bg-white"
+                    >
+                        <option value="">Select organization type</option>
+                        {organizationOptions.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            {showOtherOrg && (
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Specify Organization</label>
+                    <input
+                        type="text"
+                        name="otherOrganization"
+                        placeholder="Enter your organization"
+                        value={formData.otherOrganization}
+                        onChange={handleInputChange}
+                        className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                    />
+                </div>
+            )}
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Institution Name</label>
+                <div className="relative">
+                    <Building className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        name="institution"
+                        placeholder="Your institution"
+                        value={formData.institution}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderStep3Instructor = () => (
+        <div className="space-y-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Professional Profile</h3>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Bio *</label>
+                <textarea
+                    name="bio"
+                    placeholder="Tell us about yourself, your teaching philosophy, and experience..."
+                    value={formData.bio}
+                    onChange={handleInputChange}
+                    className="w-full h-24 px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors resize-none"
+                    required
+                />
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Qualifications *</label>
+                <div className="relative">
+                    <GraduationCap className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        name="qualifications"
+                        placeholder="e.g., PhD in Economics, MSc in Data Science"
+                        value={formData.qualifications}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                        required
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Expertise/Specialization *</label>
+                <div className="relative">
+                    <Briefcase className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type="text"
+                        name="expertise"
+                        placeholder="e.g., Research Methods, Policy Analysis"
+                        value={formData.expertise}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                        required
+                    />
+                </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Years of Experience</label>
+                    <div className="relative">
+                        <Calendar className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                        <input
+                            type="number"
+                            name="yearsOfExperience"
+                            placeholder="5"
+                            value={formData.yearsOfExperience}
+                            onChange={handleInputChange}
+                            className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                            min="0"
+                        />
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Teaching Experience</label>
+                    <input
+                        type="text"
+                        name="teachingExperience"
+                        placeholder="e.g., 10 years"
+                        value={formData.teachingExperience}
+                        onChange={handleInputChange}
+                        className="w-full h-12 px-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">LinkedIn Profile</label>
+                <div className="relative">
+                    <Link2 className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type="url"
+                        name="linkedIn"
+                        placeholder="https://linkedin.com/in/yourprofile"
+                        value={formData.linkedIn}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                    />
+                </div>
+            </div>
+
+            <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Portfolio/Website</label>
+                <div className="relative">
+                    <Globe className="absolute left-3 top-3.5 text-gray-400" size={18} />
+                    <input
+                        type="url"
+                        name="portfolio"
+                        placeholder="https://yourportfolio.com"
+                        value={formData.portfolio}
+                        onChange={handleInputChange}
+                        className="w-full h-12 pl-10 pr-4 border-2 border-gray-200 rounded-lg focus:border-[#021d49] focus:outline-none transition-colors"
+                    />
+                </div>
+            </div>
+
+            <div className="space-y-3 pt-2">
+                <label className="flex items-center justify-between p-4 border-2 border-gray-200 rounded-lg hover:border-[#021d49] cursor-pointer transition-colors">
+                    <div className="flex items-center gap-3">
+                        <Upload className="w-5 h-5 text-gray-400" />
+                        <span className="text-sm text-gray-600">
+                            {formData.profilePicture ? formData.profilePicture.name : 'Profile Photo (Optional)'}
+                        </span>
+                    </div>
+                    <input
+                        type="file"
+                        name="profilePicture"
+                        accept="image/*"
+                        onChange={handleInputChange}
+                        className="hidden"
+                    />
+                </label>
+
+                <label className="flex items-center justify-between p-4 border-2 border-[#021d49] rounded-lg hover:border-[#032a66] cursor-pointer transition-colors bg-blue-50">
+                    <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-[#021d49]" />
+                        <span className="text-sm font-medium text-gray-700">
+                            {formData.cv ? formData.cv.name : 'Upload CV/Resume (PDF only) *'}
+                        </span>
+                    </div>
+                    <input
+                        type="file"
+                        name="cv"
+                        accept=".pdf,application/pdf"
+                        onChange={handleInputChange}
+                        className="hidden"
+                        required
+                    />
+                </label>
+            </div>
+
+            <div className="flex items-start space-x-2 pt-4">
+                <input
+                    type="checkbox"
+                    id="terms"
+                    name="agreedToTerms"
+                    checked={formData.agreedToTerms}
+                    onChange={handleInputChange}
+                    className="w-4 h-4 mt-0.5 text-[#021d49] border-gray-300 rounded focus:ring-[#021d49]"
+                    required
+                />
+                <label htmlFor="terms" className="text-sm text-gray-600">
+                    I agree to the{' '}
+                    <a href="#" className="text-[#021d49] hover:underline font-medium">Terms & Conditions</a>
+                    {' '}and{' '}
+                    <a href="#" className="text-[#021d49] hover:underline font-medium">Privacy Policy</a>
+                </label>
+            </div>
+        </div>
+    );
 
     return (
         <>
+            {/* <Navbar /> */}
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            {loading && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl px-6 py-4 shadow-2xl flex items-center gap-3 border border-gray-200">
+                        <svg className="animate-spin h-6 w-6 text-[#021d49]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-900">Processing your request</p>
+                            <p className="text-xs text-gray-600">This may take a few seconds…</p>
+                        </div>
+                    </div>
+                </div>
+            )}
 
-            <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50">
-                <div className="w-full max-w-md">
-                    {/* Back to Home Button */}
-                    <Link 
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-orange-50 py-12 px-4">
+                <div className="max-w-4xl mx-auto mt-20">
+                    {/* Back Button */}
+                    <Link
                         href="/"
                         className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
                     >
@@ -221,292 +659,142 @@ export default function RegisterPage() {
                         <span>Back to Home</span>
                     </Link>
 
-                    <div className="bg-white rounded-2xl shadow-2xl p-6 max-h-[85vh] overflow-y-auto">
-                        <div className="text-center mb-5">
-                            <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl mx-auto mb-3 flex items-center justify-center shadow-lg">
-                                <span className="text-2xl">🎓</span>
+                    {/* Main Card */}
+                    <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
+                        {/* Header Section */}
+                        <div className="bg-gradient-to-br from-[#021d49] via-[#032a66] to-[#021d49] px-8 py-8 text-white relative overflow-hidden">
+                            <div className="absolute inset-0 opacity-10">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-orange-300 rounded-full blur-3xl"></div>
+                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-400 rounded-full blur-3xl"></div>
                             </div>
-                            <h2 className="text-2xl font-bold text-gray-900 mb-1">Join Us Today!</h2>
-                            <p className="text-sm text-gray-600">Start your learning journey</p>
+
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-4">
+                                    <div className="w-12 h-12 bg-gradient-to-br from-orange-400 to-pink-500 rounded-xl flex items-center justify-center shadow-lg">
+                                        <BookOpen className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <h1 className="text-2xl font-bold">ARIN Publishing Academy</h1>
+                                        <p className="text-orange-200 text-sm">Join Our Learning Community</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        {error && (
-                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
-                                <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                                <p className="text-xs text-red-800">{error}</p>
-                            </div>
-                        )}
-
-                        <div className="mb-4">
-                            <div className="grid grid-cols-2 gap-2">
+                        {/* Role Selection */}
+                        <div className="px-8 py-6 border-b border-gray-200">
+                            <label className="block text-sm font-medium text-gray-700 mb-3">I want to:</label>
+                            <div className="grid grid-cols-2 gap-4">
                                 <button
                                     type="button"
                                     onClick={() => handleRoleChange('student')}
-                                    className={`h-auto py-3 px-3 rounded-lg font-semibold transition-all text-sm ${userRole === 'student'
-                                        ? 'bg-gradient-to-br from-orange-500 to-pink-500 text-white shadow-md'
-                                        : 'border-2 border-gray-200 text-gray-700 hover:border-orange-300'
+                                    className={`h-auto py-5 px-4 rounded-xl font-semibold transition-all flex flex-col items-center gap-2 ${userRole === 'student'
+                                        ? 'bg-gradient-to-br from-[#021d49] to-[#032a66] text-white shadow-lg border-2 border-[#021d49]'
+                                        : 'border-2 border-gray-200 text-gray-700 hover:border-[#021d49] hover:bg-blue-50'
                                         }`}
                                 >
-                                    <div className="text-xl mb-1">📚</div>
-                                    Learn
+                                    <div className="text-3xl">📚</div>
+                                    <div>
+                                        <div className="font-bold text-base">Student</div>
+                                        <div className="text-xs opacity-80">Learn & Grow</div>
+                                    </div>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => handleRoleChange('instructor')}
-                                    className={`h-auto py-3 px-3 rounded-lg font-semibold transition-all text-sm ${userRole === 'instructor'
-                                        ? 'bg-gradient-to-br from-green-500 to-emerald-600 text-white shadow-md'
-                                        : 'border-2 border-gray-200 text-gray-700 hover:border-green-300'
+                                    className={`h-auto py-5 px-4 rounded-xl font-semibold transition-all flex flex-col items-center gap-2 ${userRole === 'instructor'
+                                        ? 'bg-gradient-to-br from-[#021d49] to-[#032a66] text-white shadow-lg border-2 border-[#021d49]'
+                                        : 'border-2 border-gray-200 text-gray-700 hover:border-[#021d49] hover:bg-blue-50'
                                         }`}
                                 >
-                                    <div className="text-xl mb-1">👨‍🏫</div>
-                                    Teach
+                                    <div className="text-3xl">👨‍🏫</div>
+                                    <div>
+                                        <div className="font-bold text-base">Instructor</div>
+                                        <div className="text-xs opacity-80">Teach & Inspire</div>
+                                    </div>
                                 </button>
                             </div>
                             {userRole === 'instructor' && (
-                                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg">
-                                    <p className="text-xs text-amber-800">⚠️ Requires admin approval</p>
+                                <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                                    <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                                    <p className="text-xs text-amber-800">Instructor accounts require admin approval. Please complete all steps accurately.</p>
                                 </div>
                             )}
                         </div>
 
-                        <button
-                            type="button"
-                            onClick={() => {
-                                const gsiButton = document.querySelector('[data-google-register-button]');
-                                if (gsiButton) {
-                                    gsiButton.click();
-                                } else if (window.google?.accounts?.id) {
-                                    window.google.accounts.id.prompt();
-                                }
-                            }}
-                            disabled={googleLoading}
-                            className="w-full h-10 border-2 border-gray-200 rounded-lg hover:border-red-500 hover:bg-red-50 flex items-center justify-center gap-2 transition-all mb-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {googleLoading ? (
-                                <>
-                                    <svg className="animate-spin h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    <span className="text-xs font-medium text-gray-700">Signing up...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <GoogleIcon />
-                                    <span className="text-sm font-medium text-gray-700">Continue with Google</span>
-                                </>
-                            )}
-                        </button>
+                        {/* Form Content */}
+                        <div className="px-8 py-8">
+                            {renderStepIndicator()}
 
-                        <div 
-                            id="google-signin-button-register" 
-                            data-google-register-button
-                            className="hidden"
-                        ></div>
-
-                        <div className="relative mb-4">
-                            <div className="absolute inset-0 flex items-center">
-                                <div className="w-full border-t border-gray-300"></div>
-                            </div>
-                            <div className="relative flex justify-center text-xs">
-                                <span className="px-2 bg-white text-gray-500">OR</span>
-                            </div>
-                        </div>
-
-                        <form onSubmit={handleSubmit} className="space-y-3">
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="relative">
-                                    <User className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                                    <input
-                                        type="text"
-                                        name="firstName"
-                                        placeholder="First Name *"
-                                        value={formData.firstName}
-                                        onChange={handleInputChange}
-                                        className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
-                                        required
-                                    />
+                            {error && (
+                                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+                                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+                                    <p className="text-sm text-red-800">{error}</p>
                                 </div>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                                    <input
-                                        type="text"
-                                        name="lastName"
-                                        placeholder="Last Name *"
-                                        value={formData.lastName}
-                                        onChange={handleInputChange}
-                                        className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
-                                        required
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                                <input
-                                    type="email"
-                                    name="email"
-                                    placeholder="Email address *"
-                                    value={formData.email}
-                                    onChange={handleInputChange}
-                                    className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
-                                    required
-                                />
-                            </div>
-
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    name="password"
-                                    placeholder="Password (min 6 chars) *"
-                                    value={formData.password}
-                                    onChange={handleInputChange}
-                                    className="w-full h-10 pl-9 pr-9 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
-                                    required
-                                    minLength={6}
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                                >
-                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                                </button>
-                            </div>
-
-                            <div className="relative">
-                                <Globe className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                                <input
-                                    type="text"
-                                    name="country"
-                                    placeholder="Country"
-                                    value={formData.country}
-                                    onChange={handleInputChange}
-                                    className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
-                                />
-                            </div>
-
-                            {userRole === 'instructor' && (
-                                <>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                                        <input
-                                            type="tel"
-                                            name="phoneNumber"
-                                            placeholder="Phone Number *"
-                                            value={formData.phoneNumber}
-                                            onChange={handleInputChange}
-                                            className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div className="relative">
-                                        <Building className="absolute left-3 top-2.5 text-gray-400" size={16} />
-                                        <input
-                                            type="text"
-                                            name="institution"
-                                            placeholder="Institution/Organization *"
-                                            value={formData.institution}
-                                            onChange={handleInputChange}
-                                            className="w-full h-10 pl-9 pr-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors text-sm"
-                                            required
-                                        />
-                                    </div>
-
-                                    <textarea
-                                        name="bio"
-                                        placeholder="Brief bio (teaching experience, expertise) *"
-                                        value={formData.bio}
-                                        onChange={handleInputChange}
-                                        className="w-full h-20 px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none transition-colors resize-none text-sm"
-                                        required
-                                    />
-
-                                    <div className="space-y-2">
-                                        <label className="flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg hover:border-green-300 cursor-pointer transition-colors">
-                                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                <Upload className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                                <span className="text-xs text-gray-600 truncate">
-                                                    {formData.profileImage ? formData.profileImage.name : 'Profile Photo (Optional)'}
-                                                </span>
-                                            </div>
-                                            <input
-                                                type="file"
-                                                name="profileImage"
-                                                accept="image/*"
-                                                onChange={handleInputChange}
-                                                className="hidden"
-                                            />
-                                        </label>
-
-                                        <label className="flex items-center justify-between p-3 border-2 border-green-200 rounded-lg hover:border-green-400 cursor-pointer transition-colors bg-green-50">
-                                            <div className="flex items-center gap-2 flex-1 min-w-0">
-                                                <Upload className="w-4 h-4 text-green-600 flex-shrink-0" />
-                                                <span className="text-xs font-medium text-gray-700 truncate">
-                                                    {formData.cvFile ? formData.cvFile.name : 'Upload CV/Resume *'}
-                                                </span>
-                                            </div>
-                                            <input
-                                                type="file"
-                                                name="cvFile"
-                                                accept=".pdf,.doc,.docx"
-                                                onChange={handleInputChange}
-                                                className="hidden"
-                                                required
-                                            />
-                                        </label>
-                                    </div>
-                                </>
                             )}
 
-                            <div className="flex items-start space-x-2">
-                                <input
-                                    type="checkbox"
-                                    id="terms"
-                                    name="agreedToTerms"
-                                    checked={formData.agreedToTerms}
-                                    onChange={handleInputChange}
-                                    className="w-4 h-4 mt-0.5 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                                    required
-                                />
-                                <label htmlFor="terms" className="text-xs text-gray-600 leading-tight">
-                                    I agree to the{' '}
-                                    <a href="#" className="text-green-600 hover:underline">Terms</a>
-                                    {' '}and{' '}
-                                    <a href="#" className="text-green-600 hover:underline">Privacy Policy</a>
-                                </label>
+                            <div className="max-h-[500px] overflow-y-auto pr-2">
+                                {currentStep === 1 && renderStep1()}
+                                {currentStep === 2 && userRole === 'student' && renderStep2Student()}
+                                {currentStep === 2 && userRole === 'instructor' && renderStep2Instructor()}
+                                {currentStep === 3 && userRole === 'instructor' && renderStep3Instructor()}
                             </div>
 
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full h-10 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-                            >
-                                {loading ? (
-                                    <span className="flex items-center justify-center">
-                                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Creating account...
-                                    </span>
-                                ) : (
-                                    'Sign Up'
+                            {/* Navigation Buttons */}
+                            <div className="flex gap-3 mt-8 pt-6 border-t border-gray-200">
+                                {currentStep > 1 && (
+                                    <button
+                                        type="button"
+                                        onClick={prevStep}
+                                        className="flex-1 h-12 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all"
+                                    >
+                                        ← Previous
+                                    </button>
                                 )}
-                            </button>
-                        </form>
 
-                        <p className="text-center text-xs text-gray-600 mt-4">
-                            Already have an account?{' '}
-                            <Link
-                                href="/login"
-                                className="text-green-600 font-semibold hover:text-green-700"
-                            >
-                                Log In
-                            </Link>
-                        </p>
+                                {currentStep < totalSteps ? (
+                                    <button
+                                        type="button"
+                                        onClick={nextStep}
+                                        className="flex-1 h-12 bg-gradient-to-r from-[#021d49] to-[#032a66] hover:from-[#032a66] hover:to-[#021d49] text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] shadow-lg"
+                                    >
+                                        Next →
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={handleSubmit}
+                                        disabled={loading}
+                                        className="flex-1 h-12 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white font-semibold rounded-lg transition-all transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {loading ? (
+                                            <span className="flex items-center justify-center">
+                                                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                </svg>
+                                                Creating account...
+                                            </span>
+                                        ) : (
+                                            '✓ Complete Registration'
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="px-8 py-4 bg-gray-50 border-t border-gray-200">
+                            <p className="text-center text-sm text-gray-600">
+                                Already have an account?{' '}
+                                <Link
+                                    href="/login"
+                                    className="text-[#021d49] font-semibold hover:underline"
+                                >
+                                    Sign In
+                                </Link>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -526,6 +814,7 @@ export default function RegisterPage() {
                     animation: slideIn 0.3s ease-out;
                 }
             `}</style>
+            <Footer />
         </>
     );
 }

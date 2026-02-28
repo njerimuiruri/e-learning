@@ -1,11 +1,21 @@
 'use client';
 
-import React, { useState } from 'react';
+export const dynamic = "force-dynamic";
+
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import axios from 'axios';
 
 export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+            <ResetPasswordContent />
+        </Suspense>
+    );
+}
+
+function ResetPasswordContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get('token');

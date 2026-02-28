@@ -1,280 +1,459 @@
-﻿"use client";
+"use client";
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { Clock, Users, Star, ArrowRight, Layers, BookOpen, TrendingUp, Award } from 'lucide-react';
-import courseService from '@/lib/api/courseService';
+import {
+    ArrowRight, Layers, BookOpen, Users, Award,
+    DollarSign, Unlock, Tag, LayoutGrid, GraduationCap,
+    CheckCircle, ChevronRight,
+} from 'lucide-react';
+import moduleService from '@/lib/api/moduleService';
 import categoryService from '@/lib/api/categoryService';
 
-const placeholderGradient = 'bg-gradient-to-br from-orange-100 via-white to-blue-50';
+const placeholderGradient = 'bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-50';
+
+// Helper to get instructor name from module (field is instructorIds - array of populated User objects)
+function getInstructorName(mod) {
+    if (mod.instructorIds && mod.instructorIds.length > 0) {
+        const instructor = mod.instructorIds[0];
+        if (instructor && typeof instructor === 'object') {
+            const name = `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim();
+            if (name) return name;
+            if (instructor.email) return instructor.email;
+        }
+    }
+    return 'Instructor';
+}
+
+// Helper to get instructor initials
+function getInstructorInitials(name) {
+    const parts = name.trim().split(' ');
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return name[0]?.toUpperCase() || '?';
+}
+
+// Resolve access type
+// - isFellowOnly: category is 'free' (= restricted to fellows; non-fellows cannot access)
+// - isPaid: category requires payment (non-fellows can pay)
+function resolveAccess(cat) {
+    if (!cat) return { isPaid: false, isFellowOnly: false, isRestricted: false };
+    const at = cat.accessType?.toLowerCase();
+    if (at === 'free') return { isPaid: false, isFellowOnly: true, isRestricted: false };
+    if (at === 'restricted') return { isPaid: true, isFellowOnly: false, isRestricted: true };
+    if (cat.isPaid === true || at === 'paid') return { isPaid: true, isFellowOnly: false, isRestricted: false };
+    return { isPaid: false, isFellowOnly: false, isRestricted: false };
+}
+
+const LEVEL_STYLES = {
+    beginner: 'bg-emerald-100 text-emerald-700',
+    intermediate: 'bg-amber-100 text-amber-700',
+    advanced: 'bg-red-100 text-red-700',
+};
 
 const CoursesSection = () => {
-    const [activeCategory, setActiveCategory] = useState('All');
-    const [courses, setCourses] = useState([]);
+    const [activeCategory, setActiveCategory] = useState(null); // null = All
+    const [modules, setModules] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [dynamicCategories, setDynamicCategories] = useState([]);
+    const [categories, setCategories] = useState([]);
 
     useEffect(() => {
         let mounted = true;
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const [coursesData, categoriesData] = await Promise.all([
-                    courseService.getAllCourses({ status: 'published' }),
+                const [modulesData, categoriesData] = await Promise.all([
+                    moduleService.getAllModules({ status: 'published' }),
                     categoryService.getAllCategories()
                 ]);
-
                 if (mounted) {
-                    setCourses(Array.isArray(coursesData) ? coursesData : coursesData?.courses || []);
-                    setDynamicCategories(Array.isArray(categoriesData) ? categoriesData : []);
+                    const modList = Array.isArray(modulesData)
+                        ? modulesData
+                        : modulesData?.modules || modulesData?.data || [];
+                    setModules(modList);
+                    setCategories(Array.isArray(categoriesData) ? categoriesData : []);
                 }
             } catch (err) {
                 console.error('Failed to load data', err);
-                if (mounted) setError('Unable to load courses right now.');
+                if (mounted) setError('Unable to load modules right now.');
             } finally {
                 if (mounted) setLoading(false);
             }
         };
         fetchData();
-        return () => {
-            mounted = false;
-        };
+        return () => { mounted = false; };
     }, []);
 
-    const categories = useMemo(() => {
-        if (dynamicCategories.length > 0) {
-            return ['All', ...dynamicCategories.map(cat => cat.name)];
-        }
-        const unique = new Set(courses.map((c) => c.category).filter(Boolean));
-        return ['All', ...Array.from(unique)];
-    }, [dynamicCategories, courses]);
+    const selectedCategory = useMemo(
+        () => categories.find(c => c._id === activeCategory) || null,
+        [categories, activeCategory]
+    );
 
-    const filteredCourses = useMemo(() => {
-        if (activeCategory === 'All') return courses;
-        return courses.filter((course) => course.category === activeCategory);
-    }, [courses, activeCategory]);
+    const filteredModules = useMemo(() => {
+        if (!activeCategory) return modules;
+        return modules.filter(m => {
+            const catId = m.categoryId?._id || m.categoryId;
+            return catId === activeCategory;
+        });
+    }, [modules, activeCategory]);
 
-    const getTotalQuestions = (modules = []) =>
-        modules.reduce((sum, mod) => sum + (mod.questions?.length || 0), 0);
+    const moduleCountForCategory = (catId) =>
+        modules.filter(m => (m.categoryId?._id || m.categoryId) === catId).length;
 
     return (
-        <section className="relative py-20 lg:py-32 bg-gradient-to-b from-slate-50 via-white to-slate-50 overflow-hidden">
-            {/* Enhanced Background Pattern */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {/* Animated gradient orbs */}
-                <div className="absolute top-0 left-1/4 w-96 h-96 bg-gradient-to-br from-orange-200/30 to-pink-200/30 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gradient-to-br from-blue-200/30 to-purple-200/30 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-                
-                {/* Grid pattern */}
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:64px_64px]"></div>
+        <section className="relative py-20 lg:py-28 bg-gray-50 overflow-hidden">
+            {/* Subtle background */}
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:64px_64px]" />
             </div>
 
             <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                {/* Section Header with Badge */}
-                <div className="text-center mb-16">
-                    <div className="inline-flex items-center gap-2 bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+
+                {/* ─── Section Header ─────────────────────────────────── */}
+                <div className="text-center mb-12">
+                    <div className="inline-flex items-center gap-2 bg-[#021d49]/10 text-[#021d49] px-4 py-2 rounded-full text-sm font-semibold mb-4">
                         <Award className="w-4 h-4" />
-                        <span>PREMIUM LEARNING EXPERIENCE</span>
+                        <span>LEARNING MODULES</span>
                     </div>
-                    <h2 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 mb-6 leading-tight">
-                        Explore Our Research
-                        <span className="block mt-2 bg-gradient-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-                            Programs
-                        </span>
+                    <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-gray-900 mb-4">
+                        Explore Our Learning Modules
                     </h2>
-                    <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-                        Master the art of research with our expert-led courses designed to elevate your academic journey
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                        Expert-led modules designed to elevate your research and policy skills
                     </p>
                 </div>
 
-                {/* Enhanced Category Filter */}
-                <div className="flex flex-wrap justify-center gap-3 mb-16">
-                    {categories.map((category) => (
-                        <button
-                            key={category}
-                            onClick={() => setActiveCategory(category)}
-                            className={`group relative px-8 py-3.5 rounded-full font-semibold transition-all duration-300 ${
-                                activeCategory === category
-                                    ? 'bg-gradient-to-r from-[#021d49] to-[#03275f] text-white shadow-xl shadow-blue-900/30 scale-105'
-                                    : 'bg-white text-gray-700 hover:bg-gray-50 border-2 border-gray-200 hover:border-orange-300 hover:scale-105'
-                            }`}
-                        >
-                            {activeCategory === category && (
-                                <div className="absolute inset-0 rounded-full bg-white/20 animate-pulse"></div>
-                            )}
-                            <span className="relative">{category}</span>
-                        </button>
-                    ))}
-                </div>
+                {/* ─── Category Tabs ───────────────────────────────────── */}
+                {!loading && categories.length > 0 && (
+                    <div className="mb-10">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Tag className="w-4 h-4 text-[#021d49]" />
+                            <span className="text-sm font-semibold text-gray-700">Filter by Category</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                            {/* All tab */}
+                            <button
+                                onClick={() => setActiveCategory(null)}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all ${
+                                    !activeCategory
+                                        ? 'bg-[#021d49] border-[#021d49] text-white shadow-md'
+                                        : 'bg-white border-gray-200 text-gray-700 hover:border-[#021d49] hover:text-[#021d49]'
+                                }`}
+                            >
+                                <LayoutGrid className="w-3.5 h-3.5" />
+                                All
+                                <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${!activeCategory ? 'bg-white/20' : 'bg-gray-100'}`}>
+                                    {modules.length}
+                                </span>
+                            </button>
 
-                {/* Loading State */}
+                            {/* Category tabs */}
+                            {categories.map((cat) => {
+                                const isActive = activeCategory === cat._id;
+                                const count = moduleCountForCategory(cat._id);
+                                const { isPaid, isFellowOnly, isRestricted } = resolveAccess(cat);
+
+                                return (
+                                    <button
+                                        key={cat._id}
+                                        onClick={() => setActiveCategory(isActive ? null : cat._id)}
+                                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold border-2 transition-all ${
+                                            isActive
+                                                ? 'bg-[#021d49] border-[#021d49] text-white shadow-md'
+                                                : 'bg-white border-gray-200 text-gray-700 hover:border-[#021d49] hover:text-[#021d49]'
+                                        }`}
+                                    >
+                                        <Layers className="w-3.5 h-3.5" />
+                                        {cat.name}
+                                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20' : 'bg-gray-100'}`}>
+                                            {count}
+                                        </span>
+                                        {isFellowOnly ? (
+                                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isActive ? 'bg-purple-400/30 text-purple-100' : 'bg-purple-100 text-purple-700'}`}>
+                                                Fellows Only
+                                            </span>
+                                        ) : isRestricted ? (
+                                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isActive ? 'bg-purple-400/30 text-purple-100' : 'bg-purple-100 text-purple-700'}`}>
+                                                Fellows Priority
+                                            </span>
+                                        ) : isPaid ? (
+                                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isActive ? 'bg-orange-400/30 text-orange-100' : 'bg-orange-100 text-orange-700'}`}>
+                                                Paid
+                                            </span>
+                                        ) : (
+                                            <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${isActive ? 'bg-emerald-400/30 text-emerald-100' : 'bg-emerald-100 text-emerald-700'}`}>
+                                                Open
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Selected category summary strip */}
+                        {selectedCategory && (() => {
+                            const { isPaid, isFellowOnly, isRestricted } = resolveAccess(selectedCategory);
+                            return (
+                                <div className="mt-4 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between flex-wrap gap-3 bg-white border border-gray-200 rounded-2xl px-5 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-[#021d49]/10 flex items-center justify-center">
+                                                <Layers className="w-4 h-4 text-[#021d49]" />
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-900 text-sm">{selectedCategory.name}</p>
+                                                {selectedCategory.description && (
+                                                    <p className="text-xs text-gray-500 max-w-md truncate">{selectedCategory.description}</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            {isFellowOnly ? (
+                                                <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-purple-100 text-purple-700">
+                                                    <Award className="w-3 h-3" /> Fellows Only
+                                                </span>
+                                            ) : isRestricted ? (
+                                                <>
+                                                    <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-purple-100 text-purple-700">
+                                                        <Award className="w-3 h-3" /> Fellows Priority
+                                                    </span>
+                                                    {selectedCategory.price > 0 && (
+                                                        <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-orange-100 text-orange-700">
+                                                            <DollarSign className="w-3 h-3" /> USD {selectedCategory.price.toLocaleString()}
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : isPaid ? (
+                                                <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-orange-100 text-orange-700">
+                                                    <DollarSign className="w-3 h-3" /> Paid{selectedCategory.price > 0 ? ` · USD ${selectedCategory.price.toLocaleString()}` : ''}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700">
+                                                    <Unlock className="w-3 h-3" /> Open Access
+                                                </span>
+                                            )}
+                                            <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-blue-100 text-blue-700">
+                                                <BookOpen className="w-3 h-3" />
+                                                {moduleCountForCategory(selectedCategory._id)} Modules
+                                            </span>
+                                            <Link
+                                                href={`/modules?category=${selectedCategory._id}`}
+                                                className="text-xs font-semibold text-[#021d49] hover:underline flex items-center gap-1"
+                                            >
+                                                View all <ChevronRight className="w-3 h-3" />
+                                            </Link>
+                                        </div>
+                                    </div>
+                                    {/* Disclaimer for fellow-only categories */}
+                                    {isFellowOnly && (
+                                        <div className="flex items-start gap-2 bg-purple-50 border border-purple-200 rounded-xl px-4 py-2.5">
+                                            <Award className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                                            <p className="text-xs text-purple-800 leading-relaxed">
+                                                <span className="font-bold">Fellows-only access:</span> Modules in this category are free only for fellows added by the admin. Non-fellows must pay to access them.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                    </div>
+                )}
+
+                {/* ─── Loading ─────────────────────────────────────────── */}
                 {loading && (
                     <div className="flex justify-center items-center py-20">
-                        <div className="relative">
-                            <div className="w-16 h-16 border-4 border-orange-200 border-t-orange-600 rounded-full animate-spin"></div>
-                            <BookOpen className="w-6 h-6 text-orange-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-                        </div>
+                        <div className="w-12 h-12 border-4 border-blue-200 border-t-[#021d49] rounded-full animate-spin" />
                     </div>
                 )}
 
-                {/* Error State */}
+                {/* ─── Error ───────────────────────────────────────────── */}
                 {error && !loading && (
-                    <div className="text-center bg-red-50 border border-red-200 rounded-2xl p-8">
-                        <div className="text-red-600 font-semibold text-lg">{error}</div>
+                    <div className="text-center bg-red-50 border border-red-200 rounded-2xl p-8 mb-8">
+                        <p className="text-red-600 font-semibold">{error}</p>
                     </div>
                 )}
 
-                {/* Enhanced Courses Grid */}
+                {/* ─── Section label ───────────────────────────────────── */}
                 {!loading && !error && (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
-                        {filteredCourses.map((course) => {
-                            const rating = course.instructorId?.avgRating ?? course.avgRating ?? 0;
-                            const modules = course.modules || [];
-                            const totalQuestions = getTotalQuestions(modules);
-                            const enrollmentCount = course.enrollmentCount ?? 0;
-                            const instructorName = course.instructorId
-                                ? `${course.instructorId.firstName || ''} ${course.instructorId.lastName || ''}`.trim()
-                                : 'Unknown Instructor';
-                            const category = course.category || 'General';
-                            
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold text-gray-900">
+                            {selectedCategory ? `Modules in "${selectedCategory.name}"` : 'All Modules'}
+                            <span className="ml-2 text-sm font-normal text-gray-400">({filteredModules.length})</span>
+                        </h3>
+                        <Link
+                            href="/modules"
+                            className="text-sm font-semibold text-[#021d49] hover:underline flex items-center gap-1"
+                        >
+                            Browse all <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    </div>
+                )}
+
+                {/* ─── Modules Grid ─────────────────────────────────────── */}
+                {!loading && !error && (
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-14">
+                        {filteredModules.map((mod) => {
+                            const instructorName = getInstructorName(mod);
+                            const initials = getInstructorInitials(instructorName);
+                            const lessonCount = mod.lessons?.length || 0;
+                            const enrollmentCount = mod.enrollmentCount ?? 0;
+
+                            // Category info
+                            const cat = categories.find(c => c._id === (mod.categoryId?._id || mod.categoryId));
+                            const catName = cat?.name || mod.categoryId?.name || '';
+                            const { isPaid, isFellowOnly, isRestricted } = resolveAccess(cat);
+                            const catPrice = cat?.price;
+                            const levelStyle = LEVEL_STYLES[mod.level] || LEVEL_STYLES.beginner;
+
                             return (
                                 <div
-                                    key={course._id}
-                                    className="group relative bg-white rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-500 overflow-hidden border border-gray-100 hover:border-orange-300 hover:-translate-y-2"
+                                    key={mod._id}
+                                    className="bg-white rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg hover:border-blue-200 hover:-translate-y-1 transition-all duration-300 overflow-hidden flex flex-col"
                                 >
-                                    {/* Hover glow effect */}
-                                    <div className="absolute inset-0 bg-gradient-to-br from-orange-500/0 via-pink-500/0 to-blue-500/0 group-hover:from-orange-500/5 group-hover:via-pink-500/5 group-hover:to-blue-500/5 transition-all duration-500 pointer-events-none"></div>
-                                    
-                                    {/* Course Image */}
-                                    <div className="relative overflow-hidden h-56">
-                                        {/* Category Badge */}
-                                        <div className="absolute top-4 left-4 bg-gradient-to-r from-[#021d49] to-[#03275f] text-white px-4 py-2 rounded-full text-xs font-bold z-10 shadow-lg backdrop-blur-sm">
-                                            {category}
-                                        </div>
-                                        
-                                        {/* Trending Badge for popular courses */}
-                                        {enrollmentCount > 100 && (
-                                            <div className="absolute top-4 right-4 bg-gradient-to-r from-orange-500 to-pink-500 text-white px-3 py-1.5 rounded-full text-xs font-bold z-10 shadow-lg flex items-center gap-1">
-                                                <TrendingUp className="w-3 h-3" />
-                                                Popular
-                                            </div>
-                                        )}
-                                        
-                                        {course.thumbnailUrl ? (
+                                    {/* Banner */}
+                                    <div className="relative h-44 overflow-hidden">
+                                        {mod.bannerUrl || mod.thumbnailUrl ? (
                                             <img
-                                                src={course.thumbnailUrl}
-                                                alt={course.title}
-                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                                                src={mod.bannerUrl || mod.thumbnailUrl}
+                                                alt={mod.title}
+                                                className="w-full h-full object-cover"
                                             />
                                         ) : (
                                             <div className={`w-full h-full ${placeholderGradient} flex items-center justify-center`}>
-                                                <BookOpen className="w-16 h-16 text-gray-400" />
+                                                <Layers className="w-14 h-14 text-gray-300" />
                                             </div>
                                         )}
-                                        
-                                        {/* Overlay gradient */}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+                                        {/* Overlay badges */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                                        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between">
+                                            {/* Level badge */}
+                                            {mod.level && (
+                                                <span className={`text-xs font-bold px-2.5 py-1 rounded-full capitalize ${levelStyle}`}>
+                                                    {mod.level}
+                                                </span>
+                                            )}
+                                            {/* Access badge */}
+                                            {isFellowOnly ? (
+                                                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-purple-600 text-white">
+                                                    <Award className="w-3 h-3" /> Fellows Only
+                                                </span>
+                                            ) : isRestricted ? (
+                                                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-purple-600 text-white">
+                                                    <Award className="w-3 h-3" /> Fellows Priority{catPrice ? ` · USD ${catPrice.toLocaleString()}` : ''}
+                                                </span>
+                                            ) : isPaid ? (
+                                                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500 text-white">
+                                                    <DollarSign className="w-3 h-3" />
+                                                    Paid{catPrice ? ` · USD ${catPrice.toLocaleString()}` : ''}
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500 text-white">
+                                                    <Unlock className="w-3 h-3" /> Open
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    {/* Course Content */}
-                                    <div className="relative p-6 space-y-4">
-                                        {/* Title */}
-                                        <h3 className="text-xl font-bold text-gray-900 group-hover:text-[#021d49] transition-colors line-clamp-2 min-h-[3.5rem]">
-                                            {course.title}
+                                    {/* Content */}
+                                    <div className="p-5 flex flex-col flex-1">
+                                        {/* Category */}
+                                        {catName && (
+                                            <span className="text-xs font-semibold text-[#021d49] uppercase tracking-wide mb-1.5">
+                                                {catName}
+                                            </span>
+                                        )}
+
+                                        {/* Module name */}
+                                        <h3 className="font-bold text-gray-900 text-lg leading-snug mb-2 line-clamp-2">
+                                            {mod.title}
                                         </h3>
 
-                                        {/* Meta Info */}
-                                        <div className="flex items-center justify-between text-sm">
-                                            <div className="flex items-center gap-1.5 text-gray-600">
-                                                <Layers className="w-4 h-4 text-orange-500" />
-                                                <span className="font-medium">{modules.length} modules</span>
-                                            </div>
-                                            <div className="flex items-center gap-1.5 text-gray-600">
-                                                <Users className="w-4 h-4 text-blue-500" />
-                                                <span className="font-medium">{enrollmentCount.toLocaleString()}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Rating */}
-                                        <div className="flex items-center gap-3 py-3 px-4 bg-gradient-to-r from-orange-50 to-pink-50 rounded-xl">
-                                            <div className="flex">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <Star
-                                                        key={i}
-                                                        className={`w-4 h-4 ${
-                                                            i < Math.floor(rating)
-                                                                ? 'fill-orange-500 text-orange-500'
-                                                                : 'text-gray-300'
-                                                        }`}
-                                                    />
-                                                ))}
-                                            </div>
-                                            <span className="text-sm font-bold text-gray-900">
-                                                {rating.toFixed(1)}
-                                            </span>
-                                            <span className="text-xs text-gray-500">rating</span>
-                                        </div>
-
-                                        {/* Instructor */}
-                                        <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
-                                            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-orange-400 to-pink-400 text-white font-bold flex items-center justify-center text-lg shadow-md">
-                                                {instructorName?.[0] || '?'}
-                                            </div>
-                                            <div className="flex-1">
-                                                <p className="text-xs text-gray-500 font-medium">Instructor</p>
-                                                <p className="text-sm font-bold text-gray-900 truncate">
-                                                    {instructorName}
+                                        {/* Fellow-only disclaimer */}
+                                        {(isFellowOnly || isRestricted) && (
+                                            <div className="flex items-start gap-1.5 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 mb-3">
+                                                <Award className="w-3.5 h-3.5 text-purple-600 flex-shrink-0 mt-0.5" />
+                                                <p className="text-xs text-purple-800 leading-snug">
+                                                    {isRestricted
+                                                        ? `Fellows get free access. Public can pay USD ${catPrice?.toLocaleString() || ''} to access.`
+                                                        : 'Free for fellows only. Non-fellows must pay to access.'}
                                                 </p>
                                             </div>
+                                        )}
+
+                                        {/* Instructor */}
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className="w-7 h-7 rounded-full bg-[#021d49] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                                {initials}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs text-gray-500">Instructor</p>
+                                                <p className="text-sm font-semibold text-gray-900 truncate">{instructorName}</p>
+                                            </div>
                                         </div>
 
-                                        {/* Questions Count */}
-                                        <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 px-3 py-2 rounded-lg">
-                                            <ArrowRight className="w-4 h-4 text-blue-500" />
-                                            <span className="font-semibold">{totalQuestions} practice questions</span>
-                                        </div>
-
-                                        {/* CTA Button */}
-                                        <Link
-                                            href={`/courses/${course._id}`}
-                                            className="block w-full bg-gradient-to-r from-[#021d49] to-[#03275f] hover:from-[#03275f] hover:to-[#021d49] text-white py-4 rounded-2xl font-bold transition-all duration-300 text-center group-hover:shadow-xl group-hover:shadow-blue-900/30 mt-4"
-                                        >
-                                            <span className="flex items-center justify-center gap-2">
-                                                View Course Details
-                                                <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform duration-300" />
+                                        {/* Stats row */}
+                                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-4 pt-3 border-t border-gray-100">
+                                            <span className="flex items-center gap-1">
+                                                <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
+                                                {lessonCount} {lessonCount === 1 ? 'Lesson' : 'Lessons'}
                                             </span>
-                                        </Link>
+                                            <span className="flex items-center gap-1">
+                                                <Users className="w-3.5 h-3.5 text-blue-500" />
+                                                {enrollmentCount.toLocaleString()} enrolled
+                                            </span>
+                                            {mod.finalAssessment && (
+                                                <span className="flex items-center gap-1 text-emerald-600">
+                                                    <CheckCircle className="w-3.5 h-3.5" />
+                                                    Certificate
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        {/* CTA */}
+                                        <div className="mt-auto">
+                                            <Link
+                                                href={`/modules/${mod._id}`}
+                                                className="flex items-center justify-center gap-2 w-full bg-[#021d49] hover:bg-[#032a5e] text-white py-3 rounded-xl font-semibold text-sm transition-colors"
+                                            >
+                                                View Module
+                                                <ArrowRight className="w-4 h-4" />
+                                            </Link>
+                                        </div>
                                     </div>
                                 </div>
                             );
                         })}
-                        
-                        {!filteredCourses.length && (
-                            <div className="col-span-full text-center py-16">
-                                <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                <p className="text-gray-600 text-lg font-medium">No courses available for this category yet.</p>
-                                <p className="text-gray-500 text-sm mt-2">Check back soon for new additions!</p>
+
+                        {filteredModules.length === 0 && (
+                            <div className="col-span-full text-center py-16 bg-white rounded-2xl border border-gray-200">
+                                <Layers className="w-14 h-14 text-gray-200 mx-auto mb-3" />
+                                <p className="text-gray-600 font-medium">
+                                    {selectedCategory
+                                        ? `No modules available in "${selectedCategory.name}" yet.`
+                                        : 'No modules available yet.'}
+                                </p>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Enhanced Bottom CTA */}
-                <div className="text-center bg-gradient-to-r from-orange-50 via-pink-50 to-blue-50 rounded-3xl p-12 border border-orange-200/50">
-                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                        Ready to Start Your Learning Journey?
-                    </h3>
-                    <p className="text-gray-600 mb-6 text-lg">
-                        Explore endless knowledge and unlock your full potential
-                    </p>
-                    <Link 
-                        href="/courses" 
-                        className="inline-flex items-center gap-3 bg-gradient-to-r from-[#021d49] to-[#03275f] text-white px-10 py-4 rounded-full font-bold hover:shadow-xl hover:shadow-blue-900/30 transition-all duration-300 hover:scale-105"
-                    >
-                        Browse All Courses
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                    </Link>
-                </div>
+                {/* ─── Bottom CTA ───────────────────────────────────────── */}
+                {!loading && (
+                    <div className="text-center bg-white rounded-2xl border-2 border-gray-200 p-10">
+                        <GraduationCap className="w-10 h-10 text-[#021d49] mx-auto mb-3" />
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">Ready to Start Learning?</h3>
+                        <p className="text-gray-500 mb-5 text-sm">
+                            Browse all modules and unlock your full potential
+                        </p>
+                        <Link
+                            href="/modules"
+                            className="inline-flex items-center gap-2 bg-[#021d49] hover:bg-[#032a5e] text-white px-8 py-3 rounded-full font-bold transition-colors"
+                        >
+                            Browse All Modules
+                            <ArrowRight className="w-4 h-4" />
+                        </Link>
+                    </div>
+                )}
             </div>
         </section>
     );

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import InstructorSidebar from '@/components/instructor/InstructorSidebar';
+import authService from '@/lib/api/authService';
 import * as Icons from 'lucide-react';
 
 export default function InstructorLayout({ children }) {
@@ -14,41 +15,46 @@ export default function InstructorLayout({ children }) {
 
     useEffect(() => {
         // Check if user is authenticated and has instructor role
-        const token = localStorage.getItem('token');
-        const userStr = localStorage.getItem('user');
+        // First try to get from cookie (set by backend), then fallback to localStorage (set by frontend)
+        let user = authService.getCurrentUser();
 
-        if (!token || !userStr) {
+        if (!user && typeof window !== 'undefined') {
+            // Fallback to localStorage if cookie is not available yet
+            const userStr = window.localStorage.getItem('user');
+            if (userStr) {
+                try {
+                    user = JSON.parse(userStr);
+                } catch (error) {
+                    console.error('Error parsing user from localStorage:', error);
+                }
+            }
+        }
+
+        if (!user) {
             router.replace('/');
             return;
         }
 
-        try {
-            const user = JSON.parse(userStr);
-            if (user.role !== 'instructor') {
-                // Not an instructor, redirect based on their role
-                if (user.role === 'admin') {
-                    router.replace('/admin');
-                } else if (user.role === 'student') {
-                    router.replace('/student');
-                } else {
-                    router.replace('/');
-                }
-                return;
+        if (user.role !== 'instructor') {
+            // Not an instructor, redirect based on their role
+            if (user.role === 'admin') {
+                router.replace('/admin');
+            } else if (user.role === 'student') {
+                router.replace('/student');
+            } else {
+                router.replace('/');
             }
-
-            setInstructorData(user);
-
-            // Check if instructor is approved
-            // The backend returns 'instructorStatus' field with values: 'pending', 'approved', 'rejected'
-            const approved = user.instructorStatus === 'approved';
-            setIsApproved(approved);
-            setIsAuthorized(true);
-        } catch (error) {
-            console.error('Error parsing user data:', error);
-            router.replace('/');
-        } finally {
-            setIsLoading(false);
+            return;
         }
+
+        setInstructorData(user);
+
+        // Check if instructor is approved
+        // The backend returns 'instructorStatus' field with values: 'pending', 'approved', 'rejected'
+        const approved = user.instructorStatus === 'approved';
+        setIsApproved(approved);
+        setIsAuthorized(true);
+        setIsLoading(false);
     }, [router]);
 
     // Show loading state

@@ -1,25 +1,25 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import authService from '@/lib/api/authService';
 
 export default function ProtectedStudentRoute({ children }) {
     const router = useRouter();
+    const pathname = usePathname();
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
         const checkAccess = async () => {
             try {
-                const token = localStorage.getItem('token');
-                const userStr = localStorage.getItem('user');
+                const user = authService.getCurrentUser();
 
-                if (!token || !userStr) {
-                    router.push('/login');
+                if (!user) {
+                    const redirect = pathname ? `?redirect=${encodeURIComponent(pathname)}` : '';
+                    router.push(`/login${redirect}`);
                     return;
                 }
-
-                const user = JSON.parse(userStr);
 
                 // Check if user must set password (admin-created student)
                 if (user.mustSetPassword) {

@@ -1,10 +1,13 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen } from 'lucide-react';
+import { Menu, X, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen, Play } from 'lucide-react';
+import courseService from '@/lib/api/courseService';
+import authService from '@/lib/api/authService';
 
 const Navbar = () => {
     const router = useRouter();
+    const [mounted, setMounted] = useState(false); // Fix hydration
     const [isOpen, setIsOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -13,23 +16,30 @@ const Navbar = () => {
     const [currentUser, setCurrentUser] = useState(null);
     const [studentData, setStudentData] = useState([]);
 
+    // Set mounted to true on client-side only
     useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!mounted) return; // Only run on client after mount
+
         const handleScroll = () => {
             setIsScrolled(window.scrollY > 10);
         };
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
+    }, [mounted]);
 
-    // Load user from localStorage on mount
+    // Load user from cookies on mount
     useEffect(() => {
+        if (!mounted) return; // Only run on client after mount
+
         const loadUserData = () => {
             try {
-                const token = localStorage.getItem('token');
-                const userData = localStorage.getItem('user');
-                
-                if (token && userData) {
-                    const user = JSON.parse(userData);
+                const user = authService.getCurrentUser();
+
+                if (user) {
                     setCurrentUser(user);
                     setIsLoggedIn(true);
                     setUserRole(user.role || 'student');
@@ -44,9 +54,11 @@ const Navbar = () => {
         };
 
         loadUserData();
-    }, []);
+    }, [mounted]);
 
     useEffect(() => {
+        if (!mounted) return; // Only run on client after mount
+
         const handleClickOutside = (e) => {
             if (showProfileMenu && !e.target.closest('.profile-menu')) {
                 setShowProfileMenu(false);
@@ -54,7 +66,7 @@ const Navbar = () => {
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [showProfileMenu]);
+    }, [showProfileMenu, mounted]);
 
     const getInitials = () => {
         if (currentUser) {
@@ -93,32 +105,79 @@ const Navbar = () => {
     const navLinks = [
         { name: 'Home', href: '/' },
         { name: 'About', href: '/about' },
-        { name: 'Courses', href: '/courses' },
+        { name: 'Modules', href: '/modules' },
         { name: 'Community', href: '#community' },
         { name: 'Contact', href: '#contact' }
     ];
 
     const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        // Mark that we're logging out to prevent redirect loops
+        if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('isLoggingOut', 'true');
+        }
+
+        // Clear cookies immediately (synchronous)
+        authService.logout();
         setIsLoggedIn(false);
         setCurrentUser(null);
         setShowProfileMenu(false);
-        router.push('/login');
+
+        // Use router.push for clean navigation
+        setTimeout(() => {
+            router.push('/login');
+            // Clear the logout flag after a delay to allow redirect to complete
+            setTimeout(() => {
+                if (typeof sessionStorage !== 'undefined') {
+                    sessionStorage.removeItem('isLoggingOut');
+                }
+            }, 500);
+        }, 50);
     };
 
     const handleDashboardClick = () => {
         setShowProfileMenu(false);
-        router.push('/student');
+
+        // Redirect based on user role
+        if (currentUser?.role === 'student') {
+            router.push('/student');
+        } else if (currentUser?.role === 'instructor') {
+            router.push('/instructor');
+        } else if (currentUser?.role === 'admin') {
+            router.push('/admin');
+        } else {
+            // Fallback to home if role is unknown
+            router.push('/');
+        }
     };
 
-    const handleContinueLearning = () => {
-        if (studentData && Array.isArray(studentData) && studentData.length > 0) {
-            const firstEnrollment = studentData[0];
-            const courseId = firstEnrollment.courseId._id || firstEnrollment.courseId;
-            const moduleIndex = firstEnrollment.lastAccessedModule || 0;
-            const lessonIndex = firstEnrollment.lastAccessedLesson || 0;
-            console.log(`Navigate to: /courses/${courseId}/learn/${moduleIndex}/${lessonIndex}`);
+    const handleContinueLearning = async () => {
+        try {
+            // Fetch dashboard data to get current enrollments
+            const dashboardData = await courseService.getStudentDashboard();
+
+            if (dashboardData?.enrollments && dashboardData.enrollments.length > 0) {
+                // Find a course that's in progress (not completed)
+                const inProgressEnrollment = dashboardData.enrollments.find(
+                    enrollment => !enrollment.isCompleted
+                );
+
+                if (inProgressEnrollment) {
+                    const courseId = inProgressEnrollment.courseId?._id || inProgressEnrollment.courseId;
+                    // Use smart resume destination API
+                    const resumeData = await courseService.getResumeDestination(courseId);
+                    router.push(resumeData.path);
+                } else {
+                    // All modules completed, go to modules page to find new ones
+                    router.push('/modules');
+                }
+            } else {
+                // No modules enrolled, go to modules page
+                router.push('/modules');
+            }
+        } catch (error) {
+            console.error('Failed to continue learning:', error);
+            // Fallback to modules page
+            router.push('/modules');
         }
     };
 
@@ -127,20 +186,20 @@ const Navbar = () => {
     return (
         <>
             <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-lg' : 'bg-white shadow-md'}`}>
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center h-16 md:h-20">
+                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex justify-between items-center h-20">
+                        {/* Logo Section */}
                         <div className="flex-shrink-0">
-                            <a href="/" className="flex items-center gap-3">
-                                <div className="relative w-14 h-14 flex items-center justify-center bg-white rounded-xl shadow-lg border-2 border-[#021d49] p-1">
+                            <a href="/" className="flex items-center gap-2">
+                                <div className="relative w-12 h-12 flex items-center justify-center bg-white rounded-lg shadow-md border-2 border-[#021d49] p-1">
                                     <img
                                         src="/Arin.png"
                                         alt="ARIN Logo"
                                         className="w-full h-full object-contain"
                                     />
                                 </div>
-                                <div className="hidden sm:flex flex-col">
-                                    <span className="font-bold text-2xl">
-                                        {/* <span className="text-gray-800">ARIN </span> */}
+                                <div className="hidden md:flex flex-col">
+                                    <span className="font-bold text-xl leading-tight">
                                         <span className="text-[#021d49]">E</span>
                                         <span className="text-gray-800">-</span>
                                         <span className="text-[#1e40af]">L</span>
@@ -152,12 +211,13 @@ const Navbar = () => {
                             </a>
                         </div>
 
-                        <div className="hidden lg:flex items-center space-x-8">
+                        {/* Navigation Links - Center */}
+                        <div className="hidden lg:flex items-center space-x-6">
                             {navLinks.map((link) => (
                                 <a
                                     key={link.name}
                                     href={link.href}
-                                    className="text-gray-700 hover:text-[#021d49] font-medium transition-colors duration-200 relative group"
+                                    className="text-gray-700 hover:text-[#021d49] font-medium text-sm transition-colors duration-200 relative group px-2 py-1"
                                 >
                                     {link.name}
                                     <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#021d49] group-hover:w-full transition-all duration-300"></span>
@@ -165,18 +225,40 @@ const Navbar = () => {
                             ))}
                         </div>
 
-                        <div className="hidden lg:flex items-center space-x-4">
-                            {isLoggedIn ? (
+                        {/* Right Side Actions */}
+                        <div className="hidden lg:flex items-center gap-3">
+                            {!mounted ? (
+                                // Show skeleton loader during hydration
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-32 bg-gray-200 rounded-lg animate-pulse"></div>
+                                    <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse"></div>
+                                </div>
+                            ) : isLoggedIn ? (
                                 <>
                                     {userRole === 'student' && (
                                         <button
-                                            onClick={handleDashboardClick}
-                                            className="flex items-center gap-2 text-gray-700 hover:text-[#021d49] font-medium px-4 py-2 rounded-lg hover:bg-blue-50 transition-all duration-200"
+                                            onClick={handleContinueLearning}
+                                            className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm"
                                         >
-                                            <LayoutDashboard size={20} />
-                                            Dashboard
+                                            <Play size={16} />
+                                            <span className="hidden xl:inline">Continue Learning</span>
+                                            <span className="xl:hidden">Continue</span>
                                         </button>
                                     )}
+
+                                    {/* Show dashboard button for all logged-in users */}
+                                    <button
+                                        onClick={handleDashboardClick}
+                                        className="flex items-center gap-1.5 text-gray-700 hover:text-[#021d49] font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition-all duration-200 text-sm border border-gray-200 hover:border-[#021d49]"
+                                    >
+                                        <LayoutDashboard size={16} />
+                                        <span className="hidden xl:inline">
+                                            {userRole === 'instructor' ? 'Instructor Dashboard' :
+                                                userRole === 'admin' ? 'Admin Dashboard' :
+                                                    'My Dashboard'}
+                                        </span>
+                                        <span className="xl:hidden">Dashboard</span>
+                                    </button>
 
                                     <div className="relative profile-menu">
                                         <button
@@ -282,7 +364,11 @@ const Navbar = () => {
                                                         <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
                                                             <LayoutDashboard className="w-5 h-5 text-blue-600" />
                                                         </div>
-                                                        <span className="font-medium text-gray-700">Your Dashboard</span>
+                                                        <span className="font-medium text-gray-700">
+                                                            {currentUser?.role === 'instructor' ? 'Instructor Dashboard' :
+                                                                currentUser?.role === 'admin' ? 'Admin Dashboard' :
+                                                                    'Your Dashboard'}
+                                                        </span>
                                                     </button>
 
                                                     <button

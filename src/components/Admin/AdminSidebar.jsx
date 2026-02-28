@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
+import authService from '@/lib/api/authService';
+import adminService from '@/lib/api/adminService';
 
 export default function AdminSidebar() {
     const router = useRouter();
@@ -12,6 +14,7 @@ export default function AdminSidebar() {
     const [showPhotoModal, setShowPhotoModal] = useState(false);
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [adminUser, setAdminUser] = useState(null);
+    const [pendingInstructorsCount, setPendingInstructorsCount] = useState(0);
 
     useEffect(() => {
         // Load admin user details from localStorage
@@ -23,17 +26,41 @@ export default function AdminSidebar() {
                 console.error('Error parsing user data:', error);
             }
         }
+
+        // Fetch pending instructors count
+        fetchPendingInstructorsCount();
     }, []);
+
+    const fetchPendingInstructorsCount = async () => {
+        try {
+            const data = await adminService.getPendingInstructors();
+            setPendingInstructorsCount(data.instructors?.length || 0);
+        } catch (error) {
+            console.error('Error fetching pending instructors:', error);
+            setPendingInstructorsCount(0);
+        }
+    };
 
     const handleLogout = () => {
         if (confirm('Are you sure you want to logout?')) {
-            // Clear all authentication data
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            sessionStorage.clear();
+            // Mark that we're logging out to prevent redirect loops
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.setItem('isLoggingOut', 'true');
+            }
 
-            // Redirect to home page
-            router.replace('/');
+            // Clear cookies immediately (synchronous)
+            authService.logout();
+
+            // Use router.push for clean navigation
+            setTimeout(() => {
+                router.push('/login');
+                // Clear the logout flag after a delay to allow redirect to complete
+                setTimeout(() => {
+                    if (typeof sessionStorage !== 'undefined') {
+                        sessionStorage.removeItem('isLoggingOut');
+                    }
+                }, 500);
+            }, 50);
         }
     };
 
@@ -69,21 +96,15 @@ export default function AdminSidebar() {
             path: '/admin/fellows',
         },
         {
-            icon: 'GraduationCap',
-            label: 'Course Management',
-            path: '/admin/courses',
-        },
-        {
-            icon: 'Clock',
-            label: 'Pending Course Approvals',
-            path: '/admin/courses/pending',
-            badge: null, // Will be updated with count
+            icon: 'BookOpen',
+            label: 'Module Management',
+            path: '/admin/modules',
         },
         {
             icon: 'UserCog',
             label: 'Instructor Approvals',
             path: '/admin/instructors',
-            badge: 3,
+            badge: pendingInstructorsCount,
         },
         {
             icon: 'Award',
@@ -95,22 +116,16 @@ export default function AdminSidebar() {
             label: 'Categories',
             path: '/admin/categories',
         },
-        // {
-        //     icon: 'MessageSquare',
-        //     label: 'Discussions',
-        //     path: '/admin/discussions',
-        //     badge: 2,
-        // },
         {
             icon: 'BarChart3',
             label: 'Analytics & Reports',
             path: '/admin/analytics',
         },
-        // {
-        //     icon: 'DollarSign',
-        //     label: 'Revenue',
-        //     path: '/admin/revenue',
-        // },
+        {
+            icon: 'Settings',
+            label: 'System Settings',
+            path: '/admin/settings',
+        },
     ];
 
     const handleNavigation = (path) => {
@@ -431,12 +446,12 @@ export default function AdminSidebar() {
                         <span className="text-xs">Users</span>
                     </button>
                     <button
-                        onClick={() => handleNavigation('/admin/courses')}
-                        className={`flex flex-col items-center gap-1 p-2 rounded-lg ${pathname === '/admin/courses' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'
+                        onClick={() => handleNavigation('/admin/modules')}
+                        className={`flex flex-col items-center gap-1 p-2 rounded-lg ${pathname === '/admin/modules' ? 'bg-blue-50 text-blue-600' : 'text-gray-600'
                             }`}
                     >
-                        <Icons.GraduationCap className="w-5 h-5" />
-                        <span className="text-xs">Courses</span>
+                        <Icons.BookOpen className="w-5 h-5" />
+                        <span className="text-xs">Modules</span>
                     </button>
                     <button
                         onClick={() => handleNavigation('/admin/instructors')}

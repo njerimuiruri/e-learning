@@ -103,6 +103,17 @@ export default function ModuleAssessmentPage() {
 
       setResults(result);
       setSubmitted(true);
+
+      // Handle auto-restart - redirect to the failed module's first lesson
+      if (result.autoRestarted) {
+        showToast(result.message || 'Course automatically restarted. Your previous progress has been saved. Redirecting to the module...', {
+          type: 'info',
+          title: 'Course Restarted'
+        });
+        setTimeout(() => {
+          router.push(`/courses/${courseId}/learn/${moduleIndex}/0`);
+        }, 2000);
+      }
     } catch (err) {
       console.error('Error submitting assessment:', err);
       showToast(err.message || 'Failed to submit assessment', { type: 'error', title: 'Submission failed' });
@@ -122,15 +133,33 @@ export default function ModuleAssessmentPage() {
     setAnswers(initialAnswers);
   };
 
+  const handleSoftReset = async () => {
+    if (!confirm('Reset only your assessment attempts while keeping your lesson progress?\n\nThis will allow you to retake assessments without losing your completed lessons.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await courseService.softResetCourse(enrollment._id);
+      showToast('Assessment attempts reset. Your lesson progress has been preserved.', { type: 'success', title: 'Soft Reset Complete' });
+      router.push(`/courses/${courseId}`);
+    } catch (err) {
+      console.error('Error soft resetting course:', err);
+      showToast('Failed to soft reset course', { type: 'error', title: 'Reset failed' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRestartCourse = async () => {
-    if (!confirm('Are you sure you want to restart the entire course? All your progress will be reset.')) {
+    if (!confirm('Are you sure you want to restart the entire course?\n\nThis will reset ALL your progress, including completed lessons and assessments. Your previous attempt will be saved for analytics.')) {
       return;
     }
 
     try {
       setLoading(true);
       await courseService.restartCourse(enrollment._id);
-      showToast('Course restarted successfully. Redirecting...', { type: 'success', title: 'Course restarted' });
+      showToast('Course restarted successfully. Your previous attempt has been saved. Redirecting...', { type: 'success', title: 'Course restarted' });
       router.push(`/courses/${courseId}`);
     } catch (err) {
       console.error('Error restarting course:', err);
@@ -252,14 +281,34 @@ export default function ModuleAssessmentPage() {
                 </button>
               )}
 
-              {mustRestart && (
-                <button
-                  onClick={handleRestartCourse}
-                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
-                >
-                  <RotateCcw className="w-5 h-5" />
-                  Restart Course
-                </button>
+              {mustRestart && results.autoRestarted && (
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+                  <p className="text-blue-800 font-semibold mb-2">Course Auto-Restarted</p>
+                  <p className="text-sm text-blue-600">
+                    Your course has been automatically restarted. Your previous progress has been saved for analytics. You can now start fresh!
+                  </p>
+                </div>
+              )}
+
+              {mustRestart && !results.autoRestarted && (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSoftReset}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
+                    title="Reset only assessment attempts, keep lesson progress"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    Soft Reset (Keep Progress)
+                  </button>
+                  <button
+                    onClick={handleRestartCourse}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2"
+                    title="Reset entire course including lessons"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                    Full Restart
+                  </button>
+                </div>
               )}
             </div>
           </div>

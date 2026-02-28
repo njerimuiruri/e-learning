@@ -210,7 +210,20 @@ export default function InstructorApprovalsPage() {
                             <div key={app._id} className="bg-white rounded-lg p-4 md:p-5 shadow-sm hover:shadow-md transition-shadow">
                                 <div className="flex flex-col md:flex-row md:items-start gap-4">
                                     {/* Avatar */}
-                                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0">
+                                    {app.profilePicture ? (
+                                        <img
+                                            src={`http://localhost:5000/api/files/download/${app.profilePicture.replace('uploads/', '').replace(/\\/g, '/')}?inline=true`}
+                                            alt={`${app.firstName} ${app.lastName}`}
+                                            className="w-16 h-16 rounded-full object-cover flex-shrink-0 border-2 border-gray-200"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                if (e.target.nextElementSibling) {
+                                                    e.target.nextElementSibling.style.display = 'flex';
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div className={`w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-xl flex-shrink-0 ${app.profilePicture ? 'hidden' : ''}`}>
                                         {app.firstName?.[0]}{app.lastName?.[0]}
                                     </div>
 

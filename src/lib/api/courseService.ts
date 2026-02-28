@@ -1,9 +1,11 @@
+
 import axios from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const api = axios.create({
   baseURL: `${API_URL}/api`,
+  withCredentials: true, // send httpOnly auth cookies with requests
 });
 
 // Add token to requests
@@ -16,6 +18,54 @@ api.interceptors.request.use((config) => {
 });
 
 const courseService = {
+  // Draft/Review/Publish Workflow
+  saveLessonDraft: async (courseId, moduleIndex, lessonIndex, lessonData) => {
+    const response = await api.put(`/courses/${courseId}/modules/${moduleIndex}/lessons/${lessonIndex}/draft`, lessonData);
+    return response.data;
+  },
+  submitLessonForReview: async (courseId, moduleIndex, lessonIndex) => {
+    const response = await api.put(`/courses/${courseId}/modules/${moduleIndex}/lessons/${lessonIndex}/submit`);
+    return response.data;
+  },
+  approveLesson: async (courseId, moduleIndex, lessonIndex) => {
+    const response = await api.put(`/courses/${courseId}/modules/${moduleIndex}/lessons/${lessonIndex}/approve`);
+    return response.data;
+  },
+  saveModuleDraft: async (courseId, moduleIndex, moduleData) => {
+    const response = await api.put(`/courses/${courseId}/modules/${moduleIndex}/draft`, moduleData);
+    return response.data;
+  },
+  submitModuleForReview: async (courseId, moduleIndex) => {
+    const response = await api.put(`/courses/${courseId}/modules/${moduleIndex}/submit`);
+    return response.data;
+  },
+  approveModule: async (courseId, moduleIndex) => {
+    const response = await api.put(`/courses/${courseId}/modules/${moduleIndex}/approve`);
+    return response.data;
+  },
+    // Lock a module for editing
+    lockModule: async (courseId, moduleIndex) => {
+      const response = await api.post(`/courses/${courseId}/modules/${moduleIndex}/lock`);
+      return response.data;
+    },
+
+    // Unlock a module after editing
+    unlockModule: async (courseId, moduleIndex) => {
+      const response = await api.post(`/courses/${courseId}/modules/${moduleIndex}/unlock`);
+      return response.data;
+    },
+
+    // Lock a lesson for editing
+    lockLesson: async (courseId, moduleIndex, lessonIndex) => {
+      const response = await api.post(`/courses/${courseId}/modules/${moduleIndex}/lessons/${lessonIndex}/lock`);
+      return response.data;
+    },
+
+    // Unlock a lesson after editing
+    unlockLesson: async (courseId, moduleIndex, lessonIndex) => {
+      const response = await api.post(`/courses/${courseId}/modules/${moduleIndex}/lessons/${lessonIndex}/unlock`);
+      return response.data;
+    },
   // Public - Get all published courses
   getAllCourses: async (filters = {}) => {
     const response = await api.get('/courses', { params: filters });
@@ -80,6 +130,13 @@ const courseService = {
     return response.data;
   },
 
+  // Duplicate getEnrollment removed
+
+  getResumeDestination: async (courseId) => {
+    const response = await api.get(`/courses/${courseId}/resume-destination`);
+    return response.data;
+  },
+
   // Progress
   updateProgress: async (enrollmentId, moduleIndex, score, answers) => {
     const response = await api.post(`/courses/enrollment/${enrollmentId}/progress`, {
@@ -111,16 +168,29 @@ const courseService = {
     return response.data;
   },
 
+  // Achievements
+  getStudentAchievements: async () => {
+    const response = await api.get('/courses/student/achievements');
+    return response.data;
+  },
+
   // Discussions
   createDiscussion: async (courseId, discussionData) => {
     const response = await api.post(`/courses/${courseId}/discussions`, discussionData);
     return response.data;
   },
 
-  getDiscussions: async (courseId, moduleIndex) => {
-    const response = await api.get(`/courses/${courseId}/discussions`, {
-      params: moduleIndex !== undefined ? { moduleIndex } : {},
-    });
+  getDiscussions: async (
+    courseId: string,
+    moduleIndex?: number,
+    options: { sortBy?: string; filterByStatus?: string } = {}
+  ) => {
+    const params: Record<string, any> = {};
+    if (moduleIndex !== undefined) params.moduleIndex = moduleIndex;
+    if (options.sortBy) params.sortBy = options.sortBy;
+    if (options.filterByStatus) params.filterByStatus = options.filterByStatus;
+
+    const response = await api.get(`/courses/${courseId}/discussions`, { params });
     return response.data;
   },
 
@@ -131,6 +201,21 @@ const courseService = {
 
   addDiscussionReply: async (discussionId, reply) => {
     const response = await api.post(`/courses/discussions/${discussionId}/reply`, reply);
+    return response.data;
+  },
+
+  togglePinDiscussion: async (discussionId) => {
+    const response = await api.post(`/courses/discussions/${discussionId}/pin`);
+    return response.data;
+  },
+
+  likeDiscussion: async (discussionId) => {
+    const response = await api.post(`/courses/discussions/${discussionId}/like`);
+    return response.data;
+  },
+
+  incrementDiscussionViews: async (discussionId) => {
+    const response = await api.post(`/courses/discussions/${discussionId}/view`);
     return response.data;
   },
 
@@ -177,9 +262,26 @@ const courseService = {
     return response.data;
   },
 
+  getAssessmentForEnrollment: async (enrollmentId) => {
+    const response = await api.get(`/courses/enrollment/${enrollmentId}/assessment`);
+    return response.data;
+  },
+
   // Restart Course
   restartCourse: async (enrollmentId) => {
     const response = await api.post(`/courses/enrollment/${enrollmentId}/restart`);
+    return response.data;
+  },
+
+  // Soft Reset Course (only reset attempts, keep progress)
+  softResetCourse: async (enrollmentId) => {
+    const response = await api.post(`/courses/enrollment/${enrollmentId}/soft-reset`);
+    return response.data;
+  },
+
+  // Get Attempt History
+  getAttemptHistory: async (enrollmentId) => {
+    const response = await api.get(`/courses/enrollment/${enrollmentId}/history`);
     return response.data;
   },
 

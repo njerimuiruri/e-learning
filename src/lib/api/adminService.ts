@@ -117,6 +117,36 @@ const adminService = {
     const { data } = await api.put(`/courses/${id}/reject`, { reason });
     return data;
   },
+
+  // Modules
+  getAllModules: async (filters: { status?: string | null; level?: string | null; category?: string | null; page?: number; limit?: number } = {}) => {
+    const { data } = await api.get('/modules', { params: filters });
+    return data;
+  },
+  getPendingModules: async (filters: { page?: number; limit?: number } = {}) => {
+    const { data } = await api.get('/modules/pending', { params: filters });
+    return data;
+  },
+  getModuleDashboardStats: async () => {
+    const { data } = await api.get('/modules/stats');
+    return data;
+  },
+  getModuleById: async (id: string) => {
+    const { data } = await api.get(`/modules/${id}`);
+    return data;
+  },
+  approveModule: async (id: string) => {
+    const { data } = await api.put(`/modules/${id}/approve`);
+    return data;
+  },
+  publishModule: async (id: string) => {
+    const { data } = await api.put(`/modules/${id}/publish`);
+    return data;
+  },
+  rejectModule: async (id: string, reason: string) => {
+    const { data } = await api.put(`/modules/${id}/reject`, { reason });
+    return data;
+  },
 };
 
 export default adminService;

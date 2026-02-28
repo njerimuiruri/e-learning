@@ -1,223 +1,527 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import * as Icons from 'lucide-react';
-import adminService from '@/lib/api/adminService';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import {
+    Progress
+} from "@/components/ui/progress";
+import analyticsService from "@/lib/api/analyticsService";
+import reminderService from "@/lib/api/reminderService";
+import {
+    Users,
+    BookOpen,
+    TrendingUp,
+    Award,
+    BarChart3,
+    UserCheck,
+    Target,
+    Trash2,
+    AlertTriangle
+} from "lucide-react";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
-export default function AdminAnalyticsPage() {
-    const [stats, setStats] = useState(null);
+export default function AnalyticsPage() {
+    const router = useRouter();
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [timeRange, setTimeRange] = useState('30days');
+    const [overview, setOverview] = useState(null);
+    const [studentProgress, setStudentProgress] = useState(null);
+    const [instructorActivity, setInstructorActivity] = useState(null);
+    const [courseCompletion, setCourseCompletion] = useState(null);
+    const [activeTab, setActiveTab] = useState("overview");
+    const [studentStatus, setStudentStatus] = useState("all");
+    const [deleteDialog, setDeleteDialog] = useState({ open: false, instructor: null });
+    const [deleting, setDeleting] = useState(false);
+    const [triggering, setTriggering] = useState(false);
+    const [sendingReminderId, setSendingReminderId] = useState(null);
 
     useEffect(() => {
-        fetchStats();
-    }, []);
+        loadAnalytics();
+    }, [studentStatus]);
 
-    const fetchStats = async () => {
+    const loadAnalytics = async () => {
         try {
             setLoading(true);
-            setError('');
-            const data = await adminService.getDashboardStats();
-            setStats(data);
-        } catch (err) {
-            setError('Failed to load analytics data');
-            console.error(err);
+            const [overviewData, progressData, activityData, completionData] = await Promise.all([
+                analyticsService.getOverview(),
+                analyticsService.getStudentProgress(50, studentStatus),
+                analyticsService.getInstructorActivity(),
+                analyticsService.getCourseCompletion(),
+            ]);
+
+            setOverview(overviewData);
+            setStudentProgress(progressData);
+            setInstructorActivity(activityData);
+            setCourseCompletion(completionData);
+        } catch (error) {
+            console.error("Error loading analytics:", error);
         } finally {
             setLoading(false);
         }
     };
 
+    const handleTriggerAndGo = async () => {
+        try {
+            setTriggering(true);
+            // Trigger automatic reminder check, then navigate to reminders
+            await reminderService.triggerAutomaticReminders();
+        } catch (e) {
+            // Even if it fails, still route to Reminders for manual actions
+            console.error("Trigger error:", e);
+        } finally {
+            setTriggering(false);
+            router.push("/admin/reminders?triggered=1");
+        }
+    };
+
+    const handleSendReminder = async (enrollmentId) => {
+        if (!enrollmentId) return;
+        try {
+            setSendingReminderId(enrollmentId);
+            await reminderService.sendManualReminder(enrollmentId);
+            await loadAnalytics();
+        } catch (e) {
+            console.error("Reminder send failed", e);
+            alert("Failed to send reminder");
+        } finally {
+            setSendingReminderId(null);
+        }
+    };
+
+    const handleDeleteInstructor = async () => {
+        if (!deleteDialog.instructor) return;
+
+        try {
+            setDeleting(true);
+            await analyticsService.deleteInstructor(deleteDialog.instructor.instructorId);
+            setDeleteDialog({ open: false, instructor: null });
+            loadAnalytics();
+        } catch (error) {
+            console.error("Error deleting instructor:", error);
+            alert("Failed to delete instructor. Please try again.");
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="flex items-center justify-center min-h-[400px]">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 mx-auto mb-4"></div>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
                     <p className="text-gray-600">Loading analytics...</p>
                 </div>
             </div>
         );
     }
 
-    if (error) {
-        return (
-            <div className="min-h-screen bg-gray-50 p-6">
-                <div className="max-w-7xl mx-auto">
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-                        {error}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Analytics Dashboard</h1>
-                    <p className="text-gray-600">Platform performance and user statistics</p>
+        <div className="space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                    <h1 className="text-3xl font-bold">Analytics & Reports</h1>
+                    <p className="text-gray-600 mt-2">Track platform performance and user activity</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                        Tip: Need to test reminder emails? Trigger a run and review details on the Reminders page.
+                    </p>
                 </div>
-
-                {/* Main Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center">
-                                <Icons.Users className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <span className="text-sm font-medium text-green-600">{stats?.userGrowth || '+0%'}</span>
-                        </div>
-                        <h3 className="text-3xl font-bold text-gray-900 mb-1">{stats?.totalUsers || 0}</h3>
-                        <p className="text-sm text-gray-600">Total Users</p>
-                        <p className="text-xs text-gray-500 mt-2">{stats?.newUsersLast30Days || 0} new this month</p>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center">
-                                <Icons.UserCheck className="w-6 h-6 text-green-600" />
-                            </div>
-                            <span className="text-sm font-medium text-green-600">{stats?.activeGrowth || '+0%'}</span>
-                        </div>
-                        <h3 className="text-3xl font-bold text-gray-900 mb-1">{stats?.activeUsers || 0}</h3>
-                        <p className="text-sm text-gray-600">Active Users</p>
-                        <p className="text-xs text-gray-500 mt-2">{stats?.activeUsersLast30Days || 0} active this month</p>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center">
-                                <Icons.GraduationCap className="w-6 h-6 text-purple-600" />
-                            </div>
-                        </div>
-                        <h3 className="text-3xl font-bold text-gray-900 mb-1">{stats?.totalStudents || 0}</h3>
-                        <p className="text-sm text-gray-600">Total Students</p>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-lg transition-shadow">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center">
-                                <Icons.BookOpen className="w-6 h-6 text-orange-600" />
-                            </div>
-                        </div>
-                        <h3 className="text-3xl font-bold text-gray-900 mb-1">{stats?.totalInstructors || 0}</h3>
-                        <p className="text-sm text-gray-600">Total Instructors</p>
-                        <p className="text-xs text-yellow-600 mt-2">{stats?.pendingInstructors || 0} pending approval</p>
-                    </div>
-                </div>
-
-                {/* Instructor Stats */}
-                <div className="grid md:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-white rounded-xl p-6 border border-gray-200">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <Icons.UserCog className="w-5 h-5 text-blue-600" />
-                            Instructor Overview
-                        </h3>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                                <span className="text-sm font-medium text-gray-700">Approved Instructors</span>
-                                <span className="text-2xl font-bold text-green-600">{stats?.approvedInstructors || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-                                <span className="text-sm font-medium text-gray-700">Pending Approval</span>
-                                <span className="text-2xl font-bold text-yellow-600">{stats?.pendingInstructors || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                                <span className="text-sm font-medium text-gray-700">Total Instructors</span>
-                                <span className="text-2xl font-bold text-blue-600">{stats?.totalInstructors || 0}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-6 border border-gray-200">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                            <Icons.Award className="w-5 h-5 text-purple-600" />
-                            Fellows Program
-                        </h3>
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
-                                <span className="text-sm font-medium text-gray-700">Total Fellows</span>
-                                <span className="text-2xl font-bold text-purple-600">{stats?.totalFellows || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                                <span className="text-sm font-medium text-gray-700">Active Fellows</span>
-                                <span className="text-2xl font-bold text-green-600">{stats?.activeFellows || 0}</span>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                                <span className="text-sm font-medium text-gray-700">Completion Rate</span>
-                                <span className="text-2xl font-bold text-blue-600">{stats?.fellowsPercentage || 0}%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* User Type Distribution */}
-                <div className="bg-white rounded-xl p-6 border border-gray-200 mb-8">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-6">User Distribution</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Icons.Users className="w-8 h-8 text-blue-600" />
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900">{stats?.totalUsers || 0}</p>
-                            <p className="text-sm text-gray-600">All Users</p>
-                        </div>
-                        <div className="text-center p-4 bg-purple-50 rounded-lg">
-                            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Icons.GraduationCap className="w-8 h-8 text-purple-600" />
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900">{stats?.totalStudents || 0}</p>
-                            <p className="text-sm text-gray-600">Students</p>
-                        </div>
-                        <div className="text-center p-4 bg-orange-50 rounded-lg">
-                            <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Icons.BookOpen className="w-8 h-8 text-orange-600" />
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900">{stats?.totalInstructors || 0}</p>
-                            <p className="text-sm text-gray-600">Instructors</p>
-                        </div>
-                        <div className="text-center p-4 bg-green-50 rounded-lg">
-                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <Icons.UserCheck className="w-8 h-8 text-green-600" />
-                            </div>
-                            <p className="text-2xl font-bold text-gray-900">{stats?.activeUsers || 0}</p>
-                            <p className="text-sm text-gray-600">Active</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Growth Indicators */}
-                <div className="grid md:grid-cols-3 gap-6">
-                    <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl p-6 text-white">
-                        <div className="flex items-center justify-between mb-4">
-                            <Icons.TrendingUp className="w-8 h-8" />
-                            <span className="text-2xl font-bold">{stats?.userGrowth || '+0%'}</span>
-                        </div>
-                        <h4 className="text-lg font-semibold mb-1">User Growth</h4>
-                        <p className="text-blue-100 text-sm">Last 30 days</p>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-green-500 to-green-700 rounded-xl p-6 text-white">
-                        <div className="flex items-center justify-between mb-4">
-                            <Icons.Activity className="w-8 h-8" />
-                            <span className="text-2xl font-bold">{stats?.activeGrowth || '+0%'}</span>
-                        </div>
-                        <h4 className="text-lg font-semibold mb-1">Active Growth</h4>
-                        <p className="text-green-100 text-sm">Last 30 days</p>
-                    </div>
-
-                    <div className="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl p-6 text-white">
-                        <div className="flex items-center justify-between mb-4">
-                            <Icons.Users className="w-8 h-8" />
-                            <span className="text-2xl font-bold">{stats?.publicUsers || 0}</span>
-                        </div>
-                        <h4 className="text-lg font-semibold mb-1">Public Users</h4>
-                        <p className="text-purple-100 text-sm">Non-enrolled</p>
-                    </div>
+                <div className="flex items-center gap-2">
+                    <Button variant="secondary" onClick={() => router.push('/admin/reminders')}>
+                        Go to Reminders
+                    </Button>
+                    <Button variant="default" onClick={handleTriggerAndGo} disabled={triggering}>
+                        {triggering ? 'Triggering…' : 'Trigger Automatic'}
+                    </Button>
                 </div>
             </div>
+
+            <div className="flex gap-2 border-b">
+                <button
+                    onClick={() => setActiveTab("overview")}
+                    className={`px-4 py-2 font-medium transition-colors ${activeTab === "overview"
+                        ? "border-b-2 border-blue-600 text-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                        }`}
+                >
+                    Overview
+                </button>
+                <button
+                    onClick={() => setActiveTab("students")}
+                    className={`px-4 py-2 font-medium transition-colors ${activeTab === "students"
+                        ? "border-b-2 border-blue-600 text-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                        }`}
+                >
+                    Student Progress
+                </button>
+                <button
+                    onClick={() => setActiveTab("instructors")}
+                    className={`px-4 py-2 font-medium transition-colors ${activeTab === "instructors"
+                        ? "border-b-2 border-blue-600 text-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                        }`}
+                >
+                    Instructor Activity
+                </button>
+                <button
+                    onClick={() => setActiveTab("courses")}
+                    className={`px-4 py-2 font-medium transition-colors ${activeTab === "courses"
+                        ? "border-b-2 border-blue-600 text-blue-600"
+                        : "text-gray-600 hover:text-gray-900"
+                        }`}
+                >
+                    Course Completion
+                </button>
+            </div>
+
+            {activeTab === "overview" && overview && (
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Enrollments</CardTitle>
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{overview.enrollments?.total || 0}</div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {overview.enrollments?.active || 0} active students
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Completions</CardTitle>
+                                <Award className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{overview.enrollments?.completed || 0}</div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Completion rate: {overview.enrollments?.completionRate || "0%"}
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Total Courses</CardTitle>
+                                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{overview.courses?.total || 0}</div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {overview.courses?.published || 0} published
+                                </p>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium">Learners & Instructors</CardTitle>
+                                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold">{overview.users?.students || 0}</div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {overview.users?.instructors || 0} active instructors
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Platform Health</CardTitle>
+                            <CardDescription>Quick overview of platform status</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Target className="h-5 w-5 text-blue-600" />
+                                    <span className="font-medium">Enrollment Status</span>
+                                </div>
+                                <Badge variant="default">Healthy</Badge>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <BarChart3 className="h-5 w-5 text-green-600" />
+                                    <span className="font-medium">Course Quality</span>
+                                </div>
+                                <Badge variant="default">Good</Badge>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <UserCheck className="h-5 w-5 text-purple-600" />
+                                    <span className="font-medium">Instructor Activity</span>
+                                </div>
+                                <Badge variant="default">Active</Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {activeTab === "students" && studentProgress && (
+                <div className="space-y-4">
+                    <div className="flex justify-end">
+                        <select
+                            className="border rounded-md px-3 py-2 text-sm"
+                            value={studentStatus}
+                            onChange={(e) => setStudentStatus(e.target.value)}
+                        >
+                            <option value="all">All students</option>
+                            <option value="in-progress">In progress</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Student Progress Overview</CardTitle>
+                            <CardDescription>
+                                Showing {studentProgress.students?.length || 0} active students |
+                                Average Progress: {studentProgress.summary?.averageProgress || 0}%
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Student</TableHead>
+                                        <TableHead>Course</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Progress</TableHead>
+                                        <TableHead>Last Accessed</TableHead>
+                                        <TableHead>Days Enrolled</TableHead>
+                                        <TableHead>Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {studentProgress.students?.map((student, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>
+                                                <div>
+                                                    <div className="font-medium">{student.studentName}</div>
+                                                    <div className="text-xs text-gray-500">{student.studentEmail}</div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{student.courseName}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={student.status === "completed" ? "default" : "secondary"}>
+                                                    {student.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <Progress value={student.progress} className="w-20" />
+                                                        <span className="text-sm">{student.progress}%</span>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                {student.lastAccessed
+                                                    ? new Date(student.lastAccessed).toLocaleDateString()
+                                                    : "Never"
+                                                }
+                                            </TableCell>
+                                            <TableCell>{student.daysEnrolled} days</TableCell>
+                                            <TableCell>
+                                                {student.status === "in-progress" ? (
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        onClick={() => handleSendReminder(student.enrollmentId)}
+                                                        disabled={sendingReminderId === student.enrollmentId}
+                                                    >
+                                                        {sendingReminderId === student.enrollmentId ? "Sending..." : "Send Reminder"}
+                                                    </Button>
+                                                ) : (
+                                                    <span className="text-xs text-gray-500">Completed</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {activeTab === "instructors" && instructorActivity && (
+                <div className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Instructor Activity</CardTitle>
+                            <CardDescription>
+                                Total: {instructorActivity.summary?.total || 0} |
+                                Approved: {instructorActivity.summary?.approved || 0} |
+                                Pending: {instructorActivity.summary?.pending || 0}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Instructor</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Courses</TableHead>
+                                        <TableHead>Students</TableHead>
+                                        <TableHead>Last Login</TableHead>
+                                        <TableHead>Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {instructorActivity.instructors?.map((instructor, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>
+                                                <div>
+                                                    <div className="font-medium">{instructor.name}</div>
+                                                    <div className="text-xs text-gray-500">{instructor.email}</div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={instructor.status === "approved" ? "default" : "secondary"}>
+                                                    {instructor.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="space-y-1">
+                                                    <div className="text-sm">{instructor.coursesCreated} total</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {instructor.publishedCourses} published
+                                                        {instructor.pendingApproval > 0 && `, ${instructor.pendingApproval} pending`}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{instructor.totalStudents}</TableCell>
+                                            <TableCell>
+                                                {instructor.lastLogin
+                                                    ? new Date(instructor.lastLogin).toLocaleDateString()
+                                                    : "Never"
+                                                }
+                                            </TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() => setDeleteDialog({ open: true, instructor })}
+                                                >
+                                                    <Trash2 className="h-4 w-4 mr-1" />
+                                                    Delete
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            {activeTab === "courses" && courseCompletion && (
+                <div className="space-y-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Course Completion Statistics</CardTitle>
+                            <CardDescription>
+                                Overall Rate: {courseCompletion.overall?.completionRate || "0%"} |
+                                Average Progress: {courseCompletion.overall?.averageProgress || 0}%
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Course</TableHead>
+                                        <TableHead>Enrollments</TableHead>
+                                        <TableHead>Completed</TableHead>
+                                        <TableHead>Completion Rate</TableHead>
+                                        <TableHead>Avg Progress</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {courseCompletion.courses?.map((course, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell className="font-medium">{course.courseName}</TableCell>
+                                            <TableCell>{course.totalEnrollments}</TableCell>
+                                            <TableCell>{course.completedCount}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <Progress value={course.completionRate} className="w-20" />
+                                                    <span className="text-sm">{course.completionRate.toFixed(1)}%</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>{course.avgProgress}%</TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
+            )}
+
+            <Dialog open={deleteDialog.open} onOpenChange={(open) => setDeleteDialog({ open, instructor: null })}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-red-600">
+                            <AlertTriangle className="h-5 w-5" />
+                            Delete Instructor
+                        </DialogTitle>
+                        <DialogDescription className="space-y-2">
+                            <p>
+                                Are you sure you want to delete <strong>{deleteDialog.instructor?.name}</strong>?
+                            </p>
+                            <p className="text-red-600 font-medium">
+                                This will permanently delete:
+                            </p>
+                            <ul className="list-disc list-inside text-sm space-y-1">
+                                <li>{deleteDialog.instructor?.coursesCreated || 0} courses created by this instructor</li>
+                                <li>All enrollments for those courses</li>
+                                <li>All questions and certificates associated with those courses</li>
+                                <li>The instructor's account</li>
+                            </ul>
+                            <p className="font-bold text-red-600">This action cannot be undone!</p>
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setDeleteDialog({ open: false, instructor: null })}
+                            disabled={deleting}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleDeleteInstructor}
+                            disabled={deleting}
+                        >
+                            {deleting ? "Deleting..." : "Yes, Delete Instructor"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

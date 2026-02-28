@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import courseService from '@/lib/api/courseService';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -22,11 +22,22 @@ export default function SubmissionsPage() {
         fetchInstructorCourses();
     }, []);
 
+    // Auto-select course when `?course=` is present in URL
+    const searchParams = useSearchParams();
+
     const fetchInstructorCourses = async () => {
         try {
             setLoading(true);
             const response = await courseService.getInstructorCourses();
             setCourses(response || []);
+            const courseParam = searchParams?.get?.('course');
+            if (courseParam) {
+                const found = (response || []).find(c => c._id === courseParam || String(c._id) === courseParam);
+                if (found) {
+                    setSelectedCourse(found);
+                    fetchSubmissions(found._id);
+                }
+            }
         } catch (err) {
             console.error('Error fetching instructor courses', err);
         } finally {
@@ -174,8 +185,8 @@ export default function SubmissionsPage() {
                                     key={course._id}
                                     onClick={() => handleCourseSelect(course)}
                                     className={`text-left p-4 border-2 rounded-lg transition-all ${selectedCourse?._id === course._id
-                                            ? 'border-blue-500 bg-blue-50'
-                                            : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-200 hover:border-blue-300 hover:bg-gray-50'
                                         }`}
                                 >
                                     <h3 className="font-semibold text-gray-900 mb-1">{course.title}</h3>
@@ -225,8 +236,8 @@ export default function SubmissionsPage() {
                                                     </span>
                                                     <span
                                                         className={`px-2 py-1 rounded-full text-xs font-semibold ${submission.status === 'reviewed'
-                                                                ? 'bg-green-100 text-green-700'
-                                                                : 'bg-amber-100 text-amber-700'
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : 'bg-amber-100 text-amber-700'
                                                             }`}
                                                     >
                                                         {submission.status === 'reviewed' ? 'Reviewed' : 'Pending Review'}
@@ -258,7 +269,7 @@ export default function SubmissionsPage() {
                                         Review Submission
                                     </h2>
                                     <p className="text-sm text-gray-600 mt-1">
-                                        Student: {selectedSubmission.studentName || 'Student'}
+                                        Student: {selectedSubmission.studentName || 'Student'} | Auto-graded: {selectedSubmission.autoGradedScore || 0}%
                                     </p>
                                 </div>
                                 <button
@@ -268,6 +279,55 @@ export default function SubmissionsPage() {
                                     <Icons.X className="w-5 h-5" />
                                 </button>
                             </div>
+
+                            {/* Essays Grading Summary */}
+                            {selectedSubmission.answers?.some((a, idx) => {
+                                const q = selectedSubmission.questions?.[idx];
+                                return (a?.questionType === 'essay' || a?.requiresManualGrading || q?.type === 'essay');
+                            }) && (
+                                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-b-2 border-purple-200 p-6">
+                                        <div className="mb-4">
+                                            <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                                                <Icons.CheckSquare className="w-5 h-5 text-purple-600" />
+                                                Essay Questions Grading Checklist
+                                            </h3>
+                                            <p className="text-sm text-gray-600">Complete grading for all essay questions below</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {selectedSubmission.answers?.map((answer, idx) => {
+                                                const question = selectedSubmission.questions?.[idx];
+                                                const answerType = answer?.questionType || question?.type;
+                                                const isEssay = answerType === 'essay' || answer?.requiresManualGrading;
+
+                                                if (!isEssay) return null;
+
+                                                const isGraded = feedback[idx]?.isCorrect !== null && feedback[idx]?.isCorrect !== undefined;
+
+                                                return (
+                                                    <div key={idx} className={`flex items-center gap-3 p-3 rounded-lg ${isGraded ? 'bg-green-100 border border-green-300' : 'bg-white border border-amber-200'}`}>
+                                                        {isGraded ? (
+                                                            <>
+                                                                <Icons.CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                                                                <div className="flex-1">
+                                                                    <p className="text-sm font-semibold text-gray-900">Question {idx + 1}</p>
+                                                                    <p className="text-xs text-gray-600">{feedback[idx]?.isCorrect ? '✓ Marked as Correct' : '✗ Marked as Incorrect'}</p>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Icons.Circle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+                                                                <div className="flex-1">
+                                                                    <p className="text-sm font-semibold text-gray-900">Question {idx + 1}</p>
+                                                                    <p className="text-xs text-amber-600">Pending grading...</p>
+                                                                </div>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
 
                             <div className="p-6 space-y-6">
                                 {selectedSubmission.answers?.map((answer, idx) => {
@@ -282,50 +342,61 @@ export default function SubmissionsPage() {
                                     return (
                                         <div
                                             key={idx}
-                                            className={`border-2 rounded-lg p-4 ${isEssay
-                                                    ? answer?.gradedAt
-                                                        ? answer?.isCorrect
-                                                            ? 'border-green-300 bg-green-50'
-                                                            : 'border-red-300 bg-red-50'
-                                                        : 'border-amber-300 bg-amber-50'
-                                                    : answer?.isCorrect
+                                            className={`border-2 rounded-lg p-6 ${isEssay
+                                                ? answer?.gradedAt
+                                                    ? answer?.isCorrect
                                                         ? 'border-green-300 bg-green-50'
                                                         : 'border-red-300 bg-red-50'
+                                                    : 'border-amber-300 bg-amber-50'
+                                                : answer?.isCorrect
+                                                    ? 'border-green-300 bg-green-50'
+                                                    : 'border-red-300 bg-red-50'
                                                 }`}
                                         >
-                                            <div className="flex items-start justify-between mb-3">
+                                            <div className="flex items-start justify-between mb-4">
                                                 <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        <span className="text-sm font-semibold text-gray-500">
+                                                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                                                        <span className="text-sm font-semibold text-gray-700 bg-white px-3 py-1 rounded-full">
                                                             Question {idx + 1}
                                                         </span>
-                                                        <span className="text-xs px-2 py-1 bg-gray-200 rounded">
-                                                            {answerType}
-                                                        </span>
+                                                        {isEssay ? (
+                                                            <span className="text-xs px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold">
+                                                                ✏️ Essay Question
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs px-2 py-1 bg-gray-200 rounded">
+                                                                {answerType}
+                                                            </span>
+                                                        )}
                                                         {isEssay && answer?.gradedAt && (
-                                                            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                                                                Already Graded
+                                                            <span className={`text-xs px-3 py-1 rounded-full font-semibold ${answer?.isCorrect
+                                                                    ? 'bg-green-100 text-green-700'
+                                                                    : 'bg-red-100 text-red-700'
+                                                                }`}>
+                                                                {answer?.isCorrect ? '✓ Graded as Correct' : '✗ Graded as Incorrect'}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="font-semibold text-gray-900 mb-3">
+                                                    <p className="font-bold text-gray-900 mb-3 text-lg">
                                                         {question.text}
                                                     </p>
                                                 </div>
                                                 {isAutoGraded && (
                                                     answer?.isCorrect ? (
-                                                        <Icons.CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+                                                        <Icons.CheckCircle className="w-8 h-8 text-green-600 flex-shrink-0" />
                                                     ) : (
-                                                        <Icons.XCircle className="w-6 h-6 text-red-600 flex-shrink-0" />
+                                                        <Icons.XCircle className="w-8 h-8 text-red-600 flex-shrink-0" />
                                                     )
                                                 )}
                                             </div>
 
-                                            <div className="bg-white rounded-lg p-3 mb-3">
-                                                <p className="text-sm text-gray-600 font-semibold mb-1">
-                                                    Student Answer:
+                                            <div className={`rounded-lg p-4 mb-4 ${isEssay ? 'bg-white border-2 border-purple-200' : 'bg-white'}`}>
+                                                <p className="text-sm text-gray-600 font-semibold mb-2">
+                                                    📝 Student Answer:
                                                 </p>
-                                                <p className="text-gray-900 whitespace-pre-wrap">{studentAnswer || '(Not answered)'}</p>
+                                                <div className={`text-gray-900 whitespace-pre-wrap p-3 rounded ${isEssay ? 'bg-purple-50 border border-purple-100 min-h-[150px]' : 'bg-gray-50'}`}>
+                                                    {studentAnswer || '(Not answered)'}
+                                                </div>
                                             </div>
 
                                             {isAutoGraded && question.correctAnswer && (
@@ -349,13 +420,25 @@ export default function SubmissionsPage() {
                                             )}
 
                                             {isEssay && (
-                                                <div className="mt-4 space-y-4 bg-white rounded-lg p-4">
-                                                    <div>
-                                                        <p className="text-sm font-semibold text-gray-700 mb-2">
-                                                            Grade this answer:
+                                                <div className="mt-6 space-y-5 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-5 border-2 border-purple-200">
+                                                    <div className="border-b border-purple-200 pb-3">
+                                                        <p className="text-sm font-bold text-purple-900 mb-1">
+                                                            ⭐ Grade This Essay
                                                         </p>
-                                                        <div className="flex gap-4">
-                                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                        <p className="text-xs text-purple-700">
+                                                            Review the student's answer and determine if it meets the expected criteria
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        <p className="text-sm font-bold text-gray-900">
+                                                            Is this answer correct?
+                                                        </p>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <label className={`flex items-center gap-3 cursor-pointer p-4 rounded-lg border-2 transition ${feedback[idx]?.isCorrect === true
+                                                                    ? 'border-green-500 bg-green-100'
+                                                                    : 'border-gray-300 bg-white hover:border-green-300'
+                                                                }`}>
                                                                 <input
                                                                     type="radio"
                                                                     name={`grade-${idx}`}
@@ -363,13 +446,16 @@ export default function SubmissionsPage() {
                                                                     onChange={() =>
                                                                         updateFeedback(idx, 'isCorrect', true)
                                                                     }
-                                                                    className="w-4 h-4 text-green-600"
+                                                                    className="w-5 h-5 text-green-600"
                                                                 />
-                                                                <span className="text-green-700 font-semibold">
-                                                                    Correct
+                                                                <span className={`font-bold ${feedback[idx]?.isCorrect === true ? 'text-green-700' : 'text-gray-700'}`}>
+                                                                    ✓ Correct
                                                                 </span>
                                                             </label>
-                                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                            <label className={`flex items-center gap-3 cursor-pointer p-4 rounded-lg border-2 transition ${feedback[idx]?.isCorrect === false
+                                                                    ? 'border-red-500 bg-red-100'
+                                                                    : 'border-gray-300 bg-white hover:border-red-300'
+                                                                }`}>
                                                                 <input
                                                                     type="radio"
                                                                     name={`grade-${idx}`}
@@ -377,29 +463,44 @@ export default function SubmissionsPage() {
                                                                     onChange={() =>
                                                                         updateFeedback(idx, 'isCorrect', false)
                                                                     }
-                                                                    className="w-4 h-4 text-red-600"
+                                                                    className="w-5 h-5 text-red-600"
                                                                 />
-                                                                <span className="text-red-700 font-semibold">
-                                                                    Incorrect
+                                                                <span className={`font-bold ${feedback[idx]?.isCorrect === false ? 'text-red-700' : 'text-gray-700'}`}>
+                                                                    ✗ Incorrect
                                                                 </span>
                                                             </label>
                                                         </div>
                                                     </div>
 
                                                     <div>
-                                                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                                            Feedback (Optional):
+                                                        <label className="block text-sm font-bold text-gray-900 mb-2">
+                                                            💬 Feedback to Student (Optional)
                                                         </label>
+                                                        <p className="text-xs text-gray-600 mb-2">
+                                                            Provide constructive feedback about their answer
+                                                        </p>
                                                         <textarea
                                                             value={feedback[idx]?.feedback || ''}
                                                             onChange={(e) =>
                                                                 updateFeedback(idx, 'feedback', e.target.value)
                                                             }
-                                                            placeholder="Provide feedback to the student..."
-                                                            rows={3}
-                                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                                            placeholder="Example: Great effort! Your explanation of the concept is clear, but you missed mentioning... Consider reviewing the section on..."
+                                                            rows={4}
+                                                            className="w-full px-4 py-3 border-2 border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-medium text-gray-900"
                                                         />
+                                                        <p className="text-xs text-gray-500 mt-1">
+                                                            {feedback[idx]?.feedback?.length || 0} characters
+                                                        </p>
                                                     </div>
+
+                                                    {answer?.instructorFeedback && (
+                                                        <div className="bg-blue-50 border-l-4 border-blue-400 p-3 rounded">
+                                                            <p className="text-xs font-bold text-blue-700 mb-1">
+                                                                📌 Previous Feedback:
+                                                            </p>
+                                                            <p className="text-sm text-blue-900">{answer.instructorFeedback}</p>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>
@@ -407,21 +508,61 @@ export default function SubmissionsPage() {
                                 })}
                             </div>
 
-                            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex justify-end gap-3">
-                                <button
-                                    onClick={() => setReviewModal(false)}
-                                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleSaveReview}
-                                    disabled={saving}
-                                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-                                >
-                                    {saving && <Icons.Loader className="w-4 h-4 animate-spin" />}
-                                    Save Review & Update Status
-                                </button>
+                            <div className="sticky bottom-0 bg-gradient-to-r from-gray-50 to-blue-50 border-t-2 border-gray-200 p-6">
+                                <div className="mb-4">
+                                    {(() => {
+                                        const essayQuestions = selectedSubmission.answers?.filter((a, idx) => {
+                                            const q = selectedSubmission.questions?.[idx];
+                                            return a?.questionType === 'essay' || a?.requiresManualGrading || q?.type === 'essay';
+                                        }) || [];
+
+                                        const gradedCount = essayQuestions.filter((_, idx) => {
+                                            const actualIdx = selectedSubmission.answers.findIndex((a, i) => {
+                                                const q = selectedSubmission.questions?.[i];
+                                                return i >= 0 && (a?.questionType === 'essay' || a?.requiresManualGrading || q?.type === 'essay') &&
+                                                    selectedSubmission.answers.indexOf(a) - selectedSubmission.answers.filter((x, j) => {
+                                                        const qx = selectedSubmission.questions?.[j];
+                                                        return j < i && (x?.questionType === 'essay' || x?.requiresManualGrading || qx?.type === 'essay');
+                                                    }).length === essayQuestions.indexOf(a);
+                                            });
+                                            return feedback[idx]?.isCorrect !== null && feedback[idx]?.isCorrect !== undefined;
+                                        }).length;
+
+                                        const allGraded = essayQuestions.length === 0 || essayQuestions.every((_, idx) => {
+                                            const actualQuestionIdx = selectedSubmission.answers.indexOf(selectedSubmission.answers.filter((a, i) => {
+                                                const q = selectedSubmission.questions?.[i];
+                                                return (a?.questionType === 'essay' || a?.requiresManualGrading || q?.type === 'essay');
+                                            })[idx]);
+                                            return feedback[actualQuestionIdx]?.isCorrect !== null && feedback[actualQuestionIdx]?.isCorrect !== undefined;
+                                        });
+
+                                        return (
+                                            <div className={`p-3 rounded-lg border-l-4 ${allGraded ? 'bg-green-50 border-green-400' : 'bg-yellow-50 border-yellow-400'}`}>
+                                                <p className={`text-sm font-bold ${allGraded ? 'text-green-700' : 'text-yellow-700'}`}>
+                                                    {allGraded ? '✓ All essays graded' : `⏳ ${essayQuestions.length} essay${essayQuestions.length !== 1 ? 's' : ''} need grading`}
+                                                </p>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+
+                                <div className="flex justify-end gap-3">
+                                    <button
+                                        onClick={() => setReviewModal(false)}
+                                        className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 font-semibold transition"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleSaveReview}
+                                        disabled={saving}
+                                        className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 font-semibold flex items-center gap-2 transition"
+                                    >
+                                        {saving && <Icons.Loader className="w-4 h-4 animate-spin" />}
+                                        <Icons.Save className="w-4 h-4" />
+                                        Save Review & Update Status
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>

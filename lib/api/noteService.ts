@@ -1,6 +1,6 @@
-import { API_BASE_URL } from './config';
+import api from '../../src/lib/api/config';
 
-const NOTES_API = `${API_BASE_URL}/notes`;
+const NOTES_API = '/notes';
 
 export const noteService = {
   /**
@@ -15,184 +15,120 @@ export const noteService = {
     moduleName?: string;
     lessonIndex?: number;
   }) {
-    const response = await fetch(NOTES_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify(noteData),
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to create note');
+    try {
+      const response = await api.post(NOTES_API, noteData);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to create note');
     }
-    return data.data;
   },
 
   /**
    * Get all notes for the student
    */
   async getAllNotes() {
-    const response = await fetch(NOTES_API, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to fetch notes');
+    try {
+      const response = await api.get(NOTES_API);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch notes');
     }
-    return data.data;
   },
 
   /**
    * Get notes grouped by course
    */
   async getNotesGroupedByCourse() {
-    const response = await fetch(`${NOTES_API}/grouped`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to fetch grouped notes');
+    try {
+      const response = await api.get(`${NOTES_API}/grouped`);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch grouped notes');
     }
-    return data.data;
   },
 
   /**
    * Get notes for a specific course
    */
   async getCourseNotes(courseId: string) {
-    const response = await fetch(`${NOTES_API}/course/${courseId}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to fetch course notes');
+    try {
+      const response = await api.get(`${NOTES_API}/course/${courseId}`);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch course notes');
     }
-    return data.data;
   },
 
   /**
    * Get a single note
    */
   async getNote(noteId: string) {
-    const response = await fetch(`${NOTES_API}/${noteId}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to fetch note');
+    try {
+      const response = await api.get(`${NOTES_API}/${noteId}`);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch note');
     }
-    return data.data;
   },
 
   /**
    * Update a note
    */
   async updateNote(noteId: string, updateData: { content: string; category?: string; tags?: string[] }) {
-    const response = await fetch(`${NOTES_API}/${noteId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-      body: JSON.stringify(updateData),
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to update note');
+    try {
+      const response = await api.put(`${NOTES_API}/${noteId}`, updateData);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to update note');
     }
-    return data.data;
   },
 
   /**
    * Delete a note
    */
   async deleteNote(noteId: string) {
-    const response = await fetch(`${NOTES_API}/${noteId}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to delete note');
+    try {
+      const response = await api.delete(`${NOTES_API}/${noteId}`);
+      return response.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to delete note');
     }
-    return data;
   },
 
   /**
    * Toggle bookmark on a note
    */
   async toggleBookmark(noteId: string) {
-    const response = await fetch(`${NOTES_API}/${noteId}/toggle-bookmark`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to toggle bookmark');
+    try {
+      const response = await api.put(`${NOTES_API}/${noteId}/toggle-bookmark`);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to toggle bookmark');
     }
-    return data.data;
   },
 
   /**
    * Search notes
    */
   async searchNotes(keyword: string) {
-    const response = await fetch(`${NOTES_API}/search/${encodeURIComponent(keyword)}`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to search notes');
+    try {
+      const response = await api.get(`${NOTES_API}/search/${encodeURIComponent(keyword)}`);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to search notes');
     }
-    return data.data;
   },
 
   /**
    * Get bookmarked notes
    */
   async getBookmarkedNotes() {
-    const response = await fetch(`${NOTES_API}/bookmarked`, {
-      method: 'GET',
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem('token')}`,
-      },
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to fetch bookmarked notes');
+    try {
+      const response = await api.get(`${NOTES_API}/bookmarked`);
+      return response.data.data;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Failed to fetch bookmarked notes');
     }
-    return data.data;
   },
 };
 

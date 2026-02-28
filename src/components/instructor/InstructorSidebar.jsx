@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
+import authService from '@/lib/api/authService';
+import moduleService from '@/lib/api/moduleService';
 
 export default function InstructorSidebar() {
     const router = useRouter();
@@ -10,27 +12,56 @@ export default function InstructorSidebar() {
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [instructorUser, setInstructorUser] = useState(null);
     const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+    const [moduleStats, setModuleStats] = useState({ totalModules: 0, totalStudents: 0 });
 
     useEffect(() => {
-        // Load instructor user details from localStorage
-        const user = localStorage.getItem('user');
-        if (user) {
+        // Load instructor user details from cookies and refresh from backend
+        const loadUser = async () => {
             try {
-                setInstructorUser(JSON.parse(user));
+                // Fetch fresh data from backend
+                const user = await authService.fetchUserProfile();
+                if (user) {
+                    setInstructorUser(user);
+                    // Update cookie with fresh data
+                    authService.updateCurrentUser(user);
+                }
             } catch (error) {
-                console.error('Error parsing user data:', error);
+                console.error('Error loading user:', error);
+                // Fallback to cookie data
+                const user = authService.getCurrentUser();
+                if (user) {
+                    setInstructorUser(user);
+                }
             }
-        }
+        };
+
+        loadUser();
+    }, []);
+
+    useEffect(() => {
+        const fetchModuleStats = async () => {
+            try {
+                const stats = await moduleService.getInstructorStats();
+                setModuleStats({
+                    totalModules: stats.totalModules || 0,
+                    totalStudents: stats.totalStudents || 0,
+                });
+            } catch (error) {
+                console.error('Error fetching module stats:', error);
+            }
+        };
+
+        fetchModuleStats();
     }, []);
 
     useEffect(() => {
         // Fetch unread messages count
         const fetchUnreadCount = async () => {
             try {
-                const token = localStorage.getItem('token');
+                const token = authService.getCookie('token');
                 if (!token) return;
 
-                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
                 const response = await fetch(`${API_URL}/api/messages/unread-count`, {
                     method: 'GET',
                     headers: {
@@ -51,22 +82,33 @@ export default function InstructorSidebar() {
         };
 
         fetchUnreadCount();
-        
+
         // Poll every 30 seconds
         const interval = setInterval(fetchUnreadCount, 30000);
-        
+
         return () => clearInterval(interval);
     }, []);
 
     const handleLogout = () => {
         if (confirm('Are you sure you want to logout?')) {
-            // Clear all authentication data
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            sessionStorage.clear();
+            // Mark that we're logging out to prevent redirect loops
+            if (typeof sessionStorage !== 'undefined') {
+                sessionStorage.setItem('isLoggingOut', 'true');
+            }
 
-            // Redirect to home page
-            router.replace('/');
+            // Clear cookies immediately (synchronous)
+            authService.logout();
+
+            // Use router.push for clean navigation
+            setTimeout(() => {
+                router.push('/login');
+                // Clear the logout flag after a delay to allow redirect to complete
+                setTimeout(() => {
+                    if (typeof sessionStorage !== 'undefined') {
+                        sessionStorage.removeItem('isLoggingOut');
+                    }
+                }, 500);
+            }, 50);
         }
     };
 
@@ -101,14 +143,14 @@ export default function InstructorSidebar() {
             path: '/instructor/profile',
         },
         {
-            icon: 'BookOpen',
-            label: 'My Courses',
-            path: '/instructor/courses',
+            icon: 'Layers',
+            label: 'My Modules',
+            path: '/instructor/modules',
         },
         {
-            icon: 'Upload',
-            label: 'Upload Course',
-            path: '/instructor/courses/upload',
+            icon: 'PlusCircle',
+            label: 'Create Module',
+            path: '/instructor/modules/create',
         },
         {
             icon: 'ClipboardList',
@@ -171,7 +213,24 @@ export default function InstructorSidebar() {
                                 className="flex items-center gap-3 p-2 hover:bg-gray-100 rounded-lg transition-all duration-200 group"
                             >
                                 <div className="relative">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#16a34a] to-emerald-700 flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:shadow-lg transition-shadow">
+                                    {instructorUser?.profilePhotoUrl ? (
+                                        <img
+                                            src={
+                                                instructorUser.profilePhotoUrl.startsWith('http') 
+                                                    ? instructorUser.profilePhotoUrl 
+                                                    : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/files/download/${instructorUser.profilePhotoUrl.split('/').pop()}?inline=true`
+                                            }
+                                            alt="Profile"
+                                            className="w-10 h-10 rounded-full object-cover shadow-md group-hover:shadow-lg transition-shadow"
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                if (e.target.nextElementSibling?.nextElementSibling) {
+                                                    e.target.nextElementSibling.nextElementSibling.style.display = 'flex';
+                                                }
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#16a34a] to-emerald-700 flex items-center justify-center text-white font-bold text-sm shadow-md group-hover:shadow-lg transition-shadow" style={{ display: instructorUser?.profilePhotoUrl ? 'none' : 'flex' }}>
                                         {getUserInitials()}
                                     </div>
                                     <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-400 rounded-full border-2 border-white"></div>
@@ -187,7 +246,24 @@ export default function InstructorSidebar() {
                                 <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
                                     <div className="px-4 py-3 border-b border-gray-100">
                                         <div className="flex items-center gap-3 mb-3">
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#16a34a] to-emerald-700 flex items-center justify-center text-white font-bold shadow-md">
+                                            {instructorUser?.profilePhotoUrl ? (
+                                                <img
+                                                    src={
+                                                        instructorUser.profilePhotoUrl.startsWith('http') 
+                                                            ? instructorUser.profilePhotoUrl 
+                                                            : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/files/download/${instructorUser.profilePhotoUrl.split('/').pop()}?inline=true`
+                                                    }
+                                                    alt="Profile"
+                                                    className="w-12 h-12 rounded-full object-cover shadow-md"
+                                                    onError={(e) => {
+                                                        e.target.style.display = 'none';
+                                                        if (e.target.nextElementSibling) {
+                                                            e.target.nextElementSibling.style.display = 'flex';
+                                                        }
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#16a34a] to-emerald-700 flex items-center justify-center text-white font-bold shadow-md" style={{ display: instructorUser?.profilePhotoUrl ? 'none' : 'flex' }}>
                                                 {getUserInitials()}
                                             </div>
                                             <div className="flex-1">
@@ -268,7 +344,24 @@ export default function InstructorSidebar() {
                     <div className="p-6 border-b border-gray-200">
                         <div className="flex items-center gap-3 mb-4">
                             <div className="relative group">
-                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#16a34a] to-emerald-700 flex items-center justify-center text-white font-bold text-xl cursor-pointer shadow-md">
+                                {instructorUser?.profilePhotoUrl ? (
+                                    <img
+                                        src={
+                                            instructorUser.profilePhotoUrl.startsWith('http') 
+                                                ? instructorUser.profilePhotoUrl 
+                                                : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/files/download/${instructorUser.profilePhotoUrl.split('/').pop()}?inline=true`
+                                        }
+                                        alt="Profile"
+                                        className="w-16 h-16 rounded-full object-cover cursor-pointer shadow-md"
+                                        onError={(e) => {
+                                            e.target.style.display = 'none';
+                                            if (e.target.nextElementSibling?.nextElementSibling) {
+                                                e.target.nextElementSibling.nextElementSibling.style.display = 'flex';
+                                            }
+                                        }}
+                                    />
+                                ) : null}
+                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#16a34a] to-emerald-700 flex items-center justify-center text-white font-bold text-xl cursor-pointer shadow-md" style={{ display: instructorUser?.profilePhotoUrl ? 'none' : 'flex' }}>
                                     {getUserInitials()}
                                 </div>
                                 <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white shadow-sm"></div>
@@ -289,8 +382,8 @@ export default function InstructorSidebar() {
                                 </span>
                             </div>
                             <div className="flex items-center justify-between text-xs text-gray-600">
-                                <span>Courses: 3</span>
-                                <span>Students: 124</span>
+                                <span>Modules: {moduleStats.totalModules}</span>
+                                <span>Students: {moduleStats.totalStudents}</span>
                             </div>
                         </div>
                     </div>
@@ -307,8 +400,8 @@ export default function InstructorSidebar() {
                                         key={index}
                                         onClick={() => handleNavigation(item.path)}
                                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${isActive
-                                                ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white shadow-md'
-                                                : 'text-gray-700 hover:bg-emerald-50'
+                                            ? 'bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white shadow-md'
+                                            : 'text-gray-700 hover:bg-emerald-50'
                                             }`}
                                     >
                                         {IconComponent && (
@@ -316,9 +409,12 @@ export default function InstructorSidebar() {
                                         )}
                                         <span className="font-medium flex-1 text-left">{item.label}</span>
                                         {item.badge && (
-                                            <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${isActive
-                                                    ? 'bg-white text-emerald-600'
-                                                    : 'bg-emerald-100 text-emerald-700'
+                                            <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                                                typeof item.badge === 'string' && item.badge === 'NEW'
+                                                    ? 'bg-emerald-500 text-white'
+                                                    : isActive
+                                                        ? 'bg-white text-emerald-600'
+                                                        : 'bg-emerald-100 text-emerald-700'
                                                 }`}>
                                                 {item.badge}
                                             </span>

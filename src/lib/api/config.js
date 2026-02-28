@@ -2,25 +2,27 @@ import axios from "axios";
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true,
+  withCredentials: true, // Enable sending cookies with requests
 });
 
-// Request interceptor - Add token to requests
+// Request interceptor - attach Bearer token when available
 api.interceptors.request.use(
   (config) => {
-    // Get token from localStorage or sessionStorage
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Grab token from localStorage on the client; skip on the server
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("token");
+      if (token) {
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${token}`,
+        };
+      }
     }
-
     return config;
   },
   (error) => {
@@ -38,17 +40,17 @@ api.interceptors.response.use(
     if (error.response) {
       switch (error.response.status) {
         case 401:
-          // Unauthorized - clear token and redirect to login
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          sessionStorage.removeItem("token");
-
-          // Only redirect if not already on auth page
+          // Unauthorized - clear cookies and redirect to login
+          // Cookies are cleared by backend, we just redirect
           if (
             typeof window !== "undefined" &&
-            !window.location.pathname.includes("/login")
+            !window.location.pathname.includes("/login") &&
+            !window.location.pathname.includes("/register")
           ) {
-            window.location.href = "/";
+            // Clear user cookie on client side
+            document.cookie =
+              "user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = "/login";
           }
           break;
 

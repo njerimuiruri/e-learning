@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import StudentSidebar from '@/components/student/StudentSidebar';
+import authService from '@/lib/api/authService';
 
 export default function StudentLayout({ children }) {
     const router = useRouter();
@@ -11,37 +12,42 @@ export default function StudentLayout({ children }) {
 
     useEffect(() => {
         // Check if user is authenticated and has student role
-        const token = localStorage.getItem('token');
-        const userStr = localStorage.getItem('user');
+        // First try to get from cookie (set by backend), then fallback to localStorage (set by frontend)
+        let user = authService.getCurrentUser();
 
-        if (!token || !userStr) {
+        if (!user && typeof window !== 'undefined') {
+            // Fallback to localStorage if cookie is not available yet
+            const userStr = window.localStorage.getItem('user');
+            if (userStr) {
+                try {
+                    user = JSON.parse(userStr);
+                } catch (error) {
+                    console.error('Error parsing user from localStorage:', error);
+                }
+            }
+        }
+
+        if (!user) {
             // Not logged in, redirect to home
             router.replace('/');
             return;
         }
 
-        try {
-            const user = JSON.parse(userStr);
-            if (user.role !== 'student') {
-                // Not a student, redirect based on their role
-                if (user.role === 'admin') {
-                    router.replace('/admin');
-                } else if (user.role === 'instructor') {
-                    router.replace('/instructor');
-                } else {
-                    router.replace('/');
-                }
-                return;
+        if (user.role !== 'student') {
+            // Not a student, redirect based on their role
+            if (user.role === 'admin') {
+                router.replace('/admin');
+            } else if (user.role === 'instructor') {
+                router.replace('/instructor');
+            } else {
+                router.replace('/');
             }
-
-            // User is authorized
-            setIsAuthorized(true);
-        } catch (error) {
-            console.error('Error parsing user data:', error);
-            router.replace('/');
-        } finally {
-            setIsLoading(false);
+            return;
         }
+
+        // User is authorized
+        setIsAuthorized(true);
+        setIsLoading(false);
     }, [router]);
 
     // Show loading state
@@ -67,7 +73,7 @@ export default function StudentLayout({ children }) {
             <StudentSidebar />
 
             {/* Main Content */}
-            <div className="flex-1 lg:ml-64 pb-16 lg:pb-0">
+            <div className="flex-1 lg:ml-72 pb-16 lg:pb-0">
                 {children}
             </div>
         </div>

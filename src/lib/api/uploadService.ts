@@ -31,13 +31,25 @@ const uploadService = {
   uploadVideo: async (file) => {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     const response = await api.post('/upload/video', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
     return response.data.url;
+  },
+
+  uploadDocument: async (file) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await api.post('/upload/document', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return { url: response.data.url, originalName: response.data.originalName || file.name };
   },
 };
 

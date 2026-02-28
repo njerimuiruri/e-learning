@@ -2,7 +2,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { CheckCircle2, XCircle, AlertTriangle, Info } from "lucide-react";
 
-const ToastContext = createContext({ showToast: () => { } });
+const ToastContext = createContext({ showToast: (_message, _options = {}) => {} });
 
 const typeStyles = {
     success: {

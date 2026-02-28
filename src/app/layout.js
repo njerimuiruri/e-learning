@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/ToastProvider";
+import SessionProvider from "@/components/SessionProvider";
 import Script from "next/script";
 
 const inter = Inter({
@@ -22,7 +23,9 @@ export default function RootLayout({ children }) {
         className={`${inter.className} antialiased`}
         suppressHydrationWarning
       >
-        <ToastProvider>{children}</ToastProvider>
+        <SessionProvider>
+          <ToastProvider>{children}</ToastProvider>
+        </SessionProvider>
       </body>
     </html>
   );

@@ -81,6 +81,17 @@ export default function FinalAssessmentPage() {
 
       setResults(result);
       setSubmitted(true);
+
+      // Handle auto-restart - redirect to Module 1, Lesson 1 to start fresh
+      if (result.autoRestarted) {
+        showToast(result.message || 'Course automatically restarted. Your previous progress has been saved. Redirecting to Module 1...', {
+          type: 'info',
+          title: 'Course Restarted'
+        });
+        setTimeout(() => {
+          router.push(`/courses/${courseId}/learn/0/0`);
+        }, 2000);
+      }
     } catch (err) {
       console.error('Error submitting assessment:', err);
       showToast(err.message || 'Failed to submit assessment', { type: 'error', title: 'Submission failed' });
@@ -101,15 +112,33 @@ export default function FinalAssessmentPage() {
     setAnswers(initialAnswers);
   };
 
+  const handleSoftReset = async () => {
+    if (!confirm('Reset only your assessment attempts while keeping your lesson and module progress?\n\nThis will allow you to retake assessments without losing your completed work.')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await courseService.softResetCourse(enrollment._id);
+      showToast('Assessment attempts reset. Your progress has been preserved.', { type: 'success', title: 'Soft Reset Complete' });
+      router.push(`/courses/${courseId}`);
+    } catch (err) {
+      console.error('Error soft resetting course:', err);
+      showToast('Failed to soft reset course', { type: 'error', title: 'Reset failed' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRestartCourse = async () => {
-    if (!confirm('Are you sure you want to restart the entire course? All your progress will be reset.')) {
+    if (!confirm('Are you sure you want to restart the entire course?\n\nThis will reset ALL your progress, including completed lessons, modules, and assessments. Your previous attempt will be saved for analytics.')) {
       return;
     }
 
     try {
       setLoading(true);
       await courseService.restartCourse(enrollment._id);
-      showToast('Course restarted successfully. Redirecting to course page...', { type: 'success', title: 'Course restarted' });
+      showToast('Course restarted successfully. Your previous attempt has been saved. Redirecting...', { type: 'success', title: 'Course restarted' });
       router.push(`/courses/${courseId}`);
     } catch (err) {
       console.error('Error restarting course:', err);

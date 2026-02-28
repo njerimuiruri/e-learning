@@ -4,6 +4,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import authService from '@/lib/api/authService';
 
 export default function ProtectedInstructorRoute({ children }) {
     const router = useRouter();
@@ -13,18 +14,14 @@ export default function ProtectedInstructorRoute({ children }) {
     useEffect(() => {
         const checkAccess = () => {
             try {
-                const token = localStorage.getItem('token');
-                const userStr = localStorage.getItem('user');
+                const user = authService.getCurrentUser();
 
-                // If no token or user data, not authorized
-                if (!token || !userStr) {
+                // If no user data, not authorized
+                if (!user) {
                     router.replace('/login');
                     setIsChecking(false);
                     return;
                 }
-
-                // Parse user data from localStorage
-                const user = JSON.parse(userStr);
 
                 // Check if user is an instructor and is approved
                 if (user.role === 'instructor' && user.instructorStatus === 'approved') {

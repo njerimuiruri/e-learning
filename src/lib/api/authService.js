@@ -2,6 +2,43 @@ import api from "./config";
 
 class AuthService {
   /**
+   * Helper to set cookie
+   */
+  setCookie(name, value, days = 1) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    const cookieString = `${name}=${encodeURIComponent(
+      value
+    )}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+    document.cookie = cookieString;
+  }
+
+  /**
+   * Helper to get cookie value
+   */
+  getCookie(name) {
+    if (typeof document === "undefined") return null;
+
+    const nameEQ = name + "=";
+    const cookies = document.cookie.split(";");
+
+    for (let i = 0; i < cookies.length; i++) {
+      let cookie = cookies[i].trim();
+      if (cookie.indexOf(nameEQ) === 0) {
+        return decodeURIComponent(cookie.substring(nameEQ.length));
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Helper to delete cookie
+   */
+  deleteCookie(name) {
+    this.setCookie(name, "", -1);
+  }
+
+  /**
    * Register a student
    * @param {Object} data - Student registration data
    * @returns {Promise<Object>} Registration response
@@ -15,6 +52,8 @@ class AuthService {
         password: data.password,
         role: "student",
         country: data.country || "",
+        organization: data.organization || "",
+        otherOrganization: data.otherOrganization || "",
       });
       return response.data;
     } catch (error) {
@@ -38,23 +77,27 @@ class AuthService {
       formData.append("email", data.email);
       formData.append("password", data.password);
       formData.append("phoneNumber", data.phoneNumber);
+      formData.append("country", data.country || "");
+      formData.append("organization", data.organization || "");
+      formData.append("otherOrganization", data.otherOrganization || "");
       formData.append("institution", data.institution);
       formData.append("bio", data.bio);
+      formData.append("qualifications", data.qualifications);
+      formData.append("expertise", data.expertise);
+      formData.append("linkedIn", data.linkedIn || "");
+      formData.append("portfolio", data.portfolio || "");
+      formData.append("teachingExperience", data.teachingExperience);
+      formData.append("yearsOfExperience", data.yearsOfExperience);
       formData.append("role", "instructor");
 
-      // Add optional country
-      if (data.country) {
-        formData.append("country", data.country);
-      }
-
-      // Add profile image if provided
-      if (data.profileImage) {
-        formData.append("profileImage", data.profileImage);
+      // Add profile picture if provided
+      if (data.profilePicture) {
+        formData.append("profilePicture", data.profilePicture);
       }
 
       // Add CV file (required for instructors)
-      if (data.cvFile) {
-        formData.append("cvFile", data.cvFile);
+      if (data.cv) {
+        formData.append("cv", data.cv);
       }
 
       const response = await api.post("/api/auth/register", formData, {
@@ -82,6 +125,26 @@ class AuthService {
         email: data.email,
         password: data.password,
       });
+
+      // Cookies are automatically set by the backend
+      // Persist token and user to localStorage so axios can attach Authorization
+      if (typeof window !== "undefined") {
+        if (response.data.token) {
+          window.localStorage.setItem("token", response.data.token);
+        }
+        if (response.data.user) {
+          window.localStorage.setItem(
+            "user",
+            JSON.stringify(response.data.user)
+          );
+        }
+      }
+
+      // Also store user in a non-httpOnly cookie for convenience
+      if (response.data.user) {
+        this.setCookie("user", JSON.stringify(response.data.user), 1);
+      }
+
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || "Login failed");
@@ -99,6 +162,13 @@ class AuthService {
         idToken: data.idToken,
         role: data.role || "student",
       });
+
+      // Cookies are automatically set by the backend
+      // Store user data in a non-httpOnly cookie for client-side access
+      if (response.data.user) {
+        this.setCookie("user", JSON.stringify(response.data.user), 1);
+      }
+
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || "Google login failed");
@@ -106,37 +176,43 @@ class AuthService {
   }
 
   /**
-   * Logout user - Clear all stored data
+   * Logout user - Notify backend and clear all stored data
    */
   logout() {
-    try {
-      // Clear localStorage
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+    // Clear cookies immediately and synchronously
+    this.deleteCookie("user");
+    this.deleteCookie("token");
 
-      // Clear sessionStorage
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("user");
+    // Also clear using the most aggressive method to ensure cookies are gone
+    document.cookie = "user=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 
-      // Clear any other stored data
+    // Clear localStorage (for any other stored data)
+    if (typeof localStorage !== "undefined") {
       localStorage.removeItem("studentProgress");
       localStorage.removeItem("courseData");
-
-      console.log("User logged out successfully");
-    } catch (error) {
-      console.error("Error during logout:", error);
+      localStorage.removeItem("pendingEnrollment");
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
     }
+
+    // Notify backend asynchronously (don't block)
+    api.post("/api/auth/logout").catch((err) => {
+      console.error("Error notifying backend of logout:", err);
+    });
+
+    console.log("User logged out successfully");
   }
 
   /**
-   * Get current user from localStorage
+   * Get current user from cookie
    * @returns {Object|null} User object or null
    */
   getCurrentUser() {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
+    const userCookie = this.getCookie("user");
+    if (userCookie) {
       try {
-        return JSON.parse(userStr);
+        return JSON.parse(userCookie);
       } catch (error) {
         console.error("Error parsing user data:", error);
         return null;
@@ -146,14 +222,14 @@ class AuthService {
   }
 
   /**
-   * Update current user in localStorage
+   * Update current user in cookie
    * @param {Object} userData - Updated user data
    */
   updateCurrentUser(userData) {
     try {
       const currentUser = this.getCurrentUser();
       const updatedUser = { ...currentUser, ...userData };
-      localStorage.setItem("user", JSON.stringify(updatedUser));
+      this.setCookie("user", JSON.stringify(updatedUser), 1);
       return updatedUser;
     } catch (error) {
       console.error("Error updating user data:", error);
@@ -169,9 +245,9 @@ class AuthService {
     try {
       const response = await api.get("/api/auth/me");
 
-      // Update localStorage with fresh data
+      // Update cookie with fresh data
       if (response.data.user) {
-        localStorage.setItem("user", JSON.stringify(response.data.user));
+        this.setCookie("user", JSON.stringify(response.data.user), 1);
       }
 
       return response.data.user;
@@ -185,20 +261,21 @@ class AuthService {
 
   /**
    * Check if user is authenticated
-   * @returns {boolean} True if token exists
+   * @returns {boolean} True if token cookie exists
    */
   isAuthenticated() {
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
-    return !!token;
+    // Check if user cookie exists (token is httpOnly and can't be accessed from JS)
+    return !!this.getCookie("user");
   }
 
   /**
-   * Get user token
+   * Get user token (for API requests, token is sent via cookies automatically)
    * @returns {string|null} JWT token or null
    */
   getToken() {
-    return localStorage.getItem("token") || sessionStorage.getItem("token");
+    // Token is stored in httpOnly cookie and sent automatically
+    // We can't access it from JavaScript, but axios will send it
+    return this.getCookie("token") || null;
   }
 
   /**
@@ -226,9 +303,6 @@ class AuthService {
    */
   async verifyToken() {
     try {
-      const token = this.getToken();
-      if (!token) return false;
-
       await this.fetchUserProfile();
       return true;
     } catch (error) {
@@ -255,7 +329,7 @@ class AuthService {
         },
       });
 
-      // Update localStorage with new photo URL
+      // Update cookie with new photo URL
       if (response.data.user) {
         this.updateCurrentUser({
           profilePhotoUrl: response.data.user.profilePhotoUrl,
@@ -279,7 +353,7 @@ class AuthService {
     try {
       const response = await api.put("/api/auth/profile", data);
 
-      // Update localStorage
+      // Update cookie
       if (response.data.user) {
         this.updateCurrentUser(response.data.user);
       }
@@ -288,6 +362,27 @@ class AuthService {
     } catch (error) {
       throw new Error(
         error.response?.data?.message || "Failed to update profile"
+      );
+    }
+  }
+
+  /**
+   * Change user password
+   * @param {Object} data - Password change data
+   * @returns {Promise<Object>} Response data
+   */
+  async changePassword(data) {
+    try {
+      const response = await api.put("/api/auth/change-password", {
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+        confirmPassword: data.newPassword, // Backend expects confirmPassword
+      });
+
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.message || "Failed to change password"
       );
     }
   }

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminSidebar from '@/components/Admin/AdminSidebar';
+import authService from '@/lib/api/authService';
 
 export default function AdminLayout({ children }) {
     const router = useRouter();
@@ -11,37 +12,42 @@ export default function AdminLayout({ children }) {
 
     useEffect(() => {
         // Check if user is authenticated and has admin role
-        const token = localStorage.getItem('token');
-        const userStr = localStorage.getItem('user');
+        // First try to get from cookie (set by backend), then fallback to localStorage (set by frontend)
+        let user = authService.getCurrentUser();
 
-        if (!token || !userStr) {
+        if (!user && typeof window !== 'undefined') {
+            // Fallback to localStorage if cookie is not available yet
+            const userStr = window.localStorage.getItem('user');
+            if (userStr) {
+                try {
+                    user = JSON.parse(userStr);
+                } catch (error) {
+                    console.error('Error parsing user from localStorage:', error);
+                }
+            }
+        }
+
+        if (!user) {
             // Not logged in, redirect to home
             router.replace('/');
             return;
         }
 
-        try {
-            const user = JSON.parse(userStr);
-            if (user.role !== 'admin') {
-                // Not an admin, redirect based on their role
-                if (user.role === 'student') {
-                    router.replace('/student');
-                } else if (user.role === 'instructor') {
-                    router.replace('/instructor');
-                } else {
-                    router.replace('/');
-                }
-                return;
+        if (user.role !== 'admin') {
+            // Not an admin, redirect based on their role
+            if (user.role === 'student') {
+                router.replace('/student');
+            } else if (user.role === 'instructor') {
+                router.replace('/instructor');
+            } else {
+                router.replace('/');
             }
-
-            // User is authorized
-            setIsAuthorized(true);
-        } catch (error) {
-            console.error('Error parsing user data:', error);
-            router.replace('/');
-        } finally {
-            setIsLoading(false);
+            return;
         }
+
+        // User is authorized
+        setIsAuthorized(true);
+        setIsLoading(false);
     }, [router]);
 
     // Show loading state
