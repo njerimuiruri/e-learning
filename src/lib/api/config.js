@@ -2,7 +2,8 @@ import axios from "axios";
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000",
+  baseURL:
+    process.env.NEXT_PUBLIC_API_URL || "https://api.elearning.arin-africa.org",
   timeout: 10000,
   headers: {
     "Content-Type": "application/json",
@@ -27,7 +28,7 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor - Handle errors globally
@@ -76,7 +77,7 @@ api.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

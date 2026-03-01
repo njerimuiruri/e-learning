@@ -212,7 +212,7 @@ export default function InstructorApprovalsPage() {
                                     {/* Avatar */}
                                     {app.profilePicture ? (
                                         <img
-                                            src={`http://localhost:5000/api/files/download/${app.profilePicture.replace('uploads/', '').replace(/\\/g, '/')}?inline=true`}
+                                            src={`https://api.elearning.arin-africa.orgapi/files/download/${app.profilePicture.replace('uploads/', '').replace(/\\/g, '/')}?inline=true`}
                                             alt={`${app.firstName} ${app.lastName}`}
                                             className="w-16 h-16 rounded-full object-cover flex-shrink-0 border-2 border-gray-200"
                                             onError={(e) => {

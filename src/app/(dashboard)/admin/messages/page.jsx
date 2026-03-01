@@ -16,7 +16,7 @@ export default function AdminMessagesPage() {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/messages/admin/all-conversations', {
+            const response = await fetch('https://api.elearning.arin-africa.orgmessages/admin/all-conversations', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -36,7 +36,7 @@ export default function AdminMessagesPage() {
 
     const filteredConversations = conversations.filter(conv => {
         const searchLower = searchQuery.toLowerCase();
-        return conv.users.some(user => 
+        return conv.users.some(user =>
             user?.firstName?.toLowerCase().includes(searchLower) ||
             user?.lastName?.toLowerCase().includes(searchLower) ||
             user?.email?.toLowerCase().includes(searchLower)

@@ -6,7 +6,7 @@ import * as Icons from 'lucide-react';
 import Navbar from '@/components/navbar/navbar';
 import { useToast } from '@/components/ui/ToastProvider';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
 
 export default function CertificatesPage() {
     const router = useRouter();

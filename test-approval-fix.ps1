@@ -10,12 +10,14 @@ Write-Host ""
 # Check if backend is running
 Write-Host "1. Checking if backend is running..." -ForegroundColor Yellow
 try {
-    $response = Invoke-WebRequest -Uri "http://localhost:5000/api/users/profile" -Headers @{"Authorization"="Bearer test"} -ErrorAction SilentlyContinue
+    $response = Invoke-WebRequest -Uri "https://api.elearning.arin-africa.orgapi/users/profile" -Headers @{"Authorization" = "Bearer test" } -ErrorAction SilentlyContinue
     Write-Host "   ✓ Backend is responding" -ForegroundColor Green
-} catch {
+}
+catch {
     if ($_.Exception.Message -contains "401" -or $_.Exception.Message -contains "Unauthorized") {
         Write-Host "   ✓ Backend is running (returned 401 as expected)" -ForegroundColor Green
-    } else {
+    }
+    else {
         Write-Host "   ✗ Backend not responding. Make sure NestJS backend is running" -ForegroundColor Red
         Write-Host "     Run: cd c:\Users\HP\Desktop\Projects\Arin\elearning-backend && npm run start" -ForegroundColor Yellow
         exit 1

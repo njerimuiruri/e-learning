@@ -61,7 +61,7 @@ export default function InstructorSidebar() {
                 const token = authService.getCookie('token');
                 if (!token) return;
 
-                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
                 const response = await fetch(`${API_URL}/api/messages/unread-count`, {
                     method: 'GET',
                     headers: {
@@ -216,9 +216,9 @@ export default function InstructorSidebar() {
                                     {instructorUser?.profilePhotoUrl ? (
                                         <img
                                             src={
-                                                instructorUser.profilePhotoUrl.startsWith('http') 
-                                                    ? instructorUser.profilePhotoUrl 
-                                                    : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/files/download/${instructorUser.profilePhotoUrl.split('/').pop()}?inline=true`
+                                                instructorUser.profilePhotoUrl.startsWith('http')
+                                                    ? instructorUser.profilePhotoUrl
+                                                    : `${process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org'}/api/files/download/${instructorUser.profilePhotoUrl.split('/').pop()}?inline=true`
                                             }
                                             alt="Profile"
                                             className="w-10 h-10 rounded-full object-cover shadow-md group-hover:shadow-lg transition-shadow"
@@ -249,9 +249,9 @@ export default function InstructorSidebar() {
                                             {instructorUser?.profilePhotoUrl ? (
                                                 <img
                                                     src={
-                                                        instructorUser.profilePhotoUrl.startsWith('http') 
-                                                            ? instructorUser.profilePhotoUrl 
-                                                            : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/files/download/${instructorUser.profilePhotoUrl.split('/').pop()}?inline=true`
+                                                        instructorUser.profilePhotoUrl.startsWith('http')
+                                                            ? instructorUser.profilePhotoUrl
+                                                            : `${process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org'}/api/files/download/${instructorUser.profilePhotoUrl.split('/').pop()}?inline=true`
                                                     }
                                                     alt="Profile"
                                                     className="w-12 h-12 rounded-full object-cover shadow-md"
@@ -347,9 +347,9 @@ export default function InstructorSidebar() {
                                 {instructorUser?.profilePhotoUrl ? (
                                     <img
                                         src={
-                                            instructorUser.profilePhotoUrl.startsWith('http') 
-                                                ? instructorUser.profilePhotoUrl 
-                                                : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/files/download/${instructorUser.profilePhotoUrl.split('/').pop()}?inline=true`
+                                            instructorUser.profilePhotoUrl.startsWith('http')
+                                                ? instructorUser.profilePhotoUrl
+                                                : `${process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org'}/api/files/download/${instructorUser.profilePhotoUrl.split('/').pop()}?inline=true`
                                         }
                                         alt="Profile"
                                         className="w-16 h-16 rounded-full object-cover cursor-pointer shadow-md"
@@ -409,12 +409,11 @@ export default function InstructorSidebar() {
                                         )}
                                         <span className="font-medium flex-1 text-left">{item.label}</span>
                                         {item.badge && (
-                                            <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
-                                                typeof item.badge === 'string' && item.badge === 'NEW'
-                                                    ? 'bg-emerald-500 text-white'
-                                                    : isActive
-                                                        ? 'bg-white text-emerald-600'
-                                                        : 'bg-emerald-100 text-emerald-700'
+                                            <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${typeof item.badge === 'string' && item.badge === 'NEW'
+                                                ? 'bg-emerald-500 text-white'
+                                                : isActive
+                                                    ? 'bg-white text-emerald-600'
+                                                    : 'bg-emerald-100 text-emerald-700'
                                                 }`}>
                                                 {item.badge}
                                             </span>

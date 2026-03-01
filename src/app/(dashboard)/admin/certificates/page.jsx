@@ -37,7 +37,7 @@ export default function CertificateManagementPage() {
             setLoading(true);
             setError('');
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/api/admin/certificates', {
+            const response = await fetch('https://api.elearning.arin-africa.orgapi/admin/certificates', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

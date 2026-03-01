@@ -25,14 +25,14 @@ export default function CertificatePage() {
 
                 if (isUUID) {
                     // Use public endpoint for UUIDs (no auth required, more secure)
-                    apiEndpoint = `http://localhost:5000/api/certificates/public/${params.id}`;
+                    apiEndpoint = `https://api.elearning.arin-africa.orgapi/certificates/public/${params.id}`;
                 } else {
                     // Use authenticated endpoint for internal IDs (backward compatibility)
                     if (!token) {
                         router.push('/login');
                         return;
                     }
-                    apiEndpoint = `http://localhost:5000/api/certificates/${params.id}`;
+                    apiEndpoint = `https://api.elearning.arin-africa.orgapi/certificates/${params.id}`;
                     headers = { Authorization: `Bearer ${token}` };
                 }
 
@@ -42,8 +42,8 @@ export default function CertificatePage() {
 
                 // Fetch PDF
                 const pdfEndpoint = isUUID
-                    ? `http://localhost:5000/api/certificates/public/${params.id}/view`
-                    : `http://localhost:5000/api/certificates/${params.id}/view`;
+                    ? `https://api.elearning.arin-africa.orgapi/certificates/public/${params.id}/view`
+                    : `https://api.elearning.arin-africa.orgapi/certificates/${params.id}/view`;
 
                 const pdfResponse = await axios.get(pdfEndpoint, {
                     headers,
@@ -91,9 +91,9 @@ export default function CertificatePage() {
             let headers = {};
 
             if (isUUID) {
-                apiEndpoint = `http://localhost:5000/api/certificates/public/${params.id}/download`;
+                apiEndpoint = `https://api.elearning.arin-africa.orgapi/certificates/public/${params.id}/download`;
             } else {
-                apiEndpoint = `http://localhost:5000/api/certificates/${params.id}/download`;
+                apiEndpoint = `https://api.elearning.arin-africa.orgapi/certificates/${params.id}/download`;
                 headers = { Authorization: `Bearer ${token}` };
             }
 

@@ -51,7 +51,7 @@ function InstructorMessagesContent() {
         try {
             setLoading(true);
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/messages/conversations', {
+            const response = await fetch('https://api.elearning.arin-africa.orgmessages/conversations', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -65,10 +65,10 @@ function InstructorMessagesContent() {
 
             const result = await response.json();
             console.log('Conversations response:', result);
-            
+
             const conversationsData = result.data || result.conversations || [];
             console.log('Parsed conversations:', conversationsData);
-            
+
             setConversations(conversationsData);
         } catch (err) {
             console.error('Error fetching conversations:', err);
@@ -83,11 +83,11 @@ function InstructorMessagesContent() {
             console.error('No userId provided to fetchMessages');
             return;
         }
-        
+
         try {
             console.log('Fetching messages for user:', userId);
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/messages/conversation/${userId}`, {
+            const response = await fetch(`https://api.elearning.arin-africa.orgmessages/conversation/${userId}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -101,13 +101,13 @@ function InstructorMessagesContent() {
 
             const result = await response.json();
             console.log('Messages response:', result);
-            
+
             const messagesData = result.data || result.messages || [];
             console.log('Parsed messages:', messagesData);
             setMessages(messagesData);
 
             // Mark conversation as read
-            await fetch(`http://localhost:5000/messages/conversation/${userId}/read`, {
+            await fetch(`https://api.elearning.arin-africa.orgmessages/conversation/${userId}/read`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -128,7 +128,7 @@ function InstructorMessagesContent() {
         try {
             setSending(true);
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/messages', {
+            const response = await fetch('https://api.elearning.arin-africa.orgmessages', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -169,7 +169,7 @@ function InstructorMessagesContent() {
                 const formData = new FormData();
                 formData.append('file', file);
 
-                const response = await fetch('http://localhost:5000/upload/document', {
+                const response = await fetch('https://api.elearning.arin-africa.orgupload/document', {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`
@@ -202,7 +202,7 @@ function InstructorMessagesContent() {
     const fetchUnreadCount = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch('http://localhost:5000/messages/unread-count', {
+            const response = await fetch('https://api.elearning.arin-africa.orgmessages/unread-count', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -294,40 +294,40 @@ function InstructorMessagesContent() {
                                 const userId = user._id || user.id || '';
                                 const firstName = user.firstName || 'Unknown';
                                 const lastName = user.lastName || 'User';
-                                
+
                                 return (
-                                <div
-                                    key={userId || Math.random()}
-                                    onClick={() => setSelectedConversation(conv)}
-                                    className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${selectedConversation?.user?._id === userId ? 'bg-blue-50' : ''
-                                        }`}
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                                            {firstName[0]}{lastName[0]}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center justify-between mb-1">
-                                                <h3 className="font-semibold text-gray-900 truncate">
-                                                    {firstName} {lastName}
-                                                </h3>
-                                                <span className="text-xs text-gray-500">
-                                                    {formatTime(conv.lastMessage?.createdAt)}
-                                                </span>
+                                    <div
+                                        key={userId || Math.random()}
+                                        onClick={() => setSelectedConversation(conv)}
+                                        className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${selectedConversation?.user?._id === userId ? 'bg-blue-50' : ''
+                                            }`}
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-500 to-blue-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
+                                                {firstName[0]}{lastName[0]}
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <p className="text-sm text-gray-600 truncate flex-1">
-                                                    {conv.lastMessage?.content || 'No messages yet'}
-                                                </p>
-                                                {conv.unreadCount > 0 && (
-                                                    <span className="bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                                        {conv.unreadCount}
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <h3 className="font-semibold text-gray-900 truncate">
+                                                        {firstName} {lastName}
+                                                    </h3>
+                                                    <span className="text-xs text-gray-500">
+                                                        {formatTime(conv.lastMessage?.createdAt)}
                                                     </span>
-                                                )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-sm text-gray-600 truncate flex-1">
+                                                        {conv.lastMessage?.content || 'No messages yet'}
+                                                    </p>
+                                                    {conv.unreadCount > 0 && (
+                                                        <span className="bg-green-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                                            {conv.unreadCount}
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
                                 );
                             })
                         )}
@@ -365,7 +365,7 @@ function InstructorMessagesContent() {
                                         const senderId = message.senderId?._id || message.senderId?.id || message.senderId;
                                         const currentUserId = localStorage.getItem('userId');
                                         const isOwn = senderId === currentUserId;
-                                        
+
                                         return (
                                             <div key={message._id || Math.random()} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
                                                 <div className={`max-w-md ${isOwn ? 'bg-green-600 text-white' : 'bg-white text-gray-900'} rounded-lg px-4 py-2 shadow-sm`}>

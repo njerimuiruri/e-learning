@@ -48,20 +48,20 @@
 
 ```javascript
 // Send a message
-POST http://localhost:5000/api/messages
+POST https://api.elearning.arin-africa.orgapi/messages
 Body: { receiverId: "userId", content: "Hello!" }
 
 // Get all conversations
-GET http://localhost:5000/api/messages/conversations
+GET https://api.elearning.arin-africa.orgapi/messages/conversations
 
 // Get conversation with specific user
-GET http://localhost:5000/api/messages/conversation/userId
+GET https://api.elearning.arin-africa.orgapi/messages/conversation/userId
 
 // Mark conversation as read
-PUT http://localhost:5000/api/messages/conversation/userId/read
+PUT https://api.elearning.arin-africa.orgapi/messages/conversation/userId/read
 
 // Get unread count
-GET http://localhost:5000/api/messages/unread-count
+GET https://api.elearning.arin-africa.orgapi/messages/unread-count
 ```
 
 ---
@@ -241,7 +241,7 @@ npm run dev
 ### Access:
 
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:5000
+- Backend API: https://api.elearning.arin-africa.org
 
 ---
 

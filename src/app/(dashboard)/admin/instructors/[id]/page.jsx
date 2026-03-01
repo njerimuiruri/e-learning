@@ -134,7 +134,7 @@ export default function InstructorDetailPage() {
                         <div className="flex flex-col items-center">
                             {instructor?.profilePicture ? (
                                 <img
-                                    src={`http://localhost:5000/api/files/download/${instructor.profilePicture.replace('uploads/', '').replace(/\\/g, '/')}?inline=true`}
+                                    src={`https://api.elearning.arin-africa.orgapi/files/download/${instructor.profilePicture.replace('uploads/', '').replace(/\\/g, '/')}?inline=true`}
                                     alt={`${instructor?.firstName} ${instructor?.lastName}`}
                                     className="w-32 h-32 rounded-full object-cover border-4 border-blue-200 shadow-md"
                                     onError={(e) => {
@@ -367,7 +367,7 @@ export default function InstructorDetailPage() {
                             <div className="space-y-3">
                                 {instructor?.cvUrl ? (
                                     <a
-                                        href={`http://localhost:5000/api/files/download/${instructor.cvUrl.replace('uploads/', '').replace(/\\/g, '/')}`}
+                                        href={`https://api.elearning.arin-africa.orgapi/files/download/${instructor.cvUrl.replace('uploads/', '').replace(/\\/g, '/')}`}
                                         download={`${instructor.firstName}_${instructor.lastName}_CV.pdf`}
                                         className="flex items-center gap-3 p-3 border border-red-200 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
                                     >

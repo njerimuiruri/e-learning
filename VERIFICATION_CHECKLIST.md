@@ -13,7 +13,6 @@
 ## Code Changes
 
 - [x] `src/app/(dashboard)/instructor/pending-approval/page.jsx`
-
   - [x] Polling interval: 30s → 5s
   - [x] Added console.logs
   - [x] Added token check
@@ -50,7 +49,7 @@
 
 ### Test Checklist
 
-- [ ] Backend running (http://localhost:5000)
+- [ ] Backend running (https://api.elearning.arin-africa.org)
 - [ ] Frontend dev server running (http://localhost:3000)
 - [ ] Test Scenario 1: Immediate Check (2 min)
 - [ ] Test Scenario 2: Auto-Detection (3 min)

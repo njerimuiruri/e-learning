@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- ✅ Backend running on http://localhost:5000
+- ✅ Backend running on https://api.elearning.arin-africa.org
 - ✅ Frontend running on http://localhost:3000
 - ✅ One admin account for approvals
 - ✅ Browser with DevTools (F12)

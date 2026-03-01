@@ -26,7 +26,7 @@ export default function PendingApprovalPage() {
                 return;
             }
 
-            const response = await fetch('http://localhost:5000/api/users/profile/current', {
+            const response = await fetch('https://api.elearning.arin-africa.orgapi/users/profile/current', {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
