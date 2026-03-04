@@ -68,12 +68,12 @@ export default function StudentLayout({ children }) {
     }
 
     return (
-        <div className="flex min-h-screen bg-gray-50 pt-16">
+        <div className="flex min-h-screen bg-gray-50 pt-16 overflow-x-hidden">
             {/* Sidebar */}
             <StudentSidebar />
 
             {/* Main Content */}
-            <div className="flex-1 lg:ml-72 pb-16 lg:pb-0">
+            <div className="flex-1 min-w-0 lg:ml-64 pb-16 lg:pb-0">
                 {children}
             </div>
         </div>

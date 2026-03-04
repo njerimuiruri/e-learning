@@ -173,16 +173,26 @@ export default function ModuleDetailPage() {
             return;
         }
 
+        // Paid module — go directly to payment without attempting enrollment first
+        if (effectivelyPaid) {
+            try {
+                setEnrolling(true);
+                const payData = await paymentService.initializeModulePayment(moduleId);
+                paymentService.redirectToPaystack(payData.authorizationUrl);
+            } catch (payErr) {
+                showToast(payErr?.response?.data?.message || 'Payment initialization failed.', 'error');
+                setEnrolling(false);
+            }
+            return;
+        }
+
         try {
             setEnrolling(true);
-            const result = await moduleEnrollmentService.enrollInModule(moduleId);
-            if (result?.requiresPayment) {
-                try {
-                    const payData = await paymentService.initializeModulePayment(moduleId);
-                    paymentService.redirectToPaystack(payData.authorizationUrl);
-                } catch (payErr) {
-                    showToast(payErr?.response?.data?.message || 'Payment initialization failed.', 'error');
-                }
+            const enrollResult = await moduleEnrollmentService.enrollInModule(moduleId);
+            // Backend signals payment is required (stale frontend state)
+            if (enrollResult?.requiresPayment) {
+                const payData = await paymentService.initializeModulePayment(moduleId);
+                paymentService.redirectToPaystack(payData.authorizationUrl);
                 return;
             }
             showToast('Successfully enrolled! Starting module...', 'success');
@@ -192,13 +202,6 @@ export default function ModuleDetailPage() {
             const msg = err?.response?.data?.message || '';
             if (status === 403) {
                 showToast(msg || 'Access restricted. Contact the admin for access.', 'error');
-            } else if (effectivelyPaid) {
-                try {
-                    const payData = await paymentService.initializeModulePayment(moduleId);
-                    paymentService.redirectToPaystack(payData.authorizationUrl);
-                } catch (payErr) {
-                    showToast(payErr?.response?.data?.message || 'Payment initialization failed.', 'error');
-                }
             } else {
                 showToast(msg || 'Enrollment failed. Please try again.', 'error');
             }
@@ -236,7 +239,7 @@ export default function ModuleDetailPage() {
         }
         if (effectivelyPaid) {
             return {
-                label: catPrice ? `Pay USD ${catPrice.toLocaleString()} to Access` : 'Purchase Access',
+                label: catPrice ? `Pay KES ${catPrice.toLocaleString()} to Access` : 'Purchase Access',
                 icon: DollarSign,
                 style: 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white',
             };
@@ -355,8 +358,8 @@ export default function ModuleDetailPage() {
                                                         </div>
                                                         {catPrice > 0 && (
                                                             <div className="bg-orange-500/20 border border-orange-400/40 rounded-2xl px-5 py-3">
-                                                                <p className="text-orange-300 font-bold text-sm">USD {catPrice.toLocaleString()}</p>
-                                                                <p className="text-orange-200 text-xs">Public price</p>
+                                                                <p className="text-orange-300 font-bold text-sm">KES {catPrice.toLocaleString()}</p>
+                                                                <p className="text-orange-200 text-xs">Unlocks all modules in this category</p>
                                                             </div>
                                                         )}
                                                     </div>
@@ -364,11 +367,10 @@ export default function ModuleDetailPage() {
                                                 {category?.accessType === 'paid' && (
                                                     <div className="bg-orange-500/20 border border-orange-400/40 rounded-2xl px-5 py-4 text-center">
                                                         <DollarSign className="w-6 h-6 text-orange-300 mx-auto mb-1" />
-                                                        <p className="text-orange-300 font-bold text-sm">Paid</p>
                                                         <p className="text-orange-300 font-bold text-base">
-                                                            {catPrice ? `USD ${catPrice.toLocaleString()}` : ''}
+                                                            {catPrice ? `KES ${catPrice.toLocaleString()}` : 'Paid'}
                                                         </p>
-                                                        <p className="text-orange-200 text-xs">Open enrollment</p>
+                                                        <p className="text-orange-200 text-xs">One-time · all modules in this category</p>
                                                     </div>
                                                 )}
                                                 {category?.accessType === 'free' && (
@@ -635,13 +637,18 @@ export default function ModuleDetailPage() {
                                 {/* Paid category price */}
                                 {effectivelyPaid && !enrollment && (
                                     <div className="pb-5 border-b border-gray-100">
-                                        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Category Price</p>
+                                        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">One-Time Category Price</p>
                                         <p className="text-4xl font-extrabold text-[#021d49]">
-                                            {catPrice ? `USD ${catPrice.toLocaleString()}` : 'Paid'}
+                                            {catPrice ? `KES ${catPrice.toLocaleString()}` : 'Paid'}
                                         </p>
                                         <p className="text-sm text-gray-500 mt-1">
-                                            One-time payment · all modules in "{category?.name}"
+                                            Pay once · unlock <strong>all modules</strong> in "{category?.name}"
                                         </p>
+                                        <div className="mt-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+                                            <p className="text-xs text-orange-800 font-medium">
+                                                💡 This is a category-wide payment. You will not be charged again for other modules in <strong>{category?.name}</strong>.
+                                            </p>
+                                        </div>
                                     </div>
                                 )}
 

@@ -218,13 +218,13 @@ const CoursesSection = () => {
                                                     </span>
                                                     {selectedCategory.price > 0 && (
                                                         <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-orange-100 text-orange-700">
-                                                            <DollarSign className="w-3 h-3" /> USD {selectedCategory.price.toLocaleString()}
+                                                            <DollarSign className="w-3 h-3" /> KES {selectedCategory.price.toLocaleString()}
                                                         </span>
                                                     )}
                                                 </>
                                             ) : isPaid ? (
                                                 <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-orange-100 text-orange-700">
-                                                    <DollarSign className="w-3 h-3" /> Paid{selectedCategory.price > 0 ? ` · USD ${selectedCategory.price.toLocaleString()}` : ''}
+                                                    <DollarSign className="w-3 h-3" /> Paid{selectedCategory.price > 0 ? ` · KES ${selectedCategory.price.toLocaleString()}` : ''}
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700">
@@ -274,17 +274,29 @@ const CoursesSection = () => {
 
                 {/* ─── Section label ───────────────────────────────────── */}
                 {!loading && !error && (
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-lg font-bold text-gray-900">
-                            {selectedCategory ? `Modules in "${selectedCategory.name}"` : 'All Modules'}
-                            <span className="ml-2 text-sm font-normal text-gray-400">({filteredModules.length})</span>
-                        </h3>
-                        <Link
-                            href="/modules"
-                            className="text-sm font-semibold text-[#021d49] hover:underline flex items-center gap-1"
-                        >
-                            Browse all <ArrowRight className="w-4 h-4" />
-                        </Link>
+                    <div className="mb-6">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-lg font-bold text-gray-900">
+                                {selectedCategory ? `Modules in "${selectedCategory.name}"` : 'All Modules'}
+                                <span className="ml-2 text-sm font-normal text-gray-400">({filteredModules.length})</span>
+                            </h3>
+                            <Link
+                                href="/modules"
+                                className="text-sm font-semibold text-[#021d49] hover:underline flex items-center gap-1"
+                            >
+                                Browse all <ArrowRight className="w-4 h-4" />
+                            </Link>
+                        </div>
+                        {/* Single category pricing notice */}
+                        {selectedCategory && selectedCategory.price > 0 && (
+                            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-4 py-2.5">
+                                <DollarSign className="w-4 h-4 text-orange-500 flex-shrink-0" />
+                                <p className="text-sm text-orange-800">
+                                    <strong>Category access — KES {selectedCategory.price.toLocaleString()}</strong> · One payment unlocks all {filteredModules.length} modules in this category.
+                                    {selectedCategory.accessType === 'restricted' && <span className="text-purple-700"> Fellows get free access.</span>}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -339,12 +351,12 @@ const CoursesSection = () => {
                                                 </span>
                                             ) : isRestricted ? (
                                                 <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-purple-600 text-white">
-                                                    <Award className="w-3 h-3" /> Fellows Priority{catPrice ? ` · USD ${catPrice.toLocaleString()}` : ''}
+                                                    <Award className="w-3 h-3" /> Fellows Priority{catPrice ? ` · KES ${catPrice.toLocaleString()}` : ''}
                                                 </span>
                                             ) : isPaid ? (
                                                 <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-orange-500 text-white">
                                                     <DollarSign className="w-3 h-3" />
-                                                    Paid{catPrice ? ` · USD ${catPrice.toLocaleString()}` : ''}
+                                                    Paid{catPrice ? ` · KES ${catPrice.toLocaleString()}` : ''}
                                                 </span>
                                             ) : (
                                                 <span className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500 text-white">
@@ -368,17 +380,6 @@ const CoursesSection = () => {
                                             {mod.title}
                                         </h3>
 
-                                        {/* Fellow-only disclaimer */}
-                                        {(isFellowOnly || isRestricted) && (
-                                            <div className="flex items-start gap-1.5 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 mb-3">
-                                                <Award className="w-3.5 h-3.5 text-purple-600 flex-shrink-0 mt-0.5" />
-                                                <p className="text-xs text-purple-800 leading-snug">
-                                                    {isRestricted
-                                                        ? `Fellows get free access. Public can pay USD ${catPrice?.toLocaleString() || ''} to access.`
-                                                        : 'Free for fellows only. Non-fellows must pay to access.'}
-                                                </p>
-                                            </div>
-                                        )}
 
                                         {/* Instructor */}
                                         <div className="flex items-center gap-2 mb-3">

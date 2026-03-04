@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import paymentService from '@/lib/api/paymentService';
+import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import Navbar from '@/components/navbar/navbar';
 import Footer from '@/components/Footer/Footer';
 import { CheckCircle, XCircle, Loader2, AlertTriangle } from 'lucide-react';
@@ -15,6 +16,7 @@ function VerifyPaymentContent() {
   const [verifying, setVerifying] = useState(true);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [paymentFailed, setPaymentFailed] = useState(false);
 
   useEffect(() => {
     if (!reference) {
@@ -22,7 +24,6 @@ function VerifyPaymentContent() {
       setVerifying(false);
       return;
     }
-
     verifyPayment();
   }, [reference]);
 
@@ -31,22 +32,38 @@ function VerifyPaymentContent() {
       setVerifying(true);
       setError(null);
 
-      // Verify payment with backend
       const verificationResult = await paymentService.verifyPayment(reference!);
-
       setResult(verificationResult);
-      setVerifying(false);
 
-      // Clear pending payment data from localStorage
       localStorage.removeItem('pendingPaymentId');
       localStorage.removeItem('pendingCourseId');
+
+      // Auto-enroll in module after successful payment
+      if (verificationResult.success && verificationResult.moduleId) {
+        try {
+          await moduleEnrollmentService.enrollInModule(verificationResult.moduleId);
+        } catch {
+          // Already enrolled or enrollment failed — still redirect to module
+        }
+      }
     } catch (err: any) {
-      console.error('Error verifying payment:', err);
-      setError(err.response?.data?.message || 'Failed to verify payment');
+      const msg: string = err.response?.data?.message || err.message || 'Failed to verify payment';
+      // Distinguish a Paystack-level failure from a network/server error
+      if (
+        msg.toLowerCase().includes('payment failed') ||
+        msg.toLowerCase().includes('failed:') ||
+        msg.toLowerCase().includes('declined')
+      ) {
+        setPaymentFailed(true);
+      } else {
+        setError(msg);
+      }
+    } finally {
       setVerifying(false);
     }
   };
 
+  // ── Loading ────────────────────────────────────────────────────────────
   if (verifying) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -61,6 +78,38 @@ function VerifyPaymentContent() {
     );
   }
 
+  // ── Payment Failed (Paystack declined / gateway failure) ───────────────
+  if (paymentFailed) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
+          <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle className="w-12 h-12 text-red-600" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Payment Failed</h1>
+          <p className="text-gray-600 mb-6">
+            Your payment was declined. No charges were made. Please try again with a different payment method.
+          </p>
+          <div className="space-y-3">
+            <button
+              onClick={() => router.back()}
+              className="w-full bg-[#ff8243] text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition"
+            >
+              Try Again
+            </button>
+            <button
+              onClick={() => router.push('/modules')}
+              className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
+            >
+              Browse Modules
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Server / verification error ────────────────────────────────────────
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -70,10 +119,10 @@ function VerifyPaymentContent() {
           <p className="text-gray-600 mb-6">{error}</p>
           <div className="space-y-3">
             <button
-              onClick={() => router.push('/courses')}
+              onClick={() => router.push('/modules')}
               className="w-full bg-[#021d49] text-white py-3 rounded-lg font-semibold hover:bg-[#032a5e] transition"
             >
-              Browse Courses
+              Browse Modules
             </button>
             <button
               onClick={() => router.push('/profile')}
@@ -87,8 +136,11 @@ function VerifyPaymentContent() {
     );
   }
 
-  // Payment successful
+  // ── Payment successful ─────────────────────────────────────────────────
   if (result?.success) {
+    const moduleId = result.moduleId;
+    const courseId = result.courseId;
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
         <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
@@ -109,7 +161,7 @@ function VerifyPaymentContent() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Amount Paid:</span>
                   <span className="font-semibold text-gray-900">
-                    ${result.amount.toLocaleString()}
+                    KES {result.amount.toLocaleString()}
                   </span>
                 </div>
               )}
@@ -128,23 +180,25 @@ function VerifyPaymentContent() {
 
           <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6 text-left">
             <p className="text-sm text-blue-900">
-              <strong>✓ Access Granted!</strong> You now have lifetime access to all courses
-              in this category. Start learning right away!
+              <strong>✓ Access Granted!</strong> You now have access to all modules in this
+              category. Start learning right away!
             </p>
           </div>
 
           <div className="space-y-3">
             <button
               onClick={() => {
-                if (result.courseId) {
-                  router.push(`/courses/${result.courseId}`);
+                if (moduleId) {
+                  router.push(`/student/modules/${moduleId}`);
+                } else if (courseId) {
+                  router.push(`/courses/${courseId}`);
                 } else {
-                  router.push('/courses');
+                  router.push('/modules');
                 }
               }}
               className="w-full bg-[#021d49] text-white py-3 rounded-lg font-semibold hover:bg-[#032a5e] transition"
             >
-              {result.courseId ? 'Go to Course' : 'Browse Courses'}
+              {moduleId ? 'Go to Module' : courseId ? 'Go to Course' : 'Browse Modules'}
             </button>
             <button
               onClick={() => router.push('/profile')}
@@ -158,7 +212,7 @@ function VerifyPaymentContent() {
     );
   }
 
-  // Payment failed or abandoned
+  // ── Payment abandoned / not completed ─────────────────────────────────
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
@@ -169,23 +223,16 @@ function VerifyPaymentContent() {
         </p>
         <div className="space-y-3">
           <button
-            onClick={() => {
-              const courseId = localStorage.getItem('pendingCourseId');
-              if (courseId) {
-                router.push(`/checkout?courseId=${courseId}`);
-              } else {
-                router.push('/courses');
-              }
-            }}
+            onClick={() => router.back()}
             className="w-full bg-[#ff8243] text-white py-3 rounded-lg font-semibold hover:bg-orange-600 transition"
           >
             Try Again
           </button>
           <button
-            onClick={() => router.push('/courses')}
+            onClick={() => router.push('/modules')}
             className="w-full bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition"
           >
-            Browse Courses
+            Browse Modules
           </button>
         </div>
       </div>

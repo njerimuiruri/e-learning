@@ -32,6 +32,7 @@ export interface PaymentVerificationResponse {
   paymentId?: string;
   categoryId?: string;
   courseId?: string;
+  moduleId?: string;
   amount?: number;
   status?: string;
 }
@@ -110,7 +111,8 @@ const paymentService = {
    * @returns Payment initialization data with authorization URL
    */
   initializeModulePayment: async (moduleId: string, paymentType?: 'local' | 'international'): Promise<PaymentInitializationResponse> => {
-    const { data } = await api.post('/module/initialize', { moduleId, paymentType });
+    const callbackBaseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const { data } = await api.post('/module/initialize', { moduleId, paymentType, callbackBaseUrl });
     return data;
   },
 
