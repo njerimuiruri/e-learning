@@ -62,7 +62,7 @@ const CoursesSection = () => {
             try {
                 setLoading(true);
                 const [modulesData, categoriesData] = await Promise.all([
-                    moduleService.getAllModules({ status: 'published' }),
+                    moduleService.getAllModules({ limit: 6 }),
                     categoryService.getAllCategories()
                 ]);
                 if (mounted) {
