@@ -1,918 +1,1084 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import progressionService from '@/lib/api/progressionService';
 import moduleService from '@/lib/api/moduleService';
+import authService from '@/lib/api/authService';
+import notificationService from '@/lib/api/notificationService';
 import Navbar from '@/components/navbar/navbar';
 import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
 
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+
+/* ══════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════ */
+const levelConfig = {
+    beginner:     { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', bar: 'bg-emerald-500' },
+    intermediate: { badge: 'bg-amber-100 text-amber-700 border-amber-200',       dot: 'bg-amber-500',   bar: 'bg-amber-500'   },
+    advanced:     { badge: 'bg-rose-100 text-rose-700 border-rose-200',          dot: 'bg-rose-500',    bar: 'bg-rose-500'    },
+};
+const getLvl = (level) => levelConfig[level] || levelConfig.beginner;
+
+/** Clamp a progress value between 0 and 100 */
+const clamp = (v) => Math.min(100, Math.max(0, Math.round(v || 0)));
+
+/** Strip HTML tags and decode common HTML entities */
+const stripHtml = (html) => {
+    if (!html) return '';
+    return html
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
+const timeAgo = (date) => {
+    if (!date) return '';
+    const diff = Math.floor((Date.now() - new Date(date)) / 1000);
+    if (diff < 60)   return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+};
+
+const getAssessmentStatus = (enrollment) => {
+    const hasSubmitted = (enrollment.finalAssessmentAttempts || 0) > 0;
+    const hasPending   = (enrollment.pendingManualGradingCount || 0) > 0;
+    if (hasPending)                      return 'pending_review';
+    if (enrollment.requiresModuleRepeat) return 'repeat_required';
+    if (!hasSubmitted)                   return 'ready';
+    if (hasSubmitted && !enrollment.finalAssessmentPassed && enrollment.finalAssessmentAttempts < 3) return 'retry';
+    if (enrollment.finalAssessmentAttempts >= 3 && !enrollment.finalAssessmentPassed) return 'failed';
+    return 'ready';
+};
+
+const notificationIconMap = {
+    LESSON_COMPLETED:      { icon: 'CheckCircle', color: 'text-emerald-500', bg: 'bg-emerald-50' },
+    ASSESSMENT_PASSED:     { icon: 'Trophy',      color: 'text-yellow-500',  bg: 'bg-yellow-50'  },
+    ASSESSMENT_FAILED:     { icon: 'XCircle',     color: 'text-red-500',     bg: 'bg-red-50'     },
+    CERTIFICATE_EARNED:    { icon: 'Award',       color: 'text-violet-500',  bg: 'bg-violet-50'  },
+    MODULE_ENROLLED:       { icon: 'BookOpen',    color: 'text-blue-500',    bg: 'bg-blue-50'    },
+    ESSAY_GRADED:          { icon: 'FileText',    color: 'text-indigo-500',  bg: 'bg-indigo-50'  },
+    DISCUSSION_REPLY:      { icon: 'MessageCircle', color: 'text-teal-500',  bg: 'bg-teal-50'    },
+    LEVEL_UNLOCKED:        { icon: 'Unlock',      color: 'text-purple-500',  bg: 'bg-purple-50'  },
+    INSTRUCTOR_REMINDER:   { icon: 'Bell',        color: 'text-amber-500',   bg: 'bg-amber-50'   },
+    ADMIN_REMINDER:        { icon: 'Megaphone',   color: 'text-blue-500',    bg: 'bg-blue-50'    },
+    DEFAULT:               { icon: 'Bell',        color: 'text-gray-500',    bg: 'bg-gray-50'    },
+};
+const getNotifStyle = (type) => notificationIconMap[type] || notificationIconMap.DEFAULT;
+
+/* ══════════════════════════════════════════
+   SMALL COMPONENTS
+══════════════════════════════════════════ */
+
+/* Stat card in the hero banner */
+function HeroStat({ label, value, icon }) {
+    const Ic = Icons[icon];
+    return (
+        <div className="flex flex-col items-center justify-center bg-white/10 rounded-xl px-4 py-3 min-w-[90px] backdrop-blur-sm">
+            {Ic && <Ic className="w-4 h-4 text-white/70 mb-1" />}
+            <span className="text-xl font-bold text-white leading-none">{value}</span>
+            <span className="text-[10px] text-white/60 mt-0.5 text-center">{label}</span>
+        </div>
+    );
+}
+
+/* Quick link card */
+function QuickLink({ icon, label, sub, color, bgColor, onClick }) {
+    const Ic = Icons[icon];
+    return (
+        <button
+            onClick={onClick}
+            className={`group flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all hover:shadow-md hover:-translate-y-0.5 ${bgColor} border-transparent`}
+        >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color} bg-white/70 group-hover:scale-110 transition-transform`}>
+                {Ic && <Ic className="w-5 h-5" />}
+            </div>
+            <div className="text-center">
+                <p className="text-xs font-semibold text-gray-800 leading-tight">{label}</p>
+                {sub && <p className="text-[10px] text-gray-500 mt-0.5">{sub}</p>}
+            </div>
+        </button>
+    );
+}
+
+/* Continue learning row card */
+function ContinueLearningCard({ enrollment, onClick }) {
+    const mod      = enrollment.moduleId || {};
+    const lvl      = getLvl(mod.level);
+    const progress = clamp(enrollment.progress);
+    return (
+        <Card
+            className="group cursor-pointer border-gray-100 hover:border-[#021d49]/30 hover:shadow-md transition-all duration-200"
+            onClick={onClick}
+        >
+            <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                    {/* Icon */}
+                    <div className="w-10 h-10 rounded-xl bg-[#021d49]/8 flex items-center justify-center flex-shrink-0 group-hover:bg-[#021d49]/15 transition-colors">
+                        <Icons.BookOpen className="w-5 h-5 text-[#021d49]" />
+                    </div>
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                            <div className="min-w-0">
+                                <p className="text-xs text-gray-400 truncate">{mod.categoryId?.name || 'Module'}</p>
+                                <h3 className="text-sm font-semibold text-gray-900 line-clamp-1 group-hover:text-[#021d49] transition-colors">
+                                    {mod.title}
+                                </h3>
+                            </div>
+                            <Badge variant="outline" className={`text-[10px] shrink-0 font-semibold capitalize border ${lvl.badge}`}>
+                                {mod.level}
+                            </Badge>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <Progress value={progress} className="flex-1 h-1.5" />
+                            <span className="text-xs font-bold text-[#021d49] shrink-0">{progress}%</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-gray-400">
+                                {Math.min(enrollment.completedLessons || 0, enrollment.totalLessons || 0)}/{enrollment.totalLessons || 0} lessons
+                            </span>
+                            <span className="text-[10px] font-semibold text-[#021d49] flex items-center gap-0.5 group-hover:gap-1 transition-all">
+                                Continue <Icons.ArrowRight className="w-3 h-3" />
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+/* Assessment alert row */
+function AssessmentAlertCard({ enrollment, onClick }) {
+    const mod    = enrollment.moduleId || {};
+    const status = getAssessmentStatus(enrollment);
+    const configs = {
+        ready:           { label: 'Take Assessment',  color: 'border-l-emerald-500 bg-emerald-50/50',  btn: 'bg-emerald-600 hover:bg-emerald-700', icon: 'Play'       },
+        retry:           { label: 'Retry Assessment', color: 'border-l-orange-500 bg-orange-50/50',   btn: 'bg-orange-500 hover:bg-orange-600',   icon: 'RefreshCw'  },
+        pending_review:  { label: 'Under Review',     color: 'border-l-amber-500 bg-amber-50/50',     btn: 'bg-amber-400 cursor-not-allowed',     icon: 'Clock'      },
+        repeat_required: { label: 'Repeat Module',    color: 'border-l-rose-500 bg-rose-50/50',       btn: 'bg-rose-500 hover:bg-rose-600',       icon: 'RotateCcw'  },
+        failed:          { label: 'Max Attempts',     color: 'border-l-red-400 bg-red-50/50',         btn: 'bg-gray-400 cursor-not-allowed',      icon: 'XCircle'    },
+    };
+    const cfg = configs[status] || configs.ready;
+    const Ic  = Icons[cfg.icon];
+    return (
+        <div className={`border-l-4 rounded-r-xl p-3 flex items-center justify-between gap-3 ${cfg.color}`}>
+            <div className="min-w-0">
+                <p className="text-xs font-semibold text-gray-900 line-clamp-1">{mod.title}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">{mod.categoryId?.name} · {mod.level}</p>
+            </div>
+            <button
+                onClick={onClick}
+                disabled={status === 'pending_review' || status === 'failed'}
+                className={`shrink-0 text-white text-[10px] font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1 transition-colors ${cfg.btn}`}
+            >
+                {Ic && <Ic className="w-3 h-3" />}
+                {cfg.label}
+            </button>
+        </div>
+    );
+}
+
+/* Available module card (grid) */
+function AvailableModuleCard({ mod, onDetails, onEnroll }) {
+    const lvl   = getLvl(mod.level);
+    const clean = stripHtml(mod.description);
+    return (
+        <Card className="group border-gray-100 hover:border-[#021d49]/20 hover:shadow-md transition-all duration-200 flex flex-col h-full">
+            <CardContent className="p-4 flex flex-col flex-1">
+                {/* Top badges */}
+                <div className="flex items-center justify-between gap-2 mb-2">
+                    <Badge variant="outline" className={`text-[10px] font-semibold capitalize border ${lvl.badge}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full mr-1 inline-block ${lvl.dot}`} />
+                        {mod.level}
+                    </Badge>
+                    {mod.price > 0
+                        ? <Badge className="text-[10px] bg-amber-100 text-amber-700 border-0 font-semibold">Paid</Badge>
+                        : <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-0 font-semibold">Free</Badge>
+                    }
+                </div>
+                {/* Category */}
+                {mod.categoryId?.name && (
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{mod.categoryId.name}</p>
+                )}
+                {/* Title */}
+                <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-[#021d49] transition-colors mb-1.5">
+                    {mod.title}
+                </h3>
+                {/* Clean description — no HTML */}
+                {clean && (
+                    <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed flex-1">{clean}</p>
+                )}
+                {/* Stats row */}
+                <div className="flex items-center gap-3 text-xs text-gray-400 mb-3">
+                    <span className="flex items-center gap-1">
+                        <Icons.Users className="w-3 h-3" />
+                        {mod.enrollmentCount || 0} students
+                    </span>
+                    {(mod.totalLessons || 0) > 0 && (
+                        <span className="flex items-center gap-1">
+                            <Icons.BookOpen className="w-3 h-3" />
+                            {mod.totalLessons} lessons
+                        </span>
+                    )}
+                </div>
+                {/* Actions */}
+                <div className="flex items-center gap-1.5 pt-2.5 border-t border-gray-100 mt-auto">
+                    <Button size="sm" variant="outline"
+                        className="flex-1 h-7 text-[10px] border-gray-200 text-gray-600 hover:text-[#021d49] hover:border-[#021d49]"
+                        onClick={() => onDetails(mod)}>
+                        <Icons.Info className="w-3 h-3 mr-1" /> Details
+                    </Button>
+                    <Button size="sm"
+                        className="flex-1 h-7 text-[10px] bg-[#021d49] hover:bg-[#032a66] text-white"
+                        onClick={() => onEnroll(mod._id)}>
+                        <Icons.Plus className="w-3 h-3 mr-1" /> Enroll
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+/* Notification / Activity feed item */
+function ActivityItem({ notification, onRead }) {
+    const style = getNotifStyle(notification.type);
+    const Ic    = Icons[style.icon];
+    return (
+        <div
+            className={`flex items-start gap-3 p-3 rounded-xl transition-colors cursor-pointer hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50/40' : ''}`}
+            onClick={() => !notification.isRead && onRead(notification._id)}
+        >
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${style.bg}`}>
+                {Ic && <Ic className={`w-4 h-4 ${style.color}`} />}
+            </div>
+            <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-gray-800 line-clamp-2">{notification.message}</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">{timeAgo(notification.createdAt)}</p>
+            </div>
+            {!notification.isRead && (
+                <div className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-1" />
+            )}
+        </div>
+    );
+}
+
+/* Reminder card */
+function ReminderCard({ reminder }) {
+    const isAdmin = reminder.type === 'ADMIN_REMINDER';
+    return (
+        <div className={`rounded-xl p-3 border-l-4 ${isAdmin ? 'border-l-blue-500 bg-blue-50/50' : 'border-l-amber-500 bg-amber-50/50'}`}>
+            <div className="flex items-start gap-2">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${isAdmin ? 'bg-blue-100' : 'bg-amber-100'}`}>
+                    {isAdmin
+                        ? <Icons.Megaphone className="w-3.5 h-3.5 text-blue-600" />
+                        : <Icons.Bell className="w-3.5 h-3.5 text-amber-600" />
+                    }
+                </div>
+                <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                        <Badge variant="outline" className={`text-[9px] font-semibold border-0 px-1.5 py-0 h-4 ${isAdmin ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700'}`}>
+                            {isAdmin ? 'Admin' : 'Instructor'}
+                        </Badge>
+                        <span className="text-[10px] text-gray-400">{timeAgo(reminder.createdAt)}</span>
+                    </div>
+                    <p className="text-xs text-gray-700 line-clamp-2">{reminder.message}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* Module detail drawer */
+function ModuleDrawer({ mod, onClose, onNavigate }) {
+    if (!mod) return null;
+    const lvl   = getLvl(mod.level);
+    const clean = stripHtml(mod.description);
+    return (
+        <Sheet open={!!mod} onOpenChange={onClose}>
+            <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+                <SheetHeader className="mb-5">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <Badge variant="outline" className={`text-xs font-semibold capitalize border ${lvl.badge}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${lvl.dot} inline-block`} />{mod.level}
+                        </Badge>
+                        {mod.categoryId?.name && <Badge variant="secondary" className="text-xs">{mod.categoryId.name}</Badge>}
+                    </div>
+                    <SheetTitle className="text-xl leading-snug">{mod.title}</SheetTitle>
+                    <SheetDescription className="text-sm text-gray-500 leading-relaxed mt-1">
+                        {clean || 'No description available.'}
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="grid grid-cols-2 gap-3 mb-5">
+                    {[
+                        { icon: 'Users',    label: 'Students', value: mod.enrollmentCount || 0 },
+                        { icon: 'BookOpen', label: 'Lessons',  value: mod.totalLessons || 0    },
+                    ].map(({ icon, label, value }) => {
+                        const Ic = Icons[icon];
+                        return (
+                            <Card key={label} className="border-gray-100 text-center">
+                                <CardContent className="p-3">
+                                    {Ic && <Ic className="w-4 h-4 text-[#021d49] mx-auto mb-1" />}
+                                    <p className="text-lg font-bold text-gray-900">{value}</p>
+                                    <p className="text-xs text-gray-500">{label}</p>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
+                {mod.price > 0 && (
+                    <Card className="border-amber-100 bg-amber-50 mb-5">
+                        <CardContent className="p-3 flex items-center gap-2">
+                            <Icons.CreditCard className="w-4 h-4 text-amber-600" />
+                            <span className="text-sm font-semibold text-amber-700">
+                                {mod.currency || 'NGN'} {mod.price?.toLocaleString()}
+                            </span>
+                        </CardContent>
+                    </Card>
+                )}
+                <Button className="w-full bg-[#021d49] hover:bg-[#032a66] text-white"
+                    onClick={() => { onNavigate(mod._id); onClose(); }}>
+                    <Icons.ArrowRight className="w-4 h-4 mr-2" /> View Module
+                </Button>
+            </SheetContent>
+        </Sheet>
+    );
+}
+
+/* Empty state */
+function Empty({ icon, title, sub, action, onAction }) {
+    const Ic = Icons[icon];
+    return (
+        <div className="flex flex-col items-center py-10 text-center">
+            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                {Ic && <Ic className="w-6 h-6 text-gray-400" />}
+            </div>
+            <p className="text-sm font-semibold text-gray-700">{title}</p>
+            {sub && <p className="text-xs text-gray-400 mt-1 max-w-[200px]">{sub}</p>}
+            {action && (
+                <Button size="sm" className="mt-3 bg-[#021d49] hover:bg-[#032a66] text-white text-xs h-8"
+                    onClick={onAction}>{action}</Button>
+            )}
+        </div>
+    );
+}
+
+
+/* ══════════════════════════════════════════
+   MAIN DASHBOARD
+══════════════════════════════════════════ */
 function StudentDashboardContent() {
     const router = useRouter();
-    const [enrollments, setEnrollments] = useState([]);
-    const [progressions, setProgressions] = useState([]);
+
+    const [enrollments, setEnrollments]           = useState([]);
+    const [progressions, setProgressions]         = useState([]);
     const [availableModules, setAvailableModules] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [notifications, setNotifications]       = useState([]);
+    const [reminders, setReminders]               = useState([]);
+    const [loading, setLoading]                   = useState(true);
+    const [user, setUser]                         = useState(null);
+    const [drawerMod, setDrawerMod]               = useState(null);
+    const [modulesTab, setModulesTab]             = useState('available'); // 'available' | 'progress'
+    const [showAllActivity, setShowAllActivity]   = useState(false);
 
     useEffect(() => {
-        fetchDashboardData();
+        const u = authService.getCurrentUser?.() || null;
+        setUser(u);
+        fetchAll();
     }, []);
 
-    const fetchDashboardData = async () => {
+    const fetchAll = useCallback(async () => {
         try {
             setLoading(true);
-            setError('');
-            const [enrollmentData, progressionData, modulesData] = await Promise.all([
+            const [enrollData, progData, modsData, notifData, remindData] = await Promise.allSettled([
                 moduleEnrollmentService.getMyEnrollments(),
-                progressionService.getMyProgressions().catch(() => []),
-                moduleService.getAllModules({ limit: 12 }).catch(() => ({ modules: [] })),
+                progressionService.getMyProgressions(),
+                moduleService.getAllModules({ limit: 12 }),
+                notificationService.getMyNotifications(20),
+                notificationService.getMyReminders(),
             ]);
 
-            const list = Array.isArray(enrollmentData) ? enrollmentData : enrollmentData?.enrollments || [];
-            setEnrollments(list);
-            const progList = Array.isArray(progressionData) ? progressionData : progressionData?.progressions || [];
-            setProgressions(progList);
+            // Enrollments
+            const eList = enrollData.status === 'fulfilled'
+                ? (Array.isArray(enrollData.value) ? enrollData.value : enrollData.value?.enrollments || [])
+                : [];
+            setEnrollments(eList);
 
-            // Filter out modules the student is already enrolled in
-            const enrolledIds = new Set(list.map(e => e.moduleId?._id?.toString() || e.moduleId?.toString()));
-            const allMods = Array.isArray(modulesData) ? modulesData : modulesData?.modules || [];
-            setAvailableModules(allMods.filter(m => !enrolledIds.has(m._id?.toString())).slice(0, 6));
+            // Progressions
+            const pList = progData.status === 'fulfilled'
+                ? (Array.isArray(progData.value) ? progData.value : progData.value?.progressions || [])
+                : [];
+            setProgressions(pList);
+
+            // Available modules (filter out already enrolled)
+            if (modsData.status === 'fulfilled') {
+                const allMods    = Array.isArray(modsData.value) ? modsData.value : modsData.value?.modules || [];
+                const enrolledIds = new Set(eList.map(e => e.moduleId?._id?.toString() || e.moduleId?.toString()));
+                setAvailableModules(allMods.filter(m => !enrolledIds.has(m._id?.toString())));
+            }
+
+            // Notifications
+            if (notifData.status === 'fulfilled') {
+                const n = notifData.value;
+                setNotifications(Array.isArray(n) ? n : n?.notifications || []);
+            }
+
+            // Reminders
+            if (remindData.status === 'fulfilled') {
+                const r = remindData.value;
+                setReminders(Array.isArray(r) ? r : r?.reminders || []);
+            }
         } catch (err) {
-            setError('Failed to load dashboard data');
             console.error(err);
         } finally {
             setLoading(false);
         }
+    }, []);
+
+    const handleMarkRead = async (id) => {
+        try {
+            await notificationService.markAsRead(id);
+            setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+        } catch (_) {}
     };
 
-    const formatLastActive = (date) => {
-        if (!date) return 'Never';
-        const now = new Date();
-        const lastAccessed = new Date(date);
-        const diffTime = Math.abs(now - lastAccessed);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays === 0) return 'Today';
-        if (diffDays === 1) return '1 day ago';
-        if (diffDays < 7) return `${diffDays} days ago`;
-        if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-        return `${Math.floor(diffDays / 30)} months ago`;
-    };
-
-    // Categorize enrollments
-    const modulesInProgress = enrollments.filter(e => {
+    /* ── Derived data ── */
+    const inProgress = enrollments.filter(e => {
         if (e.isCompleted) return false;
-        const hasPendingReview = (e.pendingManualGradingCount || 0) > 0;
-        const hasSubmittedFinal = (e.finalAssessmentAttempts || 0) > 0;
-        if (hasSubmittedFinal && hasPendingReview) return false;
-        if (e.completedLessons >= e.totalLessons && e.totalLessons > 0 && !hasSubmittedFinal) return false;
+        const hasPending   = (e.pendingManualGradingCount || 0) > 0;
+        const hasSubmitted = (e.finalAssessmentAttempts || 0) > 0;
+        if (hasSubmitted && hasPending) return false;
+        if (e.completedLessons >= e.totalLessons && e.totalLessons > 0 && !hasSubmitted) return false;
         return true;
     });
 
-    const pendingAssessmentModules = enrollments.filter(e => {
+    const pendingAssessments = enrollments.filter(e => {
         if (e.isCompleted) return false;
-        const hasSubmittedFinal = (e.finalAssessmentAttempts || 0) > 0;
-        const hasPendingReview = (e.pendingManualGradingCount || 0) > 0;
-        const allLessonsDone = e.completedLessons >= e.totalLessons && e.totalLessons > 0;
-
-        return (allLessonsDone && !hasSubmittedFinal) ||
-            (hasSubmittedFinal && !e.finalAssessmentPassed && !e.isCompleted) ||
-            (hasSubmittedFinal && hasPendingReview);
+        const hasSubmitted = (e.finalAssessmentAttempts || 0) > 0;
+        const hasPending   = (e.pendingManualGradingCount || 0) > 0;
+        const allDone      = e.completedLessons >= e.totalLessons && e.totalLessons > 0;
+        return (allDone && !hasSubmitted) ||
+               (hasSubmitted && !e.finalAssessmentPassed) ||
+               hasPending;
     });
 
-    const completedModules = enrollments.filter(e => e.isCompleted && e.certificateEarned);
-
-    // Stats
-    const avgProgress = modulesInProgress.length > 0
-        ? Math.round(modulesInProgress.reduce((sum, e) => sum + (e.progress || 0), 0) / modulesInProgress.length)
-        : 0;
-
-    const totalLessonsCompleted = enrollments.reduce((sum, e) => sum + (e.completedLessons || 0), 0);
-    const totalLessonsAll = enrollments.reduce((sum, e) => sum + (e.totalLessons || 0), 0);
-    const certificatesEarned = completedModules.length;
-
-    const assessmentsWithAttempts = enrollments.filter(e => (e.finalAssessmentAttempts || 0) > 0);
-    const bestFinalScore = assessmentsWithAttempts.length
-        ? Math.max(...assessmentsWithAttempts.map(e => e.finalAssessmentScore || 0))
-        : 0;
-
-    const stats = [
-        {
-            label: 'Total Enrollments',
-            value: enrollments.length || '0',
-            icon: 'BookOpen',
-            color: 'from-blue-500 to-blue-600',
-            iconColor: 'text-blue-600',
-            bgColor: 'bg-blue-50',
-            subtext: 'Active modules'
-        },
-        {
-            label: 'In Progress',
-            value: modulesInProgress.length || '0',
-            icon: 'Zap',
-            color: 'from-purple-500 to-purple-600',
-            iconColor: 'text-purple-600',
-            bgColor: 'bg-purple-50',
-            subtext: avgProgress > 0 ? `${avgProgress}% avg progress` : 'Get started'
-        },
-        {
-            label: 'Ready for Assessment',
-            value: pendingAssessmentModules.length || '0',
-            icon: 'Target',
-            color: 'from-indigo-500 to-indigo-600',
-            iconColor: 'text-indigo-600',
-            bgColor: 'bg-indigo-50',
-            subtext: pendingAssessmentModules.length > 0 ? 'Take assessment!' : 'Complete lessons first'
-        },
-        {
-            label: 'Completed',
-            value: completedModules.length || '0',
-            icon: 'CheckCircle',
-            color: 'from-green-500 to-emerald-600',
-            iconColor: 'text-green-600',
-            bgColor: 'bg-green-50',
-            subtext: `${totalLessonsCompleted}/${totalLessonsAll} lessons`
-        },
-        {
-            label: 'Certificates Earned',
-            value: certificatesEarned,
-            icon: 'Award',
-            color: 'from-[#021d49] to-blue-800',
-            iconColor: 'text-[#021d49]',
-            bgColor: 'bg-blue-50',
-            subtext: 'Achievements'
-        },
-    ];
-
-    const getLevelBadge = (level) => {
-        const badges = {
-            beginner: { color: 'bg-green-100 text-green-700', label: 'Beginner' },
-            intermediate: { color: 'bg-yellow-100 text-yellow-700', label: 'Intermediate' },
-            advanced: { color: 'bg-red-100 text-red-700', label: 'Advanced' },
-        };
-        return badges[level] || badges.beginner;
-    };
-
-    const getAssessmentStatus = (enrollment) => {
-        const hasSubmittedFinal = (enrollment.finalAssessmentAttempts || 0) > 0;
-        const hasPendingReview = (enrollment.pendingManualGradingCount || 0) > 0;
-        const canRetry = hasSubmittedFinal && !enrollment.finalAssessmentPassed && enrollment.finalAssessmentAttempts < 3;
-
-        if (hasPendingReview) return 'pending_review';
-        if (enrollment.requiresModuleRepeat) return 'repeat_required';
-        if (!hasSubmittedFinal) return 'ready';
-        if (canRetry) return 'retry';
-        if (hasSubmittedFinal && enrollment.finalAssessmentAttempts >= 3 && !enrollment.finalAssessmentPassed) return 'failed';
-        return 'ready';
-    };
+    const completed        = enrollments.filter(e => e.isCompleted);
+    const certsEarned      = completed.filter(e => e.certificateEarned).length;
+    const avgProgress      = inProgress.length
+        ? clamp(inProgress.reduce((s, e) => s + clamp(e.progress), 0) / inProgress.length) : 0;
+    const unreadCount      = notifications.filter(n => !n.isRead).length;
+    const visibleNotifs    = showAllActivity ? notifications : notifications.slice(0, 5);
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
-                <div className="text-center">
-                    <div className="relative">
-                        <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-t-4 border-[#021d49] mx-auto mb-4"></div>
-                        <div className="absolute inset-0 flex items-center justify-center">
-                            <Icons.BookOpen className="w-8 h-8 text-[#021d49]" />
+            <>
+                <Navbar />
+                <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                    <div className="text-center">
+                        <div className="relative w-14 h-14 mx-auto mb-3">
+                            <div className="animate-spin rounded-full h-14 w-14 border-4 border-[#021d49]/20 border-t-[#021d49]" />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Icons.BookOpen className="w-5 h-5 text-[#021d49]" />
+                            </div>
                         </div>
+                        <p className="text-sm font-medium text-gray-600">Loading your dashboard…</p>
                     </div>
-                    <p className="text-gray-700 font-semibold text-lg">Loading your dashboard...</p>
                 </div>
-            </div>
+            </>
         );
     }
+
+    const firstName = user?.firstName || 'there';
+    const fullName  = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '';
+    const initials  = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() : 'S';
 
     return (
         <>
             <Navbar />
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30">
-                <main className="p-4 sm:p-6 lg:p-8">
+            <div className="min-h-screen bg-gray-50/80">
+
+                {/* ════════════════════════════════
+                    HERO WELCOME BANNER
+                ════════════════════════════════ */}
+                <div className="bg-gradient-to-r from-[#021d49] via-[#0a2d6e] to-[#0f3a8a] px-4 sm:px-6 lg:px-8 py-8">
                     <div className="max-w-7xl mx-auto">
-                        {/* Welcome Header */}
-                        <div className="mb-8">
-                            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-                                Welcome back!
-                            </h1>
-                            <p className="text-gray-600 text-lg">
-                                Continue your learning journey and achieve your goals
-                            </p>
-                        </div>
-
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-6 mb-8">
-                            {stats.map((stat, index) => {
-                                const IconComponent = Icons[stat.icon];
-                                return (
-                                    <div
-                                        key={index}
-                                        className="group bg-white rounded-2xl p-6 border-2 border-gray-100 hover:border-[#021d49]/20 hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
-                                    >
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className={`${stat.bgColor} p-3 rounded-xl group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                                                {IconComponent && <IconComponent className={`w-6 h-6 ${stat.iconColor}`} />}
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="text-3xl sm:text-4xl font-black text-gray-900 mb-0.5">{stat.value}</p>
-                                            </div>
-                                        </div>
-                                        <p className="text-sm font-semibold text-gray-700 mb-1.5">{stat.label}</p>
-                                        <p className="text-xs text-gray-500 font-medium">{stat.subtext}</p>
-                                        <div className={`h-1.5 bg-gradient-to-r ${stat.color} rounded-full mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-sm`}></div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-
-                        {/* Achievements Summary */}
-                        <div className="bg-white rounded-3xl shadow-lg border-2 border-gray-100 mb-8 overflow-hidden">
-                            <div className="p-6 sm:p-8 border-b-2 border-gray-100 bg-gradient-to-r from-amber-50 to-yellow-50">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-amber-500 text-white p-3 rounded-xl">
-                                            <Icons.Trophy className="w-6 h-6" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-2xl font-bold text-gray-900">Your Achievements</h2>
-                                            <p className="text-gray-600 text-sm">See what you've accomplished so far</p>
-                                        </div>
-                                    </div>
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                            {/* Left: Identity */}
+                            <div className="flex items-center gap-4">
+                                <Avatar className="h-14 w-14 border-2 border-white/30 shrink-0">
+                                    <AvatarFallback className="bg-white/20 text-white text-lg font-bold backdrop-blur-sm">
+                                        {initials}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="text-blue-200/80 text-xs font-medium">Welcome back</p>
+                                    <h1 className="text-2xl font-bold text-white">{fullName || firstName}</h1>
+                                    {user?.email && (
+                                        <p className="text-blue-200/60 text-xs mt-0.5">{user.email}</p>
+                                    )}
                                 </div>
                             </div>
-
-                            <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                                {[{
-                                    title: 'Modules Completed',
-                                    value: completedModules.length,
-                                    icon: 'CheckCircle',
-                                    badge: `${totalLessonsCompleted}/${totalLessonsAll} lessons`,
-                                    color: 'from-emerald-500 to-green-600'
-                                }, {
-                                    title: 'Assessments Taken',
-                                    value: assessmentsWithAttempts.length,
-                                    icon: 'Target',
-                                    badge: assessmentsWithAttempts.length > 0 ? 'Keep the streak going' : 'Start your first assessment',
-                                    color: 'from-indigo-500 to-purple-600'
-                                }, {
-                                    title: 'Best Final Score',
-                                    value: `${bestFinalScore.toFixed ? bestFinalScore.toFixed(1) : bestFinalScore}%`,
-                                    icon: 'Award',
-                                    badge: bestFinalScore > 0 ? 'Great job!' : 'No score yet',
-                                    color: 'from-blue-500 to-blue-700'
-                                }, {
-                                    title: 'Certificates',
-                                    value: certificatesEarned,
-                                    icon: 'Medal',
-                                    badge: certificatesEarned > 0 ? 'Earned certificates' : 'Complete a module to earn one',
-                                    color: 'from-amber-500 to-orange-600'
-                                }].map((card, idx) => {
-                                    const Icon = Icons[card.icon];
-                                    return (
-                                        <div key={idx} className="group border-2 border-gray-100 bg-gradient-to-br from-white to-gray-50 rounded-2xl p-5 hover:border-amber-200 hover:shadow-xl transition-all duration-200">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className={`p-3 rounded-xl text-white bg-gradient-to-r ${card.color}`}>
-                                                    {Icon && <Icon className="w-5 h-5" />}
-                                                </div>
-                                                <span className="text-xs font-semibold text-gray-500">{card.title}</span>
-                                            </div>
-                                            <p className="text-3xl font-black text-gray-900 mb-2">{card.value}</p>
-                                            <p className="text-sm text-gray-600 font-semibold flex items-center gap-2">
-                                                <Icons.Sparkles className="w-4 h-4 text-amber-500" />
-                                                {card.badge}
-                                            </p>
-                                        </div>
-                                    );
-                                })}
+                            {/* Right: Hero stats */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <HeroStat icon="BookOpen"   label="Enrolled"    value={enrollments.length} />
+                                <HeroStat icon="Zap"        label="In Progress" value={inProgress.length}  />
+                                <HeroStat icon="CheckCircle" label="Completed"  value={completed.length}   />
+                                <HeroStat icon="Award"      label="Certificates" value={certsEarned}       />
                             </div>
                         </div>
 
-                        {/* Level Progression */}
-                        {progressions.length > 0 && (
-                            <div className="bg-white rounded-3xl shadow-lg border-2 border-gray-100 mb-8 overflow-hidden">
-                                <div className="p-6 sm:p-8 border-b-2 border-gray-100 bg-gradient-to-r from-purple-50 to-indigo-50">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-purple-600 text-white p-3 rounded-xl">
-                                            <Icons.TrendingUp className="w-6 h-6" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-2xl font-bold text-gray-900">Level Progression</h2>
-                                            <p className="text-gray-600 text-sm">Your progress across categories</p>
-                                        </div>
+                        {/* Progress bar */}
+                        {inProgress.length > 0 && (
+                            <div className="mt-5 bg-white/10 rounded-xl p-3 flex items-center gap-4 backdrop-blur-sm">
+                                <div className="flex-1">
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <span className="text-xs text-white/70">Overall learning progress</span>
+                                        <span className="text-xs font-bold text-white">{avgProgress}%</span>
+                                    </div>
+                                    <div className="h-2 rounded-full bg-white/20 overflow-hidden">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-[#00c4b3] to-blue-300 transition-all duration-700"
+                                            style={{ width: `${Math.min(100, avgProgress)}%` }}
+                                        />
                                     </div>
                                 </div>
-                                <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {progressions.map((prog, idx) => {
-                                        const categoryName = prog.categoryId?.name || prog.categoryName || 'Category';
-                                        const levels = ['beginner', 'intermediate', 'advanced'];
-                                        const currentLevelIndex = levels.indexOf(prog.currentLevel || 'beginner');
-
-                                        return (
-                                            <div key={idx} className="border-2 border-gray-200 rounded-2xl p-5 hover:border-purple-300 hover:shadow-lg transition-all">
-                                                <h3 className="font-bold text-gray-900 mb-3">{categoryName}</h3>
-                                                <div className="space-y-2">
-                                                    {levels.map((level, li) => {
-                                                        const isUnlocked = li <= currentLevelIndex;
-                                                        const isCurrent = li === currentLevelIndex;
-                                                        const levelData = prog.levels?.[level] || {};
-                                                        return (
-                                                            <div key={level} className={`flex items-center gap-3 p-2 rounded-lg ${isCurrent ? 'bg-purple-50 border border-purple-200' : isUnlocked ? 'bg-green-50' : 'bg-gray-50'}`}>
-                                                                {isUnlocked ? (
-                                                                    <Icons.CheckCircle className={`w-5 h-5 ${isCurrent ? 'text-purple-600' : 'text-green-600'}`} />
-                                                                ) : (
-                                                                    <Icons.Lock className="w-5 h-5 text-gray-400" />
-                                                                )}
-                                                                <span className={`text-sm font-medium capitalize ${isUnlocked ? 'text-gray-900' : 'text-gray-400'}`}>
-                                                                    {level}
-                                                                </span>
-                                                                {isCurrent && (
-                                                                    <span className="ml-auto text-xs font-bold text-purple-600 bg-purple-100 px-2 py-0.5 rounded-full">
-                                                                        Current
-                                                                    </span>
-                                                                )}
-                                                                {isUnlocked && !isCurrent && (
-                                                                    <span className="ml-auto text-xs font-bold text-green-600">
-                                                                        {levelData.completedModules || 0} done
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Quick Actions */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                            <button
-                                onClick={() => router.push('/student/modules')}
-                                className="bg-gradient-to-r from-[#021d49] to-blue-700 text-white rounded-2xl p-6 hover:from-[#032e6b] hover:to-blue-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center gap-4"
-                            >
-                                <div className="bg-white/20 p-3 rounded-xl">
-                                    <Icons.Search className="w-6 h-6" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-bold text-lg">Browse Modules</p>
-                                    <p className="text-sm text-blue-100">Discover new learning</p>
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => router.push('/student/certificates')}
-                                className="bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-2xl p-6 hover:from-purple-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center gap-4"
-                            >
-                                <div className="bg-white/20 p-3 rounded-xl">
-                                    <Icons.Award className="w-6 h-6" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-bold text-lg">My Certificates</p>
-                                    <p className="text-sm text-purple-100">View achievements</p>
-                                </div>
-                            </button>
-
-                            <button
-                                onClick={() => router.push('/student/achievements')}
-                                className="bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl p-6 hover:from-emerald-600 hover:to-green-700 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center gap-4"
-                            >
-                                <div className="bg-white/20 p-3 rounded-xl">
-                                    <Icons.Trophy className="w-6 h-6" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="font-bold text-lg">Achievements</p>
-                                    <p className="text-sm text-green-100">Track progress</p>
-                                </div>
-                            </button>
-                        </div>
-
-                        {/* ─── Discover New Modules ─────────────────────── */}
-                        {availableModules.length > 0 && (
-                            <div className="bg-white rounded-3xl shadow-lg border-2 border-gray-100 mb-8 overflow-hidden">
-                                <div className="p-6 sm:p-8 border-b-2 border-gray-100 bg-gradient-to-r from-indigo-50 to-blue-50">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-indigo-600 text-white p-3 rounded-xl">
-                                                <Icons.Compass className="w-6 h-6" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-2xl font-bold text-gray-900">Discover New Modules</h2>
-                                                <p className="text-gray-600 text-sm">Expand your knowledge with these available modules</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => router.push('/student/modules')}
-                                            className="text-indigo-600 hover:text-indigo-800 font-semibold text-sm flex items-center gap-1"
-                                        >
-                                            See All
-                                            <Icons.ChevronRight className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                                    {availableModules.map((mod) => {
-                                        const levelBadge = getLevelBadge(mod.level);
-                                        const categoryName = mod.categoryId?.name || '';
-                                        const instructorIds = mod.instructorIds || [];
-                                        const lead = instructorIds[0];
-                                        const instructorName = lead
-                                            ? `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.email || 'Instructor'
-                                            : 'Instructor';
-                                        const cat = mod.categoryId;
-                                        const isPaid = cat?.isPaid === true || cat?.accessType === 'paid';
-                                        const isFellowOnly = cat?.accessType === 'free';
-                                        const catPrice = cat?.price;
-
-                                        return (
-                                            <div
-                                                key={mod._id}
-                                                className="group bg-white border-2 border-gray-200 rounded-2xl overflow-hidden hover:border-indigo-300 hover:shadow-xl transition-all transform hover:-translate-y-1 flex flex-col"
-                                            >
-                                                {/* Thumbnail */}
-                                                <div
-                                                    className="w-full h-36 overflow-hidden cursor-pointer flex-shrink-0"
-                                                    onClick={() => router.push(`/modules/${mod._id}`)}
-                                                >
-                                                    {mod.bannerUrl || mod.thumbnailUrl ? (
-                                                        <img
-                                                            src={mod.bannerUrl || mod.thumbnailUrl}
-                                                            alt={mod.title}
-                                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-full h-full bg-gradient-to-br from-indigo-100 to-blue-100 flex items-center justify-center">
-                                                            <Icons.Layers className="w-12 h-12 text-indigo-400" />
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div className="p-4 flex flex-col flex-1">
-                                                    {/* Badges */}
-                                                    <div className="flex flex-wrap items-center gap-1.5 mb-2">
-                                                        {mod.level && (
-                                                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${levelBadge.color}`}>
-                                                                {levelBadge.label}
-                                                            </span>
-                                                        )}
-                                                        {isFellowOnly && (
-                                                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 flex items-center gap-1">
-                                                                <Icons.Award className="w-3 h-3" /> Fellows Only
-                                                            </span>
-                                                        )}
-                                                        {isPaid && !isFellowOnly && (
-                                                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-orange-100 text-orange-700">
-                                                                {catPrice ? `$${catPrice.toLocaleString()}` : 'Paid'}
-                                                            </span>
-                                                        )}
-                                                        {!isPaid && !isFellowOnly && (
-                                                            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Free</span>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Title */}
-                                                    <h3
-                                                        className="font-bold text-gray-900 text-sm mb-1 line-clamp-2 cursor-pointer group-hover:text-indigo-600 transition-colors leading-snug"
-                                                        onClick={() => router.push(`/modules/${mod._id}`)}
-                                                    >
-                                                        {mod.title}
-                                                    </h3>
-
-                                                    {/* Category + Instructor */}
-                                                    <p className="text-xs text-gray-500 mb-1 truncate">
-                                                        {categoryName && <span className="font-medium">{categoryName} · </span>}
-                                                        {instructorName}
-                                                    </p>
-
-                                                    {/* Lesson count */}
-                                                    <p className="text-xs text-gray-400 mb-3">
-                                                        {(mod.lessons?.length || 0)} {mod.lessons?.length === 1 ? 'lesson' : 'lessons'}
-                                                    </p>
-
-                                                    <button
-                                                        onClick={() => router.push(`/modules/${mod._id}`)}
-                                                        className="mt-auto w-full bg-gradient-to-r from-[#021d49] to-blue-700 hover:from-[#032e6b] hover:to-blue-800 text-white py-2.5 rounded-xl font-bold text-sm transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2"
-                                                    >
-                                                        <Icons.Eye className="w-4 h-4" />
-                                                        View Details
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Pending Assessment Modules */}
-                        {pendingAssessmentModules.length > 0 && (
-                            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-3xl shadow-2xl mb-8 overflow-hidden">
-                                <div className="p-6 sm:p-8 text-white">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="bg-white/20 p-3 rounded-xl">
-                                            <Icons.Target className="w-8 h-8" />
-                                        </div>
-                                        <div>
-                                            <h2 className="text-2xl sm:text-3xl font-bold">
-                                                Final Assessment Status
-                                            </h2>
-                                            <p className="text-indigo-100 text-sm sm:text-base">
-                                                Complete your learning journey with the final assessment
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white p-6 sm:p-8">
-                                    <div className="space-y-6">
-                                        {pendingAssessmentModules.map((enrollment) => {
-                                            const mod = enrollment.moduleId || {};
-                                            const status = getAssessmentStatus(enrollment);
-                                            const levelBadge = getLevelBadge(mod.level);
-
-                                            const statusConfig = {
-                                                ready: {
-                                                    badge: { bg: 'bg-green-100', text: 'text-green-700', icon: 'CheckCircle', label: 'Ready for Assessment' },
-                                                    action: { text: 'Take Final Assessment', icon: 'BookOpen', onClick: () => router.push(`/student/modules/${mod._id}?showFinalAssessment=true`) }
-                                                },
-                                                pending_review: {
-                                                    badge: { bg: 'bg-amber-100', text: 'text-amber-700', icon: 'Clock', label: 'Waiting for Instructor Review' },
-                                                    action: { text: 'View Submission', icon: 'Eye', onClick: () => router.push(`/student/modules/${mod._id}`) }
-                                                },
-                                                retry: {
-                                                    badge: { bg: 'bg-orange-100', text: 'text-orange-700', icon: 'RefreshCw', label: `Retry Available (${enrollment.finalAssessmentAttempts}/3 attempts)` },
-                                                    action: { text: 'Retry Assessment', icon: 'RotateCcw', onClick: () => router.push(`/student/modules/${mod._id}?showFinalAssessment=true`) }
-                                                },
-                                                repeat_required: {
-                                                    badge: { bg: 'bg-red-100', text: 'text-red-700', icon: 'AlertTriangle', label: 'Module Repeat Required' },
-                                                    action: { text: 'Repeat Module', icon: 'RotateCcw', onClick: () => router.push(`/student/modules/${mod._id}`) }
-                                                },
-                                                failed: {
-                                                    badge: { bg: 'bg-red-100', text: 'text-red-700', icon: 'XCircle', label: 'All attempts used - Contact instructor' },
-                                                    action: { text: 'View Results', icon: 'FileText', onClick: () => router.push(`/student/modules/${mod._id}`) }
-                                                }
-                                            };
-
-                                            const config = statusConfig[status] || statusConfig.ready;
-                                            const BadgeIcon = Icons[config.badge.icon];
-                                            const ActionIcon = Icons[config.action.icon];
-
-                                            return (
-                                                <div key={enrollment._id} className="flex flex-col sm:flex-row gap-6 p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border-2 border-indigo-200 hover:shadow-lg transition-all">
-                                                    {mod.bannerUrl ? (
-                                                        <img
-                                                            src={mod.bannerUrl}
-                                                            alt={mod.title}
-                                                            className="w-full sm:w-48 h-32 rounded-xl object-cover cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0 shadow-md"
-                                                            onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                        />
-                                                    ) : (
-                                                        <div
-                                                            className="w-full sm:w-48 h-32 rounded-xl bg-gradient-to-br from-indigo-200 to-purple-200 flex items-center justify-center flex-shrink-0 shadow-md cursor-pointer"
-                                                            onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                        >
-                                                            <Icons.Layers className="w-12 h-12 text-indigo-500" />
-                                                        </div>
-                                                    )}
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <h3
-                                                                className="font-bold text-xl text-gray-900 cursor-pointer hover:text-indigo-600 transition-colors"
-                                                                onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                            >
-                                                                {mod.title || 'Module'}
-                                                            </h3>
-                                                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${levelBadge.color}`}>
-                                                                {levelBadge.label}
-                                                            </span>
-                                                        </div>
-
-                                                        <div className="flex flex-wrap items-center gap-3 mb-4">
-                                                            <div className={`flex items-center gap-2 ${config.badge.bg} ${config.badge.text} px-4 py-2 rounded-full`}>
-                                                                <BadgeIcon className="w-5 h-5" />
-                                                                <span className="text-sm font-bold">{config.badge.label}</span>
-                                                            </div>
-                                                            {enrollment.finalAssessmentScore > 0 && status !== 'ready' && (
-                                                                <div className="flex items-center gap-2 bg-purple-100 text-purple-700 px-4 py-2 rounded-full">
-                                                                    <Icons.Award className="w-4 h-4" />
-                                                                    <span className="text-xs font-bold">
-                                                                        Score: {enrollment.finalAssessmentScore.toFixed(1)}%
-                                                                    </span>
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="w-full bg-green-200 rounded-full h-3 mb-4">
-                                                            <div
-                                                                className="bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all shadow-sm"
-                                                                style={{ width: '100%' }}
-                                                            ></div>
-                                                        </div>
-
-                                                        {status === 'pending_review' && (
-                                                            <div className="mb-4 p-4 bg-amber-50 border-l-4 border-amber-400 rounded">
-                                                                <p className="text-sm text-amber-800">
-                                                                    <strong>Final Assessment Done - Waiting for Review</strong><br />
-                                                                    Your instructor is reviewing your essay responses. You'll be notified once grading is complete.
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                        {status === 'repeat_required' && (
-                                                            <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-400 rounded">
-                                                                <p className="text-sm text-red-800">
-                                                                    <strong>Maximum Attempts Reached — Module Repeat Required</strong><br />
-                                                                    You have used all your assessment attempts. You must redo all lessons before you can attempt the final assessment again.
-                                                                </p>
-                                                            </div>
-                                                        )}
-
-                                                        <button
-                                                            onClick={config.action.onClick}
-                                                            className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center gap-3 text-lg"
-                                                        >
-                                                            <ActionIcon className="w-5 h-5" />
-                                                            {config.action.text}
-                                                            <Icons.ArrowRight className="w-5 h-5" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Modules in Progress */}
-                        {modulesInProgress.length > 0 && (
-                            <div className="bg-white rounded-3xl shadow-lg border-2 border-gray-100 mb-8 overflow-hidden">
-                                <div className="p-6 sm:p-8 border-b-2 border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-[#021d49] text-white p-3 rounded-xl">
-                                                <Icons.BookOpen className="w-6 h-6" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-2xl font-bold text-gray-900">
-                                                    Continue Learning ({modulesInProgress.length})
-                                                </h2>
-                                                <p className="text-gray-600 text-sm">Keep up the momentum!</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => router.push('/student/modules')}
-                                            className="text-[#021d49] hover:text-blue-700 font-semibold text-sm flex items-center gap-1"
-                                        >
-                                            Browse All
-                                            <Icons.ChevronRight className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 sm:p-8">
-                                    <div className="space-y-6">
-                                        {modulesInProgress.map((enrollment) => {
-                                            const mod = enrollment.moduleId || {};
-                                            const categoryName = mod.categoryId?.name || '';
-                                            const levelBadge = getLevelBadge(mod.level);
-
-                                            return (
-                                                <div key={enrollment._id} className="flex flex-col sm:flex-row gap-6 p-6 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-all border-2 border-gray-200 hover:border-[#021d49]/30">
-                                                    {mod.bannerUrl ? (
-                                                        <img
-                                                            src={mod.bannerUrl}
-                                                            alt={mod.title}
-                                                            className="w-full sm:w-48 h-32 rounded-xl object-cover cursor-pointer hover:opacity-90 transition-opacity flex-shrink-0 shadow-md"
-                                                            onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                        />
-                                                    ) : (
-                                                        <div
-                                                            className="w-full sm:w-48 h-32 rounded-xl bg-gradient-to-br from-blue-200 to-indigo-200 flex items-center justify-center flex-shrink-0 shadow-md cursor-pointer"
-                                                            onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                        >
-                                                            <Icons.Layers className="w-12 h-12 text-blue-500" />
-                                                        </div>
-                                                    )}
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <h3
-                                                                className="font-bold text-xl text-gray-900 cursor-pointer hover:text-[#021d49] transition-colors"
-                                                                onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                            >
-                                                                {mod.title || 'Module'}
-                                                            </h3>
-                                                            <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${levelBadge.color}`}>
-                                                                {levelBadge.label}
-                                                            </span>
-                                                            {categoryName && (
-                                                                <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 text-gray-600">
-                                                                    {categoryName}
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="mb-4">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-sm font-bold text-gray-700">{enrollment.progress || 0}% Complete</span>
-                                                                    {enrollment.progress >= 75 && (
-                                                                        <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">Almost there!</span>
-                                                                    )}
-                                                                    {enrollment.progress >= 50 && enrollment.progress < 75 && (
-                                                                        <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">Halfway!</span>
-                                                                    )}
-                                                                </div>
-                                                                <span className="text-xs text-gray-500 uppercase font-semibold">Last active: {formatLastActive(enrollment.lastAccessedAt)}</span>
-                                                            </div>
-                                                            <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
-                                                                <div
-                                                                    className={`h-3 rounded-full transition-all shadow-sm ${enrollment.progress >= 75
-                                                                        ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                                                                        : enrollment.progress >= 50
-                                                                            ? 'bg-gradient-to-r from-blue-500 to-indigo-600'
-                                                                            : 'bg-gradient-to-r from-[#021d49] to-blue-600'
-                                                                        }`}
-                                                                    style={{ width: `${enrollment.progress || 0}%` }}
-                                                                ></div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Lesson Progress */}
-                                                        <div className="mb-4 bg-white p-4 rounded-xl border-2 border-gray-200">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Lesson Progress</span>
-                                                                <span className="text-xs font-bold text-[#021d49]">
-                                                                    {enrollment.completedLessons || 0} / {enrollment.totalLessons || 0} Lessons
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex gap-1">
-                                                                {Array.from({ length: enrollment.totalLessons || 0 }).map((_, idx) => {
-                                                                    const lessonProg = enrollment.lessonProgress?.find(lp => lp.lessonIndex === idx);
-                                                                    const isCompleted = lessonProg?.isCompleted || false;
-                                                                    const isCurrent = idx === (enrollment.lastAccessedLesson || 0) && !isCompleted;
-                                                                    return (
-                                                                        <div
-                                                                            key={idx}
-                                                                            className={`h-2 flex-1 rounded-full transition-all ${isCompleted
-                                                                                ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                                                                                : isCurrent
-                                                                                    ? 'bg-gradient-to-r from-blue-400 to-indigo-500 animate-pulse'
-                                                                                    : 'bg-gray-300'
-                                                                                }`}
-                                                                            title={`Lesson ${idx + 1}`}
-                                                                        ></div>
-                                                                    );
-                                                                })}
-                                                            </div>
-                                                            <div className="flex items-center gap-4 mt-3 text-xs">
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-green-500 to-emerald-600"></div>
-                                                                    <span className="text-gray-600 font-medium">Completed</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <div className="w-3 h-3 rounded-full bg-gradient-to-r from-blue-400 to-indigo-500"></div>
-                                                                    <span className="text-gray-600 font-medium">Current</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-                                                                    <span className="text-gray-600 font-medium">Pending</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div className="flex gap-3">
-                                                            <button
-                                                                onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                                className="flex-1 bg-gradient-to-r from-[#021d49] to-blue-700 hover:from-[#032e6b] hover:to-blue-800 text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                                                            >
-                                                                <Icons.Play className="w-5 h-5" />
-                                                                Continue Learning
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Completed Modules */}
-                        {completedModules.length > 0 && (
-                            <div className="bg-white rounded-3xl shadow-lg border-2 border-gray-100 mb-8 overflow-hidden">
-                                <div className="p-6 sm:p-8 border-b-2 border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-3 rounded-xl">
-                                                <Icons.Award className="w-6 h-6" />
-                                            </div>
-                                            <div>
-                                                <h2 className="text-2xl font-bold text-gray-900">
-                                                    Completed Modules ({completedModules.length})
-                                                </h2>
-                                                <p className="text-gray-600 text-sm">Congratulations on your achievements!</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            onClick={() => router.push('/student/certificates')}
-                                            className="text-green-600 hover:text-green-700 font-semibold text-sm flex items-center gap-1"
-                                        >
-                                            View Certificates
-                                            <Icons.ChevronRight className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {completedModules.map((enrollment) => {
-                                        const mod = enrollment.moduleId || {};
-                                        const levelBadge = getLevelBadge(mod.level);
-
-                                        return (
-                                            <div key={enrollment._id} className="group bg-gradient-to-br from-white to-gray-50 border-2 border-gray-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-green-300 transition-all transform hover:-translate-y-1">
-                                                <div className="relative">
-                                                    {mod.bannerUrl ? (
-                                                        <img
-                                                            src={mod.bannerUrl}
-                                                            alt={mod.title}
-                                                            className="w-full h-40 object-cover cursor-pointer group-hover:opacity-90 transition-opacity"
-                                                            onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                        />
-                                                    ) : (
-                                                        <div
-                                                            className="w-full h-40 bg-gradient-to-br from-green-200 to-emerald-200 flex items-center justify-center cursor-pointer"
-                                                            onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                        >
-                                                            <Icons.Layers className="w-16 h-16 text-green-500" />
-                                                        </div>
-                                                    )}
-                                                    <div className="absolute top-3 right-3 bg-green-500 text-white px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 shadow-lg">
-                                                        <Icons.CheckCircle className="w-3 h-3" />
-                                                        Completed
-                                                    </div>
-                                                    <div className="absolute top-3 left-3">
-                                                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${levelBadge.color}`}>
-                                                            {levelBadge.label}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="p-5">
-                                                    <h3 className="font-bold text-gray-900 mb-3 text-base line-clamp-2 group-hover:text-green-600 transition-colors">{mod.title || 'Module'}</h3>
-                                                    <div className="flex items-center gap-2 mb-2 text-xs text-gray-600">
-                                                        <Icons.Calendar className="w-3 h-3" />
-                                                        <span>Completed {formatLastActive(enrollment.completedAt)}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 mb-4 text-xs">
-                                                        <Icons.Award className="w-3 h-3 text-green-600" />
-                                                        <span className="text-green-600 font-bold">Score: {(enrollment.finalAssessmentScore || 0).toFixed(1)}%</span>
-                                                    </div>
-                                                    {enrollment.certificatePublicId ? (
-                                                        <button
-                                                            onClick={() => router.push('/student/certificates')}
-                                                            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-3 rounded-xl font-bold transition-all text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-                                                        >
-                                                            <Icons.Download className="w-4 h-4" />
-                                                            View Certificate
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            onClick={() => router.push(`/student/modules/${mod._id}`)}
-                                                            className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all"
-                                                        >
-                                                            <Icons.Eye className="w-4 h-4" />
-                                                            View Module
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Empty State */}
-                        {enrollments.length === 0 && (
-                            <div className="bg-white rounded-3xl shadow-lg border-2 border-gray-100 p-12 text-center">
-                                <Icons.BookOpen className="w-20 h-20 text-gray-300 mx-auto mb-6" />
-                                <h3 className="text-3xl font-bold text-gray-900 mb-3">No Modules Yet</h3>
-                                <p className="text-gray-600 mb-8 text-lg">Start your learning journey by exploring our modules</p>
-                                <button
+                                <Button
+                                    size="sm"
+                                    className="shrink-0 bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs h-8 backdrop-blur-sm"
                                     onClick={() => router.push('/student/modules')}
-                                    className="bg-gradient-to-r from-[#021d49] to-blue-700 hover:from-[#032e6b] hover:to-blue-800 text-white px-10 py-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl inline-flex items-center gap-3 text-lg"
                                 >
-                                    <Icons.Search className="w-6 h-6" />
+                                    <Icons.Compass className="w-3.5 h-3.5 mr-1.5" />
                                     Browse Modules
-                                </button>
+                                </Button>
                             </div>
                         )}
                     </div>
-                </main>
+                </div>
+
+                {/* ════════════════════════════════
+                    MAIN CONTENT
+                ════════════════════════════════ */}
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                        {/* ══ LEFT / MAIN COLUMN ══ */}
+                        <div className="lg:col-span-2 space-y-6">
+
+                            {/* Quick Links */}
+                            <Card className="border-gray-100 shadow-sm">
+                                <CardHeader className="px-5 pt-5 pb-3">
+                                    <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                        <Icons.Zap className="w-4 h-4 text-amber-500" />
+                                        Quick Links
+                                    </CardTitle>
+                                    <p className="text-xs text-gray-400 mt-0.5">Frequently accessed resources</p>
+                                </CardHeader>
+                                <CardContent className="px-5 pb-5">
+                                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                                        {[
+                                            { icon: 'BookOpen',      label: 'Browse',       sub: 'All modules',  color: 'text-blue-600',   bgColor: 'bg-blue-50',   href: '/student/modules'      },
+                                            { icon: 'MessageSquare', label: 'Discussions',  sub: 'Forums',       color: 'text-teal-600',   bgColor: 'bg-teal-50',   href: '/student/modules'      },
+                                            { icon: 'Award',         label: 'Certificates', sub: 'My awards',    color: 'text-violet-600', bgColor: 'bg-violet-50', href: '/student/certificates'  },
+                                            { icon: 'Trophy',        label: 'Achievements', sub: 'Progress',     color: 'text-amber-600',  bgColor: 'bg-amber-50',  href: '/student/achievements'  },
+                                            { icon: 'User',          label: 'Profile',      sub: 'My account',   color: 'text-gray-600',   bgColor: 'bg-gray-100',  href: '/student/profile'       },
+                                        ].map((ql) => (
+                                            <QuickLink key={ql.label} {...ql} onClick={() => router.push(ql.href)} />
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Continue Learning */}
+                            {inProgress.length > 0 && (
+                                <Card className="border-gray-100 shadow-sm">
+                                    <CardHeader className="px-5 pt-5 pb-3">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                    <Icons.Play className="w-4 h-4 text-[#021d49]" />
+                                                    Continue Learning
+                                                    <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-[#021d49] text-white border-0 rounded-full">
+                                                        {inProgress.length}
+                                                    </Badge>
+                                                </CardTitle>
+                                                <p className="text-xs text-gray-400 mt-0.5">Pick up where you left off</p>
+                                            </div>
+                                            <Button variant="ghost" size="sm"
+                                                className="text-xs text-[#021d49] hover:bg-blue-50 h-7 px-2"
+                                                onClick={() => router.push('/student/modules')}>
+                                                View all <Icons.ChevronRight className="w-3 h-3 ml-0.5" />
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="px-5 pb-5 space-y-2.5">
+                                        {inProgress.slice(0, 4).map((e) => (
+                                            <ContinueLearningCard
+                                                key={e._id}
+                                                enrollment={e}
+                                                onClick={() => router.push(`/student/modules/${e.moduleId._id}`)}
+                                            />
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Assessments Due */}
+                            {pendingAssessments.length > 0 && (
+                                <Card className="border-gray-100 shadow-sm">
+                                    <CardHeader className="px-5 pt-5 pb-3">
+                                        <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                            <Icons.Target className="w-4 h-4 text-amber-500" />
+                                            Assessments
+                                            <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-amber-500 text-white border-0 rounded-full">
+                                                {pendingAssessments.length}
+                                            </Badge>
+                                        </CardTitle>
+                                        <p className="text-xs text-gray-400 mt-0.5">Modules awaiting your assessment</p>
+                                    </CardHeader>
+                                    <CardContent className="px-5 pb-5 space-y-2">
+                                        {pendingAssessments.slice(0, 4).map((e) => (
+                                            <AssessmentAlertCard
+                                                key={e._id}
+                                                enrollment={e}
+                                                onClick={() => router.push(`/student/modules/${e.moduleId._id}`)}
+                                            />
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Modules Section */}
+                            <Card className="border-gray-100 shadow-sm">
+                                <CardHeader className="px-5 pt-5 pb-0">
+                                    {/* Tab-like switcher */}
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                                            <button
+                                                onClick={() => setModulesTab('available')}
+                                                className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${modulesTab === 'available' ? 'bg-white shadow-sm text-[#021d49]' : 'text-gray-500 hover:text-gray-700'}`}
+                                            >
+                                                Available Modules
+                                                {availableModules.length > 0 && (
+                                                    <span className="ml-1.5 bg-[#021d49] text-white text-[10px] rounded-full px-1.5 py-0.5">{availableModules.length}</span>
+                                                )}
+                                            </button>
+                                            <button
+                                                onClick={() => setModulesTab('progress')}
+                                                className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${modulesTab === 'progress' ? 'bg-white shadow-sm text-[#021d49]' : 'text-gray-500 hover:text-gray-700'}`}
+                                            >
+                                                My Progress
+                                            </button>
+                                        </div>
+                                        <Button variant="ghost" size="sm"
+                                            className="text-xs text-[#021d49] hover:bg-blue-50 h-7 px-2"
+                                            onClick={() => router.push('/student/modules')}>
+                                            Browse all <Icons.ArrowRight className="w-3 h-3 ml-0.5" />
+                                        </Button>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="px-5 pb-5">
+                                    {modulesTab === 'available' ? (
+                                        availableModules.length > 0 ? (
+                                            <>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                                                    {availableModules.slice(0, 6).map((mod) => (
+                                                        <AvailableModuleCard
+                                                            key={mod._id}
+                                                            mod={mod}
+                                                            onDetails={setDrawerMod}
+                                                            onEnroll={(id) => router.push(`/student/modules/${id}`)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                                <Button
+                                                    variant="outline"
+                                                    className="w-full border-dashed border-gray-300 text-gray-600 hover:border-[#021d49] hover:text-[#021d49] text-xs h-9"
+                                                    onClick={() => router.push('/student/modules')}>
+                                                    <Icons.Grid className="w-3.5 h-3.5 mr-2" />
+                                                    View All Modules
+                                                    {availableModules.length > 6 && (
+                                                        <Badge className="ml-2 h-4 px-1.5 text-[10px] bg-gray-200 text-gray-600 border-0">
+                                                            +{availableModules.length - 6} more
+                                                        </Badge>
+                                                    )}
+                                                </Button>
+                                            </>
+                                        ) : (
+                                            <Empty icon="BookOpen" title="All caught up!" sub="You're enrolled in all available modules." />
+                                        )
+                                    ) : (
+                                        /* Progress view */
+                                        enrollments.length > 0 ? (
+                                            <div className="space-y-2">
+                                                {enrollments.map((e) => {
+                                                    const mod  = e.moduleId || {};
+                                                    const lvl  = getLvl(mod.level);
+                                                    const prog = clamp(e.progress);
+
+                                                    // Status label
+                                                    let statusBadge;
+                                                    if (e.isCompleted) {
+                                                        statusBadge = <Badge className="text-[9px] bg-emerald-100 text-emerald-700 border-0 font-semibold shrink-0"><Icons.CheckCircle className="w-2.5 h-2.5 mr-0.5 inline" />Done</Badge>;
+                                                    } else if ((e.pendingManualGradingCount || 0) > 0) {
+                                                        statusBadge = <Badge className="text-[9px] bg-amber-100 text-amber-700 border-0 font-semibold shrink-0"><Icons.Clock className="w-2.5 h-2.5 mr-0.5 inline" />Review</Badge>;
+                                                    } else if (e.completedLessons >= e.totalLessons && e.totalLessons > 0) {
+                                                        statusBadge = <Badge className="text-[9px] bg-blue-100 text-blue-700 border-0 font-semibold shrink-0"><Icons.Target className="w-2.5 h-2.5 mr-0.5 inline" />Assess</Badge>;
+                                                    } else {
+                                                        statusBadge = <Badge className="text-[9px] bg-violet-100 text-violet-700 border-0 font-semibold shrink-0"><Icons.Play className="w-2.5 h-2.5 mr-0.5 inline" />Active</Badge>;
+                                                    }
+
+                                                    return (
+                                                        <div key={e._id}
+                                                            className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-blue-50/40 cursor-pointer transition-colors group border border-transparent hover:border-blue-100"
+                                                            onClick={() => router.push(`/student/modules/${mod._id}`)}>
+                                                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${e.isCompleted ? 'bg-emerald-100' : 'bg-[#021d49]/8'}`}>
+                                                                {e.isCompleted
+                                                                    ? <Icons.CheckCircle className="w-4 h-4 text-emerald-500" />
+                                                                    : <Icons.BookOpen className="w-4 h-4 text-[#021d49]" />
+                                                                }
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <div className="flex items-center justify-between gap-2 mb-1">
+                                                                    <p className="text-xs font-semibold text-gray-900 line-clamp-1 group-hover:text-[#021d49] transition-colors">{mod.title}</p>
+                                                                    <div className="flex items-center gap-1 shrink-0">
+                                                                        {statusBadge}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Progress value={prog} className="flex-1 h-1.5" />
+                                                                    <span className="text-[10px] font-bold text-[#021d49] shrink-0 w-8 text-right">{prog}%</span>
+                                                                </div>
+                                                                <div className="flex items-center justify-between mt-1">
+                                                                    <span className="text-[10px] text-gray-400">{Math.min(e.completedLessons || 0, e.totalLessons || 0)}/{e.totalLessons || 0} lessons</span>
+                                                                    <Badge variant="outline" className={`text-[9px] border ${lvl.badge}`}>{mod.level}</Badge>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        ) : (
+                                            <Empty icon="BookOpen" title="No modules yet"
+                                                sub="Enroll in a module to start tracking progress."
+                                                action="Browse Modules"
+                                                onAction={() => router.push('/student/modules')} />
+                                        )
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Learning Progression by Level */}
+                            {progressions.length > 0 && (
+                                <Card className="border-gray-100 shadow-sm">
+                                    <CardHeader className="px-5 pt-5 pb-3">
+                                        <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                            <Icons.TrendingUp className="w-4 h-4 text-[#021d49]" />
+                                            Level Progression
+                                        </CardTitle>
+                                        <p className="text-xs text-gray-400 mt-0.5">Your journey through each category</p>
+                                    </CardHeader>
+                                    <CardContent className="px-5 pb-5 space-y-3">
+                                        {progressions.map((prog) => {
+                                            const catName    = prog.categoryId?.name || prog.categoryName || 'Category';
+                                            const levels     = ['beginner', 'intermediate', 'advanced'];
+                                            const currentIdx = levels.indexOf(prog.currentLevel || 'beginner');
+                                            const levelColors = {
+                                                beginner:     { active: 'bg-emerald-600 text-white', done: 'bg-emerald-100 text-emerald-700', locked: 'bg-gray-100 text-gray-400' },
+                                                intermediate: { active: 'bg-amber-500 text-white',  done: 'bg-amber-100 text-amber-700',     locked: 'bg-gray-100 text-gray-400' },
+                                                advanced:     { active: 'bg-rose-600 text-white',   done: 'bg-rose-100 text-rose-700',       locked: 'bg-gray-100 text-gray-400' },
+                                            };
+                                            return (
+                                                <div key={prog._id} className="bg-gray-50 rounded-xl p-4">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <p className="text-sm font-semibold text-gray-900">{catName}</p>
+                                                        <div className="flex items-center gap-1">
+                                                            {levels.map((_, i) => (
+                                                                <div key={i} className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#021d49]' : 'bg-gray-300'}`} />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        {levels.map((level, li) => {
+                                                            const isUnlocked = li <= currentIdx;
+                                                            const isCurrent  = li === currentIdx;
+                                                            const ld         = prog.levels?.[level] || {};
+                                                            const c          = levelColors[level];
+                                                            return (
+                                                                <div key={level} className={`rounded-lg p-3 text-center ${isCurrent ? `${c.active} ring-2 ring-offset-1 shadow-sm` : isUnlocked ? c.done : c.locked}`}>
+                                                                    <div className="flex justify-center mb-1">
+                                                                        {isCurrent  ? <Icons.Zap className="w-3.5 h-3.5" /> :
+                                                                         isUnlocked ? <Icons.CheckCircle className="w-3.5 h-3.5" /> :
+                                                                                      <Icons.Lock className="w-3.5 h-3.5" />}
+                                                                    </div>
+                                                                    <p className="text-[10px] font-bold capitalize">{level}</p>
+                                                                    <p className="text-[10px] opacity-75">{ld.completedModules || 0}/{ld.totalModules || 0}</p>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Empty state: no enrollments at all */}
+                            {enrollments.length === 0 && availableModules.length === 0 && (
+                                <Card className="border-gray-100 shadow-sm">
+                                    <CardContent className="p-10 text-center">
+                                        <Icons.BookOpen className="w-14 h-14 text-gray-200 mx-auto mb-4" />
+                                        <h3 className="text-base font-bold text-gray-900 mb-1">Start your learning journey</h3>
+                                        <p className="text-sm text-gray-500 mb-5">Explore modules and enroll to begin.</p>
+                                        <Button className="bg-[#021d49] hover:bg-[#032a66] text-white"
+                                            onClick={() => router.push('/student/modules')}>
+                                            <Icons.Compass className="w-4 h-4 mr-2" /> Browse Modules
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+
+                        {/* ══ RIGHT SIDEBAR ══ */}
+                        <div className="space-y-5">
+
+                            {/* Summary Card */}
+                            <Card className="border-0 shadow-sm bg-gradient-to-br from-[#021d49] to-[#0a2d6e] text-white overflow-hidden">
+                                <CardContent className="p-5">
+                                    <p className="text-xs text-white/60 font-medium mb-3">Your Summary</p>
+                                    <div className="space-y-3">
+                                        {[
+                                            { label: 'Lessons Completed', value: (() => { const total = enrollments.reduce((s,e)=>s+(e.totalLessons||0),0); const done = enrollments.reduce((s,e)=>s+Math.min(e.completedLessons||0,e.totalLessons||0),0); return `${done}/${total}`; })(), icon: 'BookOpen' },
+                                            { label: 'Avg Progress',      value: `${avgProgress}%`,  icon: 'BarChart2' },
+                                            { label: 'Certificates',      value: certsEarned,        icon: 'Award'     },
+                                            { label: 'Completed Modules', value: completed.length,   icon: 'CheckCircle' },
+                                        ].map(({ label, value, icon }) => {
+                                            const Ic = Icons[icon];
+                                            return (
+                                                <div key={label} className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 text-xs text-white/70">
+                                                        {Ic && <Ic className="w-3.5 h-3.5 text-white/50" />}
+                                                        {label}
+                                                    </div>
+                                                    <span className="text-sm font-bold text-white">{value}</span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <Separator className="my-3 bg-white/10" />
+                                    <div className="flex gap-2">
+                                        <Button size="sm" variant="ghost"
+                                            className="flex-1 text-xs text-white/80 hover:bg-white/15 hover:text-white h-8 border border-white/20"
+                                            onClick={() => router.push('/student/certificates')}>
+                                            <Icons.Award className="w-3.5 h-3.5 mr-1.5" /> Certificates
+                                        </Button>
+                                        <Button size="sm" variant="ghost"
+                                            className="flex-1 text-xs text-white/80 hover:bg-white/15 hover:text-white h-8 border border-white/20"
+                                            onClick={() => router.push('/student/achievements')}>
+                                            <Icons.Trophy className="w-3.5 h-3.5 mr-1.5" /> Achievements
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Reminders from Instructors / Admin */}
+                            {reminders.length > 0 && (
+                                <Card className="border-gray-100 shadow-sm">
+                                    <CardHeader className="px-4 pt-4 pb-2">
+                                        <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                            <Icons.Bell className="w-4 h-4 text-amber-500" />
+                                            Reminders
+                                            <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-amber-500 text-white border-0 rounded-full">
+                                                {reminders.length}
+                                            </Badge>
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="px-4 pb-4 space-y-2">
+                                        {reminders.slice(0, 3).map((r, i) => (
+                                            <ReminderCard key={r._id || i} reminder={r} />
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Recent Activity / Notifications */}
+                            <Card className="border-gray-100 shadow-sm">
+                                <CardHeader className="px-4 pt-4 pb-2">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                            <Icons.Activity className="w-4 h-4 text-[#021d49]" />
+                                            Recent Activity
+                                            {unreadCount > 0 && (
+                                                <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-blue-500 text-white border-0 rounded-full">
+                                                    {unreadCount}
+                                                </Badge>
+                                            )}
+                                        </CardTitle>
+                                        {unreadCount > 0 && (
+                                            <button
+                                                className="text-[10px] text-gray-400 hover:text-[#021d49] font-medium"
+                                                onClick={async () => {
+                                                    try {
+                                                        await notificationService.markAllAsRead();
+                                                        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+                                                    } catch (_) {}
+                                                }}>
+                                                Mark all read
+                                            </button>
+                                        )}
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="px-4 pb-4">
+                                    {notifications.length > 0 ? (
+                                        <>
+                                            <div className="space-y-1">
+                                                {visibleNotifs.map((n, i) => (
+                                                    <ActivityItem key={n._id || i} notification={n} onRead={handleMarkRead} />
+                                                ))}
+                                            </div>
+                                            {notifications.length > 5 && (
+                                                <button
+                                                    className="w-full mt-2 text-xs text-[#021d49] font-semibold hover:underline py-1"
+                                                    onClick={() => setShowAllActivity(v => !v)}>
+                                                    {showAllActivity ? 'Show less' : `Show all ${notifications.length} activities`}
+                                                </button>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <div className="text-center py-8">
+                                            <Icons.Bell className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                                            <p className="text-xs text-gray-400">No recent activity</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Discussion Shortcuts (per enrolled module) */}
+                            {inProgress.length > 0 && (
+                                <Card className="border-gray-100 shadow-sm">
+                                    <CardHeader className="px-4 pt-4 pb-2">
+                                        <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                            <Icons.MessageCircle className="w-4 h-4 text-teal-500" />
+                                            Discussions & Resources
+                                        </CardTitle>
+                                        <p className="text-xs text-gray-400 mt-0.5">Jump into your module discussions</p>
+                                    </CardHeader>
+                                    <CardContent className="px-4 pb-4 space-y-2">
+                                        {inProgress.slice(0, 3).map((e) => {
+                                            const mod = e.moduleId || {};
+                                            const lvl = getLvl(mod.level);
+                                            return (
+                                                <div key={e._id}
+                                                    className="flex items-center justify-between p-2.5 rounded-lg bg-gray-50 hover:bg-teal-50/50 transition-colors group cursor-pointer"
+                                                    onClick={() => router.push(`/student/modules/${mod._id}/discussions`)}>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="text-xs font-semibold text-gray-800 line-clamp-1 group-hover:text-teal-700 transition-colors">
+                                                            {mod.title}
+                                                        </p>
+                                                        <Badge variant="outline" className={`text-[9px] font-semibold capitalize border mt-0.5 ${lvl.badge}`}>
+                                                            {mod.level}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                                                        <button
+                                                            className="w-7 h-7 rounded-lg bg-teal-100 hover:bg-teal-200 flex items-center justify-center transition-colors"
+                                                            onClick={(ev) => { ev.stopPropagation(); router.push(`/student/modules/${mod._id}/discussions`); }}
+                                                            title="Discussions">
+                                                            <Icons.MessageSquare className="w-3.5 h-3.5 text-teal-600" />
+                                                        </button>
+                                                        <button
+                                                            className="w-7 h-7 rounded-lg bg-blue-100 hover:bg-blue-200 flex items-center justify-center transition-colors"
+                                                            onClick={(ev) => { ev.stopPropagation(); router.push(`/student/modules/${mod._id}`); }}
+                                                            title="Module & Resources">
+                                                            <Icons.FolderOpen className="w-3.5 h-3.5 text-blue-600" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                        {inProgress.length > 3 && (
+                                            <button
+                                                className="w-full text-xs text-[#021d49] font-semibold hover:underline py-1"
+                                                onClick={() => router.push('/student/modules')}>
+                                                +{inProgress.length - 3} more modules
+                                            </button>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Completed modules */}
+                            {completed.length > 0 && (
+                                <Card className="border-gray-100 shadow-sm">
+                                    <CardHeader className="px-4 pt-4 pb-2">
+                                        <div className="flex items-center justify-between">
+                                            <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                                <Icons.CheckCircle className="w-4 h-4 text-emerald-500" />
+                                                Completed
+                                                <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-emerald-600 text-white border-0 rounded-full">
+                                                    {completed.length}
+                                                </Badge>
+                                            </CardTitle>
+                                            {certsEarned > 0 && (
+                                                <button
+                                                    className="text-[10px] text-[#021d49] font-semibold hover:underline flex items-center gap-0.5"
+                                                    onClick={() => router.push('/student/certificates')}>
+                                                    Certificates <Icons.ChevronRight className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="px-4 pb-4 space-y-1.5">
+                                        {completed.slice(0, 4).map((e) => {
+                                            const mod = e.moduleId || {};
+                                            const lvl = getLvl(mod.level);
+                                            return (
+                                                <div key={e._id}
+                                                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-emerald-50/50 cursor-pointer transition-colors group"
+                                                    onClick={() => router.push(`/student/modules/${mod._id}`)}>
+                                                    <Icons.CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-xs font-semibold text-gray-800 line-clamp-1 group-hover:text-emerald-700 transition-colors">{mod.title}</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-1 shrink-0">
+                                                        <Badge variant="outline" className={`text-[9px] border ${lvl.badge}`}>{mod.level}</Badge>
+                                                        {e.certificateEarned && <Icons.Award className="w-3.5 h-3.5 text-yellow-500" />}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            {/* Module Detail Drawer */}
+            <ModuleDrawer
+                mod={drawerMod}
+                onClose={() => setDrawerMod(null)}
+                onNavigate={(id) => router.push(`/student/modules/${id}`)}
+            />
         </>
     );
 }

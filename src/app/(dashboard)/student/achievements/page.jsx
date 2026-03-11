@@ -2,10 +2,128 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import * as Icons from 'lucide-react';
+import {
+    Trophy, ChevronLeft, Zap, BookOpen, Award,
+    BookCheck, TrendingUp, Loader2, Star, Flame,
+    Target, GraduationCap, Medal, LayoutDashboard,
+} from 'lucide-react';
 import courseService from '@/lib/api/courseService';
 import Navbar from '@/components/navbar/navbar';
 
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+    Tabs, TabsContent, TabsList, TabsTrigger,
+} from '@/components/ui/tabs';
+
+/* ─── helpers ─── */
+const fmtDate = (d) =>
+    new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+const typeConfig = {
+    course_completion: {
+        label: 'Course',
+        icon: Award,
+        bg: 'bg-emerald-50',
+        border: 'border-emerald-200',
+        iconBg: 'bg-emerald-100',
+        iconColor: 'text-emerald-600',
+        badge: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+    },
+    module_completion: {
+        label: 'Module',
+        icon: BookCheck,
+        bg: 'bg-blue-50',
+        border: 'border-blue-200',
+        iconBg: 'bg-blue-100',
+        iconColor: 'text-blue-600',
+        badge: 'bg-blue-100 text-blue-700 border-blue-200',
+    },
+    xp_boost: {
+        label: 'XP Boost',
+        icon: Zap,
+        bg: 'bg-amber-50',
+        border: 'border-amber-200',
+        iconBg: 'bg-amber-100',
+        iconColor: 'text-amber-600',
+        badge: 'bg-amber-100 text-amber-700 border-amber-200',
+    },
+};
+const getCfg = (type) => typeConfig[type] || typeConfig.xp_boost;
+
+/* ─── Stat card ─── */
+function StatCard({ icon: Icon, label, value, iconClass, valueClass }) {
+    return (
+        <Card className="border border-border">
+            <CardContent className="p-5 flex items-center gap-4">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${iconClass}`}>
+                    <Icon className="w-5 h-5" />
+                </div>
+                <div>
+                    <p className="text-xs text-muted-foreground font-medium">{label}</p>
+                    <p className={`text-2xl font-bold ${valueClass}`}>{value}</p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+}
+
+/* ─── Achievement row ─── */
+function AchievementRow({ achievement, index }) {
+    const cfg = getCfg(achievement.type);
+    const Icon = cfg.icon;
+    return (
+        <div className={`flex items-start gap-4 p-4 rounded-xl border ${cfg.border} ${cfg.bg} transition-all hover:shadow-sm`}>
+            {/* Icon */}
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cfg.iconBg}`}>
+                <Icon className={`w-5 h-5 ${cfg.iconColor}`} />
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div>
+                        <p className="font-semibold text-sm text-foreground">
+                            {achievement.title || 'Achievement Unlocked'}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                            {achievement.description || achievement.moduleTitle || 'Great work!'}
+                        </p>
+                    </div>
+                    <Badge variant="outline" className={`text-[11px] shrink-0 ${cfg.badge}`}>
+                        <Zap className="w-2.5 h-2.5 mr-1" />
+                        +{achievement.xpAwarded} XP
+                    </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-2">{fmtDate(achievement.createdAt)}</p>
+            </div>
+        </div>
+    );
+}
+
+/* ─── Empty state ─── */
+function EmptyAchievements({ onAction }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                <Trophy className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h3 className="text-base font-semibold text-foreground mb-1">No achievements yet</h3>
+            <p className="text-sm text-muted-foreground mb-6 max-w-xs">
+                Complete modules and courses to earn XP and unlock achievements.
+            </p>
+            <Button className="bg-[#021d49] hover:bg-[#032a66]" onClick={onAction}>
+                <BookOpen className="w-4 h-4 mr-2" /> Start Learning
+            </Button>
+        </div>
+    );
+}
+
+/* ─── Main ─── */
 export default function AchievementsPage() {
     const router = useRouter();
     const [achievementsData, setAchievementsData] = useState(null);
@@ -13,9 +131,7 @@ export default function AchievementsPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
-    useEffect(() => {
-        fetchAchievements();
-    }, []);
+    useEffect(() => { fetchAchievements(); }, []);
 
     const fetchAchievements = async () => {
         try {
@@ -29,41 +145,35 @@ export default function AchievementsPage() {
             setDashboardData(dashboard);
         } catch (err) {
             setError('Failed to load achievements');
-            console.error(err);
         } finally {
             setLoading(false);
         }
     };
 
-    // Calculate metrics
+    /* derived data */
     const totalXP = achievementsData?.totalXp || achievementsData?.totalPoints || 0;
     const achievements = achievementsData?.achievements || [];
-
     const moduleCompletions = achievements.filter(a => a.type === 'module_completion');
     const courseCompletions = achievements.filter(a => a.type === 'course_completion');
     const xpBoosts = achievements.filter(a => a.type === 'xp_boost');
 
-    const inProgressCourses = dashboardData?.enrollments?.filter(e => !e.isCompleted).map(e => ({
-        _id: e._id,
-        title: e.courseId?.title || 'Untitled Course',
-        progress: Math.round(e.progress || 0)
-    })) || [];
+    const inProgressCourses = dashboardData?.enrollments
+        ?.filter(e => !e.isCompleted)
+        .map(e => ({
+            _id: e._id,
+            title: e.courseId?.title || 'Untitled Course',
+            progress: Math.round(e.progress || 0),
+        })) || [];
 
-    const completedCoursesCount = dashboardData?.enrollments?.filter(e => e.isCompleted).length || 0;
-
+    /* ── Loading ── */
     if (loading) {
         return (
             <>
                 <Navbar />
-                <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 pt-16">
-                    <div className="text-center">
-                        <div className="relative">
-                            <div className="animate-spin rounded-full h-20 w-20 border-b-4 border-t-4 border-[#021d49] mx-auto mb-4"></div>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <Icons.Trophy className="w-8 h-8 text-[#021d49]" />
-                            </div>
-                        </div>
-                        <p className="text-gray-700 font-semibold text-lg">Loading your achievements...</p>
+                <div className="min-h-screen flex items-center justify-center bg-background">
+                    <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-[#021d49]" />
+                        <p className="text-sm text-muted-foreground">Loading achievements…</p>
                     </div>
                 </div>
             </>
@@ -73,183 +183,211 @@ export default function AchievementsPage() {
     return (
         <>
             <Navbar />
-            <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/30 pt-16">
-                <main className="p-4 sm:p-6 lg:p-8">
-                    <div className="max-w-7xl mx-auto">
-                        {/* Header */}
-                        <div className="mb-8">
-                            <button
-                                onClick={() => router.push('/student')}
-                                className="flex items-center gap-2 text-gray-600 hover:text-[#021d49] mb-6 font-semibold transition-colors group"
-                            >
-                                <div className="bg-white p-2 rounded-lg group-hover:bg-[#021d49] group-hover:text-white transition-all shadow-sm">
-                                    <Icons.ChevronLeft className="w-5 h-5" />
-                                </div>
-                                <span className="text-sm">Back to Dashboard</span>
-                            </button>
+            <div className="min-h-screen bg-background">
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
 
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="bg-gradient-to-r from-[#021d49] to-blue-700 p-4 rounded-2xl shadow-lg">
-                                    <Icons.Trophy className="w-10 h-10 text-white" />
-                                </div>
-                                <div>
-                                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 mb-2">
-                                        Your Achievements
-                                    </h1>
-                                    <p className="text-gray-600 text-lg">
-                                        Track your learning progress and XP boosts earned
-                                    </p>
-                                </div>
+                    {/* ── Page header ── */}
+                    <div className="mb-7">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5 text-muted-foreground mb-5 -ml-2"
+                            onClick={() => router.push('/student')}
+                        >
+                            <ChevronLeft className="w-4 h-4" />
+                            Back to Dashboard
+                        </Button>
+
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-[#021d49] flex items-center justify-center shrink-0">
+                                <Trophy className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-2xl font-bold text-foreground">Achievements</h1>
+                                <p className="text-sm text-muted-foreground">Your learning milestones and XP history</p>
                             </div>
                         </div>
-
-                        {/* Stats Cards */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-                            {/* Total XP Card */}
-                            <div className="group bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-2 cursor-pointer">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl group-hover:scale-110 transition-transform">
-                                        <Icons.Zap className="w-10 h-10" />
-                                    </div>
-                                    <span className="text-5xl font-black">{totalXP}</span>
-                                </div>
-                                <p className="text-yellow-100 text-sm font-semibold mb-1">Total XP Earned</p>
-                                <div className="h-1 bg-white/30 rounded-full mt-3"></div>
-                            </div>
-
-                            {/* Module Completions Card */}
-                            <div className="group bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-2 cursor-pointer">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl group-hover:scale-110 transition-transform">
-                                        <Icons.BookOpen className="w-10 h-10" />
-                                    </div>
-                                    <span className="text-5xl font-black">{moduleCompletions.length}</span>
-                                </div>
-                                <p className="text-blue-100 text-sm font-semibold mb-1">Modules Completed</p>
-                                <div className="h-1 bg-white/30 rounded-full mt-3"></div>
-                            </div>
-
-                            {/* Course Completions Card */}
-                            <div className="group bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-8 text-white shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-2 cursor-pointer">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="bg-white/20 backdrop-blur-sm p-4 rounded-xl group-hover:scale-110 transition-transform">
-                                        <Icons.Award className="w-10 h-10" />
-                                    </div>
-                                    <span className="text-5xl font-black">{courseCompletions.length}</span>
-                                </div>
-                                <p className="text-green-100 text-sm font-semibold mb-1">Courses Completed</p>
-                                <div className="h-1 bg-white/30 rounded-full mt-3"></div>
-                            </div>
-                        </div>
-
-                        {/* Achievement Timeline */}
-                        <div className="bg-white rounded-2xl border-2 border-gray-100 p-8 shadow-lg mb-8">
-                            <div className="flex items-center gap-3 mb-6">
-                                <Icons.List className="w-6 h-6 text-[#021d49]" />
-                                <h2 className="text-2xl font-bold text-gray-900">Achievement Timeline</h2>
-                            </div>
-
-                            {achievements.length > 0 ? (
-                                <div className="space-y-4">
-                                    {achievements.map((achievement, index) => (
-                                        <div
-                                            key={achievement._id || index}
-                                            className="group flex items-start gap-4 p-6 rounded-xl border-2 border-gray-100 hover:border-[#021d49] hover:shadow-lg transition-all"
-                                        >
-                                            {/* Icon */}
-                                            <div className={`p-4 rounded-xl ${achievement.type === 'course_completion'
-                                                ? 'bg-gradient-to-br from-green-500 to-emerald-600'
-                                                : achievement.type === 'module_completion'
-                                                    ? 'bg-gradient-to-br from-blue-500 to-indigo-600'
-                                                    : 'bg-gradient-to-br from-yellow-400 to-orange-500'
-                                                } text-white shadow-md group-hover:scale-110 transition-transform`}>
-                                                {achievement.type === 'course_completion' ? (
-                                                    <Icons.Award className="w-6 h-6" />
-                                                ) : achievement.type === 'module_completion' ? (
-                                                    <Icons.BookCheck className="w-6 h-6" />
-                                                ) : (
-                                                    <Icons.Zap className="w-6 h-6" />
-                                                )}
-                                            </div>
-
-                                            {/* Content */}
-                                            <div className="flex-1">
-                                                <div className="flex items-start justify-between">
-                                                    <div>
-                                                        <h3 className="font-bold text-lg text-gray-900 mb-1">
-                                                            {achievement.title || 'Achievement Unlocked'}
-                                                        </h3>
-                                                        <p className="text-gray-600 text-sm mb-2">
-                                                            {achievement.description || achievement.moduleTitle || 'Great work!'}
-                                                        </p>
-                                                        <p className="text-xs text-gray-500">
-                                                            {new Date(achievement.createdAt).toLocaleDateString('en-US', {
-                                                                year: 'numeric',
-                                                                month: 'long',
-                                                                day: 'numeric'
-                                                            })}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex items-center gap-2 bg-gradient-to-r from-yellow-100 to-orange-100 text-orange-700 px-4 py-2 rounded-full font-bold">
-                                                        <Icons.Zap className="w-4 h-4" />
-                                                        <span>+{achievement.xpAwarded} XP</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-12">
-                                    <div className="bg-gradient-to-br from-gray-100 to-gray-200 w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <Icons.Trophy className="w-16 h-16 text-gray-400" />
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-3">No Achievements Yet</h3>
-                                    <p className="text-gray-600 mb-8 text-lg">Complete modules and courses to earn XP boosts!</p>
-                                    <button
-                                        onClick={() => router.push('/courses')}
-                                        className="bg-gradient-to-r from-[#021d49] to-blue-700 hover:from-[#032e6b] hover:to-blue-800 text-white px-10 py-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl inline-flex items-center gap-3 text-lg"
-                                    >
-                                        <Icons.BookOpen className="w-6 h-6" />
-                                        Start Learning
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Courses in Progress */}
-                        {inProgressCourses.length > 0 && (
-                            <div className="bg-white rounded-2xl border-2 border-gray-100 p-8 shadow-lg">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <Icons.TrendingUp className="w-6 h-6 text-[#021d49]" />
-                                    <h2 className="text-2xl font-bold text-gray-900">Continue Learning</h2>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {inProgressCourses.map((course) => (
-                                        <div
-                                            key={course._id}
-                                            className="group p-6 rounded-xl border-2 border-blue-100 hover:border-[#021d49] hover:shadow-lg transition-all cursor-pointer"
-                                            onClick={() => router.push(`/courses/${course._id}`)}
-                                        >
-                                            <div className="flex items-center justify-between mb-4">
-                                                <h3 className="font-bold text-gray-900 group-hover:text-[#021d49] transition-colors">
-                                                    {course.title}
-                                                </h3>
-                                                <span className="text-blue-600 font-bold text-lg">{course.progress}%</span>
-                                            </div>
-                                            <div className="w-full bg-gray-200 rounded-full h-2">
-                                                <div
-                                                    className="bg-gradient-to-r from-[#021d49] to-blue-700 h-2 rounded-full transition-all"
-                                                    style={{ width: `${course.progress}%` }}
-                                                ></div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
-                </main>
+
+                    {/* ── Stats row ── */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
+                        <StatCard
+                            icon={Zap}
+                            label="Total XP"
+                            value={totalXP}
+                            iconClass="bg-amber-100 text-amber-600"
+                            valueClass="text-amber-600"
+                        />
+                        <StatCard
+                            icon={BookCheck}
+                            label="Modules Done"
+                            value={moduleCompletions.length}
+                            iconClass="bg-blue-100 text-blue-600"
+                            valueClass="text-blue-600"
+                        />
+                        <StatCard
+                            icon={GraduationCap}
+                            label="Courses Done"
+                            value={courseCompletions.length}
+                            iconClass="bg-emerald-100 text-emerald-600"
+                            valueClass="text-emerald-600"
+                        />
+                        <StatCard
+                            icon={Flame}
+                            label="XP Boosts"
+                            value={xpBoosts.length}
+                            iconClass="bg-rose-100 text-rose-600"
+                            valueClass="text-rose-600"
+                        />
+                    </div>
+
+                    {/* ── Main content ── */}
+                    <div className="grid lg:grid-cols-3 gap-5">
+
+                        {/* Left: Achievement list */}
+                        <div className="lg:col-span-2">
+                            <Card className="border border-border">
+                                <CardHeader className="px-5 pt-5 pb-4 border-b border-border">
+                                    <CardTitle className="text-base font-semibold flex items-center gap-2">
+                                        <Medal className="w-4 h-4 text-[#021d49]" />
+                                        Achievement History
+                                        {achievements.length > 0 && (
+                                            <Badge variant="secondary" className="ml-auto font-normal">
+                                                {achievements.length}
+                                            </Badge>
+                                        )}
+                                    </CardTitle>
+                                </CardHeader>
+
+                                {achievements.length === 0 ? (
+                                    <EmptyAchievements onAction={() => router.push('/courses')} />
+                                ) : (
+                                    <Tabs defaultValue="all">
+                                        <div className="px-5 pt-3">
+                                            <TabsList className="h-8 text-xs">
+                                                <TabsTrigger value="all" className="text-xs px-3">All ({achievements.length})</TabsTrigger>
+                                                <TabsTrigger value="courses" className="text-xs px-3">Courses ({courseCompletions.length})</TabsTrigger>
+                                                <TabsTrigger value="modules" className="text-xs px-3">Modules ({moduleCompletions.length})</TabsTrigger>
+                                                <TabsTrigger value="xp" className="text-xs px-3">XP ({xpBoosts.length})</TabsTrigger>
+                                            </TabsList>
+                                        </div>
+
+                                        {[
+                                            { value: 'all', data: achievements },
+                                            { value: 'courses', data: courseCompletions },
+                                            { value: 'modules', data: moduleCompletions },
+                                            { value: 'xp', data: xpBoosts },
+                                        ].map(({ value, data }) => (
+                                            <TabsContent key={value} value={value} className="mt-0">
+                                                <ScrollArea className="h-[420px]">
+                                                    <div className="p-5 space-y-3">
+                                                        {data.length === 0 ? (
+                                                            <div className="text-center py-10 text-sm text-muted-foreground">
+                                                                No achievements in this category yet.
+                                                            </div>
+                                                        ) : (
+                                                            data.map((a, i) => (
+                                                                <AchievementRow key={a._id || i} achievement={a} index={i} />
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </ScrollArea>
+                                            </TabsContent>
+                                        ))}
+                                    </Tabs>
+                                )}
+                            </Card>
+                        </div>
+
+                        {/* Right: sidebar */}
+                        <div className="space-y-4">
+
+                            {/* XP Summary */}
+                            <Card className="border border-border">
+                                <CardHeader className="px-5 pt-5 pb-3 border-b border-border">
+                                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                        <Zap className="w-4 h-4 text-amber-500" />
+                                        XP Summary
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-5 space-y-4">
+                                    {[
+                                        { label: 'From courses', value: courseCompletions.reduce((s, a) => s + (a.xpAwarded || 0), 0), color: 'bg-emerald-500' },
+                                        { label: 'From modules', value: moduleCompletions.reduce((s, a) => s + (a.xpAwarded || 0), 0), color: 'bg-blue-500' },
+                                        { label: 'XP boosts', value: xpBoosts.reduce((s, a) => s + (a.xpAwarded || 0), 0), color: 'bg-amber-500' },
+                                    ].map(({ label, value, color }) => (
+                                        <div key={label}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <span className="text-xs text-muted-foreground">{label}</span>
+                                                <span className="text-xs font-bold">{value} XP</span>
+                                            </div>
+                                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                                                <div
+                                                    className={`h-full rounded-full ${color} transition-all`}
+                                                    style={{ width: totalXP ? `${Math.round((value / totalXP) * 100)}%` : '0%' }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    <Separator />
+
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-semibold text-foreground">Total XP</span>
+                                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 border text-xs font-bold">
+                                            <Zap className="w-3 h-3 mr-1" /> {totalXP} XP
+                                        </Badge>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Continue Learning */}
+                            {inProgressCourses.length > 0 && (
+                                <Card className="border border-border">
+                                    <CardHeader className="px-5 pt-5 pb-3 border-b border-border">
+                                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                                            <TrendingUp className="w-4 h-4 text-[#021d49]" />
+                                            Continue Learning
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-4 space-y-3">
+                                        {inProgressCourses.slice(0, 4).map((course) => (
+                                            <div
+                                                key={course._id}
+                                                className="p-3 rounded-lg border border-border hover:border-[#021d49]/40 hover:bg-muted/40 cursor-pointer transition-all group"
+                                                onClick={() => router.push(`/courses/${course._id}`)}
+                                            >
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <p className="text-xs font-medium text-foreground group-hover:text-[#021d49] line-clamp-1 transition-colors flex-1 mr-2">
+                                                        {course.title}
+                                                    </p>
+                                                    <span className="text-[11px] font-bold text-[#021d49] shrink-0">
+                                                        {course.progress}%
+                                                    </span>
+                                                </div>
+                                                <Progress value={course.progress} className="h-1.5" />
+                                            </div>
+                                        ))}
+                                        {inProgressCourses.length > 4 && (
+                                            <p className="text-xs text-muted-foreground text-center pt-1">
+                                                +{inProgressCourses.length - 4} more courses
+                                            </p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Quick nav */}
+                            <Button
+                                variant="outline"
+                                className="w-full gap-2 border-border text-sm"
+                                onClick={() => router.push('/student')}
+                            >
+                                <LayoutDashboard className="w-4 h-4" /> Go to Dashboard
+                            </Button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </>
     );

@@ -1,65 +1,123 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
-import * as Icons from 'lucide-react';
+import { Search, Send, MessageCircle, ArrowLeft, MoreVertical } from 'lucide-react';
 import messageService from '@/lib/api/messageService';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
+/* ─── Helpers ─── */
+function formatTime(date) {
+    const d = new Date(date);
+    const now = new Date();
+    const diff = now - d;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1)  return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24)  return `${hrs}h ago`;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function getIdValue(val) {
+    if (!val) return '';
+    if (typeof val === 'string') return val;
+    return val._id?.toString() || val.id?.toString() || val.toString?.() || '';
+}
+
+function initials(first, last) {
+    return `${first?.[0] || ''}${last?.[0] || ''}`.toUpperCase() || '?';
+}
+
+/* ─── Conversation Item ─── */
+function ConversationItem({ conv, isActive, onClick }) {
+    const instructor = conv.instructorId || {};
+    const name = `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || 'Instructor';
+    const time = conv.lastMessage?.createdAt ? formatTime(conv.lastMessage.createdAt) : '';
+
+    return (
+        <button
+            onClick={onClick}
+            className={`w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left ${isActive ? 'bg-blue-50 border-r-2 border-blue-600' : ''}`}
+        >
+            <Avatar className="w-10 h-10 flex-shrink-0 bg-gradient-to-br from-blue-500 to-indigo-600">
+                <AvatarFallback className="text-white text-sm font-semibold bg-gradient-to-br from-blue-500 to-indigo-600">
+                    {initials(instructor.firstName, instructor.lastName)}
+                </AvatarFallback>
+            </Avatar>
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-0.5">
+                    <p className={`text-sm font-semibold truncate ${isActive ? 'text-blue-700' : 'text-gray-900'}`}>{name}</p>
+                    <span className="text-xs text-gray-400 flex-shrink-0 ml-2">{time}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                    <p className="text-xs text-gray-500 truncate flex-1">{conv.lastMessage?.content || 'No messages yet'}</p>
+                    {conv.unreadCount > 0 && (
+                        <Badge className="ml-2 h-4 min-w-[1rem] px-1 text-[10px] bg-blue-600 border-0 flex-shrink-0">
+                            {conv.unreadCount}
+                        </Badge>
+                    )}
+                </div>
+            </div>
+        </button>
+    );
+}
+
+/* ─── Message Bubble ─── */
+function MessageBubble({ message, currentUserId }) {
+    const senderId = typeof message.senderId === 'string' ? message.senderId : message.senderId?._id;
+    const isOwn = senderId === currentUserId;
+
+    return (
+        <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3`}>
+            <div className={`max-w-xs sm:max-w-md px-4 py-2.5 rounded-2xl shadow-sm ${
+                isOwn
+                    ? 'bg-blue-600 text-white rounded-br-sm'
+                    : 'bg-white text-gray-900 border border-gray-100 rounded-bl-sm'
+            }`}>
+                <p className="text-sm leading-relaxed">{message.content}</p>
+                <p className={`text-[10px] mt-1 ${isOwn ? 'text-blue-100' : 'text-gray-400'} text-right`}>
+                    {formatTime(message.createdAt)}
+                    {message.isRead && isOwn && ' · Read'}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+/* ─── Main Page ─── */
 export default function StudentMessagesPage() {
-    const router = useRouter();
-    const [conversations, setConversations] = useState([]);
-    const [selectedConversation, setSelectedConversation] = useState(null);
-    const [messages, setMessages] = useState([]);
-    const [newMessage, setNewMessage] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [sending, setSending] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
-    const messagesEndRef = useRef(null);
+    const [conversations, setConversations]           = useState([]);
+    const [selected, setSelected]                     = useState(null);
+    const [messages, setMessages]                     = useState([]);
+    const [newMessage, setNewMessage]                 = useState('');
+    const [loading, setLoading]                       = useState(true);
+    const [sending, setSending]                       = useState(false);
+    const [searchQuery, setSearchQuery]               = useState('');
+    const [mobileShowChat, setMobileShowChat]         = useState(false);
+    const messagesEndRef                              = useRef(null);
 
-    useEffect(() => {
-        fetchConversations();
-    }, []);
+    const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
-    useEffect(() => {
-        if (selectedConversation?.instructorIdValue) {
-            fetchMessages(selectedConversation.instructorIdValue);
-        }
-    }, [selectedConversation]);
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    const getIdValue = (val) => {
-        if (!val) return '';
-        if (typeof val === 'string') return val;
-        if (typeof val === 'object') {
-            if (val._id) return val._id.toString();
-            if (val.id) return val.id.toString();
-            if (val.toString) return val.toString();
-        }
-        return '';
-    };
+    useEffect(() => { fetchConversations(); }, []);
+    useEffect(() => { if (selected?.instructorIdValue) fetchMessages(selected.instructorIdValue); }, [selected]);
+    useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
     const fetchConversations = async () => {
         try {
             setLoading(true);
             const data = await messageService.getConversations();
             const raw = Array.isArray(data) ? data : data?.conversations || [];
-            const normalized = raw.map((conv) => {
+            setConversations(raw.map(conv => {
                 const instructor = conv.instructorId || conv.user || {};
                 const instructorIdValue = getIdValue(instructor) || getIdValue(conv.instructorId) || getIdValue(conv.user);
-                return {
-                    ...conv,
-                    instructorId: instructor,
-                    instructorIdValue,
-                };
-            });
-            setConversations(normalized);
+                return { ...conv, instructorId: instructor, instructorIdValue };
+            }));
         } catch (err) {
             console.error('Error fetching conversations:', err);
         } finally {
@@ -71,200 +129,168 @@ export default function StudentMessagesPage() {
         try {
             const data = await messageService.getConversation(userId, 100);
             setMessages(Array.isArray(data) ? data : data?.messages || []);
-
-            // Mark conversation as read
             await messageService.markConversationAsRead(userId);
-
-            // Update conversation list
             fetchConversations();
         } catch (err) {
             console.error('Error fetching messages:', err);
         }
     };
 
-    const handleSendMessage = async (e) => {
+    const handleSend = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !selectedConversation) return;
-
+        if (!newMessage.trim() || !selected) return;
         try {
             setSending(true);
-            const instructorId = selectedConversation.instructorIdValue;
-            await messageService.sendMessage({
-                receiverId: instructorId,
-                content: newMessage
-            });
+            await messageService.sendMessage({ receiverId: selected.instructorIdValue, content: newMessage });
             setNewMessage('');
-            await fetchMessages(instructorId);
+            await fetchMessages(selected.instructorIdValue);
         } catch (err) {
             console.error('Error sending message:', err);
-            alert('Failed to send message');
         } finally {
             setSending(false);
         }
     };
 
-    const filteredConversations = conversations.filter(conv => {
-        const instructor = conv.instructorId || {};
-        const instructorName = `${instructor.firstName || ''} ${instructor.lastName || ''}`.toLowerCase();
-        const lastContent = conv.lastMessage?.content?.toLowerCase() || '';
-        return instructorName.includes(searchQuery.toLowerCase()) || lastContent.includes(searchQuery.toLowerCase());
-    });
-
-    const formatTime = (date) => {
-        const d = new Date(date);
-        const now = new Date();
-        const diff = now.getTime() - d.getTime();
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-
-        if (hours < 1) {
-            const minutes = Math.floor(diff / (1000 * 60));
-            return minutes < 1 ? 'Just now' : `${minutes}m ago`;
-        } else if (hours < 24) {
-            return `${hours}h ago`;
-        } else {
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
+    const handleSelectConv = (conv) => {
+        setSelected(conv);
+        setMobileShowChat(true);
     };
 
+    const filtered = conversations.filter(conv => {
+        const instructor = conv.instructorId || {};
+        const name = `${instructor.firstName || ''} ${instructor.lastName || ''}`.toLowerCase();
+        const last = conv.lastMessage?.content?.toLowerCase() || '';
+        return name.includes(searchQuery.toLowerCase()) || last.includes(searchQuery.toLowerCase());
+    });
+
+    const selectedInstructor = selected?.instructorId || {};
+    const selectedName = `${selectedInstructor.firstName || ''} ${selectedInstructor.lastName || ''}`.trim() || 'Instructor';
+
     return (
-        <div className="h-screen bg-gray-50 flex flex-col">
-            <div className="flex-1 flex overflow-hidden">
-                {/* Conversations Sidebar */}
-                <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-                    <div className="p-4 border-b border-gray-200">
-                        <h1 className="text-xl font-bold text-gray-900 mb-3">Messages</h1>
+        <div className="h-[calc(100vh-4rem)] bg-gray-50 flex">
+            <Card className="flex flex-1 overflow-hidden rounded-none border-0 shadow-none">
+                {/* ── Sidebar ── */}
+                <div className={`w-full sm:w-80 lg:w-80 flex-shrink-0 border-r bg-white flex flex-col ${mobileShowChat ? 'hidden sm:flex' : 'flex'}`}>
+                    {/* Header */}
+                    <div className="p-4 border-b">
+                        <h1 className="text-lg font-bold text-gray-900 mb-3">Messages</h1>
                         <div className="relative">
-                            <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Input
                                 placeholder="Search conversations..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                onChange={e => setSearchQuery(e.target.value)}
+                                className="pl-9 h-9 text-sm"
                             />
                         </div>
                     </div>
 
-                    <div className="flex-1 overflow-y-auto">
+                    {/* List */}
+                    <ScrollArea className="flex-1">
                         {loading ? (
-                            <div className="p-4 text-center text-gray-500">Loading...</div>
-                        ) : filteredConversations.length === 0 ? (
-                            <div className="p-4 text-center text-gray-500">No conversations yet</div>
-                        ) : (
-                            filteredConversations.map((conv) => {
-                                const instructorId = conv.instructorIdValue;
-                                return (
-                                    <div
-                                        key={instructorId}
-                                        onClick={() => setSelectedConversation(conv)}
-                                        className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${
-                                            selectedConversation?.instructorIdValue === instructorId ? 'bg-blue-50' : ''
-                                        }`}
-                                    >
-                                        <div className="flex items-start gap-3">
-                                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-                                                {conv.instructorId?.firstName?.[0]}{conv.instructorId?.lastName?.[0]}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <h3 className="font-semibold text-gray-900 truncate">
-                                                        {conv.instructorId?.firstName} {conv.instructorId?.lastName}
-                                                    </h3>
-                                                    <span className="text-xs text-gray-500">
-                                                        {formatTime(conv.lastMessage?.createdAt)}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-sm text-gray-600 truncate flex-1">
-                                                        {conv.lastMessage?.content}
-                                                    </p>
-                                                    {conv.unreadCount > 0 && (
-                                                        <span className="bg-blue-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                                            {conv.unreadCount}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
+                            <div className="p-4 space-y-3">
+                                {[...Array(4)].map((_, i) => (
+                                    <div key={i} className="flex items-center gap-3 animate-pulse">
+                                        <div className="w-10 h-10 rounded-full bg-gray-200 flex-shrink-0" />
+                                        <div className="flex-1 space-y-2">
+                                            <div className="h-3 bg-gray-200 rounded w-1/2" />
+                                            <div className="h-3 bg-gray-200 rounded w-3/4" />
                                         </div>
                                     </div>
-                                );
-                            })
+                                ))}
+                            </div>
+                        ) : filtered.length === 0 ? (
+                            <div className="p-8 text-center">
+                                <MessageCircle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                                <p className="text-sm text-gray-500">No conversations yet</p>
+                            </div>
+                        ) : (
+                            filtered.map(conv => (
+                                <ConversationItem
+                                    key={conv.instructorIdValue}
+                                    conv={conv}
+                                    isActive={selected?.instructorIdValue === conv.instructorIdValue}
+                                    onClick={() => handleSelectConv(conv)}
+                                />
+                            ))
                         )}
-                    </div>
+                    </ScrollArea>
                 </div>
 
-                {/* Messages Area */}
-                <div className="flex-1 flex flex-col bg-white">
-                    {selectedConversation ? (
+                {/* ── Chat Area ── */}
+                <div className={`flex-1 flex flex-col bg-white min-w-0 ${!mobileShowChat ? 'hidden sm:flex' : 'flex'}`}>
+                    {selected ? (
                         <>
                             {/* Chat Header */}
-                            <div className="p-4 border-b border-gray-200 bg-white">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
-                                        {selectedConversation.instructorId?.firstName?.[0]}{selectedConversation.instructorId?.lastName?.[0]}
-                                    </div>
-                                    <div>
-                                        <h2 className="font-semibold text-gray-900">
-                                            {selectedConversation.instructorId?.firstName} {selectedConversation.instructorId?.lastName}
-                                        </h2>
-                                        <p className="text-sm text-gray-600 capitalize">Instructor</p>
-                                    </div>
+                            <div className="flex items-center gap-3 px-4 py-3 border-b bg-white">
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="sm:hidden"
+                                    onClick={() => setMobileShowChat(false)}
+                                >
+                                    <ArrowLeft className="w-4 h-4" />
+                                </Button>
+                                <Avatar className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600">
+                                    <AvatarFallback className="text-white text-sm font-semibold bg-gradient-to-br from-blue-500 to-indigo-600">
+                                        {initials(selectedInstructor.firstName, selectedInstructor.lastName)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-gray-900 truncate">{selectedName}</p>
+                                    <p className="text-xs text-gray-500 capitalize">Instructor</p>
                                 </div>
                             </div>
 
                             {/* Messages */}
-                            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                                {messages.map((message) => {
-                                    const currentUserId = localStorage.getItem('userId');
-                                    const senderIdValue = typeof message.senderId === 'string' ? message.senderId : message.senderId?._id;
-                                    const isOwn = senderIdValue === currentUserId;
-                                    return (
-                                        <div key={message._id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                                            <div className={`max-w-md ${isOwn ? 'bg-blue-600 text-white' : 'bg-white text-gray-900'} rounded-lg px-4 py-2 shadow-sm`}>
-                                                <p className="text-sm">{message.content}</p>
-                                                <p className={`text-xs mt-1 ${isOwn ? 'text-blue-100' : 'text-gray-500'}`}>
-                                                    {formatTime(message.createdAt)}
-                                                    {message.isRead && isOwn && ' • Read'}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
+                            <ScrollArea className="flex-1 px-4 py-4 bg-gray-50">
+                                {messages.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-40 gap-2">
+                                        <MessageCircle className="w-8 h-8 text-gray-300" />
+                                        <p className="text-sm text-gray-400">No messages yet. Say hi!</p>
+                                    </div>
+                                ) : (
+                                    messages.map(msg => (
+                                        <MessageBubble key={msg._id} message={msg} currentUserId={currentUserId} />
+                                    ))
+                                )}
                                 <div ref={messagesEndRef} />
-                            </div>
+                            </ScrollArea>
 
-                            {/* Message Input */}
-                            <form onSubmit={handleSendMessage} className="p-4 border-t border-gray-200 bg-white">
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="text"
+                            {/* Input */}
+                            <div className="border-t bg-white p-3">
+                                <form onSubmit={handleSend} className="flex items-center gap-2">
+                                    <Input
                                         value={newMessage}
-                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        onChange={e => setNewMessage(e.target.value)}
                                         placeholder="Type a message..."
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                         disabled={sending}
+                                        className="flex-1 h-10"
                                     />
-                                    <button
+                                    <Button
                                         type="submit"
                                         disabled={sending || !newMessage.trim()}
-                                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                                        className="bg-blue-600 hover:bg-blue-700 h-10 px-4 gap-2"
                                     >
-                                        <Icons.Send className="w-4 h-4" />
-                                        Send
-                                    </button>
-                                </div>
-                            </form>
+                                        <Send className="w-4 h-4" />
+                                        <span className="hidden sm:inline">Send</span>
+                                    </Button>
+                                </form>
+                            </div>
                         </>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center text-gray-500">
-                            <div className="text-center">
-                                <Icons.MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                                <p className="text-lg font-medium">Select a conversation to start messaging</p>
+                        <div className="flex-1 flex items-center justify-center text-center p-8">
+                            <div>
+                                <div className="inline-flex p-5 bg-gray-100 rounded-full mb-4">
+                                    <MessageCircle className="w-10 h-10 text-gray-400" />
+                                </div>
+                                <h3 className="text-lg font-semibold text-gray-700 mb-1">Your Messages</h3>
+                                <p className="text-sm text-gray-400">Select a conversation to start messaging</p>
                             </div>
                         </div>
                     )}
                 </div>
-            </div>
+            </Card>
         </div>
     );
 }

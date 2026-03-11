@@ -1,33 +1,14 @@
 "use client";
 import React from 'react';
-import { BookOpen, BarChart3, FileText, Microscope, Users, Award, TrendingUp, Lightbulb } from 'lucide-react';
+import { BookOpen, BarChart3, FileText, Users, Award, Lightbulb } from 'lucide-react';
 
 const HeroSection = () => {
-    const floatingIcons = [
-        { Icon: BookOpen, color: 'bg-[#021d49]', position: 'top-8 -left-4', delay: '0s' },
-        { Icon: BarChart3, color: 'bg-[#021d49]', position: 'top-20 -right-4', delay: '0.5s' },
-        { Icon: FileText, color: 'bg-[#021d49]', position: 'top-40 -left-6', delay: '1s' },
-        { Icon: Microscope, color: 'bg-[#021d49]', position: 'bottom-32 -right-6', delay: '1.5s' },
-        { Icon: Award, color: 'bg-[#021d49]', position: 'bottom-16 -left-4', delay: '2s' },
-        { Icon: TrendingUp, color: 'bg-[#021d49]', position: 'bottom-8 right-2', delay: '2.5s' },
-    ];
-
     return (
-        <div className="relative min-h-screen  overflow-hidden">
-            {/* Animated Background Elements */}
-            <div className="absolute top-20 left-10 w-32 h-32 bg-[#021d49] rounded-full opacity-10 blur-3xl animate-pulse"></div>
-            <div className="absolute bottom-20 right-10 w-40 h-40 bg-[#00c4b3] rounded-full opacity-10 blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="relative min-h-screen overflow-hidden">
+            {/* Background Blurs */}
+            <div className="absolute top-20 left-10 w-32 h-32 bg-[#021d49] rounded-full opacity-10 blur-3xl"></div>
+            <div className="absolute bottom-20 right-10 w-40 h-40 bg-[#00c4b3] rounded-full opacity-10 blur-3xl"></div>
             <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-[#039e8e] rounded-full opacity-5 blur-3xl"></div>
-
-            <style jsx>{`
-                @keyframes float {
-                    0%, 100% { transform: translateY(0px); }
-                    50% { transform: translateY(-20px); }
-                }
-                .animate-float {
-                    animation: float 3s ease-in-out infinite;
-                }
-            `}</style>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 lg:pt-28 lg:pb-32">
                 <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
@@ -109,45 +90,29 @@ const HeroSection = () => {
 
                     {/* Right Content - Image Section */}
                     <div className="relative flex justify-center lg:justify-end">
-                        <div className="relative">
-                            {/* Main Image Container - Card Style */}
-                            <div className="relative bg-white p-6 rounded-3xl shadow-2xl w-full lg:w-[580px] border border-gray-100">
-                                <div className="rounded-2xl overflow-hidden relative bg-gradient-to-br from-[#021d49] from-0% via-white via-40% to-[#021d49] to-100% bg-opacity-5">
-                                    <img
-                                        src="/image/0.png"
-                                        alt="ARIN Publishing Academy Launch Event"
-                                        className="w-full h-auto object-cover"
-                                    />
-                                </div>
-
-                                {/* Floating Badge */}
-                                <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-white px-8 py-4 rounded-2xl shadow-xl border border-[#021d49] border-opacity-20 flex items-center gap-4">
-                                    <div className="flex -space-x-3">
-                                        <div className="w-10 h-10 bg-gradient-to-br from-[#021d49] to-[#021d49] rounded-full border-2 border-white flex items-center justify-center">
-                                            <Users className="w-5 h-5 text-white" />
-                                        </div>
-                                        <div className="w-10 h-10 bg-gradient-to-br from-[#00c4b3] to-[#039e8e] rounded-full border-2 border-white flex items-center justify-center">
-                                            <BookOpen className="w-5 h-5 text-white" />
-                                        </div>
-                                        <div className="w-10 h-10 bg-gradient-to-br from-[#021d49] to-[#021d49] rounded-full border-2 border-white flex items-center justify-center">
-                                            <Award className="w-5 h-5 text-white" />
-                                        </div>
-                                    </div>
-
-                                </div>
+                        <div className="relative bg-white p-6 rounded-3xl shadow-2xl w-full lg:w-[580px] border border-gray-100">
+                            <div className="rounded-2xl overflow-hidden relative bg-gradient-to-br from-[#021d49] from-0% via-white via-40% to-[#021d49] to-100% bg-opacity-5">
+                                <img
+                                    src="/image/0.png"
+                                    alt="ARIN Publishing Academy Launch Event"
+                                    className="w-full h-auto object-cover"
+                                />
                             </div>
 
-                            {floatingIcons.map((item, index) => (
-                                <div
-                                    key={index}
-                                    className={`absolute ${item.position} hidden lg:block animate-float`}
-                                    style={{ animationDelay: item.delay }}
-                                >
-                                    <div className={`${item.color} p-3 rounded-xl shadow-lg backdrop-blur-sm bg-opacity-90 hover:scale-110 transition-all duration-300 cursor-pointer`}>
-                                        <item.Icon className="w-5 h-5 text-white" />
+                            {/* Floating Badge */}
+                            <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 bg-white px-8 py-4 rounded-2xl shadow-xl border border-[#021d49] border-opacity-20 flex items-center gap-4">
+                                <div className="flex -space-x-3">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-[#021d49] to-[#021d49] rounded-full border-2 border-white flex items-center justify-center">
+                                        <Users className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div className="w-10 h-10 bg-gradient-to-br from-[#00c4b3] to-[#039e8e] rounded-full border-2 border-white flex items-center justify-center">
+                                        <BookOpen className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div className="w-10 h-10 bg-gradient-to-br from-[#021d49] to-[#021d49] rounded-full border-2 border-white flex items-center justify-center">
+                                        <Award className="w-5 h-5 text-white" />
                                     </div>
                                 </div>
-                            ))}
+                            </div>
                         </div>
                     </div>
 

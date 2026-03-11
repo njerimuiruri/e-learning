@@ -55,7 +55,7 @@ const Footer = () => {
                         <div className="space-y-2 text-sm">
                             <div className="flex items-start gap-2">
                                 <MapPin className="w-4 h-4 text-white mt-1 flex-shrink-0" />
-                                <span className="text-gray-400">ACK Gardens House, Bishop Road, 1St Ngong Ave, Upperhill, Nairobi. P.O Box 53358 – 00200. Nairobi, Kenya</span>
+                                <span className="text-gray-400">ACK Gardens House, 1St Ngong Ave, Upperhill, Nairobi. P.O Box 53358 – 00200. Nairobi, Kenya</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Phone className="w-4 h-4 text-white" />

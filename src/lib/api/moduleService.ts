@@ -60,18 +60,23 @@ const moduleService = {
     return response.data;
   },
 
-  async addLesson(moduleId, lessonData) {
-    const response = await api.post(`/${moduleId}/lessons`, lessonData);
+  async deleteTopic(moduleId, topicIndex) {
+    const response = await api.delete(`/${moduleId}/topics/${topicIndex}`);
     return response.data;
   },
 
-  async updateLesson(moduleId, lessonIndex, lessonData) {
-    const response = await api.put(`/${moduleId}/lessons/${lessonIndex}`, lessonData);
+  async addLesson(moduleId, topicIndex, lessonData) {
+    const response = await api.post(`/${moduleId}/topics/${topicIndex}/lessons`, lessonData);
     return response.data;
   },
 
-  async deleteLesson(moduleId, lessonIndex) {
-    const response = await api.delete(`/${moduleId}/lessons/${lessonIndex}`);
+  async updateLesson(moduleId, topicIndex, lessonIndex, lessonData) {
+    const response = await api.put(`/${moduleId}/topics/${topicIndex}/lessons/${lessonIndex}`, lessonData);
+    return response.data;
+  },
+
+  async deleteLesson(moduleId, topicIndex, lessonIndex) {
+    const response = await api.delete(`/${moduleId}/topics/${topicIndex}/lessons/${lessonIndex}`);
     return response.data;
   },
 

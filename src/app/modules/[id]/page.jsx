@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
     ArrowLeft, CheckCircle, Lock, Loader2, AlertTriangle,
     Users, BookOpen, Award, DollarSign, Unlock, Star,
-    Play, ChevronRight, Layers, Clock, UserCheck, Mail,
+    Play, Clock, UserCheck, Mail,
     Target, GraduationCap, Lightbulb
 } from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
@@ -225,7 +225,7 @@ export default function ModuleDetailPage() {
         }
         if (!isLoggedIn) {
             return {
-                label: isFellowOnly ? 'Sign In (Fellows Only)' : effectivelyPaid ? 'Sign In to Purchase' : 'Sign In to Enroll for Free',
+                label: isFellowOnly ? 'Sign In (Fellows Only)' : effectivelyPaid ? 'Sign In' : 'Sign In to Enroll for Free',
                 icon: UserCheck,
                 style: 'bg-gradient-to-r from-[#021d49] to-blue-700 hover:from-[#032e6b] hover:to-blue-800 text-white',
             };
@@ -325,93 +325,7 @@ export default function ModuleDetailPage() {
                         {/* ══════════════ LEFT / MAIN CONTENT ══════════════ */}
                         <div className="lg:col-span-2 space-y-6">
 
-                            {/* ─── Category Card ───────────────────────────── */}
-                            {category && (
-                                <div className="bg-gradient-to-r from-[#021d49] via-blue-800 to-indigo-700 rounded-3xl overflow-hidden shadow-xl">
-                                    <div className="p-8 text-white">
-                                        {/* Breadcrumb */}
-                                        <div className="flex items-center gap-2 text-blue-300 text-sm mb-4">
-                                            <Layers className="w-4 h-4" />
-                                            <span>Category</span>
-                                            <ChevronRight className="w-3 h-3" />
-                                            <span className="text-white font-semibold">{category.name}</span>
-                                        </div>
-
-                                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                                            <div className="flex-1">
-                                                <h2 className="text-2xl sm:text-3xl font-extrabold mb-3">{category.name}</h2>
-                                                {category.description && (
-                                                    <p className="text-blue-200 leading-relaxed text-sm sm:text-base max-w-xl">
-                                                        {category.description}
-                                                    </p>
-                                                )}
-                                            </div>
-
-                                            {/* Access type badge */}
-                                            <div className="flex-shrink-0">
-                                                {category?.accessType === 'restricted' && (
-                                                    <div className="space-y-2 text-center">
-                                                        <div className="bg-purple-500/20 border border-purple-400/40 rounded-2xl px-5 py-4">
-                                                            <Award className="w-6 h-6 text-purple-300 mx-auto mb-1" />
-                                                            <p className="text-purple-300 font-bold text-sm">Fellows Priority</p>
-                                                            <p className="text-purple-200 text-xs">Fellows get free access</p>
-                                                        </div>
-                                                        {catPrice > 0 && (
-                                                            <div className="bg-orange-500/20 border border-orange-400/40 rounded-2xl px-5 py-3">
-                                                                <p className="text-orange-300 font-bold text-sm">KES {catPrice.toLocaleString()}</p>
-                                                                <p className="text-orange-200 text-xs">Unlocks all modules in this category</p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                {category?.accessType === 'paid' && (
-                                                    <div className="bg-orange-500/20 border border-orange-400/40 rounded-2xl px-5 py-4 text-center">
-                                                        <DollarSign className="w-6 h-6 text-orange-300 mx-auto mb-1" />
-                                                        <p className="text-orange-300 font-bold text-base">
-                                                            {catPrice ? `KES ${catPrice.toLocaleString()}` : 'Paid'}
-                                                        </p>
-                                                        <p className="text-orange-200 text-xs">One-time · all modules in this category</p>
-                                                    </div>
-                                                )}
-                                                {category?.accessType === 'free' && (
-                                                    <div className="bg-purple-500/20 border border-purple-400/40 rounded-2xl px-5 py-4 text-center">
-                                                        <Award className="w-6 h-6 text-purple-300 mx-auto mb-1" />
-                                                        <p className="text-purple-300 font-bold text-sm">Fellows Only</p>
-                                                        <p className="text-purple-200 text-xs">Admin-approved access</p>
-                                                    </div>
-                                                )}
-                                                {isFree && !category?.accessType && (
-                                                    <div className="bg-emerald-500/20 border border-emerald-400/40 rounded-2xl px-5 py-4 text-center">
-                                                        <Unlock className="w-6 h-6 text-emerald-300 mx-auto mb-1" />
-                                                        <p className="text-emerald-300 font-bold text-sm">Open Access</p>
-                                                        <p className="text-emerald-200 text-xs">No payment needed</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {/* Category rich-text fields */}
-                                        {[
-                                            { key: 'courseDescription', label: 'Programme Description' },
-                                            { key: 'overallObjectives',  label: 'Objectives' },
-                                            { key: 'learningOutcomes',   label: 'Learning Outcomes' },
-                                        ].map(f => {
-                                            if (!category[f.key]?.replace(/<[^>]*>/g, '').trim()) return null;
-                                            return (
-                                                <div key={f.key} className="mt-5 pt-5 border-t border-white/20">
-                                                    <h4 className="text-blue-300 text-xs font-bold uppercase tracking-wide mb-2">{f.label}</h4>
-                                                    <div
-                                                        className="text-blue-100 text-sm leading-relaxed prose prose-invert prose-sm max-w-none"
-                                                        dangerouslySetInnerHTML={{ __html: category[f.key] }}
-                                                    />
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* ─── Module Info Card ─────────────────────────── */}
+                                {/* ─── Module Info Card ─────────────────────────── */}
                             <div className="bg-white rounded-3xl shadow-lg overflow-hidden border border-gray-100">
                                 {(mod.bannerUrl || mod.thumbnailUrl) && (
                                     <img
@@ -631,24 +545,6 @@ export default function ModuleDetailPage() {
                                             <p className="text-emerald-600 font-bold text-lg">Free Access</p>
                                         </div>
                                         <p className="text-sm text-gray-500">No payment required. Sign in to enroll.</p>
-                                    </div>
-                                )}
-
-                                {/* Paid category price */}
-                                {effectivelyPaid && !enrollment && (
-                                    <div className="pb-5 border-b border-gray-100">
-                                        <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">One-Time Category Price</p>
-                                        <p className="text-4xl font-extrabold text-[#021d49]">
-                                            {catPrice ? `KES ${catPrice.toLocaleString()}` : 'Paid'}
-                                        </p>
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            Pay once · unlock <strong>all modules</strong> in "{category?.name}"
-                                        </p>
-                                        <div className="mt-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
-                                            <p className="text-xs text-orange-800 font-medium">
-                                                💡 This is a category-wide payment. You will not be charged again for other modules in <strong>{category?.name}</strong>.
-                                            </p>
-                                        </div>
                                     </div>
                                 )}
 
