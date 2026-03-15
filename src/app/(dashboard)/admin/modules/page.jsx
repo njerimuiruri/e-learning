@@ -145,15 +145,8 @@ export default function AdminModulesPage() {
         }
     };
 
-    const openModuleDetail = async (mod) => {
-        try {
-            const detailed = await adminService.getModuleById(mod._id);
-            setSelectedModule(detailed);
-            setShowDetailModal(true);
-        } catch {
-            setSelectedModule(mod);
-            setShowDetailModal(true);
-        }
+    const openModuleDetail = (mod) => {
+        router.push(`/admin/modules/${mod._id}`);
     };
 
     const getInstructorNames = (instructorIds) => {

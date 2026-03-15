@@ -37,6 +37,9 @@ function ModuleLearningContent() {
     const [finalAnswers, setFinalAnswers] = useState({});
     const [finalAssessmentResult, setFinalAssessmentResult] = useState(null);
 
+    // Sidebar topic collapse state (array of collapsed topic indices)
+    const [collapsedTopics, setCollapsedTopics] = useState([]);
+
     useEffect(() => {
         if (moduleId) fetchModuleData();
     }, [moduleId, openFinalAssessmentOnLoad]);
@@ -297,57 +300,97 @@ function ModuleLearningContent() {
                                 {completedCount} / {totalLessons} lessons completed
                             </p>
 
-                            <div className="space-y-1">
-                                {lessons.map((lesson, idx) => {
-                                    const completed = isLessonCompleted(idx);
-                                    const accessible = isLessonAccessible(idx) || completed;
-                                    const isCurrent = idx === currentLessonIndex && !showFinalAssessment;
-                                    const lessonProg = getLessonProgress(idx);
-
+                            {/* Topics grouped sidebar - if topics exist */}
+                            {moduleData.topics?.length > 0 ? (
+                                moduleData.topics.map((topic, topicIdx) => {
+                                    const topicLessons = topic.lessons || [];
+                                    // Calculate global lesson indices for this topic
+                                    const globalStartIdx = moduleData.topics.slice(0, topicIdx).reduce((acc, t) => acc + (t.lessons?.length || 0), 0);
+                                    const isTopicOpen = !collapsedTopics.includes(topicIdx);
                                     return (
-                                        <button
-                                            key={idx}
-                                            onClick={() => accessible && navigateToLesson(idx)}
-                                            disabled={!accessible}
-                                            className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 ${isCurrent
-                                                ? 'bg-[#021d49] text-white shadow-md'
-                                                : completed
-                                                    ? 'bg-green-50 hover:bg-green-100 text-gray-900'
-                                                    : accessible
-                                                        ? 'hover:bg-gray-100 text-gray-900'
-                                                        : 'opacity-50 cursor-not-allowed text-gray-400'
-                                                }`}
-                                        >
-                                            <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${isCurrent
-                                                ? 'bg-white text-[#021d49]'
-                                                : completed
-                                                    ? 'bg-green-500 text-white'
-                                                    : 'bg-gray-200 text-gray-600'
-                                                }`}>
-                                                {completed ? <Icons.Check className="w-3.5 h-3.5" /> : idx + 1}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className={`text-sm font-medium truncate ${isCurrent ? 'text-white' : ''}`}>
-                                                    {lesson.title}
-                                                </p>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    {lesson.duration && (
-                                                        <span className={`text-xs ${isCurrent ? 'text-blue-200' : 'text-gray-500'}`}>
-                                                            {lesson.duration}
-                                                        </span>
-                                                    )}
-                                                    {lesson.assessment?.questions?.length > 0 && (
-                                                        <span className={`text-xs flex items-center gap-1 ${isCurrent ? 'text-blue-200' : lessonProg?.assessmentPassed ? 'text-green-600' : 'text-indigo-600'}`}>
-                                                            <Icons.FileQuestion className="w-3 h-3" />
-                                                            {lessonProg?.assessmentPassed ? 'Passed' : 'Quiz'}
-                                                        </span>
-                                                    )}
+                                        <div key={topicIdx} className="mb-1">
+                                            <button
+                                                onClick={() => setCollapsedTopics(prev => prev.includes(topicIdx) ? prev.filter(x => x !== topicIdx) : [...prev, topicIdx])}
+                                                className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-gray-50 rounded-xl transition-colors group"
+                                            >
+                                                <div className="w-6 h-6 rounded-lg bg-[#021d49] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{topicIdx + 1}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-bold text-gray-700 uppercase tracking-wide truncate">{topic.name || topic.title || `Topic ${topicIdx + 1}`}</p>
+                                                    <p className="text-xs text-gray-400">{topicLessons.length} lessons</p>
                                                 </div>
-                                            </div>
-                                            {!accessible && <Icons.Lock className="w-4 h-4 flex-shrink-0 mt-1" />}
-                                        </button>
+                                                <Icons.ChevronDown className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform ${isTopicOpen ? 'rotate-180' : ''}`} />
+                                            </button>
+                                            {isTopicOpen && topicLessons.map((lesson, lessonLocalIdx) => {
+                                                const idx = globalStartIdx + lessonLocalIdx;
+                                                const completed = isLessonCompleted(idx);
+                                                const accessible = isLessonAccessible(idx) || completed;
+                                                const isCurrent = idx === currentLessonIndex && !showFinalAssessment;
+                                                const lessonProg = getLessonProgress(idx);
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        onClick={() => accessible && navigateToLesson(idx)}
+                                                        disabled={!accessible}
+                                                        className={`w-full text-left p-3 pl-10 rounded-xl transition-all flex items-start gap-3 ${isCurrent ? 'bg-[#021d49] text-white shadow-md' : completed ? 'bg-green-50 hover:bg-green-100 text-gray-900' : accessible ? 'hover:bg-gray-100 text-gray-900' : 'opacity-50 cursor-not-allowed text-gray-400'}`}
+                                                    >
+                                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${isCurrent ? 'bg-white text-[#021d49]' : completed ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                                                            {completed ? <Icons.Check className="w-3.5 h-3.5" /> : idx + 1}
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className={`text-sm font-medium truncate ${isCurrent ? 'text-white' : ''}`}>{lesson.title}</p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                {lesson.duration && <span className={`text-xs ${isCurrent ? 'text-blue-200' : 'text-gray-500'}`}>{lesson.duration}</span>}
+                                                                {lesson.assessment?.questions?.length > 0 && (
+                                                                    <span className={`text-xs flex items-center gap-1 ${isCurrent ? 'text-blue-200' : lessonProg?.assessmentPassed ? 'text-green-600' : 'text-indigo-600'}`}>
+                                                                        <Icons.FileQuestion className="w-3 h-3" />
+                                                                        {lessonProg?.assessmentPassed ? 'Passed' : 'Quiz'}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        {!accessible && <Icons.Lock className="w-4 h-4 flex-shrink-0 mt-1" />}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                     );
-                                })}
+                                })
+                            ) : (
+                                /* Flat lessons fallback */
+                                <div className="space-y-1">
+                                    {lessons.map((lesson, idx) => {
+                                        const completed = isLessonCompleted(idx);
+                                        const accessible = isLessonAccessible(idx) || completed;
+                                        const isCurrent = idx === currentLessonIndex && !showFinalAssessment;
+                                        const lessonProg = getLessonProgress(idx);
+                                        return (
+                                            <button
+                                                key={idx}
+                                                onClick={() => accessible && navigateToLesson(idx)}
+                                                disabled={!accessible}
+                                                className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 ${isCurrent ? 'bg-[#021d49] text-white shadow-md' : completed ? 'bg-green-50 hover:bg-green-100 text-gray-900' : accessible ? 'hover:bg-gray-100 text-gray-900' : 'opacity-50 cursor-not-allowed text-gray-400'}`}
+                                            >
+                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${isCurrent ? 'bg-white text-[#021d49]' : completed ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                                                    {completed ? <Icons.Check className="w-3.5 h-3.5" /> : idx + 1}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className={`text-sm font-medium truncate ${isCurrent ? 'text-white' : ''}`}>{lesson.title}</p>
+                                                    <div className="flex items-center gap-2 mt-0.5">
+                                                        {lesson.duration && <span className={`text-xs ${isCurrent ? 'text-blue-200' : 'text-gray-500'}`}>{lesson.duration}</span>}
+                                                        {lesson.assessment?.questions?.length > 0 && (
+                                                            <span className={`text-xs flex items-center gap-1 ${isCurrent ? 'text-blue-200' : lessonProg?.assessmentPassed ? 'text-green-600' : 'text-indigo-600'}`}>
+                                                                <Icons.FileQuestion className="w-3 h-3" />
+                                                                {lessonProg?.assessmentPassed ? 'Passed' : 'Quiz'}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {!accessible && <Icons.Lock className="w-4 h-4 flex-shrink-0 mt-1" />}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
 
                                 {/* Final Assessment entry */}
                                 <button
@@ -388,7 +431,6 @@ function ModuleLearningContent() {
                                     </div>
                                     {!allLessonsCompleted && <Icons.Lock className="w-4 h-4 flex-shrink-0 mt-1" />}
                                 </button>
-                            </div>
 
                             {/* Discussion Forum link */}
                             <div className="p-4 border-t">
@@ -540,6 +582,60 @@ function ModuleLearningContent() {
                                                             );
                                                         })}
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {/* Tasks */}
+                                            {currentLesson.tasks?.length > 0 && (
+                                                <div className="bg-white rounded-2xl border-2 border-blue-100 p-6 mb-6">
+                                                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                                        <Icons.CheckSquare className="w-5 h-5 text-blue-600" />
+                                                        Tasks
+                                                    </h3>
+                                                    <ul className="space-y-2">
+                                                        {currentLesson.tasks.map((task, ti) => (
+                                                            <li key={ti} className="flex items-start gap-3 p-3 bg-blue-50 rounded-xl text-sm text-gray-800">
+                                                                <Icons.CheckSquare className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                                                                <span>{typeof task === 'string' ? task : task.text || task.value}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {/* Deliverables */}
+                                            {currentLesson.deliverables?.length > 0 && (
+                                                <div className="bg-white rounded-2xl border-2 border-purple-100 p-6 mb-6">
+                                                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                                        <Icons.Package className="w-5 h-5 text-purple-600" />
+                                                        Deliverables
+                                                    </h3>
+                                                    <ul className="space-y-2">
+                                                        {currentLesson.deliverables.map((item, i) => (
+                                                            <li key={i} className="flex items-start gap-3 p-3 bg-purple-50 rounded-xl text-sm text-gray-800">
+                                                                <Icons.Package className="w-4 h-4 text-purple-600 flex-shrink-0 mt-0.5" />
+                                                                <span>{typeof item === 'string' ? item : item.text || item.value}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            {/* Evaluation Criteria */}
+                                            {currentLesson.evaluationCriteria?.length > 0 && (
+                                                <div className="bg-white rounded-2xl border-2 border-amber-100 p-6 mb-6">
+                                                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                                        <Icons.Star className="w-5 h-5 text-amber-600" />
+                                                        Evaluation Criteria
+                                                    </h3>
+                                                    <ul className="space-y-2">
+                                                        {currentLesson.evaluationCriteria.map((item, i) => (
+                                                            <li key={i} className="flex items-start gap-3 p-3 bg-amber-50 rounded-xl text-sm text-gray-800">
+                                                                <Icons.Star className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                                                                <span>{typeof item === 'string' ? item : item.text || item.value}</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
                                                 </div>
                                             )}
 
