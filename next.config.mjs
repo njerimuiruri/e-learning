@@ -4,11 +4,11 @@ const nextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "https://api.elearning.arin-africa.orgapi/:path*",
+        destination: "http://api.elearning.arin-africa.org/api/:path*",
       },
       {
         source: "/uploads/:path*",
-        destination: "https://api.elearning.arin-africa.orguploads/:path*",
+        destination: "http://api.elearning.arin-africa.org/uploads/:path*",
       },
     ];
   },

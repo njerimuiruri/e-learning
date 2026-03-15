@@ -19,6 +19,7 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // ─────────────────────────────────────────────────────────────────
 // CONFIRM DELETE DIALOG
@@ -277,149 +278,204 @@ function LessonEditorPage({ lesson, onChange, onBack, lessonNumber, topicName })
 
     return (
         <div className="space-y-0">
-            {/* Breadcrumb bar */}
-            <div className="flex items-center gap-2 text-sm text-gray-500 mb-6 p-4 bg-gray-50 rounded-xl border">
-                <Icons.Layers className="w-4 h-4 text-blue-500" />
-                <span className="text-blue-600 font-medium">{topicName}</span>
-                <Icons.ChevronRight className="w-4 h-4" />
-                <Icons.BookOpen className="w-4 h-4 text-green-500" />
-                <span className="text-green-700 font-medium">
-                    {lesson.lessonName || `Lesson ${lessonNumber}`}
-                </span>
+            {/* Breadcrumb + lesson identity bar */}
+            <div className="flex items-center justify-between gap-4 mb-6 p-4 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-100">
+                <div className="flex items-center gap-2 text-sm text-gray-500 min-w-0">
+                    <Icons.Layers className="w-4 h-4 text-blue-500 flex-shrink-0" />
+                    <span className="text-blue-600 font-medium truncate">{topicName}</span>
+                    <Icons.ChevronRight className="w-4 h-4 flex-shrink-0" />
+                    <Icons.BookOpen className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    <span className="text-green-700 font-semibold truncate">
+                        {lesson.lessonName || `Lesson ${lessonNumber}`}
+                    </span>
+                </div>
+                <Button onClick={onBack} variant="outline" size="sm" className="gap-1.5 flex-shrink-0 border-green-300 text-green-700 hover:bg-green-50">
+                    <Icons.CheckCircle className="w-3.5 h-3.5" /> Done
+                </Button>
             </div>
 
-            <div className="space-y-8">
-                {/* ── Basic info ─────────────────────── */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                        <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-sm">1</div>
-                        <h3 className="font-semibold text-gray-800">Lesson Details</h3>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                            <Label>Lesson Name <span className="text-red-500">*</span></Label>
-                            <Input
-                                value={lesson.lessonName}
-                                onChange={e => update('lessonName', e.target.value)}
-                                placeholder="e.g. Phase Overview, Literature Review Tasks"
-                            />
-                        </div>
-                        <div className="space-y-1">
-                            <Label>Duration / Timeline</Label>
-                            <Input
-                                value={lesson.duration || ''}
-                                onChange={e => update('duration', e.target.value)}
-                                placeholder="e.g. Weeks 1–6"
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                {/* ── Lesson Content (WYSIWYG) ────────── */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                        <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-sm">2</div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800">Lesson Content</h3>
-                            <p className="text-xs text-gray-500">Write the main lesson body. This is what learners read/watch.</p>
-                        </div>
-                    </div>
-                    <RichTextEditor
-                        value={lesson.lessonContent || ''}
-                        onChange={v => update('lessonContent', v)}
-                        placeholder="Write the full lesson content here — explain concepts, provide context, include examples..."
+            {/* Lesson name + duration always visible at top */}
+            <div className="grid grid-cols-2 gap-4 mb-6 p-5 bg-white border rounded-xl shadow-sm">
+                <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold">Lesson Name <span className="text-red-500">*</span></Label>
+                    <Input
+                        value={lesson.lessonName}
+                        onChange={e => update('lessonName', e.target.value)}
+                        placeholder="e.g. Phase Overview, Literature Review Tasks"
+                        className="text-base"
                     />
-                </section>
-
-                {/* ── Tasks ──────────────────────────── */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                        <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-orange-700 font-bold text-sm">3</div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800">Tasks</h3>
-                            <p className="text-xs text-gray-500">What should the learner DO in this lesson?</p>
-                        </div>
-                    </div>
-                    <BulletList
-                        label="Task List"
-                        hint="List clear, actionable things learners must do (e.g. read, write, analyse, submit)."
-                        values={lesson.tasks || []}
-                        onChange={v => update('tasks', v)}
-                        placeholder="e.g. Read provided research papers on climate resilience AI projects"
+                </div>
+                <div className="space-y-1.5">
+                    <Label className="text-sm font-semibold">Duration / Timeline</Label>
+                    <Input
+                        value={lesson.duration || ''}
+                        onChange={e => update('duration', e.target.value)}
+                        placeholder="e.g. Weeks 1–6"
                     />
-                </section>
-
-                {/* ── Deliverables ────────────────────── */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                        <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold text-sm">4</div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800">Deliverables</h3>
-                            <p className="text-xs text-gray-500">What should the learner submit or produce at the end of this lesson?</p>
-                        </div>
-                    </div>
-                    <BulletList
-                        label="Deliverable List"
-                        hint="These are the outputs learners must hand in (documents, reports, datasets, etc.)."
-                        values={lesson.deliverables || []}
-                        onChange={v => update('deliverables', v)}
-                        placeholder="e.g. Written problem statement (5–10 pages)"
-                    />
-                </section>
-
-                {/* ── Evaluation Criteria ─────────────── */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                        <div className="w-7 h-7 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 font-bold text-sm">5</div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800">Evaluation Criteria</h3>
-                            <p className="text-xs text-gray-500">How will the learner's work be assessed? List the grading criteria.</p>
-                        </div>
-                    </div>
-                    <BulletList
-                        label="Criteria List"
-                        hint="e.g. Relevance and clarity of problem statement, Quality of literature review."
-                        values={lesson.evaluationCriteria || []}
-                        onChange={v => update('evaluationCriteria', v)}
-                        placeholder="e.g. Completeness and clarity of the problem statement"
-                    />
-                </section>
-
-                {/* ── Quiz ───────────────────────────── */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                        <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm">6</div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800">Assessment Quiz</h3>
-                            <p className="text-xs text-gray-500">Learners must pass this quiz before moving to the next lesson.</p>
-                        </div>
-                    </div>
-                    <QuizBuilder
-                        questions={lesson.assessmentQuiz || []}
-                        onChange={v => update('assessmentQuiz', v)}
-                    />
-                </section>
-
-                {/* ── Lesson Resources ───────────────── */}
-                <section className="space-y-4">
-                    <div className="flex items-center gap-2 border-b pb-2">
-                        <div className="w-7 h-7 rounded-full bg-teal-100 flex items-center justify-center text-teal-700 font-bold text-sm">7</div>
-                        <div>
-                            <h3 className="font-semibold text-gray-800">Lesson Resources</h3>
-                            <p className="text-xs text-gray-500">Attach PDFs, datasets, code notebooks, or external links for this lesson.</p>
-                        </div>
-                    </div>
-                    <ResourceList
-                        label="Resources"
-                        hint="These files and links will be available to learners inside this lesson."
-                        values={lesson.lessonResources || []}
-                        onChange={v => update('lessonResources', v)}
-                    />
-                </section>
+                </div>
             </div>
 
-            {/* Done button */}
-            <div className="pt-8 flex justify-end">
+            {/* Tabbed sections */}
+            <Tabs defaultValue="content" className="space-y-0">
+                <TabsList className="w-full grid grid-cols-4 h-12 bg-gray-100 rounded-xl p-1 mb-6">
+                    <TabsTrigger value="content" className="rounded-lg gap-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-green-700">
+                        <Icons.FileText className="w-4 h-4" />
+                        <span>Content</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="tasks" className="rounded-lg gap-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-orange-700">
+                        <Icons.ListChecks className="w-4 h-4" />
+                        <span>Tasks & Grading</span>
+                        {((lesson.tasks || []).length + (lesson.deliverables || []).length) > 0 && (
+                            <Badge className="ml-1 h-4 px-1 text-xs bg-orange-100 text-orange-700 border-0">
+                                {(lesson.tasks || []).length + (lesson.deliverables || []).length}
+                            </Badge>
+                        )}
+                    </TabsTrigger>
+                    <TabsTrigger value="quiz" className="rounded-lg gap-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-blue-700">
+                        <Icons.HelpCircle className="w-4 h-4" />
+                        <span>Quiz</span>
+                        {(lesson.assessmentQuiz || []).length > 0 && (
+                            <Badge className="ml-1 h-4 px-1 text-xs bg-blue-100 text-blue-700 border-0">
+                                {(lesson.assessmentQuiz || []).length}
+                            </Badge>
+                        )}
+                    </TabsTrigger>
+                    <TabsTrigger value="resources" className="rounded-lg gap-1.5 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-teal-700">
+                        <Icons.Link className="w-4 h-4" />
+                        <span>Resources</span>
+                        {(lesson.lessonResources || []).length > 0 && (
+                            <Badge className="ml-1 h-4 px-1 text-xs bg-teal-100 text-teal-700 border-0">
+                                {(lesson.lessonResources || []).length}
+                            </Badge>
+                        )}
+                    </TabsTrigger>
+                </TabsList>
+
+                {/* ── Tab 1: Content ─────────────────────────────── */}
+                <TabsContent value="content" className="space-y-2 mt-0">
+                    <div className="p-5 bg-white border rounded-xl shadow-sm space-y-2">
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                                <Icons.FileText className="w-4 h-4 text-green-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-800">Lesson Content</h3>
+                                <p className="text-xs text-gray-500">Write the main lesson body — what learners will read and learn.</p>
+                            </div>
+                        </div>
+                        <RichTextEditor
+                            value={lesson.lessonContent || ''}
+                            onChange={v => update('lessonContent', v)}
+                            placeholder="Write the full lesson content here — explain concepts, provide context, include examples..."
+                        />
+                    </div>
+                </TabsContent>
+
+                {/* ── Tab 2: Tasks & Grading ──────────────────────── */}
+                <TabsContent value="tasks" className="mt-0">
+                    <div className="space-y-4">
+                        <div className="p-5 bg-white border rounded-xl shadow-sm space-y-4">
+                            <div className="flex items-center gap-2 pb-3 border-b">
+                                <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                                    <Icons.ListChecks className="w-4 h-4 text-orange-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-800">Tasks</h3>
+                                    <p className="text-xs text-gray-500">What should the learner DO in this lesson?</p>
+                                </div>
+                            </div>
+                            <BulletList
+                                label="Task List"
+                                hint="List clear, actionable things learners must do (e.g. read, write, analyse, submit)."
+                                values={lesson.tasks || []}
+                                onChange={v => update('tasks', v)}
+                                placeholder="e.g. Read provided research papers on climate resilience AI projects"
+                            />
+                        </div>
+
+                        <div className="p-5 bg-white border rounded-xl shadow-sm space-y-4">
+                            <div className="flex items-center gap-2 pb-3 border-b">
+                                <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                                    <Icons.FileText className="w-4 h-4 text-purple-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-800">Deliverables</h3>
+                                    <p className="text-xs text-gray-500">What should the learner submit or produce at the end of this lesson?</p>
+                                </div>
+                            </div>
+                            <BulletList
+                                label="Deliverable List"
+                                hint="These are the outputs learners must hand in (documents, reports, datasets, etc.)."
+                                values={lesson.deliverables || []}
+                                onChange={v => update('deliverables', v)}
+                                placeholder="e.g. Written problem statement (5–10 pages)"
+                            />
+                        </div>
+
+                        <div className="p-5 bg-white border rounded-xl shadow-sm space-y-4">
+                            <div className="flex items-center gap-2 pb-3 border-b">
+                                <div className="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center">
+                                    <Icons.Target className="w-4 h-4 text-yellow-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-gray-800">Evaluation Criteria</h3>
+                                    <p className="text-xs text-gray-500">How will the learner's work be assessed? List the grading criteria.</p>
+                                </div>
+                            </div>
+                            <BulletList
+                                label="Criteria List"
+                                hint="e.g. Relevance and clarity of problem statement, Quality of literature review."
+                                values={lesson.evaluationCriteria || []}
+                                onChange={v => update('evaluationCriteria', v)}
+                                placeholder="e.g. Completeness and clarity of the problem statement"
+                            />
+                        </div>
+                    </div>
+                </TabsContent>
+
+                {/* ── Tab 3: Quiz ─────────────────────────────────── */}
+                <TabsContent value="quiz" className="mt-0">
+                    <div className="p-5 bg-white border rounded-xl shadow-sm space-y-4">
+                        <div className="flex items-center gap-2 pb-3 border-b">
+                            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                                <Icons.HelpCircle className="w-4 h-4 text-blue-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-800">Assessment Quiz</h3>
+                                <p className="text-xs text-gray-500">Learners must pass this quiz before moving to the next lesson.</p>
+                            </div>
+                        </div>
+                        <QuizBuilder
+                            questions={lesson.assessmentQuiz || []}
+                            onChange={v => update('assessmentQuiz', v)}
+                        />
+                    </div>
+                </TabsContent>
+
+                {/* ── Tab 4: Resources ────────────────────────────── */}
+                <TabsContent value="resources" className="mt-0">
+                    <div className="p-5 bg-white border rounded-xl shadow-sm space-y-4">
+                        <div className="flex items-center gap-2 pb-3 border-b">
+                            <div className="w-8 h-8 rounded-lg bg-teal-100 flex items-center justify-center">
+                                <Icons.Link className="w-4 h-4 text-teal-600" />
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-gray-800">Lesson Resources</h3>
+                                <p className="text-xs text-gray-500">Attach PDFs, datasets, code notebooks, or external links for this lesson.</p>
+                            </div>
+                        </div>
+                        <ResourceList
+                            label="Resources"
+                            hint="These files and links will be available to learners inside this lesson."
+                            values={lesson.lessonResources || []}
+                            onChange={v => update('lessonResources', v)}
+                        />
+                    </div>
+                </TabsContent>
+            </Tabs>
+
+            {/* Bottom done button */}
+            <div className="pt-6 flex justify-end">
                 <Button onClick={onBack} className="gap-2 bg-green-600 hover:bg-green-700">
                     <Icons.CheckCircle className="w-4 h-4" /> Done — Back to Topic
                 </Button>
@@ -1322,7 +1378,7 @@ export default function CreateModulePage() {
                 </div>
             </div>
 
-            <div className="max-w-6xl mx-auto px-6 py-8 flex gap-6">
+            <div className="max-w-7xl mx-auto px-6 py-8 flex gap-6">
 
                 {/* ── Left sidebar: step list ─────────── */}
                 <div className="w-60 flex-shrink-0">

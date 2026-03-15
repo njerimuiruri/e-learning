@@ -1,1102 +1,1181 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import adminService from '@/lib/api/adminService';
 import categoryService from '@/lib/api/categoryService';
 
-// Password generator
-const generatePassword = () => {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789!@#$%&*';
-    let password = '';
-    for (let i = 0; i < 12; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return password;
-};
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 
-export default function FellowsManagementPage() {
-    const [activeTab, setActiveTab] = useState('list');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [filterStatus, setFilterStatus] = useState('all');
-    const [fellows, setFellows] = useState([]);
-    const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState('');
-    const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
-    const [deletingId, setDeletingId] = useState(null);
+// ─────────────────────────────────────────────────────────────────
+// CONSTANTS
+// ─────────────────────────────────────────────────────────────────
+const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
+const TRACK_OPTIONS  = ['AI & Machine Learning', 'Data Science', 'Climate Tech', 'Agri-Tech', 'Health Tech', 'FinTech', 'EdTech', 'Other'];
 
-    // Student form state
-    const [studentStep, setStudentStep] = useState(1);
-    const [studentForm, setStudentForm] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        phoneNumber: '',
-        country: '',
-        organization: '',
-        otherOrganization: '',
-        profilePicture: null,
-        dateOfBirth: '',
-        gender: '',
-        educationLevel: '',
-        fieldOfStudy: '',
-        linkedIn: '',
-        motivation: '',
-        assignedCategories: []
+const BLANK_ROW = () => ({
+  id: Date.now() + Math.random(),
+  firstName: '', lastName: '', email: '', gender: '',
+  country: '', region: '', track: '', category: '', phoneNumber: '',
+});
+
+// ─────────────────────────────────────────────────────────────────
+// MODAL WRAPPER
+// ─────────────────────────────────────────────────────────────────
+function Modal({ open, onClose, title, children, maxWidth = 'max-w-2xl' }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className={`relative bg-white rounded-2xl shadow-2xl w-full ${maxWidth} max-h-[90vh] flex flex-col`}>
+        <div className="flex items-center justify-between p-6 border-b flex-shrink-0">
+          <h2 className="text-lg font-bold text-gray-900">{title}</h2>
+          <Button variant="ghost" size="icon" onClick={onClose}><Icons.X className="w-5 h-5" /></Button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-6">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// STAT CARD
+// ─────────────────────────────────────────────────────────────────
+function StatCard({ label, value, icon: Icon, color = 'blue', sub }) {
+  const colors = {
+    blue:   'bg-blue-50 text-blue-600 border-blue-100',
+    green:  'bg-green-50 text-green-600 border-green-100',
+    amber:  'bg-amber-50 text-amber-600 border-amber-100',
+    purple: 'bg-purple-50 text-purple-600 border-purple-100',
+    red:    'bg-red-50 text-red-600 border-red-100',
+  };
+  return (
+    <Card className={`border ${colors[color]}`}>
+      <CardContent className="pt-5 pb-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide opacity-70">{label}</p>
+            <p className="text-3xl font-bold mt-1">{value}</p>
+            {sub && <p className="text-xs mt-1 opacity-60">{sub}</p>}
+          </div>
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-white/60 border`}>
+            <Icon className="w-6 h-6" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SINGLE FELLOW FORM
+// ─────────────────────────────────────────────────────────────────
+function SingleFellowForm({ categories, onSuccess, onClose }) {
+  const [form, setForm] = useState({
+    firstName: '', lastName: '', email: '', gender: '',
+    country: '', region: '', track: '', category: '', phoneNumber: '',
+    sendEmail: true,
+  });
+  const [loading, setLoading] = useState(false);
+  const [created, setCreated] = useState(null); // { email, temporaryPassword, emailSent }
+  const [copied, setCopied] = useState(false);
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const copyPassword = (pw) => {
+    navigator.clipboard.writeText(pw).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     });
-    const [studentSubmitLoading, setStudentSubmitLoading] = useState(false);
-    const [studentSubmitMessage, setStudentSubmitMessage] = useState('');
-    const [showOtherOrgStudent, setShowOtherOrgStudent] = useState(false);
+  };
 
-    // Instructor form state
-    const [instructorStep, setInstructorStep] = useState(1);
-    const [instructorForm, setInstructorForm] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
-        password: '',
-        phoneNumber: '',
-        country: '',
-        organization: '',
-        otherOrganization: '',
-        institution: '',
-        profilePicture: null,
-        bio: '',
-        qualifications: '',
-        expertise: '',
-        linkedIn: '',
-        portfolio: '',
-        teachingExperience: '',
-        yearsOfExperience: '',
-        cv: null,
-    });
-    const [instructorSubmitLoading, setInstructorSubmitLoading] = useState(false);
-    const [instructorSubmitMessage, setInstructorSubmitMessage] = useState('');
-    const [showOtherOrgInstructor, setShowOtherOrgInstructor] = useState(false);
-
-    const organizationOptions = [
-        'University',
-        'Research Institute',
-        'NGO',
-        'Government Agency',
-        'Private Company',
-        'Consulting Firm',
-        'Individual/Freelance',
-        'Other'
-    ];
-
-    // Generate passwords and fetch categories on client-side only
-    useEffect(() => {
-        setStudentForm(prev => ({ ...prev, password: generatePassword() }));
-        setInstructorForm(prev => ({ ...prev, password: generatePassword() }));
-        fetchCategories();
-    }, []);
-
-    const fetchCategories = async () => {
-        try {
-            const data = await categoryService.getAllCategories();
-            setCategories(Array.isArray(data) ? data : []);
-        } catch (err) {
-            console.error('Failed to fetch categories:', err);
-        }
-    };
-
-    const fetchFellows = async () => {
-        try {
-            setLoading(true);
-            setError('');
-            const filters = { page: pagination.page, limit: pagination.limit };
-            if (filterStatus !== 'all') filters.status = filterStatus;
-
-            const response = await adminService.getAllStudents(filters);
-            const students = response.students || response.data || [];
-            const paginationData = response.pagination || pagination;
-            setFellows(Array.isArray(students) ? students : []);
-            setPagination(paginationData);
-        } catch (err) {
-            const errorMessage = err.response?.data?.message || err.message || 'Failed to load fellows data';
-            setError(errorMessage);
-            setFellows([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleDeleteFellow = async (id) => {
-        if (!confirm('Are you sure you want to delete this fellow?')) return;
-        try {
-            setDeletingId(id);
-            await adminService.deleteUser(id);
-            alert('Fellow removed successfully');
-            fetchFellows();
-        } catch (err) {
-            alert('Failed to remove fellow');
-        } finally {
-            setDeletingId(null);
-        }
-    };
-
-    const handleStudentSubmit = async () => {
-        setStudentSubmitLoading(true);
-        try {
-            const submitData = {
-                ...studentForm,
-                organization: studentForm.organization === 'Other' ? studentForm.otherOrganization : studentForm.organization,
-                // Mark this student as a Fellow so the backend
-                // can grant them fellowship-based access rights.
-                //
-                // NOTE: The backend should treat `isFellow: true`
-                // as meaning: "this user is part of the Fellows program"
-                // and restrict their free access to the configured
-                // Fellow-only course(s) only.
-                isFellow: true,
-                assignedCategories: studentForm.assignedCategories,
-            };
-            await adminService.createStudent(submitData);
-            setStudentSubmitMessage({ type: 'success', text: 'Fellow created successfully! Login credentials have been sent to their email.' });
-            setTimeout(() => {
-                setActiveTab('list');
-                setStudentStep(1);
-                setStudentForm({
-                    firstName: '',
-                    lastName: '',
-                    email: '',
-                    password: '',
-                    phoneNumber: '',
-                    country: '',
-                    organization: '',
-                    otherOrganization: '',
-                    profilePicture: null,
-                    dateOfBirth: '',
-                    gender: '',
-                    educationLevel: '',
-                    fieldOfStudy: '',
-                    linkedIn: '',
-                    motivation: '',
-                    assignedCategories: []
-                });
-                // Generate new password for next use
-                setTimeout(() => {
-                    setStudentForm(prev => ({ ...prev, password: generatePassword() }));
-                }, 100);
-                setStudentSubmitMessage('');
-                setShowOtherOrgStudent(false);
-                fetchFellows();
-            }, 2000);
-        } catch (err) {
-            setStudentSubmitMessage({ type: 'error', text: err.message || 'Failed to create student' });
-        } finally {
-            setStudentSubmitLoading(false);
-        }
-    };
-
-    const handleInstructorSubmit = async () => {
-        setInstructorSubmitLoading(true);
-        try {
-            const submitData = {
-                ...instructorForm,
-                organization: instructorForm.organization === 'Other' ? instructorForm.otherOrganization : instructorForm.organization
-            };
-            await adminService.createInstructor(submitData);
-            setInstructorSubmitMessage({ type: 'success', text: 'Instructor created successfully! Login credentials have been sent to their email.' });
-            setTimeout(() => {
-                setActiveTab('list');
-                setInstructorStep(1);
-                setInstructorForm({
-                    firstName: '',
-                    lastName: '',
-                    email: '',
-                    password: '',
-                    phoneNumber: '',
-                    country: '',
-                    organization: '',
-                    otherOrganization: '',
-                    institution: '',
-                    profilePicture: null,
-                    bio: '',
-                    qualifications: '',
-                    expertise: '',
-                    linkedIn: '',
-                    portfolio: '',
-                    teachingExperience: '',
-                    yearsOfExperience: '',
-                    cv: null,
-                });
-                // Generate new password for next use
-                setTimeout(() => {
-                    setInstructorForm(prev => ({ ...prev, password: generatePassword() }));
-                }, 100);
-                setInstructorSubmitMessage('');
-                setShowOtherOrgInstructor(false);
-            }, 2000);
-        } catch (err) {
-            setInstructorSubmitMessage({ type: 'error', text: err.message || 'Failed to create instructor' });
-        } finally {
-            setInstructorSubmitLoading(false);
-        }
-    };
-
-    const FormInput = ({ label, name, value, onChange, type = 'text', placeholder, required = false, disabled = false }) => (
-        <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <input
-                type={type}
-                name={name}
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder}
-                required={required}
-                disabled={disabled}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none disabled:bg-gray-100"
-            />
-        </div>
-    );
-
-    const FormTextarea = ({ label, name, value, onChange, placeholder, required = false, rows = 4 }) => (
-        <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <textarea
-                name={name}
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder}
-                required={required}
-                rows={rows}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
-            />
-        </div>
-    );
-
-    const FormSelect = ({ label, name, value, onChange, options, required = false }) => (
-        <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <select
-                name={name}
-                value={value}
-                onChange={onChange}
-                required={required}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
-            >
-                <option value="">Select {label}</option>
-                {options.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                ))}
-            </select>
-        </div>
-    );
-
-    const FormFileInput = ({ label, name, onChange, accept, required = false }) => (
-        <div className="mb-4">
-            <label className="block text-sm font-semibold text-gray-700 mb-1">
-                {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <input
-                type="file"
-                name={name}
-                onChange={onChange}
-                accept={accept}
-                required={required}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100"
-            />
-        </div>
-    );
-
-    const StepIndicator = ({ currentStep, totalSteps, steps }) => (
-        <div className="mb-8">
-            <div className="flex items-center justify-between">
-                {steps.map((step, index) => (
-                    <React.Fragment key={index}>
-                        <div className="flex flex-col items-center">
-                            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${currentStep > index + 1 ? 'bg-emerald-600 text-white' :
-                                currentStep === index + 1 ? 'bg-emerald-600 text-white' :
-                                    'bg-gray-300 text-gray-600'
-                                }`}>
-                                {currentStep > index + 1 ? <Icons.Check className="w-5 h-5" /> : index + 1}
-                            </div>
-                            <span className={`text-xs mt-2 font-medium ${currentStep === index + 1 ? 'text-emerald-600' : 'text-gray-500'}`}>
-                                {step}
-                            </span>
-                        </div>
-                        {index < steps.length - 1 && (
-                            <div className={`flex-1 h-1 mx-2 ${currentStep > index + 1 ? 'bg-emerald-600' : 'bg-gray-300'}`} />
-                        )}
-                    </React.Fragment>
-                ))}
-            </div>
-        </div>
-    );
-
-    const CreateStudentForm = () => {
-        const studentSteps = ['Basic Info', 'Contact & Organization', 'Profile Details', 'Review'];
-
-        const validateStep = (step) => {
-            if (step === 1) {
-                return studentForm.firstName && studentForm.lastName && studentForm.email;
-            }
-            if (step === 2) {
-                return studentForm.country && (studentForm.organization !== 'Other' || studentForm.otherOrganization);
-            }
-            return true;
-        };
-
-        return (
-            <div className="max-w-3xl">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Fellow (Student)</h2>
-
-                {studentSubmitMessage && (
-                    <div className={`mb-6 p-4 rounded-lg ${studentSubmitMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                        {studentSubmitMessage.text}
-                    </div>
-                )}
-
-                <StepIndicator currentStep={studentStep} totalSteps={4} steps={studentSteps} />
-
-                {/* Step 1: Basic Info */}
-                {studentStep === 1 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInput
-                                label="First Name"
-                                name="firstName"
-                                value={studentForm.firstName}
-                                onChange={(e) => setStudentForm({ ...studentForm, firstName: e.target.value })}
-                                placeholder="John"
-                                required
-                            />
-                            <FormInput
-                                label="Last Name"
-                                name="lastName"
-                                value={studentForm.lastName}
-                                onChange={(e) => setStudentForm({ ...studentForm, lastName: e.target.value })}
-                                placeholder="Doe"
-                                required
-                            />
-                            <FormInput
-                                label="Email Address"
-                                name="email"
-                                type="email"
-                                value={studentForm.email}
-                                onChange={(e) => setStudentForm({ ...studentForm, email: e.target.value })}
-                                placeholder="john.doe@example.com"
-                                required
-                            />
-                            <div className="mb-4">
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                    Auto-Generated Password <span className="text-emerald-600">(Will be sent via email)</span>
-                                </label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={studentForm.password}
-                                        disabled
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setStudentForm({ ...studentForm, password: generatePassword() })}
-                                        className="px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200 font-medium"
-                                    >
-                                        <Icons.RefreshCw className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInput
-                                label="Date of Birth"
-                                name="dateOfBirth"
-                                type="date"
-                                value={studentForm.dateOfBirth}
-                                onChange={(e) => setStudentForm({ ...studentForm, dateOfBirth: e.target.value })}
-                            />
-                            <FormSelect
-                                label="Gender"
-                                name="gender"
-                                value={studentForm.gender}
-                                onChange={(e) => setStudentForm({ ...studentForm, gender: e.target.value })}
-                                options={['Male', 'Female', 'Non-binary', 'Prefer not to say']}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 2: Contact & Organization */}
-                {studentStep === 2 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact & Organization</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInput
-                                label="Phone Number"
-                                name="phoneNumber"
-                                value={studentForm.phoneNumber}
-                                onChange={(e) => setStudentForm({ ...studentForm, phoneNumber: e.target.value })}
-                                placeholder="+254 700 000 000"
-                            />
-                            <FormInput
-                                label="Country"
-                                name="country"
-                                value={studentForm.country}
-                                onChange={(e) => setStudentForm({ ...studentForm, country: e.target.value })}
-                                placeholder="Kenya"
-                                required
-                            />
-                        </div>
-                        <FormSelect
-                            label="Organization"
-                            name="organization"
-                            value={studentForm.organization}
-                            onChange={(e) => {
-                                setStudentForm({ ...studentForm, organization: e.target.value });
-                                setShowOtherOrgStudent(e.target.value === 'Other');
-                            }}
-                            options={organizationOptions}
-                        />
-                        {showOtherOrgStudent && (
-                            <FormInput
-                                label="Specify Organization"
-                                name="otherOrganization"
-                                value={studentForm.otherOrganization}
-                                onChange={(e) => setStudentForm({ ...studentForm, otherOrganization: e.target.value })}
-                                placeholder="Enter your organization"
-                                required
-                            />
-                        )}
-                        <FormFileInput
-                            label="Profile Picture"
-                            name="profilePicture"
-                            accept="image/*"
-                            onChange={(e) => setStudentForm({ ...studentForm, profilePicture: e.target.files[0] })}
-                        />
-                    </div>
-                )}
-
-                {/* Step 3: Profile Details */}
-                {studentStep === 3 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Profile Details</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormSelect
-                                label="Education Level"
-                                name="educationLevel"
-                                value={studentForm.educationLevel}
-                                onChange={(e) => setStudentForm({ ...studentForm, educationLevel: e.target.value })}
-                                options={['High School', 'Diploma', 'Bachelor\'s Degree', 'Master\'s Degree', 'PhD', 'Other']}
-                            />
-                            <FormInput
-                                label="Field of Study"
-                                name="fieldOfStudy"
-                                value={studentForm.fieldOfStudy}
-                                onChange={(e) => setStudentForm({ ...studentForm, fieldOfStudy: e.target.value })}
-                                placeholder="Computer Science, Business, etc."
-                            />
-                        </div>
-                        <FormInput
-                            label="LinkedIn Profile (Optional)"
-                            name="linkedIn"
-                            value={studentForm.linkedIn}
-                            onChange={(e) => setStudentForm({ ...studentForm, linkedIn: e.target.value })}
-                            placeholder="https://linkedin.com/in/yourprofile"
-                        />
-                        <FormTextarea
-                            label="Motivation / Why do you want to join?"
-                            name="motivation"
-                            value={studentForm.motivation}
-                            onChange={(e) => setStudentForm({ ...studentForm, motivation: e.target.value })}
-                            placeholder="Tell us why you're interested in joining this program..."
-                            rows={5}
-                        />
-
-                        {/* Category Assignment */}
-                        <div className="border-t border-gray-200 pt-6 mt-6">
-                            <h4 className="text-md font-semibold text-gray-900 mb-3">Category Assignment</h4>
-                            <p className="text-sm text-gray-600 mb-4">
-                                Assign categories to grant this fellow free access to all courses in those categories.
-                            </p>
-
-                            {categories.length === 0 ? (
-                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
-                                    <Icons.AlertTriangle className="w-4 h-4 inline mr-2" />
-                                    No categories available. Please create categories first.
-                                </div>
-                            ) : (
-                                <div className="space-y-2 max-h-60 overflow-y-auto border border-gray-200 rounded-lg p-4">
-                                    {categories.map((category) => (
-                                        <label
-                                            key={category._id}
-                                            className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={studentForm.assignedCategories.includes(category._id)}
-                                                onChange={(e) => {
-                                                    if (e.target.checked) {
-                                                        setStudentForm({
-                                                            ...studentForm,
-                                                            assignedCategories: [...studentForm.assignedCategories, category._id]
-                                                        });
-                                                    } else {
-                                                        setStudentForm({
-                                                            ...studentForm,
-                                                            assignedCategories: studentForm.assignedCategories.filter(id => id !== category._id)
-                                                        });
-                                                    }
-                                                }}
-                                                className="w-4 h-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500"
-                                            />
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-medium text-gray-900">{category.name}</span>
-                                                    {category.isPaid ? (
-                                                        <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
-                                                            Paid - ${category.price?.toLocaleString()}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                                                            Free
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                {category.description && (
-                                                    <p className="text-sm text-gray-500 mt-1">{category.description}</p>
-                                                )}
-                                            </div>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-
-                            {studentForm.assignedCategories.length > 0 && (
-                                <div className="mt-4 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-                                    <p className="text-sm text-emerald-800">
-                                        <Icons.CheckCircle className="w-4 h-4 inline mr-2" />
-                                        <strong>{studentForm.assignedCategories.length}</strong> {studentForm.assignedCategories.length === 1 ? 'category' : 'categories'} assigned.
-                                        This fellow will have free access to all courses in the selected {studentForm.assignedCategories.length === 1 ? 'category' : 'categories'}.
-                                    </p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 4: Review */}
-                {studentStep === 4 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Review Information</h3>
-                        <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                            <div>
-                                <h4 className="font-semibold text-gray-700 mb-2">Basic Information</h4>
-                                <p><strong>Name:</strong> {studentForm.firstName} {studentForm.lastName}</p>
-                                <p><strong>Email:</strong> {studentForm.email}</p>
-                                <p><strong>Date of Birth:</strong> {studentForm.dateOfBirth || 'Not provided'}</p>
-                                <p><strong>Gender:</strong> {studentForm.gender || 'Not provided'}</p>
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-gray-700 mb-2">Contact & Organization</h4>
-                                <p><strong>Phone:</strong> {studentForm.phoneNumber || 'Not provided'}</p>
-                                <p><strong>Country:</strong> {studentForm.country}</p>
-                                <p><strong>Organization:</strong> {studentForm.organization === 'Other' ? studentForm.otherOrganization : studentForm.organization || 'Not provided'}</p>
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-gray-700 mb-2">Profile Details</h4>
-                                <p><strong>Education:</strong> {studentForm.educationLevel || 'Not provided'}</p>
-                                <p><strong>Field of Study:</strong> {studentForm.fieldOfStudy || 'Not provided'}</p>
-                                <p><strong>LinkedIn:</strong> {studentForm.linkedIn || 'Not provided'}</p>
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-gray-700 mb-2">Category Assignment</h4>
-                                {studentForm.assignedCategories.length > 0 ? (
-                                    <div className="space-y-2">
-                                        <p className="text-sm text-gray-600 mb-2">
-                                            This fellow will have free access to <strong>{studentForm.assignedCategories.length}</strong> {studentForm.assignedCategories.length === 1 ? 'category' : 'categories'}:
-                                        </p>
-                                        <div className="flex flex-wrap gap-2">
-                                            {studentForm.assignedCategories.map(catId => {
-                                                const category = categories.find(c => c._id === catId);
-                                                return category ? (
-                                                    <span key={catId} className="px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-medium rounded-full">
-                                                        {category.name}
-                                                    </span>
-                                                ) : null;
-                                            })}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-600">No categories assigned. This fellow will need to pay for all paid courses.</p>
-                                )}
-                            </div>
-                            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
-                                <p className="text-sm text-emerald-800">
-                                    <Icons.Info className="w-4 h-4 inline mr-2" />
-                                    The generated password will be sent to <strong>{studentForm.email}</strong> upon creation.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Navigation Buttons */}
-                <div className="flex justify-between mt-8">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (studentStep === 1) {
-                                setActiveTab('list');
-                            } else {
-                                setStudentStep(studentStep - 1);
-                            }
-                        }}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium flex items-center gap-2"
-                    >
-                        <Icons.ChevronLeft className="w-4 h-4" />
-                        {studentStep === 1 ? 'Cancel' : 'Back'}
-                    </button>
-
-                    {studentStep < 4 ? (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (validateStep(studentStep)) {
-                                    setStudentStep(studentStep + 1);
-                                } else {
-                                    alert('Please fill in all required fields');
-                                }
-                            }}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2"
-                        >
-                            Next
-                            <Icons.ChevronRight className="w-4 h-4" />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={handleStudentSubmit}
-                            disabled={studentSubmitLoading}
-                            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2"
-                        >
-                            {studentSubmitLoading ? <Icons.Loader className="w-4 h-4 animate-spin" /> : <Icons.Check className="w-4 h-4" />}
-                            Create Fellow
-                        </button>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
-    const CreateInstructorForm = () => {
-        const instructorSteps = ['Basic Info', 'Professional Details', 'Qualifications', 'Review'];
-
-        const validateStep = (step) => {
-            if (step === 1) {
-                return instructorForm.firstName && instructorForm.lastName && instructorForm.email && instructorForm.phoneNumber && instructorForm.country;
-            }
-            if (step === 2) {
-                return instructorForm.bio && instructorForm.expertise;
-            }
-            if (step === 3) {
-                return instructorForm.qualifications && instructorForm.teachingExperience && instructorForm.cv;
-            }
-            return true;
-        };
-
-        return (
-            <div className="max-w-3xl">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Instructor</h2>
-
-                {instructorSubmitMessage && (
-                    <div className={`mb-6 p-4 rounded-lg ${instructorSubmitMessage.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                        {instructorSubmitMessage.text}
-                    </div>
-                )}
-
-                <StepIndicator currentStep={instructorStep} totalSteps={4} steps={instructorSteps} />
-
-                {/* Step 1: Basic Info */}
-                {instructorStep === 1 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInput
-                                label="First Name"
-                                name="firstName"
-                                value={instructorForm.firstName}
-                                onChange={(e) => setInstructorForm({ ...instructorForm, firstName: e.target.value })}
-                                placeholder="Jane"
-                                required
-                            />
-                            <FormInput
-                                label="Last Name"
-                                name="lastName"
-                                value={instructorForm.lastName}
-                                onChange={(e) => setInstructorForm({ ...instructorForm, lastName: e.target.value })}
-                                placeholder="Smith"
-                                required
-                            />
-                            <FormInput
-                                label="Email Address"
-                                name="email"
-                                type="email"
-                                value={instructorForm.email}
-                                onChange={(e) => setInstructorForm({ ...instructorForm, email: e.target.value })}
-                                placeholder="jane.smith@example.com"
-                                required
-                            />
-                            <div className="mb-4">
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                    Auto-Generated Password <span className="text-blue-600">(Will be sent via email)</span>
-                                </label>
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={instructorForm.password}
-                                        disabled
-                                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => setInstructorForm({ ...instructorForm, password: generatePassword() })}
-                                        className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 font-medium"
-                                    >
-                                        <Icons.RefreshCw className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInput
-                                label="Phone Number"
-                                name="phoneNumber"
-                                value={instructorForm.phoneNumber}
-                                onChange={(e) => setInstructorForm({ ...instructorForm, phoneNumber: e.target.value })}
-                                placeholder="+254 700 000 000"
-                                required
-                            />
-                            <FormInput
-                                label="Country"
-                                name="country"
-                                value={instructorForm.country}
-                                onChange={(e) => setInstructorForm({ ...instructorForm, country: e.target.value })}
-                                placeholder="Kenya"
-                                required
-                            />
-                        </div>
-                        <FormSelect
-                            label="Organization"
-                            name="organization"
-                            value={instructorForm.organization}
-                            onChange={(e) => {
-                                setInstructorForm({ ...instructorForm, organization: e.target.value });
-                                setShowOtherOrgInstructor(e.target.value === 'Other');
-                            }}
-                            options={organizationOptions}
-                        />
-                        {showOtherOrgInstructor && (
-                            <FormInput
-                                label="Specify Organization"
-                                name="otherOrganization"
-                                value={instructorForm.otherOrganization}
-                                onChange={(e) => setInstructorForm({ ...instructorForm, otherOrganization: e.target.value })}
-                                placeholder="Enter your organization"
-                                required
-                            />
-                        )}
-                        <FormInput
-                            label="Institution Name"
-                            name="institution"
-                            value={instructorForm.institution}
-                            onChange={(e) => setInstructorForm({ ...instructorForm, institution: e.target.value })}
-                            placeholder="Your institution"
-                        />
-                        <FormFileInput
-                            label="Profile Picture"
-                            name="profilePicture"
-                            accept="image/*"
-                            onChange={(e) => setInstructorForm({ ...instructorForm, profilePicture: e.target.files[0] })}
-                        />
-                    </div>
-                )}
-
-                {/* Step 2: Professional Details */}
-                {instructorStep === 2 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Professional Details</h3>
-                        <FormTextarea
-                            label="Bio / Short Introduction"
-                            name="bio"
-                            value={instructorForm.bio}
-                            onChange={(e) => setInstructorForm({ ...instructorForm, bio: e.target.value })}
-                            placeholder="Tell us about your experience, teaching style, and what you bring to the program..."
-                            rows={5}
-                            required
-                        />
-                        <FormTextarea
-                            label="Expertise / Skills"
-                            name="expertise"
-                            value={instructorForm.expertise}
-                            onChange={(e) => setInstructorForm({ ...instructorForm, expertise: e.target.value })}
-                            placeholder="List the subjects or topics you can teach (e.g., Web Development, Data Science, Machine Learning)"
-                            rows={3}
-                            required
-                        />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <FormInput
-                                label="Years of Teaching Experience"
-                                name="yearsOfExperience"
-                                value={instructorForm.yearsOfExperience}
-                                onChange={(e) => setInstructorForm({ ...instructorForm, yearsOfExperience: e.target.value })}
-                                placeholder="5"
-                            />
-                            <FormInput
-                                label="LinkedIn Profile"
-                                name="linkedIn"
-                                value={instructorForm.linkedIn}
-                                onChange={(e) => setInstructorForm({ ...instructorForm, linkedIn: e.target.value })}
-                                placeholder="https://linkedin.com/in/..."
-                            />
-                        </div>
-                        <FormInput
-                            label="Portfolio URL"
-                            name="portfolio"
-                            value={instructorForm.portfolio}
-                            onChange={(e) => setInstructorForm({ ...instructorForm, portfolio: e.target.value })}
-                            placeholder="https://portfolio.com"
-                        />
-                    </div>
-                )}
-
-                {/* Step 3: Qualifications */}
-                {instructorStep === 3 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Qualifications & Credentials</h3>
-                        <FormTextarea
-                            label="Qualifications"
-                            name="qualifications"
-                            value={instructorForm.qualifications}
-                            onChange={(e) => setInstructorForm({ ...instructorForm, qualifications: e.target.value })}
-                            placeholder="List your degrees, certifications, or relevant experience (e.g., PhD in Computer Science, AWS Certified Solutions Architect)"
-                            rows={4}
-                            required
-                        />
-                        <FormTextarea
-                            label="Teaching Experience Details"
-                            name="teachingExperience"
-                            value={instructorForm.teachingExperience}
-                            onChange={(e) => setInstructorForm({ ...instructorForm, teachingExperience: e.target.value })}
-                            placeholder="Describe your teaching experience, courses taught, institutions worked with..."
-                            rows={4}
-                            required
-                        />
-                        <FormFileInput
-                            label="CV / Resume (Required)"
-                            name="cv"
-                            accept=".pdf,.doc,.docx"
-                            onChange={(e) => setInstructorForm({ ...instructorForm, cv: e.target.files[0] })}
-                            required
-                        />
-                    </div>
-                )}
-
-                {/* Step 4: Review */}
-                {instructorStep === 4 && (
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Review Information</h3>
-                        <div className="bg-gray-50 rounded-lg p-6 space-y-4">
-                            <div>
-                                <h4 className="font-semibold text-gray-700 mb-2">Basic Information</h4>
-                                <p><strong>Name:</strong> {instructorForm.firstName} {instructorForm.lastName}</p>
-                                <p><strong>Email:</strong> {instructorForm.email}</p>
-                                <p><strong>Phone:</strong> {instructorForm.phoneNumber || 'Not provided'}</p>
-                                <p><strong>Country:</strong> {instructorForm.country}</p>
-                                <p><strong>Organization:</strong> {instructorForm.organization === 'Other' ? instructorForm.otherOrganization : instructorForm.organization || 'Not provided'}</p>
-                                <p><strong>Institution:</strong> {instructorForm.institution || 'Not provided'}</p>
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-gray-700 mb-2">Professional Details</h4>
-                                <p><strong>Bio:</strong> {instructorForm.bio ? instructorForm.bio.substring(0, 150) + (instructorForm.bio.length > 150 ? '...' : '') : 'Not provided'}</p>
-                                <p><strong>Expertise:</strong> {instructorForm.expertise || 'Not provided'}</p>
-                                <p><strong>Years of Experience:</strong> {instructorForm.yearsOfExperience || 'Not provided'}</p>
-                                <p><strong>LinkedIn:</strong> {instructorForm.linkedIn || 'Not provided'}</p>
-                                <p><strong>Portfolio:</strong> {instructorForm.portfolio || 'Not provided'}</p>
-                            </div>
-                            <div>
-                                <h4 className="font-semibold text-gray-700 mb-2">Qualifications</h4>
-                                <p><strong>Qualifications:</strong> {instructorForm.qualifications || 'Not provided'}</p>
-                                <p><strong>Teaching Experience:</strong> {instructorForm.teachingExperience ? instructorForm.teachingExperience.substring(0, 100) + '...' : 'Not provided'}</p>
-                                <p><strong>CV:</strong> {instructorForm.cv ? instructorForm.cv.name : 'Not uploaded'}</p>
-                            </div>
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                                <p className="text-sm text-blue-800">
-                                    <Icons.Info className="w-4 h-4 inline mr-2" />
-                                    The generated password will be sent to <strong>{instructorForm.email}</strong> upon creation.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Navigation Buttons */}
-                <div className="flex justify-between mt-8">
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (instructorStep === 1) {
-                                setActiveTab('list');
-                            } else {
-                                setInstructorStep(instructorStep - 1);
-                            }
-                        }}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-2 rounded-lg font-medium flex items-center gap-2"
-                    >
-                        <Icons.ChevronLeft className="w-4 h-4" />
-                        {instructorStep === 1 ? 'Cancel' : 'Back'}
-                    </button>
-
-                    {instructorStep < 4 ? (
-                        <button
-                            type="button"
-                            onClick={() => {
-                                if (validateStep(instructorStep)) {
-                                    setInstructorStep(instructorStep + 1);
-                                } else {
-                                    alert('Please fill in all required fields');
-                                }
-                            }}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2"
-                        >
-                            Next
-                            <Icons.ChevronRight className="w-4 h-4" />
-                        </button>
-                    ) : (
-                        <button
-                            type="button"
-                            onClick={handleInstructorSubmit}
-                            disabled={instructorSubmitLoading}
-                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-6 py-2 rounded-lg font-medium flex items-center gap-2"
-                        >
-                            {instructorSubmitLoading ? <Icons.Loader className="w-4 h-4 animate-spin" /> : <Icons.Check className="w-4 h-4" />}
-                            Create Instructor
-                        </button>
-                    )}
-                </div>
-            </div>
-        );
-    };
-
-    if (activeTab === 'create-student') {
-        return (
-            <div className="min-h-screen bg-gray-50 p-6">
-                <div className="max-w-7xl mx-auto">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Fellows Management</h1>
-                        <p className="text-gray-600">Create and manage fellows and instructors</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
-                        <CreateStudentForm />
-                    </div>
-                </div>
-            </div>
-        );
+  const handleSubmit = async () => {
+    if (!form.email) return toast.error('Email address is required');
+    setLoading(true);
+    try {
+      const res = await adminService.createFellow({
+        ...form,
+        category: (form.category && form.category !== '__none__') ? form.category : undefined,
+      });
+      if (form.sendEmail) {
+        toast.success('Fellow created and invitation email sent!');
+        onSuccess?.();
+        onClose?.();
+      } else {
+        // Show temp password to admin so they can share it manually
+        setCreated({ email: form.email, temporaryPassword: res.temporaryPassword, emailSent: false });
+        onSuccess?.();
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to create fellow');
+    } finally {
+      setLoading(false);
     }
+  };
 
-    if (activeTab === 'create-instructor') {
-        return (
-            <div className="min-h-screen bg-gray-50 p-6">
-                <div className="max-w-7xl mx-auto">
-                    <div className="mb-8">
-                        <h1 className="text-3xl font-bold text-gray-900 mb-2">Fellows Management</h1>
-                        <p className="text-gray-600">Create and manage fellows and instructors</p>
-                    </div>
-                    <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm">
-                        <CreateInstructorForm />
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    if (loading) {
-        return (
-            <div className="min-h-screen flex items-center justify-center">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-emerald-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading fellows...</p>
-                </div>
-            </div>
-        );
-    }
-
+  // ── Success state: show temp password ────────────────────────────
+  if (created) {
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-7xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-2">Fellows Management</h1>
-                    <p className="text-gray-600">Create new fellows and manage instructor approvals</p>
-                </div>
-
-                {error && <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">{error}</div>}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                    <button onClick={() => setActiveTab('create-student')} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 shadow-md transition-all">
-                        <Icons.Plus className="w-5 h-5" />
-                        Create New Fellow (Student)
-                    </button>
-                    <button onClick={() => setActiveTab('create-instructor')} className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 shadow-md transition-all">
-                        <Icons.Plus className="w-5 h-5" />
-                        Create New Instructor
-                    </button>
-                </div>
-
-                <div className="bg-white rounded-xl p-6 mb-8 border shadow-sm">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="relative">
-                            <Icons.Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <input type="text" placeholder="Search fellows..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-12 pr-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none" />
-                        </div>
-                        <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="px-4 py-3 border rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none">
-                            <option value="all">All Students</option>
-                            <option value="active">Active</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div className="space-y-4">
-                    {fellows.length === 0 ? (
-                        <div className="bg-white rounded-xl text-center py-16 shadow-sm">
-                            <Icons.Users className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-2xl font-bold text-gray-900">No fellows yet</h3>
-                            <p className="text-gray-600 mt-2">Create your first fellow to get started</p>
-                        </div>
-                    ) : (
-                        fellows.map((fellow) => (
-                            <div key={fellow._id} className="bg-white rounded-xl shadow-sm border p-6 hover:shadow-md transition-shadow">
-                                <div className="flex items-start gap-6">
-                                    <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                                        {fellow.firstName?.[0]}{fellow.lastName?.[0]}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="text-lg font-bold text-gray-900">{fellow.firstName} {fellow.lastName}</h3>
-                                        <p className="text-sm text-gray-600">{fellow.email}</p>
-                                        {fellow.phoneNumber && <p className="text-sm text-gray-600">{fellow.phoneNumber}</p>}
-                                        <div className="flex gap-2 mt-3">
-                                            <button onClick={() => handleDeleteFellow(fellow._id)} disabled={deletingId === fellow._id} className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm font-medium disabled:opacity-50 transition-colors">
-                                                {deletingId === fellow._id ? 'Deleting...' : 'Delete'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
+      <div className="space-y-5">
+        <div className="flex flex-col items-center gap-3 py-4">
+          <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+            <Icons.CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+          <div className="text-center">
+            <h3 className="font-semibold text-gray-900">Fellow Created</h3>
+            <p className="text-sm text-gray-500 mt-0.5">{created.email}</p>
+          </div>
         </div>
+
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+          <div className="flex items-start gap-2">
+            <Icons.KeyRound className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-amber-800">Temporary Password</p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                No invitation email was sent. Share this temporary password with the fellow. They will be required to change it on first login.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-white border border-amber-200 rounded-lg px-3 py-2">
+            <code className="flex-1 text-sm font-mono font-bold text-gray-900 tracking-wider">
+              {created.temporaryPassword}
+            </code>
+            <Button
+              variant="ghost" size="sm"
+              onClick={() => copyPassword(created.temporaryPassword)}
+              className="gap-1.5 text-xs h-7"
+            >
+              {copied
+                ? <><Icons.CheckCircle className="w-3.5 h-3.5 text-green-500" /> Copied!</>
+                : <><Icons.Copy className="w-3.5 h-3.5" /> Copy</>}
+            </Button>
+          </div>
+          <p className="text-xs text-amber-600">
+            You can also send the invitation email later using the <strong>Send Invitations</strong> button (which will generate a fresh password automatically).
+          </p>
+        </div>
+
+        <div className="flex justify-end">
+          <Button onClick={onClose} className="bg-green-600 hover:bg-green-700">Done</Button>
+        </div>
+      </div>
     );
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label>First Name</Label>
+          <Input value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="e.g. Amara" />
+        </div>
+        <div className="space-y-1">
+          <Label>Last Name</Label>
+          <Input value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="e.g. Diallo" />
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Label>Email Address <span className="text-red-500">*</span></Label>
+        <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="fellow@example.com" />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label>Phone Number</Label>
+          <Input value={form.phoneNumber} onChange={e => set('phoneNumber', e.target.value)} placeholder="+254 700 000 000" />
+        </div>
+        <div className="space-y-1">
+          <Label>Gender</Label>
+          <Select value={form.gender} onValueChange={v => set('gender', v)}>
+            <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+            <SelectContent>{GENDER_OPTIONS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label>Country</Label>
+          <Input value={form.country} onChange={e => set('country', e.target.value)} placeholder="e.g. Kenya" />
+        </div>
+        <div className="space-y-1">
+          <Label>Region</Label>
+          <Input value={form.region} onChange={e => set('region', e.target.value)} placeholder="e.g. East Africa" />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label>Track</Label>
+          <Select value={form.track} onValueChange={v => set('track', v)}>
+            <SelectTrigger><SelectValue placeholder="Select track" /></SelectTrigger>
+            <SelectContent>{TRACK_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Category</Label>
+          <Select value={form.category} onValueChange={v => set('category', v)}>
+            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">None</SelectItem>
+              {categories.map(c => <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className={`flex items-start gap-3 p-4 rounded-xl border ${form.sendEmail ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'}`}>
+        <Checkbox id="sendEmail" checked={form.sendEmail} onCheckedChange={v => set('sendEmail', v)} className="mt-0.5" />
+        <div>
+          <label htmlFor="sendEmail" className={`text-sm font-medium cursor-pointer ${form.sendEmail ? 'text-blue-800' : 'text-gray-700'}`}>
+            Send invitation email with temporary password
+          </label>
+          <p className={`text-xs mt-0.5 ${form.sendEmail ? 'text-blue-600' : 'text-gray-500'}`}>
+            {form.sendEmail
+              ? 'Fellow will receive a welcome email with their temporary password and a prompt to set a new one on first login.'
+              : 'No email will be sent. A temporary password will be shown to you after creation so you can share it manually.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2">
+        <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={loading} className="gap-2 bg-green-600 hover:bg-green-700">
+          {loading ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Creating...</> : <><Icons.UserPlus className="w-4 h-4" /> Create Fellow</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// BULK TABLE ROW EDITOR
+// ─────────────────────────────────────────────────────────────────
+function BulkTableEditor({ categories, onSuccess, onClose }) {
+  const [rows, setRows]         = useState([BLANK_ROW(), BLANK_ROW(), BLANK_ROW()]);
+  const [sendEmails, setSend]   = useState(true);
+  const [loading, setLoading]   = useState(false);
+  const [results, setResults]   = useState(null);
+  const fileRef                 = useRef(null);
+
+  const updateRow = (idx, field, val) =>
+    setRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
+
+  const addRow = () => setRows(prev => [...prev, BLANK_ROW()]);
+  const removeRow = (idx) => setRows(prev => prev.filter((_, i) => i !== idx));
+
+  // Paste handler — tab-separated rows: firstName \t lastName \t email \t gender \t country \t region \t track \t category \t phone
+  const handlePaste = (e) => {
+    const text = e.clipboardData.getData('text');
+    const lines = text.trim().split('\n').filter(l => l.trim());
+    if (lines.length < 1) return;
+
+    const parsed = lines.map(line => {
+      const cols = line.split('\t').map(s => s.trim());
+      return {
+        id: Date.now() + Math.random(),
+        firstName:   cols[0] || '',
+        lastName:    cols[1] || '',
+        email:       cols[2] || '',
+        gender:      cols[3] || '',
+        country:     cols[4] || '',
+        region:      cols[5] || '',
+        track:       cols[6] || '',
+        category:    '',
+        phoneNumber: cols[7] || '',
+      };
+    });
+
+    // Replace blank rows with pasted data
+    const nonEmpty = rows.filter(r => r.email || r.firstName || r.lastName);
+    setRows([...nonEmpty, ...parsed]);
+    toast.success(`Pasted ${parsed.length} row${parsed.length !== 1 ? 's' : ''}`);
+  };
+
+  // CSV upload
+  const handleCSV = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target.result;
+      const lines = text.split('\n').filter(l => l.trim());
+      if (lines.length < 2) return toast.error('CSV must have a header row and at least one data row');
+
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
+      const colIdx = (names) => names.map(n => headers.indexOf(n)).find(i => i >= 0) ?? -1;
+
+      const fNameIdx    = colIdx(['firstname', 'first_name', 'first name']);
+      const lNameIdx    = colIdx(['lastname',  'last_name',  'last name']);
+      const emailIdx    = colIdx(['email']);
+      const genderIdx   = colIdx(['gender']);
+      const countryIdx  = colIdx(['country']);
+      const regionIdx   = colIdx(['region']);
+      const trackIdx    = colIdx(['track']);
+      const phoneIdx    = colIdx(['phone', 'phonenumber', 'phone_number']);
+
+      if (emailIdx < 0) return toast.error('CSV must have an "email" column');
+
+      const parsed = lines.slice(1).map(line => {
+        const cols = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+        return {
+          id: Date.now() + Math.random(),
+          firstName:   fNameIdx   >= 0 ? cols[fNameIdx]   : '',
+          lastName:    lNameIdx   >= 0 ? cols[lNameIdx]   : '',
+          email:       emailIdx   >= 0 ? cols[emailIdx]   : '',
+          gender:      genderIdx  >= 0 ? cols[genderIdx]  : '',
+          country:     countryIdx >= 0 ? cols[countryIdx] : '',
+          region:      regionIdx  >= 0 ? cols[regionIdx]  : '',
+          track:       trackIdx   >= 0 ? cols[trackIdx]   : '',
+          category:    '',
+          phoneNumber: phoneIdx   >= 0 ? cols[phoneIdx]   : '',
+        };
+      }).filter(r => r.email);
+
+      setRows(prev => {
+        const nonEmpty = prev.filter(r => r.email || r.firstName || r.lastName);
+        return [...nonEmpty, ...parsed];
+      });
+      toast.success(`Imported ${parsed.length} row${parsed.length !== 1 ? 's' : ''} from CSV`);
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const downloadTemplate = () => {
+    const header = 'firstName,lastName,email,gender,country,region,track,phoneNumber';
+    const sample = 'Amara,Diallo,amara@example.com,Female,Kenya,East Africa,AI & Machine Learning,+254700000000';
+    const blob = new Blob([`${header}\n${sample}`], { type: 'text/csv' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a'); a.href = url; a.download = 'fellows-template.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const validRows = rows.filter(r => r.email?.trim());
+
+  const handleSubmit = async () => {
+    if (validRows.length === 0) return toast.error('Add at least one fellow with an email address');
+    setLoading(true);
+    setResults(null);
+    try {
+      const res = await adminService.bulkCreateFellows(validRows.map(r => ({
+        firstName:   r.firstName   || undefined,
+        lastName:    r.lastName    || undefined,
+        email:       r.email,
+        gender:      r.gender      || undefined,
+        country:     r.country     || undefined,
+        region:      r.region      || undefined,
+        track:       r.track       || undefined,
+        category:    (r.category && r.category !== '__none__') ? r.category : undefined,
+        phoneNumber: r.phoneNumber || undefined,
+      })), sendEmails);
+      setResults(res);
+      toast.success(res.message);
+      if (res.created > 0) onSuccess?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Bulk creation failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <Button type="button" variant="outline" size="sm" onClick={downloadTemplate} className="gap-1.5">
+          <Icons.Download className="w-3.5 h-3.5" /> Download Template
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
+          <Icons.Upload className="w-3.5 h-3.5" /> Import CSV
+        </Button>
+        <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleCSV} />
+        <span className="text-xs text-gray-400 ml-1">or paste tab-separated rows directly into the table below</span>
+        <span className="ml-auto text-xs font-medium text-gray-600">{validRows.length} / {rows.length} valid</span>
+      </div>
+
+      <Alert className="border-blue-100 bg-blue-50 py-2.5">
+        <Icons.Info className="w-4 h-4 text-blue-500" />
+        <AlertDescription className="text-blue-700 text-xs">
+          <strong>Paste tip:</strong> Copy rows from Excel/Sheets (columns: First Name, Last Name, Email, Gender, Country, Region, Track, Phone). Select any cell and press <kbd className="px-1 py-0.5 bg-white border rounded text-xs">Ctrl+V</kbd>.
+        </AlertDescription>
+      </Alert>
+
+      {/* Table */}
+      <div className="border rounded-xl overflow-x-auto" onPaste={handlePaste}>
+        <table className="w-full text-sm min-w-[900px]">
+          <thead>
+            <tr className="bg-gray-50 border-b">
+              <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 w-8">#</th>
+              {['First Name', 'Last Name', 'Email *', 'Gender', 'Country', 'Region', 'Track', 'Phone'].map(h => (
+                <th key={h} className="px-2 py-2.5 text-left text-xs font-semibold text-gray-500">{h}</th>
+              ))}
+              <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-500">Category</th>
+              <th className="w-8" />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, idx) => (
+              <tr key={row.id} className={`border-b last:border-0 ${row.email ? '' : 'bg-gray-50/50'}`}>
+                <td className="px-3 py-1.5 text-xs text-gray-400 font-mono">{idx + 1}</td>
+                {[
+                  ['firstName', 'First Name', 'text'],
+                  ['lastName',  'Last Name',  'text'],
+                  ['email',     'Email',      'email'],
+                ].map(([field, ph, type]) => (
+                  <td key={field} className="px-1.5 py-1">
+                    <Input
+                      type={type}
+                      value={row[field]}
+                      onChange={e => updateRow(idx, field, e.target.value)}
+                      placeholder={ph}
+                      className={`h-8 text-xs ${field === 'email' && row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email) ? 'border-red-300 focus-visible:ring-red-300' : ''}`}
+                    />
+                  </td>
+                ))}
+                <td className="px-1.5 py-1">
+                  <Select value={row.gender} onValueChange={v => updateRow(idx, 'gender', v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Gender" /></SelectTrigger>
+                    <SelectContent>{GENDER_OPTIONS.map(g => <SelectItem key={g} value={g} className="text-xs">{g}</SelectItem>)}</SelectContent>
+                  </Select>
+                </td>
+                {[
+                  ['country',     'Country'],
+                  ['region',      'Region'],
+                ].map(([field, ph]) => (
+                  <td key={field} className="px-1.5 py-1">
+                    <Input value={row[field]} onChange={e => updateRow(idx, field, e.target.value)} placeholder={ph} className="h-8 text-xs" />
+                  </td>
+                ))}
+                <td className="px-1.5 py-1">
+                  <Select value={row.track} onValueChange={v => updateRow(idx, 'track', v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Track" /></SelectTrigger>
+                    <SelectContent>{TRACK_OPTIONS.map(t => <SelectItem key={t} value={t} className="text-xs">{t}</SelectItem>)}</SelectContent>
+                  </Select>
+                </td>
+                <td className="px-1.5 py-1">
+                  <Input value={row.phoneNumber} onChange={e => updateRow(idx, 'phoneNumber', e.target.value)} placeholder="Phone" className="h-8 text-xs" />
+                </td>
+                <td className="px-1.5 py-1">
+                  <Select value={row.category} onValueChange={v => updateRow(idx, 'category', v)}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Category" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__" className="text-xs">None</SelectItem>
+                      {categories.map(c => <SelectItem key={c._id} value={c._id} className="text-xs">{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="px-1.5 py-1">
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeRow(idx)}>
+                    <Icons.X className="w-3.5 h-3.5 text-red-400" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Button type="button" variant="outline" size="sm" onClick={addRow} className="gap-1.5 w-full border-dashed">
+        <Icons.Plus className="w-3.5 h-3.5" /> Add Row
+      </Button>
+
+      {/* Email option */}
+      <div className={`flex items-start gap-3 p-4 rounded-xl border ${sendEmails ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'}`}>
+        <Checkbox id="bulkSend" checked={sendEmails} onCheckedChange={v => setSend(v)} className="mt-0.5" />
+        <div>
+          <label htmlFor="bulkSend" className={`text-sm font-medium cursor-pointer ${sendEmails ? 'text-blue-800' : 'text-gray-700'}`}>
+            Send invitation emails with temporary passwords
+          </label>
+          <p className={`text-xs mt-0.5 ${sendEmails ? 'text-blue-600' : 'text-gray-500'}`}>
+            {sendEmails
+              ? 'Each fellow will receive a welcome email with their temporary password. They will be required to change it on first login.'
+              : 'No emails will be sent. Temporary passwords for all created fellows will be shown below after creation.'}
+          </p>
+        </div>
+      </div>
+
+      {/* Results */}
+      {results && (
+        <div className={`rounded-xl border p-4 space-y-3 ${results.failed === 0 ? 'bg-green-50 border-green-100' : 'bg-amber-50 border-amber-100'}`}>
+          <p className="font-semibold text-sm text-gray-800">{results.message}</p>
+          {results.errors?.length > 0 && (
+            <div className="space-y-1">
+              {results.errors.map((e, i) => (
+                <p key={i} className="text-xs text-red-600">• <strong>{e.email}</strong>: {e.error}</p>
+              ))}
+            </div>
+          )}
+          {/* Show temp passwords when emails were NOT sent */}
+          {!sendEmails && results.fellows?.some(f => f.temporaryPassword) && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 pt-1">
+                <Icons.KeyRound className="w-4 h-4 text-amber-600" />
+                <p className="text-xs font-semibold text-amber-800">Temporary Passwords — share these with each fellow</p>
+              </div>
+              <p className="text-xs text-amber-600">Fellows must change their password on first login. You can also send invitation emails later using the &quot;Send Invitations&quot; button.</p>
+              <div className="bg-white rounded-lg border border-amber-200 divide-y divide-amber-100 max-h-48 overflow-y-auto">
+                {results.fellows.filter(f => f.temporaryPassword).map((f, i) => (
+                  <div key={i} className="flex items-center gap-3 px-3 py-2">
+                    <span className="text-xs text-gray-600 flex-1 truncate">{f.email}</span>
+                    <code className="text-xs font-mono font-bold text-gray-900 tracking-wide">{f.temporaryPassword}</code>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-3 pt-2">
+        <Button variant="outline" onClick={onClose} disabled={loading}>Close</Button>
+        <Button onClick={handleSubmit} disabled={loading || validRows.length === 0} className="gap-2 bg-green-600 hover:bg-green-700">
+          {loading
+            ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Creating {validRows.length} fellows...</>
+            : <><Icons.Users className="w-4 h-4" /> Create {validRows.length} Fellow{validRows.length !== 1 ? 's' : ''}</>
+          }
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// BULK EMAIL DIALOG
+// ─────────────────────────────────────────────────────────────────
+function BulkEmailDialog({ selected, fellows, onClose, onDone, isInvitation }) {
+  const [form, setForm] = useState({
+    subject:  isInvitation ? 'Welcome to the Arin Fellowship Programme' : '',
+    message:  isInvitation
+      ? `Dear Fellow,\n\nWelcome to the Arin Fellowship Programme! Your account has been created and you can now log in to complete your profile and start your learning journey.\n\nWe are excited to have you as part of our community.\n\nBest regards,\nArin Academy Team`
+      : '',
+    cc:  '',
+    bcc: '',
+  });
+  const [loading, setLoading]   = useState(false);
+  const [results, setResults]   = useState(null);
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const selectedFellows = fellows.filter(f => selected.has(f._id));
+
+  const parseCcBcc = (val) =>
+    val.split(',').map(e => e.trim()).filter(e => e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+
+  const handleSend = async () => {
+    if (!form.subject.trim()) return toast.error('Subject is required');
+    if (!form.message.trim()) return toast.error('Message body is required');
+
+    setLoading(true);
+    try {
+      let res;
+      if (isInvitation) {
+        res = await adminService.sendFellowInvitations(Array.from(selected));
+      } else {
+        res = await adminService.sendBulkEmail(
+          Array.from(selected),
+          form.subject,
+          form.message,
+          parseCcBcc(form.cc),
+          parseCcBcc(form.bcc),
+        );
+      }
+      setResults(res);
+      toast.success(res.message);
+      onDone?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to send emails');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Recipients preview */}
+      <div className="space-y-2">
+        <Label className="font-semibold">Recipients ({selectedFellows.length})</Label>
+        <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-3 border rounded-xl bg-gray-50">
+          {selectedFellows.map(f => (
+            <Badge key={f._id} variant="secondary" className="text-xs">
+              {f.firstName || f.email} {f.lastName || ''}
+              {!f.invitationEmailSent && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="No invitation sent yet" />}
+            </Badge>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500">
+          <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> = no invitation sent yet</span>
+        </p>
+      </div>
+
+      {isInvitation ? (
+        <Alert className="border-green-100 bg-green-50">
+          <Icons.Mail className="w-4 h-4 text-green-600" />
+          <AlertDescription className="text-green-700 text-sm">
+            Each selected fellow will receive the <strong>standard fellowship invitation email</strong> with a freshly generated temporary password. Their passwords will be reset.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <>
+          <div className="space-y-1">
+            <Label>Subject <span className="text-red-500">*</span></Label>
+            <Input value={form.subject} onChange={e => set('subject', e.target.value)} placeholder="Email subject line" />
+          </div>
+          <div className="space-y-1">
+            <Label>Message <span className="text-red-500">*</span></Label>
+            <Textarea
+              value={form.message}
+              onChange={e => set('message', e.target.value)}
+              placeholder="Write your message to the selected fellows..."
+              rows={8}
+              className="resize-none"
+            />
+            <p className="text-xs text-gray-400">Plain text. Personalisation (fellow's name) is automatically prepended by the system.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label>CC <span className="text-gray-400 font-normal text-xs">(comma-separated emails)</span></Label>
+              <Input value={form.cc} onChange={e => set('cc', e.target.value)} placeholder="cc@example.com, cc2@example.com" />
+            </div>
+            <div className="space-y-1">
+              <Label>BCC <span className="text-gray-400 font-normal text-xs">(comma-separated emails)</span></Label>
+              <Input value={form.bcc} onChange={e => set('bcc', e.target.value)} placeholder="bcc@example.com" />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Results */}
+      {results && (
+        <div className={`rounded-xl border p-4 space-y-2 ${results.failed === 0 ? 'bg-green-50 border-green-100' : 'bg-amber-50 border-amber-100'}`}>
+          <p className="font-semibold text-sm">{results.message}</p>
+          {results.details?.filter(d => d.status === 'failed').map((d, i) => (
+            <p key={i} className="text-xs text-red-600">• {d.email}: {d.error}</p>
+          ))}
+        </div>
+      )}
+
+      <div className="flex justify-end gap-3 pt-2">
+        <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button onClick={handleSend} disabled={loading || selectedFellows.length === 0} className="gap-2 bg-blue-600 hover:bg-blue-700">
+          {loading
+            ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
+            : <><Icons.Send className="w-4 h-4" /> Send to {selectedFellows.length} Fellow{selectedFellows.length !== 1 ? 's' : ''}</>
+          }
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// REMINDER DIALOG
+// ─────────────────────────────────────────────────────────────────
+function ReminderDialog({ fellow, onClose }) {
+  const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!message.trim()) return toast.error('Please enter a reminder message');
+    setLoading(true);
+    try {
+      await adminService.sendFellowReminder(fellow._id, message.trim());
+      toast.success(`Reminder sent to ${fellow.email}`);
+      onClose();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to send reminder');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+          {(fellow.firstName?.[0] || fellow.email?.[0] || '?').toUpperCase()}
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-gray-800">{fellow.firstName || ''} {fellow.lastName || ''}</p>
+          <p className="text-xs text-gray-500">{fellow.email}</p>
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label>Reminder Message <span className="text-red-500">*</span></Label>
+        <Textarea
+          value={message}
+          onChange={e => setMessage(e.target.value)}
+          placeholder="Write a personalised reminder for this fellow..."
+          rows={6}
+          className="resize-none"
+        />
+        <p className="text-xs text-gray-400">The fellow's name will be automatically prepended to the message.</p>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2">
+        <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button onClick={handleSend} disabled={loading || !message.trim()} className="gap-2 bg-blue-600 hover:bg-blue-700">
+          {loading ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Sending...</> : <><Icons.BellRing className="w-4 h-4" /> Send Reminder</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// EDIT FELLOW DIALOG
+// ─────────────────────────────────────────────────────────────────
+function EditFellowDialog({ fellow, onClose, onDone }) {
+  const [form, setForm] = useState({
+    firstName:   fellow.firstName   || '',
+    lastName:    fellow.lastName    || '',
+    gender:      fellow.gender      || '',
+    country:     fellow.country     || '',
+    phoneNumber: fellow.phoneNumber || '',
+    region:      fellow.fellowData?.region || '',
+    track:       fellow.fellowData?.track  || '',
+    isActive:    fellow.isActive,
+  });
+  const [loading, setLoading] = useState(false);
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await adminService.updateFellow(fellow._id, form);
+      toast.success('Fellow updated');
+      onDone?.();
+      onClose();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Update failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1"><Label>First Name</Label>
+          <Input value={form.firstName} onChange={e => set('firstName', e.target.value)} /></div>
+        <div className="space-y-1"><Label>Last Name</Label>
+          <Input value={form.lastName} onChange={e => set('lastName', e.target.value)} /></div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1"><Label>Phone Number</Label>
+          <Input value={form.phoneNumber} onChange={e => set('phoneNumber', e.target.value)} /></div>
+        <div className="space-y-1"><Label>Gender</Label>
+          <Select value={form.gender} onValueChange={v => set('gender', v)}>
+            <SelectTrigger><SelectValue placeholder="Gender" /></SelectTrigger>
+            <SelectContent>{GENDER_OPTIONS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1"><Label>Country</Label>
+          <Input value={form.country} onChange={e => set('country', e.target.value)} /></div>
+        <div className="space-y-1"><Label>Region</Label>
+          <Input value={form.region} onChange={e => set('region', e.target.value)} /></div>
+      </div>
+      <div className="space-y-1"><Label>Track</Label>
+        <Select value={form.track} onValueChange={v => set('track', v)}>
+          <SelectTrigger><SelectValue placeholder="Track" /></SelectTrigger>
+          <SelectContent>{TRACK_OPTIONS.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+        </Select>
+      </div>
+      <div className="flex items-center gap-3 p-3 border rounded-xl">
+        <Checkbox id="active" checked={form.isActive} onCheckedChange={v => set('isActive', v)} />
+        <label htmlFor="active" className="text-sm font-medium cursor-pointer">Account Active</label>
+      </div>
+      <div className="flex justify-end gap-3 pt-2">
+        <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button onClick={handleSave} disabled={loading} className="gap-2">
+          {loading ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Icons.Save className="w-4 h-4" /> Save Changes</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────────
+export default function FellowsManagementPage() {
+  const router = useRouter();
+  const [fellows, setFellows]           = useState([]);
+  const [categories, setCategories]     = useState([]);
+  const [loading, setLoading]           = useState(false);
+  const [search, setSearch]             = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [pagination, setPagination]     = useState({ page: 1, limit: 50, total: 0, pages: 0 });
+
+  // Selection
+  const [selected, setSelected]         = useState(new Set());
+  const allOnPageSelected               = fellows.length > 0 && fellows.every(f => selected.has(f._id));
+  const someSelected                    = selected.size > 0;
+
+  // Modals
+  const [modal, setModal] = useState(null); // 'single' | 'bulk' | 'email' | 'invitation' | 'edit' | 'delete'
+  const [editTarget, setEditTarget]       = useState(null);
+  const [deleteTarget, setDeleteTarget]   = useState(null);
+  const [reminderTarget, setReminderTarget] = useState(null);
+  const [deleting, setDeleting]           = useState(false);
+
+  const fetchFellows = useCallback(async (page = 1) => {
+    setLoading(true);
+    try {
+      const res = await adminService.getAllFellows({ status: filterStatus, page, limit: 50, search });
+      setFellows(res.fellows || []);
+      setPagination(res.pagination || { page: 1, limit: 50, total: 0, pages: 0 });
+    } catch {
+      toast.error('Failed to load fellows');
+    } finally {
+      setLoading(false);
+    }
+  }, [filterStatus, search]);
+
+  useEffect(() => {
+    categoryService.getAllCategories().then(d => setCategories(Array.isArray(d) ? d : [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => fetchFellows(1), search ? 400 : 0);
+    return () => clearTimeout(t);
+  }, [fetchFellows, search]);
+
+  const reload = () => { fetchFellows(pagination.page); setSelected(new Set()); };
+
+  const toggleSelect = (id) => setSelected(prev => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
+
+  const toggleAll = () => {
+    if (allOnPageSelected) setSelected(new Set());
+    else setSelected(new Set(fellows.map(f => f._id)));
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await adminService.deleteFellow(deleteTarget._id);
+      toast.success('Fellow deleted');
+      setModal(null);
+      setDeleteTarget(null);
+      reload();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const statusBadge = (f) => {
+    const s = f.fellowData?.fellowshipStatus;
+    if (s === 'active')    return <Badge className="bg-green-100 text-green-700 text-xs">Active</Badge>;
+    if (s === 'completed') return <Badge className="bg-blue-100 text-blue-700 text-xs">Completed</Badge>;
+    if (s === 'expired')   return <Badge className="bg-red-100 text-red-700 text-xs">Expired</Badge>;
+    return <Badge variant="secondary" className="text-xs">Unknown</Badge>;
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
+
+      {/* ── Header ─────────────────────────────────── */}
+      <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Fellows Management</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Add, manage, and communicate with programme fellows</p>
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => setModal('single')} variant="outline" className="gap-2">
+            <Icons.UserPlus className="w-4 h-4" /> Add Fellow
+          </Button>
+          <Button onClick={() => router.push('/admin/fellows/bulk')} className="gap-2 bg-green-600 hover:bg-green-700">
+            <Icons.Users className="w-4 h-4" /> Bulk Add Fellows
+          </Button>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+
+        {/* ── Stats ────────────────────────────────── */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <StatCard label="Total Fellows"       value={pagination.total} icon={Icons.Users}     color="blue" />
+          <StatCard label="Active"              value={fellows.filter(f=>f.fellowData?.fellowshipStatus==='active').length} icon={Icons.CheckCircle} color="green" sub={`of ${fellows.length} shown`} />
+          <StatCard label="Awaiting Invitation" value={fellows.filter(f=>!f.invitationEmailSent).length}    icon={Icons.MailOpen}   color="amber" sub="No email sent yet" />
+          <StatCard label="Inactive"            value={fellows.filter(f=>!f.isActive).length}              icon={Icons.UserX}      color="red" />
+        </div>
+
+        {/* ── Toolbar ──────────────────────────────── */}
+        <Card>
+          <CardContent className="pt-4 pb-3">
+            <div className="flex flex-wrap gap-3 items-center">
+              {/* Search */}
+              <div className="relative flex-1 min-w-56">
+                <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search by name, email, track or region…"
+                  className="pl-9"
+                />
+              </div>
+
+              {/* Status filter */}
+              <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); setSelected(new Set()); }}>
+                <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Bulk actions (shown when something is selected) */}
+              {someSelected && (
+                <>
+                  <Separator orientation="vertical" className="h-8" />
+                  <span className="text-sm font-medium text-blue-700 bg-blue-50 px-3 py-1 rounded-full">
+                    {selected.size} selected
+                  </span>
+                  <Button size="sm" variant="outline" onClick={() => setModal('invitation')} className="gap-1.5">
+                    <Icons.Mail className="w-3.5 h-3.5" /> Send Invitations
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setModal('email')} className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50">
+                    <Icons.Send className="w-3.5 h-3.5" /> Custom Email
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())} className="text-gray-500">
+                    <Icons.X className="w-3.5 h-3.5" />
+                  </Button>
+                </>
+              )}
+
+              <Button variant="outline" size="icon" onClick={() => reload()} className="ml-auto" title="Refresh">
+                <Icons.RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* ── Fellows Table ─────────────────────────── */}
+        <Card>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b">
+                  <th className="px-4 py-3 text-left w-10">
+                    <Checkbox checked={allOnPageSelected} onCheckedChange={toggleAll} aria-label="Select all" />
+                  </th>
+                  {['Fellow', 'Track / Region', 'Country', 'Status', 'Invitation', 'Joined', 'Actions'].map(h => (
+                    <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading && fellows.length === 0 ? (
+                  <tr><td colSpan={8} className="text-center py-16">
+                    <Icons.Loader2 className="w-8 h-8 animate-spin text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-400 text-sm">Loading fellows…</p>
+                  </td></tr>
+                ) : fellows.length === 0 ? (
+                  <tr><td colSpan={8} className="text-center py-16">
+                    <Icons.Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                    <p className="text-gray-500 font-medium">No fellows found</p>
+                    <p className="text-gray-400 text-xs mt-1">Try adjusting your search or add fellows using the buttons above.</p>
+                  </td></tr>
+                ) : (
+                  fellows.map(f => (
+                    <tr key={f._id} className={`border-b last:border-0 hover:bg-gray-50/60 transition-colors ${selected.has(f._id) ? 'bg-blue-50/40' : ''}`}>
+                      <td className="px-4 py-3">
+                        <Checkbox checked={selected.has(f._id)} onCheckedChange={() => toggleSelect(f._id)} />
+                      </td>
+                      {/* Fellow */}
+                      <td className="px-3 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                            {(f.firstName?.[0] || f.email?.[0] || '?').toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-800 truncate">
+                              {f.firstName || f.lastName ? `${f.firstName} ${f.lastName}`.trim() : <span className="text-gray-400 italic">No name</span>}
+                            </p>
+                            <p className="text-xs text-gray-500 truncate">{f.email}</p>
+                            {f.gender && <p className="text-xs text-gray-400">{f.gender}</p>}
+                          </div>
+                        </div>
+                      </td>
+                      {/* Track / Region */}
+                      <td className="px-3 py-3">
+                        {f.fellowData?.track && <p className="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full inline-block">{f.fellowData.track}</p>}
+                        {f.fellowData?.region && <p className="text-xs text-gray-500 mt-1">{f.fellowData.region}</p>}
+                        {!f.fellowData?.track && !f.fellowData?.region && <span className="text-gray-300 text-xs">—</span>}
+                      </td>
+                      {/* Country */}
+                      <td className="px-3 py-3 text-sm text-gray-700">{f.country || <span className="text-gray-300">—</span>}</td>
+                      {/* Status */}
+                      <td className="px-3 py-3">{statusBadge(f)}</td>
+                      {/* Invitation */}
+                      <td className="px-3 py-3">
+                        {f.invitationEmailSent
+                          ? <span className="flex items-center gap-1.5 text-xs text-green-700"><Icons.MailCheck className="w-3.5 h-3.5" /> Sent</span>
+                          : <span className="flex items-center gap-1.5 text-xs text-amber-600"><Icons.MailOpen className="w-3.5 h-3.5" /> Not sent</span>
+                        }
+                      </td>
+                      {/* Joined */}
+                      <td className="px-3 py-3 text-xs text-gray-500">
+                        {f.createdAt ? new Date(f.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      </td>
+                      {/* Actions */}
+                      <td className="px-3 py-3">
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8" title="Send invitation"
+                            onClick={() => { setSelected(new Set([f._id])); setModal('invitation'); }}
+                          >
+                            <Icons.Mail className="w-3.5 h-3.5 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8" title="Send reminder"
+                            onClick={() => { setReminderTarget(f); setModal('reminder'); }}
+                          >
+                            <Icons.BellRing className="w-3.5 h-3.5 text-amber-500" />
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8" title="Edit"
+                            onClick={() => { setEditTarget(f); setModal('edit'); }}
+                          >
+                            <Icons.Pencil className="w-3.5 h-3.5 text-gray-500" />
+                          </Button>
+                          <Button
+                            variant="ghost" size="icon" className="h-8 w-8" title="Delete"
+                            onClick={() => { setDeleteTarget(f); setModal('delete'); }}
+                          >
+                            <Icons.Trash2 className="w-3.5 h-3.5 text-red-400" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50/50">
+              <p className="text-xs text-gray-500">
+                Page {pagination.page} of {pagination.pages} · {pagination.total} total fellows
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" disabled={pagination.page <= 1} onClick={() => fetchFellows(pagination.page - 1)}>
+                  <Icons.ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button size="sm" variant="outline" disabled={pagination.page >= pagination.pages} onClick={() => fetchFellows(pagination.page + 1)}>
+                  <Icons.ChevronRight className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* ── MODALS ────────────────────────────────────── */}
+
+      {/* Single Create */}
+      <Modal open={modal === 'single'} onClose={() => setModal(null)} title="Add New Fellow">
+        <SingleFellowForm categories={categories} onSuccess={reload} onClose={() => setModal(null)} />
+      </Modal>
+
+      {/* Bulk Create */}
+      <Modal open={modal === 'bulk'} onClose={() => setModal(null)} title="Bulk Add Fellows" maxWidth="max-w-6xl">
+        <BulkTableEditor categories={categories} onSuccess={reload} onClose={() => setModal(null)} />
+      </Modal>
+
+      {/* Custom Bulk Email */}
+      <Modal open={modal === 'email'} onClose={() => setModal(null)} title={`Send Custom Email — ${selected.size} Fellows`} maxWidth="max-w-2xl">
+        <BulkEmailDialog
+          selected={selected}
+          fellows={fellows}
+          isInvitation={false}
+          onClose={() => setModal(null)}
+          onDone={reload}
+        />
+      </Modal>
+
+      {/* Send Invitations */}
+      <Modal open={modal === 'invitation'} onClose={() => setModal(null)} title={`Send Fellowship Invitations — ${selected.size} Fellows`} maxWidth="max-w-xl">
+        <BulkEmailDialog
+          selected={selected}
+          fellows={fellows}
+          isInvitation={true}
+          onClose={() => setModal(null)}
+          onDone={reload}
+        />
+      </Modal>
+
+      {/* Send Reminder */}
+      {reminderTarget && (
+        <Modal open={modal === 'reminder'} onClose={() => { setModal(null); setReminderTarget(null); }} title="Send Reminder" maxWidth="max-w-lg">
+          <ReminderDialog
+            fellow={reminderTarget}
+            onClose={() => { setModal(null); setReminderTarget(null); }}
+          />
+        </Modal>
+      )}
+
+      {/* Edit Fellow */}
+      {editTarget && (
+        <Modal open={modal === 'edit'} onClose={() => setModal(null)} title={`Edit — ${editTarget.firstName || editTarget.email}`} maxWidth="max-w-lg">
+          <EditFellowDialog
+            fellow={editTarget}
+            onClose={() => { setModal(null); setEditTarget(null); }}
+            onDone={reload}
+          />
+        </Modal>
+      )}
+
+      {/* Delete Confirm */}
+      {deleteTarget && modal === 'delete' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setModal(null)} />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Icons.Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Delete Fellow?</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Are you sure you want to delete <strong>{deleteTarget.firstName || deleteTarget.email}</strong>? This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setModal(null)} disabled={deleting}>Cancel</Button>
+              <Button onClick={handleDelete} disabled={deleting} className="gap-1.5 bg-red-600 hover:bg-red-700 text-white">
+                {deleting ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Deleting...</> : <><Icons.Trash2 className="w-4 h-4" /> Delete</>}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

@@ -183,7 +183,7 @@ export default function AdminRemindersPage() {
             searchQuery === '' ||
             student.student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             student.student.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            student.course.title.toLowerCase().includes(searchQuery.toLowerCase());
+            student.course?.title?.toLowerCase().includes(searchQuery.toLowerCase());
 
         return matchesDays && matchesSearch;
     });
@@ -499,7 +499,7 @@ export default function AdminRemindersPage() {
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <div className="text-sm text-gray-900">
-                                                        {student.course.title}
+                                                        {student.course?.title ?? '—'}
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-4">

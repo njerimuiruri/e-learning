@@ -95,6 +95,34 @@ const adminService = {
   },
 
   // Fellows
+  getAllFellows: async (filters: { status?: string; page?: number; limit?: number; search?: string } = {}) => {
+    const { data } = await api.get('/fellows', { params: filters });
+    return data;
+  },
+  createFellow: async (payload: any) => {
+    const { data } = await api.post('/fellows', payload);
+    return data;
+  },
+  bulkCreateFellows: async (fellows: any[], sendEmails = false) => {
+    const { data } = await api.post('/fellows/bulk', { fellows, sendEmails });
+    return data;
+  },
+  updateFellow: async (id: string, updateData: any) => {
+    const { data } = await api.put(`/fellows/${id}`, updateData);
+    return data;
+  },
+  deleteFellow: async (id: string) => {
+    const { data } = await api.delete(`/fellows/${id}`);
+    return data;
+  },
+  sendBulkEmail: async (fellowIds: string[], subject: string, message: string, cc?: string[], bcc?: string[]) => {
+    const { data } = await api.post('/fellows/bulk-email', { fellowIds, subject, message, cc, bcc });
+    return data;
+  },
+  sendFellowInvitations: async (fellowIds: string[]) => {
+    const { data } = await api.post('/fellows/send-invitations', { fellowIds });
+    return data;
+  },
   sendFellowReminder: async (id: string, message: string) => {
     const { data } = await api.post(`/fellows/${id}/send-reminder`, { message });
     return data;
