@@ -23,7 +23,7 @@ function ModuleLearningContent() {
     // Navigation state
     const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
     const [showFinalAssessment, setShowFinalAssessment] = useState(false);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     // Action states
     const [completing, setCompleting] = useState(false);
@@ -260,7 +260,7 @@ function ModuleLearningContent() {
             <Navbar />
             <div className="min-h-screen bg-gray-50 overflow-x-hidden">
                 {/* Progress Bar */}
-                <div className="bg-white border-b sticky top-0 z-30">
+                <div className="bg-white border-b sticky top-16 z-20">
                     <div className="px-4 py-3 flex items-center justify-between max-w-full">
                         <div className="flex items-center gap-3">
                             <button
@@ -284,17 +284,18 @@ function ModuleLearningContent() {
                             </div>
                             <button
                                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                                className="lg:hidden p-2 text-gray-600 hover:text-gray-900"
+                                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                                title={sidebarOpen ? 'Hide lessons' : 'Show lessons'}
                             >
-                                <Icons.Menu className="w-5 h-5" />
+                                <Icons.PanelLeft className="w-5 h-5" />
                             </button>
                         </div>
                     </div>
                 </div>
 
                 <div className="flex relative">
-                    {/* Sidebar - Lesson List */}
-                    <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky top-[57px] left-0 h-[calc(100vh-57px)] w-80 flex-shrink-0 bg-white border-r overflow-y-auto z-20 transition-transform duration-300`}>
+                    {/* Sidebar - Lesson List (always a fixed overlay, toggled by button) */}
+                    <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed top-16 left-0 h-[calc(100vh-64px)] w-80 flex-shrink-0 bg-white border-r shadow-xl overflow-y-auto z-30 transition-transform duration-300`}>
                         <div className="p-4">
                             <h2 className="font-bold text-gray-900 mb-1 text-sm uppercase tracking-wide">Module Content</h2>
                             <p className="text-xs text-gray-500 mb-4">
@@ -446,17 +447,17 @@ function ModuleLearningContent() {
                         </div>
                     </div>
 
-                    {/* Overlay for mobile sidebar */}
+                    {/* Overlay — closes sidebar when clicking outside */}
                     {sidebarOpen && (
                         <div
-                            className="fixed inset-0 bg-black/30 z-10 lg:hidden"
+                            className="fixed inset-0 bg-black/30 z-20"
                             onClick={() => setSidebarOpen(false)}
-                        ></div>
+                        />
                     )}
 
                     {/* Main Content Area */}
-                    <div className="flex-1 min-w-0 min-h-[calc(100vh-57px)] lg:ml-0 overflow-x-hidden">
-                        <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+                    <div className="flex-1 min-w-0 min-h-[calc(100vh-120px)] overflow-x-hidden">
+                        <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
                             {/* Final Assessment View */}
                             {showFinalAssessment && (
                                 <FinalAssessmentPanel
@@ -513,7 +514,7 @@ function ModuleLearningContent() {
 
                                     {/* ── Slide-based Lesson Viewer ─────────────────────── */}
                                     {!showLessonAssessment && currentLesson.slides?.length > 0 && (
-                                        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 min-h-[640px] flex flex-col">
+                                        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 flex flex-col">
                                             <LessonViewer
                                                 lesson={currentLesson}
                                                 lessonIndex={currentLessonIndex}

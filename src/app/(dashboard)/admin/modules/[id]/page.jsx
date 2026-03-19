@@ -5,7 +5,6 @@ import { useParams, useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import adminService from '@/lib/api/adminService';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://api.elearning.arin-africa.org';
 
 function stripHtml(html) {
     if (!html) return '';
@@ -146,7 +145,9 @@ export default function AdminModuleDetailPage() {
     );
 
     const instructor = mod.instructorIds?.[0] || mod.instructorId;
-    const instructorName = instructor ? `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || instructor.email : 'Unknown';
+    const instructorName = instructor
+        ? (`${instructor.firstName || ''} ${instructor.lastName || ''}`.trim() || instructor.fullName || instructor.email)
+        : (mod.pendingInstructorName || mod.pendingInstructorEmail || null);
     const topics = mod.topics || [];
     const allLessons = mod.lessons || [];
     const caseStudies = mod.caseStudies || [];
@@ -268,16 +269,19 @@ export default function AdminModuleDetailPage() {
                         Back to Modules
                     </button>
                     <div className="flex gap-2 flex-wrap">
-                        {mod.status === 'submitted' && (
-                            <>
-                                <button onClick={() => { setActionType('approve'); setShowAction(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700">
-                                    <Icons.CheckCircle className="w-4 h-4" /> Approve
-                                </button>
-                                <button onClick={() => { setActionType('reject'); setShowAction(true); }} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-semibold text-sm hover:bg-red-700">
-                                    <Icons.XCircle className="w-4 h-4" /> Reject
-                                </button>
-                            </>
+                        {/* Approve — shown for draft, submitted, rejected */}
+                        {['draft', 'submitted', 'rejected'].includes(mod.status) && (
+                            <button onClick={() => { setActionType('approve'); setShowAction(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700">
+                                <Icons.CheckCircle className="w-4 h-4" /> Approve
+                            </button>
                         )}
+                        {/* Reject — shown for submitted modules from instructors */}
+                        {mod.status === 'submitted' && (
+                            <button onClick={() => { setActionType('reject'); setShowAction(true); }} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-semibold text-sm hover:bg-red-700">
+                                <Icons.XCircle className="w-4 h-4" /> Reject
+                            </button>
+                        )}
+                        {/* Publish — only after approval */}
                         {mod.status === 'approved' && (
                             <button onClick={() => { setActionType('publish'); setShowAction(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-700">
                                 <Icons.Globe className="w-4 h-4" /> Publish
@@ -1030,21 +1034,38 @@ export default function AdminModuleDetailPage() {
                         {/* Instructor */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                             <h4 className="font-bold text-gray-900 mb-3 text-sm">Instructor</h4>
-                            <div className="flex items-center gap-3">
-                                <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#021d49] to-blue-600 text-white font-bold flex items-center justify-center text-sm flex-shrink-0">
-                                    {instructorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
+                            {instructor ? (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#021d49] to-blue-600 text-white font-bold flex items-center justify-center text-sm flex-shrink-0">
+                                        {instructorName ? instructorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?'}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-gray-900 text-sm">{instructorName || instructor.email}</p>
+                                        {instructor.email && <p className="text-xs text-gray-500">{instructor.email}</p>}
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="font-bold text-gray-900 text-sm">{instructorName}</p>
-                                    {instructor?.email && <p className="text-xs text-gray-500">{instructor.email}</p>}
-                                    {!instructor && mod.pendingInstructorEmail && (
-                                        <p className="text-xs text-amber-600 mt-0.5">
-                                            Pending: {mod.pendingInstructorName || mod.pendingInstructorEmail}
-                                        </p>
-                                    )}
+                            ) : mod.pendingInstructorEmail ? (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-11 h-11 rounded-full bg-amber-100 text-amber-600 font-bold flex items-center justify-center text-sm flex-shrink-0">
+                                        {(mod.pendingInstructorName || mod.pendingInstructorEmail).slice(0, 2).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-gray-900 text-sm">{mod.pendingInstructorName || 'Pending Instructor'}</p>
+                                        <p className="text-xs text-amber-600">{mod.pendingInstructorEmail}</p>
+                                        <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+                                            <Icons.Clock className="w-3 h-3" /> Awaiting registration
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                            {/* Created by */}
+                            ) : (
+                                <div className="flex items-center gap-3 text-gray-400">
+                                    <div className="w-11 h-11 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                        <Icons.UserX className="w-5 h-5" />
+                                    </div>
+                                    <p className="text-sm">No instructor assigned</p>
+                                </div>
+                            )}
+                            {/* Created by admin badge */}
                             {mod.createdByRole === 'admin' && (
                                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-1.5">
                                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-medium">

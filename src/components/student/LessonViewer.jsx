@@ -194,7 +194,7 @@ export default function LessonViewer({
   if (phase === 'intro') {
     const outcomes = lesson?.learningOutcomes || [];
     return (
-      <div className="flex flex-col h-full min-h-[560px]">
+      <div className="flex flex-col h-full">
         {/* Breadcrumb */}
         <div className="flex-shrink-0 flex items-center justify-between mb-4 px-1">
           <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -301,7 +301,7 @@ export default function LessonViewer({
   if (phase === 'assessment') {
     const questions = lesson?.assessmentQuiz || [];
     return (
-      <div className="flex flex-col h-full min-h-[560px]">
+      <div className="flex flex-col h-full">
         {/* Header */}
         <div className="flex-shrink-0 flex items-center justify-between mb-4 px-1">
           <button
@@ -405,7 +405,7 @@ export default function LessonViewer({
   const nextButtonEnabled = isAlreadyCompleted || canProceed || isSlideComplete;
 
   return (
-    <div className="flex flex-col h-full min-h-[560px]">
+    <div className="flex flex-col h-full">
       {/* ── Top navigation bar ───────────────────────────────────────────── */}
       <div className="flex-shrink-0 flex items-center justify-between mb-4 px-1">
         {/* Back to intro */}
@@ -455,6 +455,7 @@ export default function LessonViewer({
             slide={currentSlide}
             slideNumber={currentSlideIndex + 1}
             totalSlides={slides.length}
+            sectionTitle={lesson?.slidesTitle || ''}
           />
         ) : (
           <div className="text-gray-400 text-sm text-center py-8">No slide content</div>

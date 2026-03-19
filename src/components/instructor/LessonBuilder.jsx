@@ -104,6 +104,128 @@ function CodeEditor({
   );
 }
 
+// ─── DiagramSlideEditor ────────────────────────────────────────────────────────
+// Extracted as its own component so it can use hooks (useRef) safely.
+
+function DiagramSlideEditor({ slide, onUpdate, disabled }) {
+  const fileRef = React.useRef(null);
+
+  const loadImageFile = (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => onUpdate('imageUrl', e.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  const handleFileChange = (e) => loadImageFile(e.target.files?.[0]);
+
+  const handlePaste = (e) => {
+    const items = Array.from(e.clipboardData?.items || []);
+    const imgItem = items.find(i => i.type.startsWith('image/'));
+    if (imgItem) {
+      e.preventDefault();
+      loadImageFile(imgItem.getAsFile());
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Title */}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-gray-600">Diagram Title</Label>
+        <Input
+          value={slide.imageCaption || ''}
+          onChange={(e) => onUpdate('imageCaption', e.target.value)}
+          disabled={disabled}
+          placeholder="e.g. Neural Network Architecture"
+          className="text-sm"
+        />
+      </div>
+
+      {/* Upload / paste zone */}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-gray-600">Diagram Image</Label>
+        <div
+          onPaste={handlePaste}
+          tabIndex={0}
+          className="relative rounded-xl border-2 border-dashed border-amber-200 bg-amber-50/40 hover:border-amber-400 focus:border-amber-400 focus:outline-none transition-colors"
+        >
+          {slide.imageUrl ? (
+            <div className="p-3 space-y-2">
+              <img
+                src={slide.imageUrl}
+                alt="Diagram preview"
+                className="max-h-64 w-full object-contain rounded-lg border border-amber-100 bg-white"
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={disabled}
+                  className="text-xs text-amber-700 hover:text-amber-900 underline"
+                >
+                  Replace image
+                </button>
+                <span className="text-gray-300">·</span>
+                <button
+                  type="button"
+                  onClick={() => onUpdate('imageUrl', '')}
+                  disabled={disabled}
+                  className="text-xs text-red-500 hover:text-red-700 underline"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center">
+              <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+                <Icons.ImagePlus className="w-6 h-6 text-amber-500" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-700">Upload or paste your diagram</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  Click to browse · or focus here and press{' '}
+                  <kbd className="px-1.5 py-0.5 bg-white border border-gray-200 rounded text-xs">Ctrl+V</kbd> to paste
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => fileRef.current?.click()}
+                disabled={disabled}
+                className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-100"
+              >
+                <Icons.Upload className="w-3.5 h-3.5" /> Browse Image
+              </Button>
+            </div>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </div>
+        <p className="text-xs text-gray-400">PNG, JPG, SVG, GIF supported · paste a screenshot with Ctrl+V</p>
+      </div>
+
+      {/* Rich-text content alongside the diagram */}
+      <div className="space-y-1.5">
+        <RichTextEditor
+          label="Diagram Content"
+          value={slide.content || ''}
+          onChange={(val) => onUpdate('content', val)}
+          placeholder="Add explanations, notes, or annotations for this diagram…"
+          height={160}
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const SLIDE_TYPES = [
@@ -387,7 +509,9 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
             <TabsContent value="slides" className="mt-0">
               <SlidesTab
                 slides={lesson.slides || []}
+                slidesTitle={lesson.slidesTitle || ''}
                 onChange={(v) => onChange('slides', v)}
+                onTitleChange={(v) => onChange('slidesTitle', v)}
                 disabled={disabled}
               />
             </TabsContent>
@@ -477,7 +601,7 @@ function LessonOutcomes({ outcomes, onChange, disabled }) {
 
 // ─── Slides Tab ─────────────────────────────────────────────────────────────────
 
-function SlidesTab({ slides, onChange, disabled }) {
+function SlidesTab({ slides, slidesTitle, onChange, onTitleChange, disabled }) {
   const [expandedSlide, setExpandedSlide] = useState(null);
 
   const addSlide = (type) => {
@@ -497,7 +621,28 @@ function SlidesTab({ slides, onChange, disabled }) {
     onChange(slides.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
+      {/* Section title — shown prominently on every slide */}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-gray-600">
+          Section Title
+          <span className="text-gray-400 font-normal ml-1">(shown on every slide)</span>
+        </Label>
+        <Input
+          value={slidesTitle}
+          onChange={(e) => onTitleChange(e.target.value)}
+          disabled={disabled}
+          placeholder="e.g. Definition of Terms"
+          className="text-sm font-medium"
+        />
+        {slidesTitle && (
+          <p className="text-xs text-blue-600 flex items-center gap-1">
+            <Icons.Eye className="w-3 h-3" />
+            Students will see &ldquo;{slidesTitle}&rdquo; on every slide in this lesson
+          </p>
+        )}
+      </div>
+
       {/* Slide type picker */}
       {!disabled && (
         <div className="space-y-1.5">
@@ -617,8 +762,8 @@ function SlideEditor({ slide, idx, expanded, onToggle, onUpdate, onDelete, disab
             </div>
           )}
 
-          {/* IMAGE / DIAGRAM slides */}
-          {(slide.type === 'image' || slide.type === 'diagram') && (
+          {/* IMAGE slide */}
+          {slide.type === 'image' && (
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-gray-600">Image URL</Label>
@@ -644,20 +789,12 @@ function SlideEditor({ slide, idx, expanded, onToggle, onUpdate, onDelete, disab
                   className="text-sm"
                 />
               </div>
-              {slide.type === 'diagram' && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-gray-600">Diagram HTML/SVG <span className="text-gray-400 font-normal">(optional)</span></Label>
-                  <Textarea
-                    value={slide.content || ''}
-                    onChange={(e) => onUpdate('content', e.target.value)}
-                    disabled={disabled}
-                    rows={4}
-                    placeholder="Paste embedded SVG or HTML diagram..."
-                    className="text-xs font-mono resize-y"
-                  />
-                </div>
-              )}
             </div>
+          )}
+
+          {/* DIAGRAM slide */}
+          {slide.type === 'diagram' && (
+            <DiagramSlideEditor slide={slide} onUpdate={onUpdate} disabled={disabled} />
           )}
 
           {/* VIDEO slide */}

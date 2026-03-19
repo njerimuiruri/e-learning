@@ -1,14 +1,18 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import StudentSidebar from '@/components/student/StudentSidebar';
 import authService from '@/lib/api/authService';
 
 export default function StudentLayout({ children }) {
     const router = useRouter();
+    const pathname = usePathname();
     const [isAuthorized, setIsAuthorized] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+
+    // Hide dashboard sidebar on the immersive lesson page
+    const isLessonPage = /^\/student\/modules\/[^/]+$/.test(pathname || '');
 
     useEffect(() => {
         // Check if user is authenticated and has student role
@@ -69,11 +73,11 @@ export default function StudentLayout({ children }) {
 
     return (
         <div className="flex min-h-screen bg-gray-50 pt-16 overflow-x-hidden">
-            {/* Sidebar */}
-            <StudentSidebar />
+            {/* Sidebar — hidden on the immersive lesson view */}
+            {!isLessonPage && <StudentSidebar />}
 
             {/* Main Content */}
-            <div className="flex-1 min-w-0 lg:ml-64 pb-16 lg:pb-0">
+            <div className={`flex-1 min-w-0 ${!isLessonPage ? 'lg:ml-64' : ''} pb-16 lg:pb-0`}>
                 {children}
             </div>
         </div>

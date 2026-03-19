@@ -179,6 +179,10 @@ const adminService = {
     const { data } = await api.put(`/modules/${id}/reject`, { reason });
     return data;
   },
+  updateModule: async (id: string, payload: any) => {
+    const { data } = await api.put(`/modules/${id}`, payload);
+    return data;
+  },
   deleteModule: async (id: string) => {
     const { data } = await api.delete(`/modules/${id}`);
     return data;

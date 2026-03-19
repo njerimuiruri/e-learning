@@ -7,12 +7,22 @@ import InteractiveCodeEditor from './InteractiveCodeEditor';
  * SlideRenderer — renders a single slide with type-specific visual design.
  * Supported types: text | image | video | diagram | codeSnippet
  */
-export default function SlideRenderer({ slide, slideNumber, totalSlides }) {
+export default function SlideRenderer({ slide, slideNumber, totalSlides, sectionTitle = '' }) {
   if (!slide) return null;
   const { type } = slide;
 
   return (
-    <div className="w-full">
+    <div className="w-full space-y-3">
+      <RichContentStyles />
+
+      {/* ── Section title banner ─────────────────────────────────────────── */}
+      {sectionTitle && (
+        <div className="flex items-center gap-3 px-1">
+          <div className="flex-shrink-0 w-1 h-7 rounded-full bg-gradient-to-b from-blue-500 to-indigo-500" />
+          <h2 className="text-lg font-bold text-gray-900 leading-tight tracking-tight">{sectionTitle}</h2>
+        </div>
+      )}
+
       {/* ── TEXT SLIDE ─────────────────────────────────────────────────────── */}
       {type === 'text' && (
         <div className="relative rounded-xl overflow-hidden border border-blue-100 bg-white shadow-sm">
@@ -36,7 +46,7 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides }) {
           {/* Content */}
           <div className="px-6 py-6">
             <div
-              className="prose prose-gray max-w-none
+              className="slide-rich-content prose prose-gray max-w-none
                 prose-headings:text-gray-900 prose-headings:font-bold
                 prose-p:text-gray-700 prose-p:leading-relaxed
                 prose-li:text-gray-700
@@ -70,7 +80,7 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides }) {
             {slide.imageUrl ? (
               <div className="flex flex-col items-center gap-4">
                 <div className="relative group w-full">
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-50 opacity-0 group-hover:opacity-30 transition-opacity pointer-events-none rounded-xl" />
+                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-100 to-teal-50 opacity-0 group-hover:opacity-30 transition-opacity pointer-events-none" />
                   <img
                     src={slide.imageUrl}
                     alt={slide.imageCaption || 'Slide image'}
@@ -176,28 +186,26 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides }) {
             <SlideProgress current={slideNumber} total={totalSlides} color="amber" />
           </div>
           <div className="p-6 space-y-4">
-            {slide.content && (
-              <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 overflow-x-auto">
-                <div
-                  className="text-gray-800 prose max-w-none"
-                  dangerouslySetInnerHTML={{ __html: slide.content }}
-                />
-              </div>
-            )}
+            {/* Uploaded / pasted image */}
             {slide.imageUrl && (
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-2">
                 <img
                   src={slide.imageUrl}
                   alt={slide.imageCaption || 'Diagram'}
                   className="max-w-full mx-auto rounded-xl shadow-sm border border-amber-100 object-contain max-h-[460px]"
                 />
                 {slide.imageCaption && (
-                  <div className="flex items-center gap-2 text-sm text-gray-500 italic">
-                    <span className="w-4 h-0.5 bg-amber-300 rounded" />
-                    {slide.imageCaption}
-                    <span className="w-4 h-0.5 bg-amber-300 rounded" />
-                  </div>
+                  <p className="text-sm text-gray-500 italic text-center">{slide.imageCaption}</p>
                 )}
+              </div>
+            )}
+            {/* Embedded SVG / HTML */}
+            {slide.content && (
+              <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 overflow-x-auto">
+                <div
+                  className="slide-rich-content text-gray-800 prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: slide.content }}
+                />
               </div>
             )}
             {!slide.content && !slide.imageUrl && (
@@ -245,6 +253,38 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ── Shared rich-content styles (tables, etc.) ─────────────────────────────────
+function RichContentStyles() {
+  return (
+    <style jsx global>{`
+      .slide-rich-content table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 0.75rem 0;
+        font-size: 13px;
+      }
+      .slide-rich-content table th,
+      .slide-rich-content table td {
+        border: 1px solid #d1d5db;
+        padding: 8px 12px;
+        text-align: left;
+        min-width: 80px;
+      }
+      .slide-rich-content table th {
+        background: #f3f4f6;
+        font-weight: 600;
+        color: #374151;
+      }
+      .slide-rich-content table tr:nth-child(even) td {
+        background: #f9fafb;
+      }
+      .slide-rich-content table tr:hover td {
+        background: #eff6ff;
+      }
+    `}</style>
   );
 }
 
