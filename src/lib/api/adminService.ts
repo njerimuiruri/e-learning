@@ -147,6 +147,10 @@ const adminService = {
   },
 
   // Modules
+  createModuleAsAdmin: async (payload: any) => {
+    const { data } = await api.post('/modules', payload);
+    return data;
+  },
   getAllModules: async (filters: { status?: string | null; level?: string | null; category?: string | null; page?: number; limit?: number } = {}) => {
     const { data } = await api.get('/modules', { params: filters });
     return data;
@@ -173,6 +177,18 @@ const adminService = {
   },
   rejectModule: async (id: string, reason: string) => {
     const { data } = await api.put(`/modules/${id}/reject`, { reason });
+    return data;
+  },
+  deleteModule: async (id: string) => {
+    const { data } = await api.delete(`/modules/${id}`);
+    return data;
+  },
+  approveAssessment: async (id: string) => {
+    const { data } = await api.put(`/modules/${id}/approve-assessment`);
+    return data;
+  },
+  rejectAssessment: async (id: string, reason: string) => {
+    const { data } = await api.put(`/modules/${id}/reject-assessment`, { reason });
     return data;
   },
 };

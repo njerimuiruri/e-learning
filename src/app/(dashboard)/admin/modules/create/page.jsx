@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import moduleService from '@/lib/api/moduleService';
+import adminService from '@/lib/api/adminService';
 import categoryService from '@/lib/api/categoryService';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
@@ -27,7 +27,6 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 // SHARED HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Numbered bullet list (outcomes, tasks, prerequisites, etc.) */
 function BulletList({ label, hint, values, onChange, placeholder, required }) {
   const add    = ()      => onChange([...values, '']);
   const update = (i, v)  => { const n = [...values]; n[i] = v; onChange(n); };
@@ -67,7 +66,6 @@ function BulletList({ label, hint, values, onChange, placeholder, required }) {
   );
 }
 
-/** Resource entry — name, URL, description, type */
 function ResourceList({ label, hint, values, onChange }) {
   const blank  = ()         => ({ url: '', name: '', description: '', fileType: '' });
   const add    = ()         => onChange([...values, blank()]);
@@ -273,263 +271,6 @@ function FinalAssessmentStep({ assessment, onChange }) {
 // MODULE PREVIEW
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ModulePreview({ form, onClose }) {
-  const [selectedLesson, setSelectedLesson] = useState(0);
-  const [selectedSlide, setSelectedSlide]   = useState(0);
-
-  const lessons = form.lessons || [];
-  const lesson  = lessons[selectedLesson];
-
-  return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl w-full h-[90vh] p-0 overflow-hidden flex flex-col">
-        {/* Preview header */}
-        <div className="flex items-center justify-between px-6 py-3 border-b bg-gray-900 text-white flex-shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-            <span className="text-sm font-medium">Student Preview</span>
-            <Badge className="bg-amber-900/40 text-amber-300 border-amber-700 text-xs">Read-only</Badge>
-          </div>
-          <Button variant="ghost" size="sm" onClick={onClose} className="text-gray-300 hover:text-white hover:bg-white/10">
-            <Icons.X className="w-4 h-4 mr-1" /> Close Preview
-          </Button>
-        </div>
-
-        <div className="flex flex-1 min-h-0">
-          {/* Sidebar — lesson list */}
-          <div className="w-64 border-r bg-gray-50 flex-shrink-0 overflow-y-auto">
-            {/* Module header in sidebar */}
-            {form.bannerUrl && (
-              <img src={form.bannerUrl} alt="banner" className="w-full h-24 object-cover" />
-            )}
-            <div className="p-4 border-b">
-              <h2 className="text-sm font-bold text-gray-900 leading-tight">{form.title || 'Untitled Module'}</h2>
-              {form.level && (
-                <Badge variant="secondary" className="mt-1 text-xs capitalize">{form.level}</Badge>
-              )}
-            </div>
-
-            <div className="p-2">
-              <p className="text-[10px] font-semibold text-gray-400 uppercase px-2 mb-1">Lessons</p>
-              {lessons.length === 0 ? (
-                <p className="text-xs text-gray-400 italic px-2 py-4 text-center">No lessons yet</p>
-              ) : (
-                lessons.map((l, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { setSelectedLesson(i); setSelectedSlide(0); }}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition-colors ${
-                      selectedLesson === i
-                        ? 'bg-blue-600 text-white'
-                        : 'hover:bg-gray-200 text-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 ${
-                        selectedLesson === i ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'
-                      }`}>{i + 1}</span>
-                      <span className="text-xs font-medium truncate">{l.title || `Lesson ${i + 1}`}</span>
-                    </div>
-                    {selectedLesson === i && (l.slides || []).length > 0 && (
-                      <p className={`text-[10px] mt-0.5 pl-7 ${selectedLesson === i ? 'text-blue-200' : 'text-gray-400'}`}>
-                        {(l.slides || []).length} slides
-                      </p>
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Main content */}
-          <div className="flex-1 overflow-y-auto">
-            {!lesson ? (
-              <div className="flex items-center justify-center h-full text-gray-400">
-                <div className="text-center">
-                  <Icons.BookOpen className="w-12 h-12 text-gray-200 mx-auto mb-3" />
-                  <p className="text-sm">No lessons to preview.</p>
-                  <p className="text-xs mt-1">Add lessons in the Lessons step.</p>
-                </div>
-              </div>
-            ) : (
-              <div>
-                {/* Lesson header */}
-                <div className="px-8 py-6 border-b bg-white">
-                  <h1 className="text-xl font-bold text-gray-900">{lesson.title || `Lesson ${selectedLesson + 1}`}</h1>
-                  {lesson.description && lesson.description !== '<p><br></p>' && (
-                    <div
-                      className="prose prose-sm max-w-none mt-3 text-gray-600"
-                      dangerouslySetInnerHTML={{ __html: lesson.description }}
-                    />
-                  )}
-                  {(lesson.learningOutcomes || []).length > 0 && (
-                    <div className="mt-4">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Learning Outcomes</p>
-                      <ul className="space-y-1">
-                        {lesson.learningOutcomes.map((o, i) => (
-                          <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
-                            <Icons.CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            {o}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-
-                {/* Slide viewer */}
-                {(lesson.slides || []).length > 0 ? (
-                  <div>
-                    {/* Slide nav bar — prev / indicator / next */}
-                    <div className="sticky top-0 z-10 flex items-center justify-between px-8 py-3 bg-white border-b shadow-sm">
-                      <Button
-                        variant="outline" size="sm"
-                        onClick={() => setSelectedSlide((s) => Math.max(0, s - 1))}
-                        disabled={selectedSlide === 0}
-                        className="gap-1.5"
-                      >
-                        <Icons.ArrowLeft className="w-4 h-4" /> Previous
-                      </Button>
-
-                      {/* Dot indicators */}
-                      <div className="flex items-center gap-1.5">
-                        {lesson.slides.map((_, si) => (
-                          <button
-                            key={si}
-                            onClick={() => setSelectedSlide(si)}
-                            title={`Slide ${si + 1}`}
-                            className={`rounded-full transition-all ${
-                              selectedSlide === si
-                                ? 'w-6 h-2.5 bg-blue-600'
-                                : 'w-2.5 h-2.5 bg-gray-300 hover:bg-blue-300'
-                            }`}
-                          />
-                        ))}
-                        <span className="ml-2 text-xs text-gray-400">
-                          {selectedSlide + 1} / {lesson.slides.length}
-                        </span>
-                      </div>
-
-                      <Button
-                        variant="outline" size="sm"
-                        onClick={() => setSelectedSlide((s) => Math.min(lesson.slides.length - 1, s + 1))}
-                        disabled={selectedSlide >= lesson.slides.length - 1}
-                        className="gap-1.5"
-                      >
-                        Next <Icons.ArrowRight className="w-4 h-4" />
-                      </Button>
-                    </div>
-
-                    {/* Slide content */}
-                    <div className="px-8 py-6 min-h-[300px]">
-                      <PreviewSlide slide={lesson.slides[selectedSlide] || lesson.slides[0]} />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="px-8 py-10 text-center text-gray-400">
-                    <Icons.Layers className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-                    <p className="text-sm">No slides in this lesson yet.</p>
-                  </div>
-                )}
-
-                {/* Case study */}
-                {lesson._caseStudy && lesson._caseStudy.name && (
-                  <div className="mx-8 mb-6 border border-amber-200 rounded-xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 bg-amber-50 border-b border-amber-100">
-                      <Icons.FlaskConical className="w-4 h-4 text-amber-600" />
-                      <span className="text-sm font-semibold text-amber-800">Case Study: {lesson._caseStudy.name}</span>
-                    </div>
-                    {['introduction', 'dataset', 'aiTask', 'keyReadings'].map((key) => {
-                      const labels = { introduction: 'Introduction', dataset: 'Dataset', aiTask: 'AI Task', keyReadings: 'Key Readings' };
-                      const content = lesson._caseStudy[key];
-                      if (!content || content === '<p><br></p>') return null;
-                      return (
-                        <div key={key} className="px-4 py-3 border-b border-amber-50 last:border-0">
-                          <p className="text-xs font-semibold text-amber-700 mb-2">{labels[key]}</p>
-                          <div className="prose prose-sm max-w-none text-gray-700" dangerouslySetInnerHTML={{ __html: content }} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Resources */}
-                {(lesson.resources || []).length > 0 && (
-                  <div className="mx-8 mb-6 border border-teal-200 rounded-xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 bg-teal-50 border-b border-teal-100">
-                      <Icons.Link className="w-4 h-4 text-teal-600" />
-                      <span className="text-sm font-semibold text-teal-800">Lesson Resources</span>
-                    </div>
-                    <div className="divide-y divide-teal-50">
-                      {lesson.resources.map((r, i) => (
-                        <div key={i} className="flex items-center gap-3 px-4 py-3">
-                          <Icons.FileText className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 truncate">{r.name}</p>
-                            {r.description && <p className="text-xs text-gray-500">{r.description}</p>}
-                          </div>
-                          {r.url && (
-                            <Badge variant="secondary" className="text-xs flex-shrink-0">{r.fileType || 'link'}</Badge>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Quiz preview */}
-                {(lesson.assessmentQuiz || []).length > 0 && (
-                  <div className="mx-8 mb-8 border border-purple-200 rounded-xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 py-3 bg-purple-50 border-b border-purple-100">
-                      <Icons.HelpCircle className="w-4 h-4 text-purple-600" />
-                      <span className="text-sm font-semibold text-purple-800">
-                        Lesson Quiz — {lesson.assessmentQuiz.length} question{lesson.assessmentQuiz.length !== 1 ? 's' : ''}
-                      </span>
-                      <Badge className="ml-auto bg-purple-100 text-purple-700 border-0 text-xs">
-                        Pass: {lesson.quizPassingScore ?? 70}%
-                      </Badge>
-                    </div>
-                    <div className="p-4 space-y-4">
-                      {lesson.assessmentQuiz.map((q, qi) => (
-                        <div key={qi} className="space-y-2">
-                          <p className="text-sm font-medium text-gray-800">
-                            <span className="text-purple-600 mr-1">Q{qi + 1}.</span> {q.question}
-                          </p>
-                          {q.type === 'multiple-choice' && (
-                            <div className="space-y-1 ml-5">
-                              {(q.options || []).map((opt, oi) => (
-                                <div key={oi} className="flex items-center gap-2">
-                                  <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
-                                  <span className="text-sm text-gray-600">{opt}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                          {q.type === 'true-false' && (
-                            <div className="flex gap-4 ml-5">
-                              {['True', 'False'].map((opt) => (
-                                <div key={opt} className="flex items-center gap-2">
-                                  <div className="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
-                                  <span className="text-sm text-gray-600">{opt}</span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/** Renders a single slide in preview (read-only) */
 function PreviewSlide({ slide }) {
   if (!slide) return null;
 
@@ -553,9 +294,6 @@ function PreviewSlide({ slide }) {
           </div>
         )}
         {slide.imageCaption && <p className="text-sm text-center text-gray-500 italic">{slide.imageCaption}</p>}
-        {slide.type === 'diagram' && slide.content && (
-          <div className="border border-gray-200 rounded-xl p-4 overflow-auto" dangerouslySetInnerHTML={{ __html: slide.content }} />
-        )}
       </div>
     );
   }
@@ -601,12 +339,101 @@ function PreviewSlide({ slide }) {
   return null;
 }
 
+function ModulePreview({ form, onClose }) {
+  const [selectedLesson, setSelectedLesson] = useState(0);
+  const [selectedSlide, setSelectedSlide]   = useState(0);
+
+  const lessons = form.lessons || [];
+  const lesson  = lessons[selectedLesson];
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl w-full h-[90vh] p-0 overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-6 py-3 border-b bg-gray-900 text-white flex-shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <span className="text-sm font-medium">Student Preview</span>
+            <Badge className="bg-amber-900/40 text-amber-300 border-amber-700 text-xs">Read-only</Badge>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onClose} className="text-gray-300 hover:text-white hover:bg-white/10">
+            <Icons.X className="w-4 h-4 mr-1" /> Close Preview
+          </Button>
+        </div>
+        <div className="flex flex-1 min-h-0">
+          <div className="w-64 border-r overflow-y-auto flex-shrink-0 bg-gray-50">
+            <div className="p-4 border-b">
+              <p className="font-semibold text-sm text-gray-900 truncate">{form.title || 'Untitled Module'}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{lessons.length} lesson{lessons.length !== 1 ? 's' : ''}</p>
+            </div>
+            {lessons.length === 0 ? (
+              <p className="text-sm text-gray-400 italic text-center py-8 px-4">No lessons yet.</p>
+            ) : (
+              <div className="p-2 space-y-1">
+                {lessons.map((l, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setSelectedLesson(i); setSelectedSlide(0); }}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                      i === selectedLesson ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <p className="font-medium truncate">{l.title || `Lesson ${i + 1}`}</p>
+                    <p className={`text-xs mt-0.5 ${i === selectedLesson ? 'text-blue-100' : 'text-gray-400'}`}>
+                      {(l.slides || []).length} slide{(l.slides || []).length !== 1 ? 's' : ''}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            {!lesson ? (
+              <div className="flex items-center justify-center h-full">
+                <p className="text-sm text-gray-400 italic">Select a lesson to preview.</p>
+              </div>
+            ) : (
+              <div>
+                <div className="px-8 pt-8 pb-4 border-b bg-white">
+                  <h2 className="text-xl font-bold text-gray-900">{lesson.title || 'Untitled Lesson'}</h2>
+                  {lesson.description && <p className="text-sm text-gray-500 mt-1">{lesson.description}</p>}
+                </div>
+                {(lesson.slides || []).length > 0 && (
+                  <div className="flex gap-2 px-8 py-3 border-b bg-gray-50 flex-wrap">
+                    {lesson.slides.map((s, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setSelectedSlide(i)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          i === selectedSlide ? 'bg-blue-600 text-white' : 'bg-white border text-gray-600 hover:bg-gray-100'
+                        }`}
+                      >
+                        {i + 1}. {s.type}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="px-8 py-8">
+                  {(lesson.slides || []).length === 0 ? (
+                    <p className="text-sm text-gray-400 italic">No slides in this lesson yet.</p>
+                  ) : (
+                    <PreviewSlide slide={lesson.slides[selectedSlide]} />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // STEPS CONFIG
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { id: 'info',       label: 'Module Info',      icon: Icons.Info,            desc: 'Title, description, level, outcomes' },
+  { id: 'info',       label: 'Module Info',      icon: Icons.Info,            desc: 'Title, description, level, instructor' },
   { id: 'lessons',    label: 'Lessons',           icon: Icons.BookOpen,        desc: 'Build lessons with slides and quizzes' },
   { id: 'resources',  label: 'Module Resources',  icon: Icons.Link,            desc: 'Bibliography, datasets, links' },
   { id: 'assessment', label: 'Final Assessment',  icon: Icons.ClipboardCheck,  desc: 'Certificate-granting assessment' },
@@ -617,7 +444,6 @@ const STEPS = [
 // HELPERS
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Strip HTML tags — used before sending WYSIWYG content to the API */
 const stripHtml = (html) => (html || '').replace(/<[^>]*>/g, '').trim();
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -648,30 +474,40 @@ const defaultForm = {
     maxAttempts: 3,
     timeLimit: null,
   },
+  // Admin-only
+  assignedInstructorId: '',
+  pendingInstructorEmail: '',
+  pendingInstructorName: '',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 
-export default function CreateModulePage() {
+export default function AdminCreateModulePage() {
   const router = useRouter();
-  const [step, setStep]             = useState(0);
-  const [form, setForm]             = useState(defaultForm);
-  const [categories, setCategories] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
+  const [step, setStep]               = useState(0);
+  const [form, setForm]               = useState(defaultForm);
+  const [categories, setCategories]   = useState([]);
+  const [instructors, setInstructors] = useState([]);
+  const [submitting, setSubmitting]   = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  // 'existing' | 'pending'
+  const [assignMode, setAssignMode]   = useState('existing');
 
   useEffect(() => {
     categoryService.getAllCategories()
       .then((d) => setCategories(d || []))
+      .catch(() => {});
+
+    adminService.getAllInstructors({ status: 'approved', limit: 200 })
+      .then((d) => setInstructors(d?.instructors || d || []))
       .catch(() => {});
   }, []);
 
   const updateForm = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const progress   = Math.round(((step + 1) / STEPS.length) * 100);
 
-  // Extract case studies from lessons before submitting
   const buildPayload = () => {
     const caseStudies = (form.lessons || [])
       .filter((l) => l._caseStudy && l._caseStudy.name)
@@ -686,7 +522,8 @@ export default function CreateModulePage() {
       }));
 
     const cleanLessons = (form.lessons || []).map(({ _caseStudy, ...rest }) => rest);
-    return {
+
+    const payload = {
       ...form,
       learningObjectives: stripHtml(form.learningObjectives),
       learningOutcomes: stripHtml(form.learningOutcomes),
@@ -695,6 +532,20 @@ export default function CreateModulePage() {
       lessons: cleanLessons,
       caseStudies,
     };
+
+    // Clean up instructor assignment fields based on mode
+    if (assignMode === 'existing' && form.assignedInstructorId) {
+      delete payload.pendingInstructorEmail;
+      delete payload.pendingInstructorName;
+    } else if (assignMode === 'pending') {
+      delete payload.assignedInstructorId;
+    } else {
+      delete payload.assignedInstructorId;
+      delete payload.pendingInstructorEmail;
+      delete payload.pendingInstructorName;
+    }
+
+    return payload;
   };
 
   const handleSubmit = async () => {
@@ -705,15 +556,13 @@ export default function CreateModulePage() {
     }
     setSubmitting(true);
     try {
-      const created = await moduleService.createModule(buildPayload());
+      const created = await adminService.createModuleAsAdmin(buildPayload());
       toast.success('Module created successfully!');
-      // Redirect to the new module's detail page with ?new=true so the
-      // "Submit for Review" guidance banner is shown immediately.
       const newId = created?._id || created?.id;
       if (newId) {
-        router.push(`/instructor/modules/${newId}?new=true`);
+        router.push(`/admin/modules/${newId}`);
       } else {
-        router.push('/instructor/modules');
+        router.push('/admin/modules');
       }
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to create module');
@@ -730,9 +579,102 @@ export default function CreateModulePage() {
       case 'info':
         return (
           <div className="space-y-8">
+
+            {/* Assign Instructor — admin-only */}
+            <section className="space-y-5">
+              <SectionHeading number={1} title="Assign Instructor" subtitle="Assign this module to an instructor." />
+              <Alert className="border-blue-200 bg-blue-50">
+                <Icons.UserCheck className="w-4 h-4 text-blue-600" />
+                <AlertDescription className="text-blue-700 text-sm">
+                  You can assign this module to an <strong>existing instructor</strong> or to a <strong>not-yet-registered instructor</strong> by entering their email.
+                  If using email, the module will automatically link to their account once they register and are approved.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant={assignMode === 'existing' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAssignMode('existing')}
+                  className="gap-1.5"
+                >
+                  <Icons.Users className="w-3.5 h-3.5" /> Existing Instructor
+                </Button>
+                <Button
+                  type="button"
+                  variant={assignMode === 'pending' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAssignMode('pending')}
+                  className="gap-1.5"
+                >
+                  <Icons.UserPlus className="w-3.5 h-3.5" /> Pending / Not Yet Registered
+                </Button>
+                <Button
+                  type="button"
+                  variant={assignMode === 'none' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setAssignMode('none')}
+                  className="gap-1.5"
+                >
+                  <Icons.UserX className="w-3.5 h-3.5" /> Assign Later
+                </Button>
+              </div>
+
+              {assignMode === 'existing' && (
+                <div className="space-y-1.5">
+                  <Label className="font-semibold">Select Instructor</Label>
+                  <Select value={form.assignedInstructorId} onValueChange={(v) => updateForm('assignedInstructorId', v)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Search and select an instructor..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {instructors.length === 0 ? (
+                        <SelectItem value="_none" disabled>No approved instructors found</SelectItem>
+                      ) : (
+                        instructors.map((inst) => (
+                          <SelectItem key={inst._id} value={inst._id}>
+                            {inst.firstName} {inst.lastName}
+                            {inst.email && <span className="text-gray-400 text-xs ml-2">({inst.email})</span>}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {assignMode === 'pending' && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold">Instructor Email <span className="text-red-500">*</span></Label>
+                    <Input
+                      type="email"
+                      value={form.pendingInstructorEmail}
+                      onChange={(e) => updateForm('pendingInstructorEmail', e.target.value)}
+                      placeholder="instructor@example.com"
+                    />
+                    <p className="text-xs text-gray-500">The module will be linked when this person registers and is approved.</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold">Instructor Name</Label>
+                    <Input
+                      value={form.pendingInstructorName}
+                      onChange={(e) => updateForm('pendingInstructorName', e.target.value)}
+                      placeholder="Dr. Jane Smith"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {assignMode === 'none' && (
+                <p className="text-sm text-gray-400 italic">No instructor assigned. You can assign one later from the module detail page.</p>
+              )}
+            </section>
+
             {/* Basic details */}
             <section className="space-y-5">
-              <SectionHeading number={1} title="Basic Details" />
+              <SectionHeading number={2} title="Basic Details" />
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label className="font-semibold">Module Title <span className="text-red-500">*</span></Label>
@@ -780,7 +722,7 @@ export default function CreateModulePage() {
 
             {/* Description */}
             <section className="space-y-4">
-              <SectionHeading number={2} title="Module Description" subtitle="Explain what this module is about and why it matters." required />
+              <SectionHeading number={3} title="Module Description" subtitle="Explain what this module is about and why it matters." required />
               <RichTextEditor
                 value={form.description}
                 onChange={(v) => updateForm('description', v)}
@@ -791,7 +733,7 @@ export default function CreateModulePage() {
 
             {/* Capstone */}
             <section className="space-y-4">
-              <SectionHeading number={3} title="Capstone Project" subtitle="Optional — describe the final project learners will design and submit." />
+              <SectionHeading number={4} title="Capstone Project" subtitle="Optional — describe the final project learners will design and submit." />
               <RichTextEditor
                 value={form.capstone}
                 onChange={(v) => updateForm('capstone', v)}
@@ -802,7 +744,7 @@ export default function CreateModulePage() {
 
             {/* Objectives / Outcomes / Audience / Prerequisites */}
             <section className="space-y-6">
-              <SectionHeading number={4} title="Objectives, Outcomes, Audience & Prerequisites" />
+              <SectionHeading number={5} title="Objectives, Outcomes, Audience & Prerequisites" />
               <div className="space-y-2">
                 <Label className="font-semibold">Learning Objectives</Label>
                 <p className="text-xs text-gray-500">What does this module aim to teach? (The instructor's goals)</p>
@@ -839,31 +781,31 @@ export default function CreateModulePage() {
               />
             </section>
 
-            {/* Module Content / Topics */}
+            {/* Module Content */}
             <section className="space-y-4">
-              <SectionHeading number={5} title="Module Content" subtitle="List the topics and subject areas covered in this module." />
+              <SectionHeading number={6} title="Module Content" subtitle="List the topics and subject areas covered in this module." />
               <RichTextEditor
                 value={form.moduleTopics}
                 onChange={(v) => updateForm('moduleTopics', v)}
-                placeholder="e.g. 1. Overview of climate change science and fundamentals of climate&#10;2. Key concepts and terminologies..."
+                placeholder="e.g. 1. Overview of climate change science..."
                 height={160}
               />
             </section>
 
             {/* Core Reading Materials */}
             <section className="space-y-4">
-              <SectionHeading number={6} title="Core Reading Materials" subtitle="Add required or recommended readings for this module." />
+              <SectionHeading number={7} title="Core Reading Materials" subtitle="Add required or recommended readings for this module." />
               <RichTextEditor
                 value={form.coreReadingMaterials}
                 onChange={(v) => updateForm('coreReadingMaterials', v)}
-                placeholder="e.g. Houghton, D. D. (2002). Introduction to Climate Change. World Meteorological Organization, Geneva."
+                placeholder="e.g. Houghton, D. D. (2002). Introduction to Climate Change..."
                 height={180}
               />
             </section>
 
             {/* Banner */}
             <section className="space-y-4">
-              <SectionHeading number={7} title="Banner Image" />
+              <SectionHeading number={8} title="Banner Image" />
               <BannerUploader value={form.bannerUrl} onChange={(v) => updateForm('bannerUrl', v)} />
             </section>
           </div>
@@ -896,7 +838,6 @@ export default function CreateModulePage() {
               <AlertDescription className="text-teal-700 text-sm">
                 These resources apply to the <strong>whole module</strong>, not a specific lesson. Use this for
                 bibliography, recommended reading lists, datasets, code repositories, and recorded lectures.
-                Lesson-specific resources can be added inside each lesson.
               </AlertDescription>
             </Alert>
             <ResourceList
@@ -919,7 +860,7 @@ export default function CreateModulePage() {
             <Alert className="border-green-200 bg-green-50">
               <Icons.CheckCircle className="w-4 h-4 text-green-600" />
               <AlertDescription className="text-green-700 text-sm">
-                Your module will be saved as a <strong>draft</strong>. You can edit it and submit for approval later.
+                Your module will be saved as a <strong>draft</strong>. You can edit it, add lessons, and change status from the module detail page.
               </AlertDescription>
             </Alert>
 
@@ -935,6 +876,29 @@ export default function CreateModulePage() {
               <Button onClick={() => setShowPreview(true)} className="gap-2 bg-blue-600 hover:bg-blue-700">
                 <Icons.Eye className="w-4 h-4" /> Open Student Preview
               </Button>
+            </div>
+
+            {/* Instructor assignment summary */}
+            <div className="border rounded-xl p-4 bg-gray-50 space-y-2">
+              <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                <Icons.UserCheck className="w-4 h-4 text-blue-500" /> Instructor Assignment
+              </p>
+              {assignMode === 'existing' && form.assignedInstructorId ? (
+                (() => {
+                  const inst = instructors.find((i) => i._id === form.assignedInstructorId);
+                  return inst ? (
+                    <p className="text-sm text-gray-600">
+                      Assigned to <strong>{inst.firstName} {inst.lastName}</strong> ({inst.email})
+                    </p>
+                  ) : <p className="text-sm text-gray-400">Instructor selected (ID: {form.assignedInstructorId})</p>;
+                })()
+              ) : assignMode === 'pending' && form.pendingInstructorEmail ? (
+                <p className="text-sm text-gray-600">
+                  Pending instructor: <strong>{form.pendingInstructorName || 'Unknown'}</strong> ({form.pendingInstructorEmail}) — will be linked upon registration.
+                </p>
+              ) : (
+                <p className="text-sm text-gray-400 italic">No instructor assigned. You can assign one later.</p>
+              )}
             </div>
 
             {/* Summary cards */}
@@ -986,21 +950,6 @@ export default function CreateModulePage() {
               ))}
             </div>
 
-            {/* Learning outcomes preview */}
-            {form.learningOutcomes.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-gray-600">Module Learning Outcomes</p>
-                <div className="space-y-1.5">
-                  {form.learningOutcomes.map((o, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm">
-                      <Icons.CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700">{o}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Validation warnings */}
             {(!form.title || !form.description || !form.categoryId || !form.level) && (
               <Alert className="border-amber-200 bg-amber-50">
@@ -1029,7 +978,6 @@ export default function CreateModulePage() {
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-right" />
 
-      {/* Preview modal */}
       {showPreview && (
         <ModulePreview form={form} onClose={() => setShowPreview(false)} />
       )}
@@ -1041,7 +989,10 @@ export default function CreateModulePage() {
             <Icons.ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Create New Module</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold text-gray-900">Create New Module</h1>
+              <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">Admin</Badge>
+            </div>
             <p className="text-sm text-gray-500">
               Step {step + 1} of {STEPS.length} —{' '}
               <span className="font-medium text-gray-700">{STEPS[step].label}</span>
@@ -1153,7 +1104,7 @@ export default function CreateModulePage() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Small helper component for section headings
+// Section heading helper
 // ─────────────────────────────────────────────────────────────────────────────
 
 function SectionHeading({ number, title, subtitle, required }) {

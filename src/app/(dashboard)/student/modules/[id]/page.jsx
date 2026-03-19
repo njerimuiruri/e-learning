@@ -8,6 +8,7 @@ import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import moduleRatingService from '@/lib/api/moduleRatingService';
 import Navbar from '@/components/navbar/navbar';
 import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
+import LessonViewer from '@/components/student/LessonViewer';
 
 function ModuleLearningContent() {
     const { id: moduleId } = useParams();
@@ -340,7 +341,7 @@ function ModuleLearningContent() {
                                                             <p className={`text-sm font-medium truncate ${isCurrent ? 'text-white' : ''}`}>{lesson.title}</p>
                                                             <div className="flex items-center gap-2 mt-0.5">
                                                                 {lesson.duration && <span className={`text-xs ${isCurrent ? 'text-blue-200' : 'text-gray-500'}`}>{lesson.duration}</span>}
-                                                                {lesson.assessment?.questions?.length > 0 && (
+                                                                {(lesson.assessment?.questions?.length > 0 || lesson.assessmentQuiz?.length > 0) && (
                                                                     <span className={`text-xs flex items-center gap-1 ${isCurrent ? 'text-blue-200' : lessonProg?.assessmentPassed ? 'text-green-600' : 'text-indigo-600'}`}>
                                                                         <Icons.FileQuestion className="w-3 h-3" />
                                                                         {lessonProg?.assessmentPassed ? 'Passed' : 'Quiz'}
@@ -479,20 +480,16 @@ function ModuleLearningContent() {
                             {/* Lesson Content View */}
                             {!showFinalAssessment && currentLesson && (
                                 <>
-                                    {/* Lesson Header */}
-                                    <div className="mb-6">
-                                        <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-                                            <span>Lesson {currentLessonIndex + 1} of {totalLessons}</span>
-                                            {isLessonCompleted(currentLessonIndex) && (
-                                                <span className="flex items-center gap-1 text-green-600 font-medium">
-                                                    <Icons.CheckCircle className="w-4 h-4" />
-                                                    Completed
-                                                </span>
-                                            )}
-                                        </div>
-                                        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{currentLesson.title}</h2>
-                                        {currentLesson.description && (
-                                            <p className="text-gray-600 mt-2">{currentLesson.description}</p>
+                                    {/* Minimal breadcrumb — LessonViewer intro slide shows title + description */}
+                                    <div className="mb-4 flex items-center gap-3">
+                                        <span className="text-sm text-gray-400">
+                                            Lesson {currentLessonIndex + 1} of {totalLessons}
+                                        </span>
+                                        {isLessonCompleted(currentLessonIndex) && (
+                                            <span className="flex items-center gap-1 text-green-600 text-sm font-medium bg-green-50 px-2 py-0.5 rounded-full">
+                                                <Icons.CheckCircle className="w-3.5 h-3.5" />
+                                                Completed
+                                            </span>
                                         )}
                                     </div>
 
@@ -514,8 +511,42 @@ function ModuleLearningContent() {
                                         />
                                     )}
 
+                                    {/* ── Slide-based Lesson Viewer ─────────────────────── */}
+                                    {!showLessonAssessment && currentLesson.slides?.length > 0 && (
+                                        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 min-h-[640px] flex flex-col">
+                                            <LessonViewer
+                                                lesson={currentLesson}
+                                                lessonIndex={currentLessonIndex}
+                                                totalLessons={totalLessons}
+                                                enrollment={enrollment}
+                                                isAlreadyCompleted={isLessonCompleted(currentLessonIndex)}
+                                                onLessonComplete={async () => {
+                                                    const result = await moduleEnrollmentService.completeLesson(enrollment._id, currentLessonIndex);
+                                                    const updatedEnrollment = result.enrollment ?? result;
+                                                    setEnrollment(updatedEnrollment);
+                                                    // Auto-advance to next lesson
+                                                    if (result.navigateTo === 'next_lesson' && result.nextLessonIndex != null) {
+                                                        setCurrentLessonIndex(result.nextLessonIndex);
+                                                    } else if (result.navigateTo === 'final_assessment') {
+                                                        setShowFinalAssessment(true);
+                                                    }
+                                                }}
+                                                onAssessmentComplete={(res) => {
+                                                    setEnrollment(res.enrollment ?? res);
+                                                    if (res.passed) {
+                                                        if (res.navigateTo === 'next_lesson' && res.nextLessonIndex != null) {
+                                                            setCurrentLessonIndex(res.nextLessonIndex);
+                                                        } else if (res.navigateTo === 'final_assessment') {
+                                                            setShowFinalAssessment(true);
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+
                                     {/* Lesson Content */}
-                                    {!showLessonAssessment && (
+                                    {!showLessonAssessment && (!currentLesson.slides || currentLesson.slides.length === 0) && (
                                         <>
                                             {/* Video */}
                                             {currentLesson.videoUrl && (
@@ -1066,77 +1097,159 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
     );
 }
 
-// Question Renderer Component
+// ── Answer evaluation helper ──────────────────────────────────────────────────
+function evaluateStudentAnswer(question, studentAnswer) {
+    if (!studentAnswer) return false;
+    const ca = question.correctAnswer;
+    if (ca === undefined || ca === null || ca === '') return false;
+    const options = question.options || [];
+    const idx = Number(ca);
+    if (!isNaN(idx) && Number.isInteger(idx) && idx >= 0 && idx < options.length) {
+        return String(studentAnswer).trim() === String(options[idx]).trim();
+    }
+    return String(studentAnswer).trim().toLowerCase() === String(ca).trim().toLowerCase();
+}
+
+function getCorrectText(question) {
+    const ca = question.correctAnswer;
+    const options = question.options || [];
+    const idx = Number(ca);
+    if (!isNaN(idx) && Number.isInteger(idx) && idx >= 0 && idx < options.length) return options[idx];
+    return String(ca || '');
+}
+
+// Question Renderer Component (with immediate per-question feedback)
 function QuestionRenderer({ question, index, answer, onChange }) {
+    const [checked, setChecked] = React.useState(null); // null | { correct: bool }
+
+    const isMultipleChoice = question.type === 'multiple-choice' || question.type === 'multiple_choice';
+    const isTrueFalse = question.type === 'true-false';
+    const isEssay = question.type === 'essay' || question.type === 'short-answer';
+
+    const isChecked = checked !== null;
+    const isCorrect = checked?.correct;
+
+    const handleSelect = (val) => {
+        onChange(val);
+        // Auto-check on selection for MC / true-false
+        if (isMultipleChoice || isTrueFalse) {
+            const correct = evaluateStudentAnswer(question, val);
+            setChecked({ correct, answer: val });
+        }
+    };
+
+    const questionText = question.question || question.text || '';
+    const correctOptionText = isChecked ? getCorrectText(question) : null;
+
     return (
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-            <div className="flex items-start gap-3 mb-3">
-                <span className="bg-[#021d49] text-white w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
-                    {index + 1}
+        <div className={`rounded-xl border-2 p-5 transition-all ${
+            isChecked
+                ? isCorrect ? 'border-green-300 bg-green-50' : 'border-red-200 bg-red-50'
+                : 'bg-gray-50 border-gray-200'
+        }`}>
+            <div className="flex items-start gap-3 mb-4">
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white ${
+                    isChecked ? (isCorrect ? 'bg-green-500' : 'bg-red-500') : 'bg-[#021d49]'
+                }`}>
+                    {isChecked ? (isCorrect ? '✓' : '✗') : index + 1}
                 </span>
                 <div className="flex-1">
-                    <p className="font-medium text-gray-900">{question.text}</p>
-                    <span className="text-xs text-gray-500">{question.points} points - {question.type}</span>
+                    {/* Optional code snippet */}
+                    {question.codeSnippet && (
+                        <div className="mb-3 rounded-lg overflow-hidden border border-gray-700">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-[#2d2d2d]">
+                                <span className="text-xs text-gray-300 font-semibold font-mono">{question.codeSnippet.language || 'python'}</span>
+                            </div>
+                            <pre className="bg-[#1e1e1e] text-green-300 text-xs p-3 overflow-x-auto font-mono leading-relaxed whitespace-pre-wrap">{question.codeSnippet.code}</pre>
+                        </div>
+                    )}
+                    <p className="font-medium text-gray-900">{questionText}</p>
+                    {question.points && (
+                        <span className="text-xs text-gray-500">{question.points} point{question.points !== 1 ? 's' : ''}</span>
+                    )}
                 </div>
             </div>
 
-            {question.type === 'multiple-choice' && question.options && (
-                <div className="space-y-2 ml-10">
-                    {question.options.map((option, optIdx) => (
-                        <label
-                            key={optIdx}
-                            className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${answer === option
-                                ? 'border-[#021d49] bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
+            {(isMultipleChoice || isTrueFalse) && (
+                <div className={`space-y-2 ml-10 ${isMultipleChoice ? '' : 'flex gap-3 space-y-0'}`}>
+                    {(isTrueFalse ? ['True', 'False'] : question.options || []).map((option, optIdx) => {
+                        const isSelected = answer === option;
+                        const isThisCorrect = isChecked && String(option).trim() === String(correctOptionText).trim();
+                        const isThisWrong = isChecked && isSelected && !isCorrect;
+                        return (
+                            <label
+                                key={optIdx}
+                                className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${isTrueFalse ? 'flex-1 justify-center' : ''} ${
+                                    isChecked
+                                        ? isThisCorrect
+                                            ? 'border-green-400 bg-green-100 text-green-900'
+                                            : isThisWrong
+                                            ? 'border-red-400 bg-red-100 text-red-900'
+                                            : 'border-gray-200 bg-white text-gray-400 opacity-60'
+                                        : isSelected
+                                        ? 'border-[#021d49] bg-blue-50'
+                                        : 'border-gray-200 hover:border-gray-300'
                                 }`}
-                        >
-                            <input
-                                type="radio"
-                                name={`question-${index}`}
-                                value={option}
-                                checked={answer === option}
-                                onChange={() => onChange(option)}
-                                className="text-[#021d49]"
-                            />
-                            <span className="text-sm">{option}</span>
-                        </label>
-                    ))}
+                            >
+                                <input
+                                    type="radio"
+                                    name={`question-${index}`}
+                                    value={option}
+                                    checked={isSelected}
+                                    onChange={() => !isChecked && handleSelect(option)}
+                                    disabled={isChecked}
+                                    className="text-[#021d49] flex-shrink-0"
+                                />
+                                <span className="text-sm font-medium flex-1">{option}</span>
+                                {isChecked && isThisCorrect && <span className="text-green-600 text-xs font-bold">✓</span>}
+                                {isChecked && isThisWrong && <span className="text-red-500 text-xs font-bold">✗</span>}
+                            </label>
+                        );
+                    })}
                 </div>
             )}
 
-            {question.type === 'true-false' && (
-                <div className="flex gap-3 ml-10">
-                    {['True', 'False'].map((option) => (
-                        <label
-                            key={option}
-                            className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${answer === option
-                                ? 'border-[#021d49] bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                        >
-                            <input
-                                type="radio"
-                                name={`question-${index}`}
-                                value={option}
-                                checked={answer === option}
-                                onChange={() => onChange(option)}
-                                className="text-[#021d49]"
-                            />
-                            <span className="text-sm font-medium">{option}</span>
-                        </label>
-                    ))}
-                </div>
-            )}
-
-            {question.type === 'essay' && (
-                <div className="ml-10">
+            {isEssay && (
+                <div className="ml-10 space-y-2">
                     <textarea
                         value={answer || ''}
-                        onChange={(e) => onChange(e.target.value)}
+                        onChange={(e) => !isChecked && onChange(e.target.value)}
+                        disabled={isChecked}
                         placeholder="Write your answer here..."
                         rows={4}
-                        className="w-full border-2 border-gray-200 rounded-lg p-3 text-sm focus:border-[#021d49] focus:ring-0 outline-none resize-none"
+                        className="w-full border-2 border-gray-200 rounded-lg p-3 text-sm focus:border-[#021d49] focus:ring-0 outline-none resize-none disabled:bg-white disabled:text-gray-500"
                     />
+                    {!isChecked && answer && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const correct = evaluateStudentAnswer(question, answer);
+                                setChecked({ correct, answer });
+                            }}
+                            className="text-xs px-3 py-1.5 rounded-lg bg-[#021d49] text-white font-semibold hover:bg-blue-800 transition-colors"
+                        >
+                            Check Answer
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {/* Feedback + explanation */}
+            {isChecked && (
+                <div className={`mt-4 ml-10 rounded-lg p-3 border ${
+                    isCorrect ? 'bg-green-100 border-green-300' : 'bg-red-100 border-red-300'
+                }`}>
+                    <p className={`text-sm font-bold mb-1 ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
+                        {isCorrect ? '✓ Correct!' : '✗ Incorrect'}
+                        {!isCorrect && correctOptionText && (
+                            <span className="font-normal text-gray-700 ml-2">
+                                Correct answer: <span className="font-semibold text-green-700">{correctOptionText}</span>
+                            </span>
+                        )}
+                    </p>
+                    {question.explanation && (
+                        <p className="text-sm text-gray-700 leading-relaxed">{question.explanation}</p>
+                    )}
                 </div>
             )}
         </div>

@@ -38,6 +38,21 @@ const moduleEnrollmentService = {
     return response.data;
   },
 
+  // Track engagement for a single slide (time spent + scroll)
+  async trackSlideProgress(
+    enrollmentId: string,
+    lessonIndex: number,
+    slideIndex: number,
+    timeSpent: number,
+    scrolledToBottom: boolean,
+  ) {
+    const response = await api.put(
+      `/${enrollmentId}/lessons/${lessonIndex}/slides/${slideIndex}/progress`,
+      { timeSpent, scrolledToBottom },
+    );
+    return response.data;
+  },
+
   async completeLesson(enrollmentId, lessonIndex) {
     const response = await api.put(`/${enrollmentId}/lessons/${lessonIndex}/complete`);
     return response.data;

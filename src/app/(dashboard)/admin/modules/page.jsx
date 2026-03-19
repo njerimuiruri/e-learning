@@ -178,9 +178,17 @@ export default function AdminModulesPage() {
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                 {/* Page Header */}
-                <div className="mb-8">
-                    <h1 className="text-2xl font-bold text-gray-900">Module Management</h1>
-                    <p className="text-gray-600 mt-1">Review, approve, and manage learning modules</p>
+                <div className="mb-8 flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Module Management</h1>
+                        <p className="text-gray-600 mt-1">Review, approve, and manage learning modules</p>
+                    </div>
+                    <button
+                        onClick={() => router.push('/admin/modules/create')}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                    >
+                        <Icons.Plus className="w-4 h-4" /> Create Module
+                    </button>
                 </div>
 
                 {/* Stats Cards */}
@@ -320,7 +328,6 @@ export default function AdminModulesPage() {
                         {filteredModules.map((mod) => {
                             const statusCfg = STATUS_CONFIG[mod.status] || STATUS_CONFIG.draft;
                             const levelCfg = LEVEL_CONFIG[mod.level] || LEVEL_CONFIG.beginner;
-                            const StatusIcon = Icons[statusCfg.icon];
 
                             return (
                                 <div
@@ -333,13 +340,18 @@ export default function AdminModulesPage() {
                                         {mod.bannerUrl && (
                                             <img src={mod.bannerUrl} alt="" className="w-full h-full object-cover" />
                                         )}
-                                        <div className="absolute top-3 left-3 flex gap-2">
+                                        <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
                                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusCfg.color}`}>
                                                 {statusCfg.label}
                                             </span>
                                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${levelCfg.color}`}>
                                                 {levelCfg.label}
                                             </span>
+                                            {mod.assessmentReviewStatus === 'pending' && (
+                                                <span className="px-2 py-1 rounded-full text-xs font-bold bg-amber-400 text-amber-900">
+                                                    Assessment Review
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
 

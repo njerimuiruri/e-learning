@@ -26,9 +26,10 @@ const TRACK_OPTIONS  = ['AI & Machine Learning', 'Data Science', 'Climate Tech',
 
 const BLANK_ROW = () => ({
   id: Date.now() + Math.random(),
-  firstName: '', lastName: '', email: '', gender: '',
+  fullName: '', email: '', gender: '',
   country: '', region: '', track: '', category: '', phoneNumber: '',
 });
+
 
 // ─────────────────────────────────────────────────────────────────
 // MODAL WRAPPER
@@ -83,7 +84,7 @@ function StatCard({ label, value, icon: Icon, color = 'blue', sub }) {
 // ─────────────────────────────────────────────────────────────────
 function SingleFellowForm({ categories, onSuccess, onClose }) {
   const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', gender: '',
+    fullName: '', email: '', gender: '',
     country: '', region: '', track: '', category: '', phoneNumber: '',
     sendEmail: true,
   });
@@ -105,6 +106,7 @@ function SingleFellowForm({ categories, onSuccess, onClose }) {
     try {
       const res = await adminService.createFellow({
         ...form,
+        fullName: form.fullName,
         category: (form.category && form.category !== '__none__') ? form.category : undefined,
       });
       if (form.sendEmail) {
@@ -175,15 +177,9 @@ function SingleFellowForm({ categories, onSuccess, onClose }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1">
-          <Label>First Name</Label>
-          <Input value={form.firstName} onChange={e => set('firstName', e.target.value)} placeholder="e.g. Amara" />
-        </div>
-        <div className="space-y-1">
-          <Label>Last Name</Label>
-          <Input value={form.lastName} onChange={e => set('lastName', e.target.value)} placeholder="e.g. Diallo" />
-        </div>
+      <div className="space-y-1">
+        <Label>Full Name</Label>
+        <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} placeholder="e.g. Amara Diallo" />
       </div>
       <div className="space-y-1">
         <Label>Email Address <span className="text-red-500">*</span></Label>
@@ -274,7 +270,7 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
   const addRow = () => setRows(prev => [...prev, BLANK_ROW()]);
   const removeRow = (idx) => setRows(prev => prev.filter((_, i) => i !== idx));
 
-  // Paste handler — tab-separated rows: firstName \t lastName \t email \t gender \t country \t region \t track \t category \t phone
+  // Paste handler — tab-separated rows: Full Name \t email \t gender \t country \t region \t track \t phone
   const handlePaste = (e) => {
     const text = e.clipboardData.getData('text');
     const lines = text.trim().split('\n').filter(l => l.trim());
@@ -284,20 +280,18 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
       const cols = line.split('\t').map(s => s.trim());
       return {
         id: Date.now() + Math.random(),
-        firstName:   cols[0] || '',
-        lastName:    cols[1] || '',
-        email:       cols[2] || '',
-        gender:      cols[3] || '',
-        country:     cols[4] || '',
-        region:      cols[5] || '',
-        track:       cols[6] || '',
+        fullName:    cols[0] || '',
+        email:       cols[1] || '',
+        gender:      cols[2] || '',
+        country:     cols[3] || '',
+        region:      cols[4] || '',
+        track:       cols[5] || '',
         category:    '',
-        phoneNumber: cols[7] || '',
+        phoneNumber: cols[6] || '',
       };
     });
 
-    // Replace blank rows with pasted data
-    const nonEmpty = rows.filter(r => r.email || r.firstName || r.lastName);
+    const nonEmpty = rows.filter(r => r.email || r.fullName);
     setRows([...nonEmpty, ...parsed]);
     toast.success(`Pasted ${parsed.length} row${parsed.length !== 1 ? 's' : ''}`);
   };
@@ -316,8 +310,9 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g, ''));
       const colIdx = (names) => names.map(n => headers.indexOf(n)).find(i => i >= 0) ?? -1;
 
-      const fNameIdx    = colIdx(['firstname', 'first_name', 'first name']);
-      const lNameIdx    = colIdx(['lastname',  'last_name',  'last name']);
+      const fullNameIdx = colIdx(['fullname', 'full_name', 'name']);
+      const fNameIdx    = colIdx(['firstname', 'first_name']);
+      const lNameIdx    = colIdx(['lastname',  'last_name']);
       const emailIdx    = colIdx(['email']);
       const genderIdx   = colIdx(['gender']);
       const countryIdx  = colIdx(['country']);
@@ -329,10 +324,14 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
 
       const parsed = lines.slice(1).map(line => {
         const cols = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+        const fn = fNameIdx >= 0 ? cols[fNameIdx] : '';
+        const ln = lNameIdx >= 0 ? cols[lNameIdx] : '';
+        const resolvedFullName = fullNameIdx >= 0
+          ? cols[fullNameIdx]
+          : [fn, ln].filter(Boolean).join(' ');
         return {
           id: Date.now() + Math.random(),
-          firstName:   fNameIdx   >= 0 ? cols[fNameIdx]   : '',
-          lastName:    lNameIdx   >= 0 ? cols[lNameIdx]   : '',
+          fullName:    resolvedFullName,
           email:       emailIdx   >= 0 ? cols[emailIdx]   : '',
           gender:      genderIdx  >= 0 ? cols[genderIdx]  : '',
           country:     countryIdx >= 0 ? cols[countryIdx] : '',
@@ -344,7 +343,7 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
       }).filter(r => r.email);
 
       setRows(prev => {
-        const nonEmpty = prev.filter(r => r.email || r.firstName || r.lastName);
+        const nonEmpty = prev.filter(r => r.email || r.fullName);
         return [...nonEmpty, ...parsed];
       });
       toast.success(`Imported ${parsed.length} row${parsed.length !== 1 ? 's' : ''} from CSV`);
@@ -354,8 +353,8 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
   };
 
   const downloadTemplate = () => {
-    const header = 'firstName,lastName,email,gender,country,region,track,phoneNumber';
-    const sample = 'Amara,Diallo,amara@example.com,Female,Kenya,East Africa,AI & Machine Learning,+254700000000';
+    const header = 'fullName,email,gender,country,region,track,phoneNumber';
+    const sample = 'Amara Diallo,amara@example.com,Female,Kenya,East Africa,AI & Machine Learning,+254700000000';
     const blob = new Blob([`${header}\n${sample}`], { type: 'text/csv' });
     const url  = URL.createObjectURL(blob);
     const a    = document.createElement('a'); a.href = url; a.download = 'fellows-template.csv'; a.click();
@@ -370,8 +369,7 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
     setResults(null);
     try {
       const res = await adminService.bulkCreateFellows(validRows.map(r => ({
-        firstName:   r.firstName   || undefined,
-        lastName:    r.lastName    || undefined,
+        fullName:    r.fullName,
         email:       r.email,
         gender:      r.gender      || undefined,
         country:     r.country     || undefined,
@@ -418,7 +416,7 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
           <thead>
             <tr className="bg-gray-50 border-b">
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-500 w-8">#</th>
-              {['First Name', 'Last Name', 'Email *', 'Gender', 'Country', 'Region', 'Track', 'Phone'].map(h => (
+              {['Full Name', 'Email *', 'Gender', 'Country', 'Region', 'Track', 'Phone'].map(h => (
                 <th key={h} className="px-2 py-2.5 text-left text-xs font-semibold text-gray-500">{h}</th>
               ))}
               <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-500">Category</th>
@@ -430,9 +428,8 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
               <tr key={row.id} className={`border-b last:border-0 ${row.email ? '' : 'bg-gray-50/50'}`}>
                 <td className="px-3 py-1.5 text-xs text-gray-400 font-mono">{idx + 1}</td>
                 {[
-                  ['firstName', 'First Name', 'text'],
-                  ['lastName',  'Last Name',  'text'],
-                  ['email',     'Email',      'email'],
+                  ['fullName', 'Full Name', 'text'],
+                  ['email',    'Email',     'email'],
                 ].map(([field, ph, type]) => (
                   <td key={field} className="px-1.5 py-1">
                     <Input
@@ -608,7 +605,7 @@ function BulkEmailDialog({ selected, fellows, onClose, onDone, isInvitation }) {
         <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-3 border rounded-xl bg-gray-50">
           {selectedFellows.map(f => (
             <Badge key={f._id} variant="secondary" className="text-xs">
-              {f.firstName || f.email} {f.lastName || ''}
+              {f.fullName || f.firstName || f.email}
               {!f.invitationEmailSent && <span className="ml-1 w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" title="No invitation sent yet" />}
             </Badge>
           ))}
@@ -703,10 +700,10 @@ function ReminderDialog({ fellow, onClose }) {
     <div className="space-y-4">
       <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
         <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-          {(fellow.firstName?.[0] || fellow.email?.[0] || '?').toUpperCase()}
+          {(fellow.fullName?.[0] || fellow.email?.[0] || '?').toUpperCase()}
         </div>
         <div>
-          <p className="text-sm font-semibold text-gray-800">{fellow.firstName || ''} {fellow.lastName || ''}</p>
+          <p className="text-sm font-semibold text-gray-800">{fellow.fullName || ''}</p>
           <p className="text-xs text-gray-500">{fellow.email}</p>
         </div>
       </div>
@@ -738,8 +735,7 @@ function ReminderDialog({ fellow, onClose }) {
 // ─────────────────────────────────────────────────────────────────
 function EditFellowDialog({ fellow, onClose, onDone }) {
   const [form, setForm] = useState({
-    firstName:   fellow.firstName   || '',
-    lastName:    fellow.lastName    || '',
+    fullName:    fellow.fullName || `${fellow.firstName || ''} ${fellow.lastName || ''}`.trim(),
     gender:      fellow.gender      || '',
     country:     fellow.country     || '',
     phoneNumber: fellow.phoneNumber || '',
@@ -753,7 +749,7 @@ function EditFellowDialog({ fellow, onClose, onDone }) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      await adminService.updateFellow(fellow._id, form);
+      await adminService.updateFellow(fellow._id, { ...form, fullName: form.fullName });
       toast.success('Fellow updated');
       onDone?.();
       onClose();
@@ -766,11 +762,8 @@ function EditFellowDialog({ fellow, onClose, onDone }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1"><Label>First Name</Label>
-          <Input value={form.firstName} onChange={e => set('firstName', e.target.value)} /></div>
-        <div className="space-y-1"><Label>Last Name</Label>
-          <Input value={form.lastName} onChange={e => set('lastName', e.target.value)} /></div>
+      <div className="space-y-1"><Label>Full Name</Label>
+        <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1"><Label>Phone Number</Label>
@@ -1009,11 +1002,11 @@ export default function FellowsManagementPage() {
                       <td className="px-3 py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                            {(f.firstName?.[0] || f.email?.[0] || '?').toUpperCase()}
+                            {(f.fullName?.[0] || f.email?.[0] || '?').toUpperCase()}
                           </div>
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-800 truncate">
-                              {f.firstName || f.lastName ? `${f.firstName} ${f.lastName}`.trim() : <span className="text-gray-400 italic">No name</span>}
+                              {f.fullName || <span className="text-gray-400 italic">No name</span>}
                             </p>
                             <p className="text-xs text-gray-500 truncate">{f.email}</p>
                             {f.gender && <p className="text-xs text-gray-400">{f.gender}</p>}
@@ -1142,7 +1135,7 @@ export default function FellowsManagementPage() {
 
       {/* Edit Fellow */}
       {editTarget && (
-        <Modal open={modal === 'edit'} onClose={() => setModal(null)} title={`Edit — ${editTarget.firstName || editTarget.email}`} maxWidth="max-w-lg">
+        <Modal open={modal === 'edit'} onClose={() => setModal(null)} title={`Edit — ${editTarget.fullName || editTarget.email}`} maxWidth="max-w-lg">
           <EditFellowDialog
             fellow={editTarget}
             onClose={() => { setModal(null); setEditTarget(null); }}
@@ -1163,7 +1156,7 @@ export default function FellowsManagementPage() {
               <div>
                 <h3 className="font-semibold text-gray-900">Delete Fellow?</h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Are you sure you want to delete <strong>{deleteTarget.firstName || deleteTarget.email}</strong>? This action cannot be undone.
+                  Are you sure you want to delete <strong>{deleteTarget.fullName || deleteTarget.email}</strong>? This action cannot be undone.
                 </p>
               </div>
             </div>

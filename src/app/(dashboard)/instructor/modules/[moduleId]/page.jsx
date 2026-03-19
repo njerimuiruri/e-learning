@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import moduleRatingService from '@/lib/api/moduleRatingService';
@@ -10,7 +10,9 @@ import InstructorSidebar from '@/components/instructor/InstructorSidebar';
 export default function ModuleDetailPage() {
     const router = useRouter();
     const params = useParams();
+    const searchParams = useSearchParams();
     const moduleId = params.moduleId;
+    const isNewlyCreated = searchParams.get('new') === 'true';
 
     const [module, setModule] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -19,6 +21,13 @@ export default function ModuleDetailPage() {
     const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
     const [ratingSummary, setRatingSummary] = useState(null);
     const [recentReviews, setRecentReviews] = useState([]);
+    const [dismissedDraftBanner, setDismissedDraftBanner] = useState(false);
+
+    // Final assessment editor state
+    const [showAssessmentEditor, setShowAssessmentEditor] = useState(false);
+    const [assessmentDraft, setAssessmentDraft] = useState(null);
+    const [savingAssessment, setSavingAssessment] = useState(false);
+    const [assessmentError, setAssessmentError] = useState('');
 
     useEffect(() => {
         if (moduleId) fetchModule();
@@ -63,6 +72,31 @@ export default function ModuleDetailPage() {
             alert('Failed to submit: ' + (error.response?.data?.message || error.message));
         } finally {
             setSubmitting(false);
+        }
+    };
+
+    const openAssessmentEditor = () => {
+        const blank = { title: '', instructions: 'Learners must complete this final assessment to pass and receive the certificate.', questions: [], passingScore: 70, maxAttempts: 3, timeLimit: null };
+        setAssessmentDraft(module.finalAssessment ? { ...module.finalAssessment } : blank);
+        setAssessmentError('');
+        setShowAssessmentEditor(true);
+    };
+
+    const handleSaveAssessment = async () => {
+        if (!assessmentDraft.title?.trim()) {
+            setAssessmentError('Assessment title is required.');
+            return;
+        }
+        setSavingAssessment(true);
+        setAssessmentError('');
+        try {
+            await moduleService.setFinalAssessment(moduleId, assessmentDraft);
+            setShowAssessmentEditor(false);
+            await fetchModule();
+        } catch (err) {
+            setAssessmentError(err?.response?.data?.message || 'Failed to save assessment.');
+        } finally {
+            setSavingAssessment(false);
         }
     };
 
@@ -154,6 +188,69 @@ export default function ModuleDetailPage() {
                     >
                         <Icons.ArrowLeft className="w-4 h-4" /> Back to Modules
                     </button>
+
+                    {/* ── Newly created celebration + submit nudge ──── */}
+                    {isNewlyCreated && module.status === 'draft' && !dismissedDraftBanner && (
+                        <div className="mb-6 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300 rounded-xl p-5 shadow-sm">
+                            <div className="flex items-start gap-4">
+                                <div className="bg-emerald-100 p-2.5 rounded-xl flex-shrink-0">
+                                    <Icons.PartyPopper className="w-6 h-6 text-emerald-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-bold text-emerald-900 text-base">Module Created Successfully! 🎉</p>
+                                    <p className="text-sm text-emerald-800 mt-1 leading-relaxed">
+                                        Your module is saved as a <strong>draft</strong> and is not yet visible to students.
+                                        When you're happy with all your content, click <strong>"Submit for Approval"</strong> below
+                                        so an admin can review and publish it.
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-3 mt-3">
+                                        <button
+                                            onClick={() => setShowSubmitConfirm(true)}
+                                            className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                                        >
+                                            <Icons.Send className="w-4 h-4" /> Submit for Approval Now
+                                        </button>
+                                        <button
+                                            onClick={() => setDismissedDraftBanner(true)}
+                                            className="text-xs text-emerald-700 hover:text-emerald-900 underline"
+                                        >
+                                            I'll submit later
+                                        </button>
+                                    </div>
+                                </div>
+                                <button onClick={() => setDismissedDraftBanner(true)} className="text-emerald-400 hover:text-emerald-600 flex-shrink-0">
+                                    <Icons.X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Draft reminder banner (existing drafts, not newly created) ── */}
+                    {module.status === 'draft' && !isNewlyCreated && !dismissedDraftBanner && (
+                        <div className="mb-6 bg-amber-50 border-2 border-amber-300 rounded-xl p-5">
+                            <div className="flex items-start gap-4">
+                                <div className="bg-amber-100 p-2.5 rounded-xl flex-shrink-0">
+                                    <Icons.AlertTriangle className="w-6 h-6 text-amber-600" />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="font-bold text-amber-900 text-sm">This module is a Draft — not yet visible to students</p>
+                                    <p className="text-sm text-amber-800 mt-1 leading-relaxed">
+                                        Review your lessons and content, then click <strong>"Submit for Approval"</strong> to send it to an administrator for review.
+                                        Once approved, an admin can publish it for students to enrol.
+                                    </p>
+                                    <button
+                                        onClick={() => setShowSubmitConfirm(true)}
+                                        className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-semibold rounded-lg hover:bg-amber-700 transition-colors"
+                                    >
+                                        <Icons.Send className="w-4 h-4" /> Submit for Approval
+                                    </button>
+                                </div>
+                                <button onClick={() => setDismissedDraftBanner(true)} className="text-amber-400 hover:text-amber-600 flex-shrink-0">
+                                    <Icons.X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Rejection Banner */}
                     {module.status === 'rejected' && module.rejectionReason && (
@@ -381,45 +478,76 @@ export default function ModuleDetailPage() {
                             </div>
 
                             {/* Final Assessment */}
-                            {module.finalAssessment && module.finalAssessment.questions?.length > 0 && (
-                                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                                         <Icons.ClipboardCheck className="w-5 h-5 text-emerald-600" /> Final Assessment
                                     </h3>
-                                    <div className="grid grid-cols-3 gap-4 mb-4">
-                                        <div className="bg-gray-50 rounded-lg p-3 text-center">
-                                            <p className="text-2xl font-bold text-gray-900">{module.finalAssessment.questions.length}</p>
-                                            <p className="text-xs text-gray-500">Questions</p>
-                                        </div>
-                                        <div className="bg-gray-50 rounded-lg p-3 text-center">
-                                            <p className="text-2xl font-bold text-gray-900">{module.finalAssessment.passingScore || 70}%</p>
-                                            <p className="text-xs text-gray-500">Pass Score</p>
-                                        </div>
-                                        <div className="bg-gray-50 rounded-lg p-3 text-center">
-                                            <p className="text-2xl font-bold text-gray-900">
-                                                {module.finalAssessment.questions.reduce((s, q) => s + (q.points || 0), 0)}
-                                            </p>
-                                            <p className="text-xs text-gray-500">Total Points</p>
-                                        </div>
+                                    <button
+                                        onClick={openAssessmentEditor}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-emerald-50 text-emerald-700 rounded-lg hover:bg-emerald-100 transition-colors border border-emerald-200"
+                                    >
+                                        <Icons.Edit2 className="w-3.5 h-3.5" />
+                                        {module.finalAssessment ? 'Edit' : 'Add Assessment'}
+                                    </button>
+                                </div>
+
+                                {module.assessmentReviewStatus === 'pending' && (
+                                    <div className="mb-4 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800">
+                                        <Icons.Clock className="w-4 h-4 flex-shrink-0" />
+                                        Assessment update is pending admin review.
                                     </div>
-                                    <div className="space-y-2">
-                                        {module.finalAssessment.questions.map((q, idx) => (
-                                            <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                                                <span className="w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
-                                                    {idx + 1}
-                                                </span>
-                                                <div className="flex-1">
-                                                    <p className="text-sm text-gray-900">{q.text}</p>
-                                                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                                                        <span className="capitalize">{q.type?.replace('-', ' ')}</span>
-                                                        <span>{q.points} pts</span>
+                                )}
+                                {module.assessmentReviewStatus === 'rejected' && module.assessmentRejectionReason && (
+                                    <div className="mb-4 flex items-start gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm text-red-800">
+                                        <Icons.XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                        <span><strong>Assessment rejected:</strong> {module.assessmentRejectionReason}</span>
+                                    </div>
+                                )}
+
+                                {module.finalAssessment && module.finalAssessment.questions?.length > 0 ? (
+                                    <>
+                                        <div className="grid grid-cols-3 gap-4 mb-4">
+                                            <div className="bg-gray-50 rounded-lg p-3 text-center">
+                                                <p className="text-2xl font-bold text-gray-900">{module.finalAssessment.questions.length}</p>
+                                                <p className="text-xs text-gray-500">Questions</p>
+                                            </div>
+                                            <div className="bg-gray-50 rounded-lg p-3 text-center">
+                                                <p className="text-2xl font-bold text-gray-900">{module.finalAssessment.passingScore || 70}%</p>
+                                                <p className="text-xs text-gray-500">Pass Score</p>
+                                            </div>
+                                            <div className="bg-gray-50 rounded-lg p-3 text-center">
+                                                <p className="text-2xl font-bold text-gray-900">
+                                                    {module.finalAssessment.questions.reduce((s, q) => s + (q.points || 0), 0)}
+                                                </p>
+                                                <p className="text-xs text-gray-500">Total Points</p>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {module.finalAssessment.questions.map((q, idx) => (
+                                                <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                                                    <span className="w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                                                        {idx + 1}
+                                                    </span>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm text-gray-900">{q.text}</p>
+                                                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                                                            <span className="capitalize">{q.type?.replace('-', ' ')}</span>
+                                                            <span>{q.points} pts</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="text-center py-6 border-2 border-dashed border-gray-200 rounded-lg">
+                                        <Icons.ClipboardCheck className="w-10 h-10 text-gray-300 mx-auto mb-2" />
+                                        <p className="text-sm text-gray-500">No final assessment yet.</p>
+                                        <p className="text-xs text-gray-400 mt-1">Click "Add Assessment" to create one.</p>
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
 
                         {/* Sidebar */}
@@ -630,6 +758,206 @@ export default function ModuleDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Final Assessment Editor Modal */}
+            {showAssessmentEditor && assessmentDraft && (
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 overflow-y-auto py-8 px-4">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+                            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                <Icons.ClipboardCheck className="w-5 h-5 text-emerald-600" />
+                                {module.finalAssessment ? 'Edit Final Assessment' : 'Add Final Assessment'}
+                            </h3>
+                            <button onClick={() => setShowAssessmentEditor(false)} className="text-gray-400 hover:text-gray-600">
+                                <Icons.X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-5">
+                            {assessmentError && (
+                                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2">
+                                    {assessmentError}
+                                </div>
+                            )}
+                            {/* Title + Time Limit */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-semibold text-gray-700">Assessment Title <span className="text-red-500">*</span></label>
+                                    <input
+                                        value={assessmentDraft.title || ''}
+                                        onChange={e => setAssessmentDraft(d => ({ ...d, title: e.target.value }))}
+                                        placeholder="e.g. Module Final Assessment"
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-semibold text-gray-700">Time Limit <span className="text-xs font-normal text-gray-400">(minutes, optional)</span></label>
+                                    <input
+                                        type="number"
+                                        value={assessmentDraft.timeLimit || ''}
+                                        onChange={e => setAssessmentDraft(d => ({ ...d, timeLimit: e.target.value ? Number(e.target.value) : null }))}
+                                        placeholder="e.g. 120"
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+                            {/* Instructions */}
+                            <div className="space-y-1">
+                                <label className="text-sm font-semibold text-gray-700">Instructions for Learners</label>
+                                <textarea
+                                    rows={2}
+                                    value={assessmentDraft.instructions || ''}
+                                    onChange={e => setAssessmentDraft(d => ({ ...d, instructions: e.target.value }))}
+                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                                />
+                            </div>
+                            {/* Pass score + attempts */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-sm font-semibold text-gray-700">Passing Score (%)</label>
+                                    <input
+                                        type="number" min={0} max={100}
+                                        value={assessmentDraft.passingScore ?? 70}
+                                        onChange={e => setAssessmentDraft(d => ({ ...d, passingScore: Number(e.target.value) }))}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-sm font-semibold text-gray-700">Max Attempts</label>
+                                    <input
+                                        type="number" min={1}
+                                        value={assessmentDraft.maxAttempts ?? 3}
+                                        onChange={e => setAssessmentDraft(d => ({ ...d, maxAttempts: Number(e.target.value) }))}
+                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                                    />
+                                </div>
+                            </div>
+                            {/* Questions */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm font-semibold text-gray-700">Questions</p>
+                                    <button
+                                        onClick={() => setAssessmentDraft(d => ({ ...d, questions: [...(d.questions || []), { text: '', type: 'multiple-choice', points: 1, options: ['', '', '', ''], correctAnswer: '', explanation: '' }] }))}
+                                        className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 border border-purple-200"
+                                    >
+                                        <Icons.Plus className="w-3 h-3" /> Add Question
+                                    </button>
+                                </div>
+                                {(assessmentDraft.questions || []).length === 0 && (
+                                    <p className="text-sm text-gray-400 italic text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">No questions yet.</p>
+                                )}
+                                {(assessmentDraft.questions || []).map((q, qi) => (
+                                    <div key={qi} className="border border-purple-100 rounded-xl p-4 space-y-3 bg-purple-50/20">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-semibold text-purple-700 bg-purple-100 px-2 py-0.5 rounded">Q{qi + 1}</span>
+                                            <button onClick={() => setAssessmentDraft(d => ({ ...d, questions: d.questions.filter((_, i) => i !== qi) }))} className="text-gray-400 hover:text-red-500">
+                                                <Icons.Trash2 className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            rows={2}
+                                            value={q.text}
+                                            onChange={e => setAssessmentDraft(d => { const qs = [...d.questions]; qs[qi] = { ...qs[qi], text: e.target.value }; return { ...d, questions: qs }; })}
+                                            placeholder="Question text..."
+                                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none resize-none"
+                                        />
+                                        <div className="flex gap-3">
+                                            <select
+                                                value={q.type}
+                                                onChange={e => setAssessmentDraft(d => { const qs = [...d.questions]; qs[qi] = { ...qs[qi], type: e.target.value }; return { ...d, questions: qs }; })}
+                                                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none"
+                                            >
+                                                <option value="multiple-choice">Multiple Choice</option>
+                                                <option value="essay">Essay</option>
+                                                <option value="true-false">True / False</option>
+                                                <option value="short-answer">Short Answer</option>
+                                            </select>
+                                            <input
+                                                type="number" min={1}
+                                                value={q.points}
+                                                onChange={e => setAssessmentDraft(d => { const qs = [...d.questions]; qs[qi] = { ...qs[qi], points: Number(e.target.value) }; return { ...d, questions: qs }; })}
+                                                placeholder="Pts"
+                                                className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none"
+                                            />
+                                        </div>
+                                        {q.type === 'multiple-choice' && (
+                                            <div className="space-y-1.5">
+                                                <p className="text-xs text-gray-500">Options</p>
+                                                {(q.options || ['', '', '', '']).map((opt, oi) => (
+                                                    <div key={oi} className="flex gap-2 items-center">
+                                                        <span className="text-xs text-gray-400 w-5">{String.fromCharCode(65 + oi)}.</span>
+                                                        <input
+                                                            value={opt}
+                                                            onChange={e => setAssessmentDraft(d => { const qs = [...d.questions]; const opts = [...(qs[qi].options || [])]; opts[oi] = e.target.value; qs[qi] = { ...qs[qi], options: opts }; return { ...d, questions: qs }; })}
+                                                            placeholder={`Option ${String.fromCharCode(65 + oi)}`}
+                                                            className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-purple-400 outline-none"
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        {q.type !== 'essay' && q.type !== 'short-answer' && (
+                                            <div className="space-y-1">
+                                                <p className="text-xs text-gray-500">Correct Answer</p>
+                                                {q.type === 'true-false' ? (
+                                                    <select
+                                                        value={q.correctAnswer || ''}
+                                                        onChange={e => setAssessmentDraft(d => { const qs = [...d.questions]; qs[qi] = { ...qs[qi], correctAnswer: e.target.value }; return { ...d, questions: qs }; })}
+                                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none"
+                                                    >
+                                                        <option value="">Select</option>
+                                                        <option value="True">True</option>
+                                                        <option value="False">False</option>
+                                                    </select>
+                                                ) : (
+                                                    <input
+                                                        value={q.correctAnswer || ''}
+                                                        onChange={e => setAssessmentDraft(d => { const qs = [...d.questions]; qs[qi] = { ...qs[qi], correctAnswer: e.target.value }; return { ...d, questions: qs }; })}
+                                                        placeholder="Correct answer"
+                                                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none"
+                                                    />
+                                                )}
+                                            </div>
+                                        )}
+                                        {q.type === 'essay' && (
+                                            <div className="space-y-1">
+                                                <p className="text-xs text-gray-500">Grading Rubric <span className="text-gray-400">(optional)</span></p>
+                                                <textarea
+                                                    rows={2}
+                                                    value={q.rubric || ''}
+                                                    onChange={e => setAssessmentDraft(d => { const qs = [...d.questions]; qs[qi] = { ...qs[qi], rubric: e.target.value }; return { ...d, questions: qs }; })}
+                                                    placeholder="Describe what a good answer should include..."
+                                                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none resize-none"
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="space-y-1">
+                                            <p className="text-xs text-gray-400">Explanation (optional — shown after submission)</p>
+                                            <input
+                                                value={q.explanation || ''}
+                                                onChange={e => setAssessmentDraft(d => { const qs = [...d.questions]; qs[qi] = { ...qs[qi], explanation: e.target.value }; return { ...d, questions: qs }; })}
+                                                placeholder="Shown to learner after submission"
+                                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 outline-none"
+                                            />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex gap-3 justify-end px-6 py-4 border-t border-gray-200">
+                            <button onClick={() => setShowAssessmentEditor(false)} className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 text-sm">
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleSaveAssessment}
+                                disabled={savingAssessment}
+                                className="px-4 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 text-sm disabled:opacity-50"
+                            >
+                                {savingAssessment ? 'Saving...' : 'Save Assessment'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Submit Confirmation Modal */}
             {showSubmitConfirm && (
