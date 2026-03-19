@@ -236,8 +236,7 @@ export default function BulkAddFellowsPage() {
     const [results, setResults]         = useState(null);
     const [categories, setCats]         = useState([]);
     const [step, setStep]               = useState(1);
-    const [hasDraft, setHasDraft]       = useState(false);
-    const [draftCount, setDraftCount]   = useState(0);
+    const [draftRows, setDraftRows]     = useState([]); // rows loaded from localStorage for preview
     // 'cards' | 'table' — view mode for step 2
     const [viewMode, setViewMode]       = useState('cards');
     // File upload preview state
@@ -252,18 +251,15 @@ export default function BulkAddFellowsPage() {
             .catch(() => {});
     }, []);
 
-    // Check for existing draft on mount
+    // Load draft preview on mount
     useEffect(() => {
         try {
             const saved = localStorage.getItem(DRAFT_KEY);
             if (saved) {
                 const parsed = JSON.parse(saved);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    const nonEmpty = parsed.filter(r => r.email || r.fullName);
-                    if (nonEmpty.length > 0) {
-                        setHasDraft(true);
-                        setDraftCount(nonEmpty.length);
-                    }
+                    const nonEmpty = parsed.filter(r => r.email || r.fullName?.trim());
+                    if (nonEmpty.length > 0) setDraftRows(nonEmpty);
                 }
             }
         } catch {}
@@ -273,9 +269,8 @@ export default function BulkAddFellowsPage() {
         const nonEmpty = rows.filter(r => r.email || r.fullName?.trim());
         if (nonEmpty.length === 0) return toast.error('Nothing to save — add at least one fellow first');
         try {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(rows));
-            setHasDraft(true);
-            setDraftCount(nonEmpty.length);
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(nonEmpty));
+            setDraftRows(nonEmpty);
             toast.success(`Draft saved — ${nonEmpty.length} fellow${nonEmpty.length !== 1 ? 's' : ''} stored`);
         } catch {
             toast.error('Failed to save draft');
@@ -283,23 +278,15 @@ export default function BulkAddFellowsPage() {
     }, [rows]);
 
     const restoreDraft = () => {
-        try {
-            const saved = localStorage.getItem(DRAFT_KEY);
-            if (!saved) return;
-            const parsed = JSON.parse(saved);
-            // Regenerate ids to avoid key collisions
-            setRows(parsed.map(r => ({ ...r, id: Date.now() + Math.random() })));
-            setStep(2);
-            toast.success('Draft restored!');
-        } catch {
-            toast.error('Failed to restore draft');
-        }
+        if (!draftRows.length) return;
+        setRows(draftRows.map(r => ({ ...r, id: Date.now() + Math.random() })));
+        setStep(2);
+        toast.success('Draft restored — review and submit when ready');
     };
 
     const clearDraft = () => {
         localStorage.removeItem(DRAFT_KEY);
-        setHasDraft(false);
-        setDraftCount(0);
+        setDraftRows([]);
     };
 
     const updateRow = (idx, field, val) =>
@@ -511,10 +498,9 @@ export default function BulkAddFellowsPage() {
     const saveDraftFromPreview = () => {
         if (!previewData) return;
         try {
-            localStorage.setItem(DRAFT_KEY, JSON.stringify(previewData.rows));
             const nonEmpty = previewData.rows.filter(r => r.email || r.fullName?.trim());
-            setHasDraft(true);
-            setDraftCount(nonEmpty.length);
+            localStorage.setItem(DRAFT_KEY, JSON.stringify(nonEmpty));
+            setDraftRows(nonEmpty);
             setPreviewData(null);
             toast.success(`Draft saved — ${nonEmpty.length} fellow${nonEmpty.length !== 1 ? 's' : ''} stored`);
         } catch {
@@ -696,26 +682,63 @@ export default function BulkAddFellowsPage() {
 
             <div className="max-w-5xl mx-auto px-6 py-8 space-y-6">
 
-                {/* ── Draft restore banner ─────────────────────────────────── */}
-                {hasDraft && step === 1 && (
-                    <Alert className="border-amber-200 bg-amber-50">
-                        <Icons.Clock className="w-4 h-4 text-amber-600" />
-                        <AlertDescription className="text-amber-800 text-sm flex items-center justify-between flex-wrap gap-3">
-                            <span>
-                                You have an unsaved draft with <strong>{draftCount} fellow{draftCount !== 1 ? 's' : ''}</strong>. Continue where you left off?
-                            </span>
-                            <div className="flex gap-2">
-                                <Button size="sm" variant="outline" onClick={() => { clearDraft(); setHasDraft(false); }}
-                                    className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100">
-                                    Discard
-                                </Button>
-                                <Button size="sm" onClick={restoreDraft}
-                                    className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1">
-                                    <Icons.RotateCcw className="w-3 h-3" /> Restore Draft
-                                </Button>
+                {/* ── Saved Draft Card ─────────────────────────────────────── */}
+                {draftRows.length > 0 && step === 1 && (
+                    <Card className="border-2 border-amber-300 bg-amber-50/40 shadow-sm">
+                        <CardHeader className="pb-3 pt-4">
+                            <div className="flex items-start justify-between gap-4 flex-wrap">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                                        <Icons.Clock className="w-5 h-5 text-amber-600" />
+                                    </div>
+                                    <div>
+                                        <CardTitle className="text-base text-amber-900">Saved Draft</CardTitle>
+                                        <CardDescription className="text-amber-700">
+                                            {draftRows.filter(r => r.email && isValidEmail(r.email)).length} valid · {draftRows.length} total fellow{draftRows.length !== 1 ? 's' : ''} — saved locally
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 flex-wrap">
+                                    <Button size="sm" variant="outline" onClick={clearDraft}
+                                        className="gap-1.5 border-amber-300 text-amber-700 hover:bg-amber-100 hover:border-amber-400">
+                                        <Icons.Trash2 className="w-3.5 h-3.5" /> Discard Draft
+                                    </Button>
+                                    <Button size="sm" onClick={restoreDraft}
+                                        className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white">
+                                        <Icons.RotateCcw className="w-3.5 h-3.5" /> Continue & Review
+                                    </Button>
+                                </div>
                             </div>
-                        </AlertDescription>
-                    </Alert>
+                        </CardHeader>
+                        <CardContent className="pt-0 pb-4">
+                            <div className="rounded-xl border border-amber-200 bg-white overflow-hidden">
+                                <div className="max-h-52 overflow-y-auto divide-y divide-amber-100">
+                                    {draftRows.map((r, i) => {
+                                        const valid = r.email && isValidEmail(r.email);
+                                        const noEmail = !r.email;
+                                        return (
+                                            <div key={i} className="flex items-center gap-3 px-4 py-2.5 text-sm">
+                                                <div className={`w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shrink-0 ${valid ? 'bg-green-500' : noEmail ? 'bg-red-400' : 'bg-amber-400'}`}>
+                                                    {i + 1}
+                                                </div>
+                                                <span className="font-medium text-gray-800 flex-1 truncate">
+                                                    {r.fullName || <span className="text-gray-400 italic">No name</span>}
+                                                </span>
+                                                <span className="text-gray-500 text-xs truncate max-w-[200px]">{r.email || <span className="text-red-400 italic">No email</span>}</span>
+                                                {r.track && <span className="text-xs text-purple-600 bg-purple-50 px-2 py-0.5 rounded-full hidden sm:block">{r.track}</span>}
+                                                <span className={`w-2 h-2 rounded-full shrink-0 ${valid ? 'bg-green-500' : noEmail ? 'bg-red-400' : 'bg-amber-400'}`} />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {draftRows.length > 8 && (
+                                    <div className="px-4 py-2 bg-amber-50 border-t border-amber-100 text-xs text-amber-700 text-center">
+                                        Showing all {draftRows.length} fellows · scroll to see more
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
 
                 {/* ── Step 1: Import options ─────────────────────────────── */}
