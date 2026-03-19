@@ -112,8 +112,7 @@ export default function AdminModuleDetailPage() {
         setDeleting(true);
         try {
             await adminService.deleteModule(id);
-            showToast('Module removed successfully');
-            setTimeout(() => router.push('/admin/modules'), 1500);
+            router.push('/admin/modules');
         } catch (err) {
             showToast(err?.response?.data?.message || 'Failed to delete module', 'error');
             setDeleting(false);
