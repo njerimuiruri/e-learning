@@ -183,6 +183,14 @@ const adminService = {
     const { data } = await api.put(`/modules/${id}`, payload);
     return data;
   },
+  addModuleLesson: async (id: string, lessonData: any) => {
+    const { data } = await api.post(`/modules/${id}/lessons`, lessonData);
+    return data;
+  },
+  deleteModuleLesson: async (id: string, lessonIndex: number) => {
+    const { data } = await api.delete(`/modules/${id}/lessons/${lessonIndex}`);
+    return data;
+  },
   deleteModule: async (id: string) => {
     const { data } = await api.delete(`/modules/${id}`);
     return data;

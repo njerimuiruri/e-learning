@@ -6,35 +6,35 @@ import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import categoryService from '@/lib/api/categoryService';
 import InstructorSidebar from '@/components/instructor/InstructorSidebar';
+import LessonBuilder from '@/components/instructor/LessonBuilder';
 import RichTextEditor from '@/components/ui/RichTextEditor';
-import VideoUploader from '@/components/ui/VideoUploader';
-import ResourceUploader from '@/components/ui/ResourceUploader';
 import BannerUploader from '@/components/ui/BannerUploader';
 
 // ========== HELPER: Dynamic String List ==========
 function DynamicStringList({ label, values, onChange, placeholder }) {
+    const safeValues = Array.isArray(values) ? values : [];
     return (
         <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
-            {values.map((item, index) => (
+            {safeValues.map((item, index) => (
                 <div key={index} className="flex gap-2 mb-2">
                     <input
                         type="text"
                         value={item}
                         onChange={(e) => {
-                            const updated = [...values];
+                            const updated = [...safeValues];
                             updated[index] = e.target.value;
                             onChange(updated);
                         }}
                         placeholder={placeholder}
                         className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
                     />
-                    <button onClick={() => onChange(values.filter((_, i) => i !== index))} className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg">
+                    <button onClick={() => onChange(safeValues.filter((_, i) => i !== index))} className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg">
                         <Icons.Trash2 className="w-4 h-4" />
                     </button>
                 </div>
             ))}
-            <button onClick={() => onChange([...values, ''])} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+            <button onClick={() => onChange([...safeValues, ''])} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
                 + Add Item
             </button>
         </div>
@@ -82,21 +82,17 @@ function QuestionForm({ question, onChange }) {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Correct Answer <span className="text-red-500">*</span></label>
                     <select value={question.correctAnswer} onChange={(e) => onChange({ ...question, correctAnswer: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
                         <option value="">Select answer</option>
-                        <option value="true">True</option>
-                        <option value="false">False</option>
+                        <option value="True">True</option>
+                        <option value="False">False</option>
                     </select>
                 </div>
             )}
             {question.type === 'essay' && (
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Rubric (optional)</label>
-                    <textarea value={question.rubric || ''} onChange={(e) => onChange({ ...question, rubric: e.target.value })} placeholder="Grading rubric..." rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Grading Rubric</label>
+                    <textarea value={question.rubric || ''} onChange={(e) => onChange({ ...question, rubric: e.target.value })} placeholder="Describe what a good answer should include..." rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
                 </div>
             )}
-            <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">Explanation (optional)</label>
-                <textarea value={question.explanation} onChange={(e) => onChange({ ...question, explanation: e.target.value })} placeholder="Explain the correct answer" rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
-            </div>
         </div>
     );
 }
@@ -203,10 +199,8 @@ export default function EditModulePage() {
         categoryId: '', level: 'beginner', deliveryMode: '', duration: '', bannerUrl: '', prerequisites: [],
     });
 
-    // Step 2: Lessons (with inline assessments)
+    // Step 2: Lessons (LessonBuilder format with slides)
     const [lessons, setLessons] = useState([]);
-    const [editingLessonIndex, setEditingLessonIndex] = useState(null);
-    const [currentLesson, setCurrentLesson] = useState(null);
 
     // Step 3: Final Assessment
     const [finalAssessment, setFinalAssessment] = useState({
@@ -227,32 +221,37 @@ export default function EditModulePage() {
             setCategories(Array.isArray(categoriesResult) ? categoriesResult : []);
             setOriginalModule(moduleResult);
 
-            if (moduleResult.status !== 'draft' && moduleResult.status !== 'rejected') {
-                setError(`This module cannot be edited because it is currently "${moduleResult.status}". Only draft or rejected modules can be edited.`);
-                return;
-            }
-
             const categoryId = typeof moduleResult.categoryId === 'object' ? moduleResult.categoryId._id : moduleResult.categoryId;
             setModuleData({
                 title: moduleResult.title || '', description: moduleResult.description || '',
                 welcomeMessage: moduleResult.welcomeMessage || '', moduleAim: moduleResult.moduleAim || '',
                 moduleObjectives: moduleResult.moduleObjectives?.length > 0 ? moduleResult.moduleObjectives : [''],
-                learningOutcomes: moduleResult.learningOutcomes?.length > 0 ? moduleResult.learningOutcomes : [''],
+                learningOutcomes: Array.isArray(moduleResult.learningOutcomes) && moduleResult.learningOutcomes.length > 0
+                    ? moduleResult.learningOutcomes : [''],
                 targetAudience: moduleResult.targetAudience?.length > 0 ? moduleResult.targetAudience : [''],
                 categoryId: categoryId || '', level: moduleResult.level || 'beginner',
                 deliveryMode: moduleResult.deliveryMode || '', duration: moduleResult.duration || '',
                 bannerUrl: moduleResult.bannerUrl || '', prerequisites: moduleResult.prerequisites || [],
             });
 
-            const populatedLessons = (moduleResult.lessons || []).map((lesson, idx) => ({
-                title: lesson.title || '', description: lesson.description || '',
-                content: lesson.content || '', videoUrl: lesson.videoUrl || '',
-                duration: lesson.duration || '',
-                resources: (lesson.resources || []).map(r => typeof r === 'string' ? { url: r, name: r.split('/').pop() || 'Resource' } : r),
+            // Map backend lessons → LessonBuilder format (with slides)
+            const mappedLessons = (moduleResult.lessons || []).map((lesson, idx) => ({
+                title: lesson.title || '',
+                description: lesson.description || '',
+                learningOutcomes: Array.isArray(lesson.learningOutcomes) ? lesson.learningOutcomes : [],
+                slides: Array.isArray(lesson.slides) ? lesson.slides : [],
+                assessmentQuiz: Array.isArray(lesson.assessmentQuiz)
+                    ? lesson.assessmentQuiz
+                    : (Array.isArray(lesson.assessment?.questions) ? lesson.assessment.questions : []),
+                quizPassingScore: lesson.quizPassingScore ?? lesson.assessment?.passingScore ?? 70,
+                quizMaxAttempts:  lesson.quizMaxAttempts  ?? lesson.assessment?.maxAttempts  ?? 3,
+                resources: Array.isArray(lesson.lessonResources)
+                    ? lesson.lessonResources
+                    : (Array.isArray(lesson.resources) ? lesson.resources : []),
+                _caseStudy: null,
                 order: lesson.order ?? idx,
-                assessment: lesson.assessment || { title: `${lesson.title} Assessment`, description: '', questions: [], passingScore: 70, maxAttempts: 3 },
             }));
-            setLessons(populatedLessons);
+            setLessons(mappedLessons);
 
             if (moduleResult.finalAssessment) {
                 setFinalAssessment({
@@ -287,17 +286,9 @@ export default function EditModulePage() {
         if (!moduleData.categoryId) return 'Please select a category';
         return null;
     };
-    const validateStep2 = () => {
-        if (editingLessonIndex !== null) return 'Please save or cancel the current lesson before proceeding';
-        if (lessons.length === 0) return 'Add at least one lesson';
-        return null;
-    };
 
     const handleNext = () => {
-        let err = null;
-        if (currentStep === 1) err = validateStep1();
-        if (currentStep === 2) err = validateStep2();
-        if (err) { alert(err); return; }
+        if (currentStep === 1) { const err = validateStep1(); if (err) { alert(err); return; } }
         setCurrentStep(currentStep + 1);
     };
     const handlePrevious = () => setCurrentStep(currentStep - 1);
@@ -305,6 +296,11 @@ export default function EditModulePage() {
     const handleSave = async () => {
         try {
             setSaving(true);
+            // 1. Update module metadata + lessons in one call
+            const cleanLessons = lessons.map(({ _caseStudy, resources, ...rest }) => ({
+                ...rest,
+                lessonResources: resources || [],
+            }));
             const modulePayload = {
                 title: moduleData.title, description: moduleData.description,
                 welcomeMessage: moduleData.welcomeMessage, moduleAim: moduleData.moduleAim,
@@ -315,25 +311,11 @@ export default function EditModulePage() {
                 targetAudience: moduleData.targetAudience.filter(a => a.trim()),
                 moduleObjectives: moduleData.moduleObjectives.filter(o => o.trim()),
                 prerequisites: moduleData.prerequisites,
+                lessons: cleanLessons,
             };
             await moduleService.updateModule(moduleId, modulePayload);
 
-            const originalLessonCount = originalModule?.lessons?.length || 0;
-            for (let i = originalLessonCount - 1; i >= 0; i--) {
-                try { await moduleService.deleteLesson(moduleId, i); } catch (e) { console.warn(`Could not delete lesson ${i}:`, e); }
-            }
-            for (const lesson of lessons) {
-                await moduleService.addLesson(moduleId, {
-                    title: lesson.title, description: lesson.description, content: lesson.content,
-                    videoUrl: lesson.videoUrl, duration: lesson.duration,
-                    resources: (lesson.resources || []).map(r =>
-                        typeof r === 'string'
-                            ? { url: r, name: r.split('/').pop() || 'Resource', fileType: r.split('.').pop()?.toLowerCase() || '' }
-                            : { url: r.url || r, name: r.name || r.originalName || r.url?.split('/').pop() || 'Resource', fileType: r.type || r.fileType || r.url?.split('.').pop()?.toLowerCase() || '' }
-                    ),
-                    order: lesson.order, assessment: lesson.assessment,
-                });
-            }
+            // 2. Update final assessment
             await moduleService.setFinalAssessment(moduleId, finalAssessment);
 
             alert('Module updated successfully!');
@@ -345,28 +327,6 @@ export default function EditModulePage() {
             setSaving(false);
         }
     };
-
-    // Lesson functions (full-page editor)
-    const startNewLesson = () => {
-        setCurrentLesson({ title: '', description: '', content: '', videoUrl: '', duration: '', resources: [], order: lessons.length, assessment: { title: '', description: '', questions: [], passingScore: 70, maxAttempts: 3 } });
-        setEditingLessonIndex(-1);
-    };
-    const startEditLesson = (index) => {
-        const lesson = lessons[index];
-        setCurrentLesson({ ...lesson, assessment: lesson.assessment || { title: `${lesson.title} Assessment`, description: '', questions: [], passingScore: 70, maxAttempts: 3 } });
-        setEditingLessonIndex(index);
-    };
-    const saveLesson = () => {
-        if (!currentLesson.title.trim()) { alert('Lesson title is required'); return; }
-        const lessonToSave = { ...currentLesson, assessment: { ...currentLesson.assessment, title: currentLesson.assessment.title || `${currentLesson.title} Assessment` } };
-        if (editingLessonIndex === -1) setLessons([...lessons, lessonToSave]);
-        else { const updated = [...lessons]; updated[editingLessonIndex] = lessonToSave; setLessons(updated); }
-        setCurrentLesson(null); setEditingLessonIndex(null);
-    };
-    const cancelLessonEdit = () => { setCurrentLesson(null); setEditingLessonIndex(null); };
-    const deleteLesson = (index) => { if (confirm('Delete this lesson and its assessment?')) setLessons(lessons.filter((_, i) => i !== index)); };
-
-    const isEditingLesson = editingLessonIndex !== null && currentLesson !== null;
 
     // Loading state
     if (initialLoading) {
@@ -393,7 +353,7 @@ export default function EditModulePage() {
                         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <Icons.AlertTriangle className="w-8 h-8 text-red-600" />
                         </div>
-                        <h2 className="text-xl font-bold text-gray-900 mb-2">Cannot Edit Module</h2>
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">Cannot Load Module</h2>
                         <p className="text-gray-600 mb-6">{error}</p>
                         <button onClick={() => router.push('/instructor/modules')} className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">
                             <Icons.ArrowLeft className="w-5 h-5" /> Back to Modules
@@ -419,7 +379,12 @@ export default function EditModulePage() {
                         </h1>
                         <p className="mt-1 text-sm text-gray-600">
                             Editing: <strong>{originalModule?.title}</strong>
-                            {originalModule?.status === 'rejected' && <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">Rejected</span>}
+                            {originalModule?.status === 'published' && (
+                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full">Published — changes apply immediately</span>
+                            )}
+                            {originalModule?.status === 'rejected' && (
+                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">Rejected</span>
+                            )}
                         </p>
                     </div>
 
@@ -431,7 +396,6 @@ export default function EditModulePage() {
                                 <div>
                                     <p className="text-sm font-semibold text-red-900 mb-1">Rejection Reason:</p>
                                     <p className="text-sm text-red-700">{originalModule.rejectionReason}</p>
-                                    <p className="text-xs text-red-500 mt-2">Address the feedback above and resubmit your module for approval.</p>
                                 </div>
                             </div>
                         </div>
@@ -446,7 +410,7 @@ export default function EditModulePage() {
                                 const isCompleted = currentStep > step.number;
                                 return (
                                     <React.Fragment key={step.number}>
-                                        <div className="flex flex-col items-center cursor-pointer" onClick={() => !isEditingLesson && setCurrentStep(step.number)}>
+                                        <div className="flex flex-col items-center cursor-pointer" onClick={() => setCurrentStep(step.number)}>
                                             <div className={`w-12 h-12 rounded-full flex items-center justify-center ${isCompleted ? 'bg-emerald-600 text-white' : isActive ? 'bg-emerald-600 text-white ring-4 ring-emerald-100' : 'bg-gray-200 text-gray-500'}`}>
                                                 {isCompleted ? <Icons.Check className="w-6 h-6" /> : <IconComponent className="w-6 h-6" />}
                                             </div>
@@ -505,41 +469,6 @@ export default function EditModulePage() {
                                         <input type="text" value={moduleData.duration} onChange={(e) => setModuleData({ ...moduleData, duration: e.target.value })} placeholder="e.g., 4 weeks" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
                                     </div>
                                 </div>
-
-                                {/* Category Info Panel */}
-                                {moduleData.categoryId && (() => {
-                                    const selectedCat = categories.find(c => c._id === moduleData.categoryId);
-                                    if (!selectedCat) return null;
-                                    const catFields = [
-                                        { key: 'courseDescription', label: 'Course Description' },
-                                        { key: 'overallObjectives', label: 'Overall Objectives' },
-                                        { key: 'learningOutcomes', label: 'Learning Outcomes' },
-                                        { key: 'academicStructure', label: 'Academic Structure' },
-                                        { key: 'progressionFramework', label: 'Progression & Certification' },
-                                        { key: 'fellowshipLevels', label: 'Fellowship Levels' },
-                                    ];
-                                    const hasContent = catFields.some(f => selectedCat[f.key]?.replace(/<[^>]*>/g, '').trim());
-                                    if (!hasContent) return null;
-                                    return (
-                                        <details className="bg-emerald-50 border border-emerald-200 rounded-lg">
-                                            <summary className="px-4 py-3 cursor-pointer text-sm font-semibold text-emerald-800 hover:bg-emerald-100 rounded-lg transition-colors">
-                                                View Category Details: {selectedCat.name}
-                                            </summary>
-                                            <div className="px-4 pb-4 space-y-3">
-                                                {catFields.map(f => {
-                                                    if (!selectedCat[f.key]?.replace(/<[^>]*>/g, '').trim()) return null;
-                                                    return (
-                                                        <div key={f.key}>
-                                                            <h5 className="text-xs font-semibold text-emerald-700 mb-1">{f.label}</h5>
-                                                            <div className="prose prose-sm max-w-none bg-white rounded-lg p-3 border border-emerald-100" dangerouslySetInnerHTML={{ __html: selectedCat[f.key] }} />
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </details>
-                                    );
-                                })()}
-
                                 <BannerUploader value={moduleData.bannerUrl} onChange={(url) => setModuleData({ ...moduleData, bannerUrl: url })} />
                                 <DynamicStringList label="Module Objectives" values={moduleData.moduleObjectives} onChange={(vals) => setModuleData({ ...moduleData, moduleObjectives: vals })} placeholder="What specific objectives will this module achieve?" />
                                 <DynamicStringList label="Expected Learning Outcomes" values={moduleData.learningOutcomes} onChange={(vals) => setModuleData({ ...moduleData, learningOutcomes: vals })} placeholder="What will students be able to do?" />
@@ -551,123 +480,21 @@ export default function EditModulePage() {
                         </div>
                     )}
 
-                    {/* ===== STEP 2: LESSONS LIST ===== */}
-                    {currentStep === 2 && !isEditingLesson && (
+                    {/* ===== STEP 2: LESSONS (LessonBuilder) ===== */}
+                    {currentStep === 2 && (
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
                             <div className="space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Module Lessons</h2>
-                                        <p className="text-gray-600">Edit lessons with rich content, videos, resources, and assessments</p>
-                                    </div>
-                                    <button onClick={startNewLesson} className="inline-flex items-center gap-2 px-5 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 shadow-sm">
-                                        <Icons.Plus className="w-5 h-5" /> Add Lesson
-                                    </button>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-1">Module Lessons</h2>
+                                    <p className="text-gray-600 text-sm">Add lessons with slides — text, images, videos, diagrams, and interactive code editors. Each lesson can also have a quiz.</p>
                                 </div>
-                                {lessons.length === 0 ? (
-                                    <div className="text-center py-16 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-                                        <Icons.BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                        <h3 className="text-lg font-semibold text-gray-700 mb-2">No lessons yet</h3>
-                                        <p className="text-gray-500 mb-6 max-w-md mx-auto">Each lesson includes content, optional video, resources, and an assessment.</p>
-                                        <button onClick={startNewLesson} className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">
-                                            <Icons.Plus className="w-5 h-5" /> Add Your First Lesson
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {lessons.map((lesson, index) => (
-                                            <div key={index} className="border border-gray-200 rounded-lg p-5 hover:border-emerald-300 hover:shadow-sm transition-all">
-                                                <div className="flex items-start justify-between">
-                                                    <div className="flex-1">
-                                                        <div className="flex items-center gap-3 mb-2">
-                                                            <span className="w-8 h-8 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-sm font-bold">{index + 1}</span>
-                                                            <h3 className="text-lg font-semibold text-gray-900">{lesson.title}</h3>
-                                                        </div>
-                                                        {lesson.description && <p className="text-sm text-gray-600 ml-11 mb-2">{lesson.description}</p>}
-                                                        <div className="flex flex-wrap items-center gap-3 ml-11 text-xs">
-                                                            {lesson.videoUrl && <span className="flex items-center gap-1 px-2 py-1 bg-blue-50 text-blue-700 rounded-md"><Icons.Video className="w-3.5 h-3.5" /> Video</span>}
-                                                            {lesson.duration && <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-md"><Icons.Clock className="w-3.5 h-3.5" /> {lesson.duration}</span>}
-                                                            {stripHtml(lesson.content) && <span className="flex items-center gap-1 px-2 py-1 bg-gray-100 text-gray-600 rounded-md"><Icons.FileText className="w-3.5 h-3.5" /> Content</span>}
-                                                            {lesson.resources?.length > 0 && <span className="flex items-center gap-1 px-2 py-1 bg-purple-50 text-purple-700 rounded-md"><Icons.Paperclip className="w-3.5 h-3.5" /> {lesson.resources.length} resource(s)</span>}
-                                                            <span className={`flex items-center gap-1 px-2 py-1 rounded-md ${lesson.assessment?.questions?.length > 0 ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                                <Icons.ClipboardCheck className="w-3.5 h-3.5" />
-                                                                {lesson.assessment?.questions?.length > 0 ? `${lesson.assessment.questions.length} question(s)` : 'No assessment'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex gap-2 flex-shrink-0 ml-4">
-                                                        <button onClick={() => startEditLesson(index)} className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-lg"><Icons.Edit2 className="w-4 h-4" /></button>
-                                                        <button onClick={() => deleteLesson(index)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg"><Icons.Trash2 className="w-4 h-4" /></button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                                <LessonBuilder
+                                    lessons={lessons}
+                                    onChange={setLessons}
+                                />
                                 <div className="flex justify-between pt-6 border-t border-gray-200">
                                     <button onClick={handlePrevious} className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200"><Icons.ChevronLeft className="w-5 h-5" /> Previous</button>
                                     <button onClick={handleNext} className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Next: Final Assessment <Icons.ChevronRight className="w-5 h-5" /></button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ===== STEP 2: LESSON EDITOR (FULL PAGE) ===== */}
-                    {currentStep === 2 && isEditingLesson && (
-                        <div className="space-y-6">
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <button onClick={cancelLessonEdit} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"><Icons.ArrowLeft className="w-5 h-5" /></button>
-                                        <div>
-                                            <h2 className="text-2xl font-bold text-gray-900">{editingLessonIndex === -1 ? 'Add New Lesson' : `Edit Lesson ${editingLessonIndex + 1}`}</h2>
-                                            <p className="text-sm text-gray-600">Fill in the lesson content, upload media, and configure the assessment</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        <button onClick={cancelLessonEdit} className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50">Cancel</button>
-                                        <button onClick={saveLesson} className="inline-flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">
-                                            <Icons.Check className="w-5 h-5" /> {editingLessonIndex === -1 ? 'Add Lesson' : 'Save Changes'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2"><Icons.FileText className="w-5 h-5 text-emerald-600" /> Lesson Content</h3>
-                                <div className="space-y-5">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Lesson Title <span className="text-red-500">*</span></label>
-                                        <input type="text" value={currentLesson.title} onChange={(e) => setCurrentLesson({ ...currentLesson, title: e.target.value })} placeholder="e.g., Introduction to SEO Fundamentals" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-                                        <textarea value={currentLesson.description} onChange={(e) => setCurrentLesson({ ...currentLesson, description: e.target.value })} placeholder="Brief description of what this lesson covers" rows={2} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
-                                    </div>
-                                    <RichTextEditor label="Lesson Content" value={currentLesson.content} onChange={(val) => setCurrentLesson({ ...currentLesson, content: val })} placeholder="Write the main lesson content here..." height={300} />
-                                    <div className="max-w-xs">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Duration</label>
-                                        <input type="text" value={currentLesson.duration} onChange={(e) => setCurrentLesson({ ...currentLesson, duration: e.target.value })} placeholder="e.g., 30 minutes" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2"><Icons.Video className="w-5 h-5 text-blue-600" /> Lesson Video <span className="text-xs font-normal text-gray-500">(optional)</span></h3>
-                                <VideoUploader value={currentLesson.videoUrl} onChange={(url) => setCurrentLesson({ ...currentLesson, videoUrl: url })} />
-                            </div>
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                                <h3 className="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2"><Icons.Paperclip className="w-5 h-5 text-purple-600" /> Lesson Resources <span className="text-xs font-normal text-gray-500">(optional)</span></h3>
-                                <ResourceUploader value={currentLesson.resources || []} onChange={(resources) => setCurrentLesson({ ...currentLesson, resources })} />
-                            </div>
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-                                <AssessmentSection title="Lesson Assessment" assessment={currentLesson.assessment} onChange={(assessment) => setCurrentLesson({ ...currentLesson, assessment })} />
-                                <p className="mt-3 text-xs text-gray-500 flex items-center gap-1"><Icons.Info className="w-3.5 h-3.5" /> Add quiz questions to test student understanding of this lesson.</p>
-                            </div>
-                            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                                <div className="flex items-center justify-between">
-                                    <button onClick={cancelLessonEdit} className="inline-flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"><Icons.X className="w-5 h-5" /> Cancel</button>
-                                    <button onClick={saveLesson} className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 shadow-sm">
-                                        <Icons.Check className="w-5 h-5" /> {editingLessonIndex === -1 ? 'Add Lesson to Module' : 'Save Lesson Changes'}
-                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -684,7 +511,7 @@ export default function EditModulePage() {
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                                     <div className="flex items-start gap-3">
                                         <Icons.Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                                        <div className="text-sm text-blue-800"><p>Each lesson also has its own assessment (configured in Step 2). This final assessment covers the entire module.</p></div>
+                                        <div className="text-sm text-blue-800"><p>Each lesson also has its own optional quiz (configured via the lesson builder). This final assessment covers the entire module.</p></div>
                                     </div>
                                 </div>
                                 <AssessmentSection title="Final Assessment" assessment={finalAssessment} onChange={setFinalAssessment} minQuestions={3} />
@@ -710,59 +537,19 @@ export default function EditModulePage() {
                                         <div><span className="text-emerald-700">Title:</span> <strong>{moduleData.title}</strong></div>
                                         <div><span className="text-emerald-700">Level:</span> <strong className="capitalize">{moduleData.level}</strong></div>
                                         <div><span className="text-emerald-700">Lessons:</span> <strong>{lessons.length}</strong></div>
-                                        <div><span className="text-emerald-700">Final Questions:</span> <strong>{finalAssessment.questions.length}</strong></div>
-                                        {moduleData.deliveryMode && <div><span className="text-emerald-700">Delivery:</span> <strong>{moduleData.deliveryMode}</strong></div>}
-                                        {moduleData.duration && <div><span className="text-emerald-700">Duration:</span> <strong>{moduleData.duration}</strong></div>}
-                                        <div><span className="text-emerald-700">Total Points:</span> <strong>{finalAssessment.questions.reduce((s, q) => s + q.points, 0)}</strong></div>
-                                        <div><span className="text-emerald-700">Pass Score:</span> <strong>{finalAssessment.passingScore}%</strong></div>
+                                        <div><span className="text-emerald-700">Total Slides:</span> <strong>{lessons.reduce((a, l) => a + (l.slides || []).length, 0)}</strong></div>
                                     </div>
                                 </div>
-                                {moduleData.bannerUrl && (
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Banner</h4>
-                                        <img src={moduleData.bannerUrl} alt="Banner" className="w-full h-40 object-cover rounded-lg" />
-                                    </div>
-                                )}
-                                {stripHtml(moduleData.description) && (
-                                    <div>
-                                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Description</h4>
-                                        <div className="prose prose-sm max-w-none bg-gray-50 rounded-lg p-4 border" dangerouslySetInnerHTML={{ __html: moduleData.description }} />
-                                    </div>
-                                )}
                                 <div>
                                     <h4 className="text-sm font-semibold text-gray-700 mb-3">Lessons ({lessons.length})</h4>
-                                    <div className="space-y-3">
+                                    <div className="space-y-2">
                                         {lessons.map((lesson, idx) => (
-                                            <div key={idx} className="p-4 bg-gray-50 rounded-lg border">
-                                                <div className="flex items-center gap-3 mb-2">
-                                                    <span className="w-7 h-7 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{idx + 1}</span>
-                                                    <p className="text-sm font-semibold text-gray-900">{lesson.title}</p>
+                                            <div key={idx} className="p-3 bg-gray-50 rounded-lg border flex items-center gap-3">
+                                                <span className="w-7 h-7 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">{idx + 1}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-semibold text-gray-900">{lesson.title || 'Untitled'}</p>
+                                                    <p className="text-xs text-gray-500">{(lesson.slides || []).length} slide(s) · {(lesson.assessmentQuiz || []).length} quiz question(s)</p>
                                                 </div>
-                                                <div className="flex flex-wrap gap-2 ml-10 text-xs">
-                                                    {lesson.videoUrl && <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded">Video</span>}
-                                                    {lesson.duration && <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded">{lesson.duration}</span>}
-                                                    {lesson.resources?.length > 0 && <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded">{lesson.resources.length} resource(s)</span>}
-                                                    <span className={`px-2 py-0.5 rounded ${lesson.assessment?.questions?.length > 0 ? 'bg-amber-100 text-amber-700' : 'bg-gray-200 text-gray-500'}`}>
-                                                        {lesson.assessment?.questions?.length > 0 ? `${lesson.assessment.questions.length} assessment question(s)` : 'No lesson assessment'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                                <div className="border border-gray-200 rounded-lg p-6">
-                                    <h3 className="font-semibold text-gray-900 mb-4">Save Checklist</h3>
-                                    <div className="space-y-3">
-                                        {[
-                                            { check: !!moduleData.title && !!stripHtml(moduleData.description), text: 'Title and description provided' },
-                                            { check: !!moduleData.categoryId, text: 'Category selected' },
-                                            { check: lessons.length > 0, text: 'At least one lesson added' },
-                                            { check: lessons.some(l => l.assessment?.questions?.length > 0), text: 'At least one lesson has assessment questions' },
-                                            { check: finalAssessment.questions.length >= 3, text: 'Final assessment has at least 3 questions' },
-                                        ].map((item, i) => (
-                                            <div key={i} className="flex items-center gap-3">
-                                                <Icons.CheckCircle className={`w-5 h-5 ${item.check ? 'text-emerald-600' : 'text-gray-300'}`} />
-                                                <span className={item.check ? 'text-gray-900' : 'text-gray-500'}>{item.text}</span>
                                             </div>
                                         ))}
                                     </div>
@@ -772,7 +559,7 @@ export default function EditModulePage() {
                                         <Icons.Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                                         <div className="text-sm text-blue-800">
                                             <p className="font-semibold mb-1">Saving Changes</p>
-                                            <p>Your changes will be saved and the module will remain as a draft. You can submit it for approval from the modules list page.</p>
+                                            <p>{originalModule?.status === 'published' ? 'Your changes will be saved and applied to the live module immediately.' : 'Your changes will be saved. You can submit for approval from the modules list page.'}</p>
                                         </div>
                                     </div>
                                 </div>

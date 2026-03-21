@@ -72,12 +72,12 @@ export default function StudentLayout({ children }) {
     }
 
     return (
-        <div className="flex min-h-screen bg-gray-50 pt-16 overflow-x-hidden">
+        <div className={`flex bg-gray-50 overflow-x-hidden ${isLessonPage ? 'h-screen pt-20' : 'min-h-screen pt-20'}`}>
             {/* Sidebar — hidden on the immersive lesson view */}
             {!isLessonPage && <StudentSidebar />}
 
             {/* Main Content */}
-            <div className={`flex-1 min-w-0 ${!isLessonPage ? 'lg:ml-64' : ''} pb-16 lg:pb-0`}>
+            <div className={`flex-1 min-w-0 ${!isLessonPage ? 'lg:ml-64 pb-16 lg:pb-0' : 'overflow-hidden'}`}>
                 {children}
             </div>
         </div>

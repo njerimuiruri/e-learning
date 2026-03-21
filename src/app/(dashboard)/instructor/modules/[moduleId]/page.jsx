@@ -173,7 +173,7 @@ export default function ModuleDetailPage() {
         );
     }
 
-    const canEdit = module.status === 'draft' || module.status === 'rejected';
+    const canEdit = true;
     const canSubmit = module.status === 'draft' || module.status === 'rejected';
 
     return (
@@ -261,6 +261,19 @@ export default function ModuleDetailPage() {
                                     <p className="font-semibold text-red-900 text-sm">Module Rejected</p>
                                     <p className="text-sm text-red-700 mt-1">{module.rejectionReason}</p>
                                     <p className="text-xs text-red-600 mt-2">Please edit the module to address the feedback, then resubmit for approval.</p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Published – editable banner */}
+                    {module.status === 'published' && (
+                        <div className="mb-6 bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                            <div className="flex items-start gap-3">
+                                <Icons.Globe className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-semibold text-emerald-900 text-sm">Module is Live — You Can Still Edit</p>
+                                    <p className="text-sm text-emerald-700 mt-1">This module is published and visible to students. You can edit its content, add new lessons, or update details. Changes are applied immediately.</p>
                                 </div>
                             </div>
                         </div>

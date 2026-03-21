@@ -80,6 +80,22 @@ const moduleService = {
     return response.data;
   },
 
+  // Direct lesson endpoints (Category → Module → Lesson, no topic layer)
+  async addModuleLesson(moduleId, lessonData) {
+    const response = await api.post(`/${moduleId}/lessons`, lessonData);
+    return response.data;
+  },
+
+  async updateModuleLesson(moduleId, lessonIndex, lessonData) {
+    const response = await api.put(`/${moduleId}/lessons/${lessonIndex}`, lessonData);
+    return response.data;
+  },
+
+  async deleteModuleLesson(moduleId, lessonIndex) {
+    const response = await api.delete(`/${moduleId}/lessons/${lessonIndex}`);
+    return response.data;
+  },
+
   async setFinalAssessment(moduleId, assessmentData) {
     const response = await api.post(`/${moduleId}/final-assessment`, assessmentData);
     return response.data;

@@ -44,16 +44,19 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
             <SlideProgress current={slideNumber} total={totalSlides} color="blue" />
           </div>
           {/* Content */}
-          <div className="px-6 py-6">
-            <div
-              className="slide-rich-content prose prose-gray max-w-none
-                prose-headings:text-gray-900 prose-headings:font-bold
-                prose-p:text-gray-700 prose-p:leading-relaxed
-                prose-li:text-gray-700
-                prose-strong:text-gray-900
-                prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline"
-              dangerouslySetInnerHTML={{ __html: slide.content || '' }}
-            />
+          <div className="px-6 py-5 overflow-x-hidden">
+            <div className="overflow-x-auto">
+              <div
+                className="slide-rich-content prose prose-gray prose-base max-w-none break-words text-justify
+                  prose-headings:text-gray-900 prose-headings:font-bold prose-headings:text-left prose-headings:mt-5 prose-headings:mb-2
+                  prose-p:text-gray-700 prose-p:leading-[1.8] prose-p:text-justify prose-p:mb-3
+                  prose-li:text-gray-700 prose-li:leading-relaxed
+                  prose-ul:my-3 prose-ol:my-3
+                  prose-strong:text-gray-900
+                  prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline"
+                dangerouslySetInnerHTML={{ __html: slide.content || '' }}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -271,7 +274,7 @@ function RichContentStyles() {
         border: 1px solid #d1d5db;
         padding: 8px 12px;
         text-align: left;
-        min-width: 80px;
+        word-break: break-word;
       }
       .slide-rich-content table th {
         background: #f3f4f6;

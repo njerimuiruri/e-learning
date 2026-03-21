@@ -155,7 +155,7 @@ export default function AdminModuleDetailPage() {
     const finalAssessment = mod.finalAssessment;
 
     return (
-        <div className="min-h-screen bg-gray-50 pt-4 pb-16">
+        <div className="min-h-screen bg-gray-50 pt-4 pb-16 overflow-x-hidden">
             {/* Toast */}
             {toast && (
                 <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-xl text-white font-semibold text-sm ${toast.type === 'error' ? 'bg-red-600' : 'bg-emerald-600'}`}>
@@ -341,7 +341,9 @@ export default function AdminModuleDetailPage() {
                                     <section.icon className="w-5 h-5 text-[#021d49]" />
                                     <h3 className="font-bold text-gray-900">{section.label}</h3>
                                 </div>
-                                <div className="text-gray-700 text-sm leading-relaxed prose max-w-none" dangerouslySetInnerHTML={{ __html: mod[section.key] }} />
+                                <div className="overflow-x-auto">
+                                  <div className="text-gray-700 text-sm leading-relaxed prose max-w-none break-words" dangerouslySetInnerHTML={{ __html: mod[section.key] }} />
+                                </div>
                             </div>
                         ))}
 
@@ -372,7 +374,9 @@ export default function AdminModuleDetailPage() {
                                             ))}
                                         </ul>
                                     ) : (
-                                        <div className="text-gray-700 text-sm leading-relaxed prose max-w-none" dangerouslySetInnerHTML={{ __html: val }} />
+                                        <div className="overflow-x-auto">
+                                          <div className="text-gray-700 text-sm leading-relaxed prose max-w-none break-words" dangerouslySetInnerHTML={{ __html: val }} />
+                                        </div>
                                     )}
                                 </div>
                             );
@@ -458,7 +462,9 @@ export default function AdminModuleDetailPage() {
                                                                             {stripHtml(lesson.content) && (
                                                                                 <div>
                                                                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Lesson Content</p>
-                                                                                    <div className="text-sm text-gray-700 prose max-w-none leading-relaxed border border-gray-100 rounded-lg p-4 bg-gray-50" dangerouslySetInnerHTML={{ __html: lesson.content }} />
+                                                                                    <div className="overflow-x-auto border border-gray-100 rounded-lg bg-gray-50">
+                                                                                      <div className="text-sm text-gray-700 prose max-w-none leading-relaxed break-words p-4" dangerouslySetInnerHTML={{ __html: lesson.content }} />
+                                                                                    </div>
                                                                                 </div>
                                                                             )}
 
@@ -633,7 +639,9 @@ export default function AdminModuleDetailPage() {
                                                         {stripHtml(lesson.description) && (
                                                             <div>
                                                                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Description</p>
-                                                                <div className="text-sm text-gray-700 prose max-w-none leading-relaxed bg-white rounded-xl border border-gray-100 p-4" dangerouslySetInnerHTML={{ __html: lesson.description }} />
+                                                                <div className="overflow-x-auto bg-white rounded-xl border border-gray-100">
+                                                                  <div className="text-sm text-gray-700 prose max-w-none leading-relaxed break-words p-4" dangerouslySetInnerHTML={{ __html: lesson.description }} />
+                                                                </div>
                                                             </div>
                                                         )}
 
@@ -690,7 +698,9 @@ export default function AdminModuleDetailPage() {
                                                                                 {slideOpen && (
                                                                                     <div className="px-4 pb-4 pt-1 border-t border-gray-100 space-y-3">
                                                                                         {slide.type === 'text' && slide.content && (
-                                                                                            <div className="text-sm text-gray-700 prose max-w-none" dangerouslySetInnerHTML={{ __html: slide.content }} />
+                                                                                            <div className="overflow-x-auto">
+                                                                                              <div className="text-sm text-gray-700 prose max-w-none break-words" dangerouslySetInnerHTML={{ __html: slide.content }} />
+                                                                                            </div>
                                                                                         )}
                                                                                         {slide.type === 'image' && (
                                                                                             <>
@@ -857,7 +867,9 @@ export default function AdminModuleDetailPage() {
                                                 ].filter(s => stripHtml(cs[s.key])).map(section => (
                                                     <div key={section.key} className={`bg-${section.color}-50 rounded-xl p-4 border border-${section.color}-100`}>
                                                         <p className={`font-semibold text-${section.color}-800 text-sm mb-2`}>{section.label}</p>
-                                                        <div className={`text-${section.color}-900 text-sm prose max-w-none`} dangerouslySetInnerHTML={{ __html: cs[section.key] }} />
+                                                        <div className="overflow-x-auto">
+                                                          <div className={`text-${section.color}-900 text-sm prose max-w-none break-words`} dangerouslySetInnerHTML={{ __html: cs[section.key] }} />
+                                                        </div>
                                                         {cs[`${section.key}Resources`]?.length > 0 && (
                                                             <div className="mt-2 space-y-1">
                                                                 {cs[`${section.key}Resources`].map((r, ri) => {
@@ -1103,6 +1115,10 @@ export default function AdminModuleDetailPage() {
                         {/* Admin Actions */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
                             <h4 className="font-bold text-gray-900 text-sm">Admin Actions</h4>
+                            {/* Edit button — available for all statuses */}
+                            <button onClick={() => router.push(`/admin/modules/${id}/edit`)} className="w-full flex items-center justify-center gap-2 py-3 bg-gray-100 text-gray-700 border border-gray-200 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors">
+                                <Icons.Edit2 className="w-4 h-4" /> Edit Module Content
+                            </button>
                             {mod.status === 'submitted' && (
                                 <>
                                     <button onClick={() => { setActionType('approve'); setShowAction(true); }} className="w-full flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition-colors">

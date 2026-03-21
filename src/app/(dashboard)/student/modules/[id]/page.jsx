@@ -38,8 +38,6 @@ function ModuleLearningContent() {
     const [finalAnswers, setFinalAnswers] = useState({});
     const [finalAssessmentResult, setFinalAssessmentResult] = useState(null);
 
-    // Sidebar topic collapse state (array of collapsed topic indices)
-    const [collapsedTopics, setCollapsedTopics] = useState([]);
 
     useEffect(() => {
         if (moduleId) fetchModuleData();
@@ -254,210 +252,126 @@ function ModuleLearningContent() {
         );
     }
 
-    // Enrolled - Learning View (Two Panel)
+    // Enrolled - Learning View
     return (
         <>
             <Navbar />
-            <div className="min-h-screen bg-gray-50 overflow-x-hidden">
-                {/* Progress Bar */}
-                <div className="bg-white border-b sticky top-16 z-20">
-                    <div className="px-4 py-3 flex items-center justify-between max-w-full">
-                        <div className="flex items-center gap-3">
+            {/* Full-height flex layout */}
+            <div className="flex h-full overflow-hidden bg-gray-100">
+
+                {/* ── PERSISTENT SIDEBAR ──────────────────────────────────────── */}
+                {/* Desktop: always visible. Mobile: slide-in overlay */}
+                <aside className={`
+                    flex-shrink-0 w-72 bg-white border-r border-gray-200 flex flex-col
+                    transition-transform duration-300 z-30
+                    fixed top-20 left-0 h-[calc(100vh-80px)]
+                    lg:relative lg:top-0 lg:h-full lg:translate-x-0
+                    ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full lg:translate-x-0'}
+                `}>
+                    {/* Sidebar top: module title + progress */}
+                    <div className="flex-shrink-0 px-4 pt-4 pb-3 border-b border-gray-100">
+                        <div className="flex items-start justify-between gap-2 mb-3">
                             <button
                                 onClick={() => router.push('/student')}
-                                className="text-gray-600 hover:text-gray-900"
+                                className="text-gray-400 hover:text-[#021d49] transition-colors flex-shrink-0 mt-0.5"
+                                title="Back to dashboard"
                             >
-                                <Icons.ArrowLeft className="w-5 h-5" />
+                                <Icons.ArrowLeft className="w-4 h-4" />
                             </button>
-                            <h1 className="font-bold text-gray-900 text-lg truncate max-w-[300px]">{moduleData.title}</h1>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <div className="hidden sm:flex items-center gap-2 text-sm text-gray-600">
-                                <span className="font-bold text-[#021d49]">{safeProgress}%</span>
-                                <span>complete</span>
-                            </div>
-                            <div className="w-32 bg-gray-200 rounded-full h-2 hidden sm:block">
-                                <div
-                                    className="bg-gradient-to-r from-[#021d49] to-blue-600 h-2 rounded-full transition-all"
-                                    style={{ width: `${safeProgress}%` }}
-                                ></div>
-                            </div>
+                            <p className="text-xs font-bold text-gray-900 leading-snug flex-1 break-words">{moduleData.title}</p>
+                            {/* Close button — mobile only */}
                             <button
-                                onClick={() => setSidebarOpen(!sidebarOpen)}
-                                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-                                title={sidebarOpen ? 'Hide lessons' : 'Show lessons'}
+                                onClick={() => setSidebarOpen(false)}
+                                className="lg:hidden text-gray-400 hover:text-gray-600 flex-shrink-0"
                             >
-                                <Icons.PanelLeft className="w-5 h-5" />
+                                <Icons.X className="w-4 h-4" />
                             </button>
                         </div>
-                    </div>
-                </div>
-
-                <div className="flex relative">
-                    {/* Sidebar - Lesson List (always a fixed overlay, toggled by button) */}
-                    <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} fixed top-16 left-0 h-[calc(100vh-64px)] w-80 flex-shrink-0 bg-white border-r shadow-xl overflow-y-auto z-30 transition-transform duration-300`}>
-                        <div className="p-4">
-                            <h2 className="font-bold text-gray-900 mb-1 text-sm uppercase tracking-wide">Module Content</h2>
-                            <p className="text-xs text-gray-500 mb-4">
-                                {completedCount} / {totalLessons} lessons completed
-                            </p>
-
-                            {/* Topics grouped sidebar - if topics exist */}
-                            {moduleData.topics?.length > 0 ? (
-                                moduleData.topics.map((topic, topicIdx) => {
-                                    const topicLessons = topic.lessons || [];
-                                    // Calculate global lesson indices for this topic
-                                    const globalStartIdx = moduleData.topics.slice(0, topicIdx).reduce((acc, t) => acc + (t.lessons?.length || 0), 0);
-                                    const isTopicOpen = !collapsedTopics.includes(topicIdx);
-                                    return (
-                                        <div key={topicIdx} className="mb-1">
-                                            <button
-                                                onClick={() => setCollapsedTopics(prev => prev.includes(topicIdx) ? prev.filter(x => x !== topicIdx) : [...prev, topicIdx])}
-                                                className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-gray-50 rounded-xl transition-colors group"
-                                            >
-                                                <div className="w-6 h-6 rounded-lg bg-[#021d49] text-white text-xs font-bold flex items-center justify-center flex-shrink-0">{topicIdx + 1}</div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-xs font-bold text-gray-700 uppercase tracking-wide truncate">{topic.name || topic.title || `Topic ${topicIdx + 1}`}</p>
-                                                    <p className="text-xs text-gray-400">{topicLessons.length} lessons</p>
-                                                </div>
-                                                <Icons.ChevronDown className={`w-3.5 h-3.5 text-gray-400 flex-shrink-0 transition-transform ${isTopicOpen ? 'rotate-180' : ''}`} />
-                                            </button>
-                                            {isTopicOpen && topicLessons.map((lesson, lessonLocalIdx) => {
-                                                const idx = globalStartIdx + lessonLocalIdx;
-                                                const completed = isLessonCompleted(idx);
-                                                const accessible = isLessonAccessible(idx) || completed;
-                                                const isCurrent = idx === currentLessonIndex && !showFinalAssessment;
-                                                const lessonProg = getLessonProgress(idx);
-                                                return (
-                                                    <button
-                                                        key={idx}
-                                                        onClick={() => accessible && navigateToLesson(idx)}
-                                                        disabled={!accessible}
-                                                        className={`w-full text-left p-3 pl-10 rounded-xl transition-all flex items-start gap-3 ${isCurrent ? 'bg-[#021d49] text-white shadow-md' : completed ? 'bg-green-50 hover:bg-green-100 text-gray-900' : accessible ? 'hover:bg-gray-100 text-gray-900' : 'opacity-50 cursor-not-allowed text-gray-400'}`}
-                                                    >
-                                                        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${isCurrent ? 'bg-white text-[#021d49]' : completed ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                                                            {completed ? <Icons.Check className="w-3.5 h-3.5" /> : idx + 1}
-                                                        </div>
-                                                        <div className="flex-1 min-w-0">
-                                                            <p className={`text-sm font-medium truncate ${isCurrent ? 'text-white' : ''}`}>{lesson.title}</p>
-                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                {lesson.duration && <span className={`text-xs ${isCurrent ? 'text-blue-200' : 'text-gray-500'}`}>{lesson.duration}</span>}
-                                                                {(lesson.assessment?.questions?.length > 0 || lesson.assessmentQuiz?.length > 0) && (
-                                                                    <span className={`text-xs flex items-center gap-1 ${isCurrent ? 'text-blue-200' : lessonProg?.assessmentPassed ? 'text-green-600' : 'text-indigo-600'}`}>
-                                                                        <Icons.FileQuestion className="w-3 h-3" />
-                                                                        {lessonProg?.assessmentPassed ? 'Passed' : 'Quiz'}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        {!accessible && <Icons.Lock className="w-4 h-4 flex-shrink-0 mt-1" />}
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    );
-                                })
-                            ) : (
-                                /* Flat lessons fallback */
-                                <div className="space-y-1">
-                                    {lessons.map((lesson, idx) => {
-                                        const completed = isLessonCompleted(idx);
-                                        const accessible = isLessonAccessible(idx) || completed;
-                                        const isCurrent = idx === currentLessonIndex && !showFinalAssessment;
-                                        const lessonProg = getLessonProgress(idx);
-                                        return (
-                                            <button
-                                                key={idx}
-                                                onClick={() => accessible && navigateToLesson(idx)}
-                                                disabled={!accessible}
-                                                className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 ${isCurrent ? 'bg-[#021d49] text-white shadow-md' : completed ? 'bg-green-50 hover:bg-green-100 text-gray-900' : accessible ? 'hover:bg-gray-100 text-gray-900' : 'opacity-50 cursor-not-allowed text-gray-400'}`}
-                                            >
-                                                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${isCurrent ? 'bg-white text-[#021d49]' : completed ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                                                    {completed ? <Icons.Check className="w-3.5 h-3.5" /> : idx + 1}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className={`text-sm font-medium truncate ${isCurrent ? 'text-white' : ''}`}>{lesson.title}</p>
-                                                    <div className="flex items-center gap-2 mt-0.5">
-                                                        {lesson.duration && <span className={`text-xs ${isCurrent ? 'text-blue-200' : 'text-gray-500'}`}>{lesson.duration}</span>}
-                                                        {lesson.assessment?.questions?.length > 0 && (
-                                                            <span className={`text-xs flex items-center gap-1 ${isCurrent ? 'text-blue-200' : lessonProg?.assessmentPassed ? 'text-green-600' : 'text-indigo-600'}`}>
-                                                                <Icons.FileQuestion className="w-3 h-3" />
-                                                                {lessonProg?.assessmentPassed ? 'Passed' : 'Quiz'}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                {!accessible && <Icons.Lock className="w-4 h-4 flex-shrink-0 mt-1" />}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            )}
-
-                                {/* Final Assessment entry */}
-                                <button
-                                    onClick={() => { setShowFinalAssessment(true); setShowLessonAssessment(false); }}
-                                    disabled={!allLessonsCompleted}
-                                    className={`w-full text-left p-3 rounded-xl transition-all flex items-start gap-3 mt-2 border-t pt-4 ${showFinalAssessment
-                                        ? 'bg-indigo-600 text-white shadow-md'
-                                        : allLessonsCompleted
-                                            ? enrollment.finalAssessmentPassed
-                                                ? 'bg-green-50 hover:bg-green-100 text-gray-900'
-                                                : 'bg-indigo-50 hover:bg-indigo-100 text-gray-900'
-                                            : 'opacity-50 cursor-not-allowed text-gray-400'
-                                        }`}
-                                >
-                                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${showFinalAssessment
-                                        ? 'bg-white text-indigo-600'
-                                        : enrollment.finalAssessmentPassed
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-indigo-200 text-indigo-700'
-                                        }`}>
-                                        {enrollment.finalAssessmentPassed
-                                            ? <Icons.Check className="w-3.5 h-3.5" />
-                                            : <Icons.Target className="w-3.5 h-3.5" />
-                                        }
-                                    </div>
-                                    <div className="flex-1">
-                                        <p className={`text-sm font-medium ${showFinalAssessment ? 'text-white' : ''}`}>
-                                            Final Assessment
-                                        </p>
-                                        <p className={`text-xs ${showFinalAssessment ? 'text-indigo-200' : 'text-gray-500'}`}>
-                                            {enrollment.finalAssessmentPassed
-                                                ? `Passed - ${enrollment.finalAssessmentScore?.toFixed(1)}%`
-                                                : !allLessonsCompleted
-                                                    ? 'Complete all lessons first'
-                                                    : `${enrollment.finalAssessmentAttempts || 0}/3 attempts used`
-                                            }
-                                        </p>
-                                    </div>
-                                    {!allLessonsCompleted && <Icons.Lock className="w-4 h-4 flex-shrink-0 mt-1" />}
-                                </button>
-
-                            {/* Discussion Forum link */}
-                            <div className="p-4 border-t">
-                                <button
-                                    onClick={() => router.push(`/student/modules/${moduleId}/discussions`)}
-                                    className="w-full flex items-center gap-2 px-4 py-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-sm transition-all"
-                                >
-                                    <Icons.MessageCircle className="w-4 h-4" />
-                                    Discussion Forum
-                                </button>
+                        {/* Progress bar */}
+                        <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-gray-200 rounded-full h-2">
+                                <div
+                                    className="bg-gradient-to-r from-[#021d49] to-blue-500 h-2 rounded-full transition-all duration-500"
+                                    style={{ width: `${safeProgress}%` }}
+                                />
                             </div>
+                            <span className="text-xs font-bold text-[#021d49] flex-shrink-0 whitespace-nowrap">
+                                {completedCount}/{totalLessons}
+                            </span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">{safeProgress}% complete</p>
+                    </div>
+
+                    {/* Lesson list — scrollable */}
+                    <div className="flex-1 overflow-y-auto py-2 px-2">
+                        <LessonSidebarList
+                            lessons={lessons}
+                            currentLessonIndex={currentLessonIndex}
+                            showFinalAssessment={showFinalAssessment}
+                            isLessonCompleted={isLessonCompleted}
+                            isLessonAccessible={isLessonAccessible}
+                            getLessonProgress={getLessonProgress}
+                            navigateToLesson={navigateToLesson}
+                            allLessonsCompleted={allLessonsCompleted}
+                            enrollment={enrollment}
+                            setShowFinalAssessment={setShowFinalAssessment}
+                            setShowLessonAssessment={setShowLessonAssessment}
+                        />
+                    </div>
+
+                    {/* Discussion Forum link */}
+                    <div className="flex-shrink-0 p-3 border-t border-gray-100">
+                        <button
+                            onClick={() => router.push(`/student/modules/${moduleId}/discussions`)}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-sm transition-all"
+                        >
+                            <Icons.MessageCircle className="w-4 h-4" />
+                            Discussion Forum
+                        </button>
+                    </div>
+                </aside>
+
+                {/* Mobile overlay backdrop */}
+                {sidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-black/40 z-20 lg:hidden"
+                        onClick={() => setSidebarOpen(false)}
+                    />
+                )}
+
+                {/* ── MAIN CONTENT ─────────────────────────────────────────────── */}
+                <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+                    {/* Thin top bar: module name + sidebar toggle for mobile */}
+                    <div className="flex-shrink-0 bg-white border-b border-gray-200 px-4 py-2.5 flex items-center gap-3">
+                        {/* Sidebar toggle — visible on mobile, hidden on desktop */}
+                        <button
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            className="lg:hidden p-1.5 rounded-lg text-gray-500 hover:text-[#021d49] hover:bg-blue-50 transition-colors flex-shrink-0"
+                            title="Toggle lesson list"
+                        >
+                            <Icons.PanelLeft className="w-5 h-5" />
+                        </button>
+                        <div className="flex-1 min-w-0">
+                            <h1 className="text-sm font-semibold text-gray-700 truncate hidden lg:block">{moduleData.title}</h1>
+                            <h1 className="text-sm font-semibold text-gray-700 truncate lg:hidden">
+                                {showFinalAssessment ? 'Final Assessment' : `Lesson ${currentLessonIndex + 1} of ${totalLessons}`}
+                            </h1>
+                        </div>
+                        {/* Progress — desktop only (sidebar already shows it) */}
+                        <div className="hidden lg:flex items-center gap-2">
+                            <div className="w-28 bg-gray-200 rounded-full h-1.5">
+                                <div
+                                    className="bg-gradient-to-r from-[#021d49] to-blue-500 h-1.5 rounded-full transition-all duration-500"
+                                    style={{ width: `${safeProgress}%` }}
+                                />
+                            </div>
+                            <span className="text-xs font-bold text-[#021d49]">{safeProgress}%</span>
                         </div>
                     </div>
 
-                    {/* Overlay — closes sidebar when clicking outside */}
-                    {sidebarOpen && (
-                        <div
-                            className="fixed inset-0 bg-black/30 z-20"
-                            onClick={() => setSidebarOpen(false)}
-                        />
-                    )}
-
-                    {/* Main Content Area */}
-                    <div className="flex-1 min-w-0 min-h-[calc(100vh-120px)] overflow-x-hidden">
-                        <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+                    {/* Scrollable content area */}
+                    <div className="flex-1 overflow-y-auto overflow-x-hidden">
+                        <div className="max-w-4xl mx-auto px-4 py-5 sm:px-6 sm:py-6">
                             {/* Final Assessment View */}
                             {showFinalAssessment && (
                                 <FinalAssessmentPanel
@@ -481,14 +395,14 @@ function ModuleLearningContent() {
                             {/* Lesson Content View */}
                             {!showFinalAssessment && currentLesson && (
                                 <>
-                                    {/* Minimal breadcrumb — LessonViewer intro slide shows title + description */}
-                                    <div className="mb-4 flex items-center gap-3">
-                                        <span className="text-sm text-gray-400">
+                                    {/* Lesson indicator */}
+                                    <div className="mb-3 flex items-center gap-2">
+                                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                                             Lesson {currentLessonIndex + 1} of {totalLessons}
                                         </span>
                                         {isLessonCompleted(currentLessonIndex) && (
-                                            <span className="flex items-center gap-1 text-green-600 text-sm font-medium bg-green-50 px-2 py-0.5 rounded-full">
-                                                <Icons.CheckCircle className="w-3.5 h-3.5" />
+                                            <span className="flex items-center gap-1 text-xs text-green-700 font-semibold bg-green-100 px-2.5 py-0.5 rounded-full">
+                                                <Icons.CheckCircle className="w-3 h-3" />
                                                 Completed
                                             </span>
                                         )}
@@ -514,7 +428,7 @@ function ModuleLearningContent() {
 
                                     {/* ── Slide-based Lesson Viewer ─────────────────────── */}
                                     {!showLessonAssessment && currentLesson.slides?.length > 0 && (
-                                        <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 sm:p-6 mb-6 flex flex-col">
+                                        <div className="mb-6">
                                             <LessonViewer
                                                 lesson={currentLesson}
                                                 lessonIndex={currentLessonIndex}
@@ -562,8 +476,14 @@ function ModuleLearningContent() {
 
                                             {/* Text Content */}
                                             {currentLesson.content && (
-                                                <div className="bg-white rounded-2xl border-2 border-gray-100 p-6 sm:p-8 mb-6 prose prose-gray max-w-none overflow-hidden">
-                                                    <div className="break-words" dangerouslySetInnerHTML={{ __html: currentLesson.content }} />
+                                                <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 mb-6 overflow-x-auto shadow-sm">
+                                                    <div className="prose prose-gray max-w-none break-words text-justify
+                                                        prose-p:text-gray-700 prose-p:leading-relaxed prose-p:text-justify
+                                                        prose-headings:text-gray-900 prose-headings:font-bold prose-headings:text-left
+                                                        prose-li:text-gray-700 prose-strong:text-gray-900
+                                                        prose-a:text-blue-600"
+                                                        dangerouslySetInnerHTML={{ __html: currentLesson.content }}
+                                                    />
                                                 </div>
                                             )}
 
@@ -727,6 +647,136 @@ function ModuleLearningContent() {
                 </div>
             </div>
         </>
+    );
+}
+
+// ── Lesson Sidebar List ──────────────────────────────────────────────────────
+function LessonSidebarList({
+    lessons, currentLessonIndex, showFinalAssessment,
+    isLessonCompleted, isLessonAccessible, getLessonProgress,
+    navigateToLesson, allLessonsCompleted, enrollment,
+    setShowFinalAssessment, setShowLessonAssessment,
+}) {
+    return (
+        <div className="space-y-1">
+            {lessons.map((lesson, idx) => {
+                const completed = isLessonCompleted(idx);
+                const accessible = isLessonAccessible(idx) || completed;
+                const isCurrent = idx === currentLessonIndex && !showFinalAssessment;
+                const isLocked = !accessible;
+                const lessonProg = getLessonProgress(idx);
+                const hasQuiz = lesson.assessmentQuiz?.length > 0 || lesson.assessment?.questions?.length > 0;
+
+                return (
+                    <button
+                        key={idx}
+                        onClick={() => accessible && navigateToLesson(idx)}
+                        disabled={isLocked}
+                        title={isLocked ? 'Complete the previous lesson first' : ''}
+                        className={`w-full text-left rounded-xl transition-all flex items-start gap-3 px-3 py-3 group
+                            ${isCurrent
+                                ? 'bg-[#021d49] shadow-md'
+                                : completed
+                                ? 'bg-green-50 hover:bg-green-100 border border-green-200'
+                                : accessible
+                                ? 'hover:bg-gray-100 border border-transparent'
+                                : 'opacity-40 cursor-not-allowed border border-transparent'}
+                        `}
+                    >
+                        {/* Status icon */}
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5
+                            ${isCurrent ? 'bg-white text-[#021d49]'
+                              : completed ? 'bg-green-500 text-white'
+                              : isLocked ? 'bg-gray-200 text-gray-400'
+                              : 'bg-gray-200 text-gray-600'}
+                        `}>
+                            {completed
+                                ? <Icons.CheckCircle className="w-4 h-4" />
+                                : isLocked
+                                ? <Icons.Lock className="w-3 h-3" />
+                                : <span>{idx + 1}</span>
+                            }
+                        </div>
+
+                        {/* Lesson info */}
+                        <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-semibold leading-snug break-words
+                                ${isCurrent ? 'text-white'
+                                  : completed ? 'text-green-900'
+                                  : isLocked ? 'text-gray-400'
+                                  : 'text-gray-800'}
+                            `}>
+                                {lesson.title || `Lesson ${idx + 1}`}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                                {completed && !isCurrent && (
+                                    <span className="text-xs font-semibold text-green-600 flex items-center gap-0.5">
+                                        <Icons.Check className="w-3 h-3" /> Done
+                                    </span>
+                                )}
+                                {hasQuiz && (
+                                    <span className={`text-xs flex items-center gap-0.5
+                                        ${isCurrent ? 'text-blue-200'
+                                          : lessonProg?.assessmentPassed ? 'text-green-600'
+                                          : 'text-indigo-500'}
+                                    `}>
+                                        <Icons.FileQuestion className="w-3 h-3" />
+                                        {lessonProg?.assessmentPassed ? 'Quiz passed' : 'Has quiz'}
+                                    </span>
+                                )}
+                                {isLocked && (
+                                    <span className="text-xs text-gray-400">Complete previous first</span>
+                                )}
+                            </div>
+                        </div>
+                    </button>
+                );
+            })}
+
+            {/* Final Assessment */}
+            <div className="pt-2 mt-2 border-t border-gray-100">
+                <button
+                    onClick={() => { setShowFinalAssessment(true); setShowLessonAssessment(false); }}
+                    disabled={!allLessonsCompleted}
+                    title={!allLessonsCompleted ? 'Complete all lessons first' : ''}
+                    className={`w-full text-left rounded-xl transition-all flex items-start gap-3 px-3 py-3
+                        ${showFinalAssessment
+                            ? 'bg-indigo-600 shadow-md'
+                            : allLessonsCompleted
+                                ? enrollment.finalAssessmentPassed
+                                    ? 'bg-green-50 hover:bg-green-100 border border-green-200'
+                                    : 'bg-indigo-50 hover:bg-indigo-100 border border-indigo-200'
+                                : 'opacity-40 cursor-not-allowed border border-transparent'}
+                    `}
+                >
+                    <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
+                        ${showFinalAssessment ? 'bg-white text-indigo-600'
+                          : enrollment.finalAssessmentPassed ? 'bg-green-500 text-white'
+                          : allLessonsCompleted ? 'bg-indigo-200 text-indigo-700'
+                          : 'bg-gray-200 text-gray-400'}
+                    `}>
+                        {enrollment.finalAssessmentPassed
+                            ? <Icons.CheckCircle className="w-4 h-4" />
+                            : allLessonsCompleted
+                            ? <Icons.Target className="w-3.5 h-3.5" />
+                            : <Icons.Lock className="w-3 h-3" />
+                        }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                        <p className={`text-sm font-semibold ${showFinalAssessment ? 'text-white' : allLessonsCompleted ? 'text-gray-800' : 'text-gray-400'}`}>
+                            Final Assessment
+                        </p>
+                        <p className={`text-xs mt-0.5 ${showFinalAssessment ? 'text-indigo-200' : 'text-gray-400'}`}>
+                            {enrollment.finalAssessmentPassed
+                                ? `Passed · ${enrollment.finalAssessmentScore?.toFixed(1)}%`
+                                : !allLessonsCompleted
+                                    ? 'Complete all lessons first'
+                                    : `${enrollment.finalAssessmentAttempts || 0}/3 attempts`}
+                        </p>
+                    </div>
+                </button>
+            </div>
+        </div>
     );
 }
 

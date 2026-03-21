@@ -211,23 +211,26 @@ export default function LessonViewer({
           {/* Blue top accent */}
           <div className="h-1.5 bg-gradient-to-r from-[#021d49] via-blue-600 to-indigo-500 rounded-t-2xl" />
 
-          <div className="p-8 md:p-10 space-y-8">
+          <div className="p-6 md:p-8 space-y-6">
             {/* Lesson title */}
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-blue-600 mb-2">Lesson Overview</p>
-              <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 leading-tight">
+              <h2 className="text-xl md:text-2xl font-extrabold text-gray-900 leading-tight">
                 {lesson?.title}
               </h2>
             </div>
 
             {/* Description — rendered as HTML */}
             {lesson?.description && (
-              <div
-                className="prose prose-gray max-w-none text-gray-700 leading-relaxed
-                  prose-p:text-gray-700 prose-p:leading-relaxed
-                  prose-strong:text-gray-900"
-                dangerouslySetInnerHTML={{ __html: lesson.description }}
-              />
+              <div className="overflow-x-auto">
+                <div
+                  className="prose prose-gray max-w-none break-words text-justify text-gray-700 leading-relaxed
+                    prose-p:text-gray-700 prose-p:leading-relaxed prose-p:text-justify
+                    prose-headings:text-left
+                    prose-strong:text-gray-900"
+                  dangerouslySetInnerHTML={{ __html: lesson.description }}
+                />
+              </div>
             )}
 
             {/* Divider */}
@@ -448,7 +451,7 @@ export default function LessonViewer({
       {/* ── Slide content (scrollable) ────────────────────────────────────── */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto min-h-0"
+        className="flex-1 overflow-y-auto overflow-x-hidden min-h-0"
       >
         {currentSlide ? (
           <SlideRenderer
