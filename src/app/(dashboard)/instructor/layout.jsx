@@ -14,47 +14,48 @@ export default function InstructorLayout({ children }) {
     const [instructorData, setInstructorData] = useState(null);
 
     useEffect(() => {
-        // Check if user is authenticated and has instructor role
-        // First try to get from cookie (set by backend), then fallback to localStorage (set by frontend)
-        let user = authService.getCurrentUser();
+        const init = async () => {
+            // Read cached user first for an immediate role check
+            let user = authService.getCurrentUser();
 
-        if (!user && typeof window !== 'undefined') {
-            // Fallback to localStorage if cookie is not available yet
-            const userStr = window.localStorage.getItem('user');
-            if (userStr) {
-                try {
-                    user = JSON.parse(userStr);
-                } catch (error) {
-                    console.error('Error parsing user from localStorage:', error);
+            if (!user && typeof window !== 'undefined') {
+                const userStr = window.localStorage.getItem('user');
+                if (userStr) {
+                    try { user = JSON.parse(userStr); } catch {}
                 }
             }
-        }
 
-        if (!user) {
-            router.replace('/');
-            return;
-        }
-
-        if (user.role !== 'instructor') {
-            // Not an instructor, redirect based on their role
-            if (user.role === 'admin') {
-                router.replace('/admin');
-            } else if (user.role === 'student') {
-                router.replace('/student');
-            } else {
+            if (!user) {
                 router.replace('/');
+                return;
             }
-            return;
-        }
 
-        setInstructorData(user);
+            if (user.role !== 'instructor') {
+                if (user.role === 'admin') router.replace('/admin');
+                else if (user.role === 'student') router.replace('/student');
+                else router.replace('/');
+                return;
+            }
 
-        // Check if instructor is approved
-        // The backend returns 'instructorStatus' field with values: 'pending', 'approved', 'rejected'
-        const approved = user.instructorStatus === 'approved';
-        setIsApproved(approved);
-        setIsAuthorized(true);
-        setIsLoading(false);
+            // Fetch fresh profile so approval status reflects any admin action
+            // since the last login. Merge into cached data so that fields the
+            // API might not return (e.g. instructorStatus) are never lost.
+            try {
+                const freshUser = await authService.fetchUserProfile();
+                if (freshUser) user = { ...user, ...freshUser };
+            } catch {
+                // Network error — fall back to cached data only
+            }
+
+            setInstructorData(user);
+
+            const approved = user.instructorStatus === 'approved';
+            setIsApproved(approved);
+            setIsAuthorized(true);
+            setIsLoading(false);
+        };
+
+        init();
     }, [router]);
 
     // Show loading state

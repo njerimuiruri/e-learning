@@ -458,7 +458,7 @@ export default function LessonViewer({
             slide={currentSlide}
             slideNumber={currentSlideIndex + 1}
             totalSlides={slides.length}
-            sectionTitle={lesson?.slidesTitle || ''}
+            sectionTitle={currentSlide?.sectionTitle || ''}
           />
         ) : (
           <div className="text-gray-400 text-sm text-center py-8">No slide content</div>

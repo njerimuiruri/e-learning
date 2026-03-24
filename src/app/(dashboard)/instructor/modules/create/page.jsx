@@ -6,6 +6,7 @@ import * as Icons from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import moduleService from '@/lib/api/moduleService';
 import categoryService from '@/lib/api/categoryService';
+import { useDraft } from '@/hooks/useDraft';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
@@ -29,9 +30,9 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 /** Numbered bullet list (outcomes, tasks, prerequisites, etc.) */
 function BulletList({ label, hint, values, onChange, placeholder, required }) {
-  const add    = ()      => onChange([...values, '']);
-  const update = (i, v)  => { const n = [...values]; n[i] = v; onChange(n); };
-  const remove = (i)     => onChange(values.filter((_, idx) => idx !== i));
+  const add = () => onChange([...values, '']);
+  const update = (i, v) => { const n = [...values]; n[i] = v; onChange(n); };
+  const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
 
   return (
     <div className="space-y-2">
@@ -69,10 +70,10 @@ function BulletList({ label, hint, values, onChange, placeholder, required }) {
 
 /** Resource entry — name, URL, description, type */
 function ResourceList({ label, hint, values, onChange }) {
-  const blank  = ()         => ({ url: '', name: '', description: '', fileType: '' });
-  const add    = ()         => onChange([...values, blank()]);
+  const blank = () => ({ url: '', name: '', description: '', fileType: '' });
+  const add = () => onChange([...values, blank()]);
   const update = (i, f, v) => { const n = [...values]; n[i] = { ...n[i], [f]: v }; onChange(n); };
-  const remove = (i)        => onChange(values.filter((_, idx) => idx !== i));
+  const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
 
   return (
     <div className="space-y-3">
@@ -131,10 +132,10 @@ function ResourceList({ label, hint, values, onChange }) {
 
 function FinalAssessmentStep({ assessment, onChange }) {
   const update = (field, value) => onChange({ ...assessment, [field]: value });
-  const blank  = () => ({ text: '', type: 'multiple-choice', points: 1, options: ['', '', '', ''], correctAnswer: '', explanation: '', rubric: '' });
+  const blank = () => ({ text: '', type: 'multiple-choice', points: 1, options: ['', '', '', ''], correctAnswer: '', explanation: '', rubric: '' });
 
-  const addQ    = ()         => update('questions', [...(assessment.questions || []), blank()]);
-  const removeQ = (i)        => update('questions', assessment.questions.filter((_, idx) => idx !== i));
+  const addQ = () => update('questions', [...(assessment.questions || []), blank()]);
+  const removeQ = (i) => update('questions', assessment.questions.filter((_, idx) => idx !== i));
   const updateQ = (i, f, v) => { const n = [...assessment.questions]; n[i] = { ...n[i], [f]: v }; update('questions', n); };
   const updateOption = (qi, oi, v) => {
     const n = [...assessment.questions];
@@ -275,10 +276,10 @@ function FinalAssessmentStep({ assessment, onChange }) {
 
 function ModulePreview({ form, onClose }) {
   const [selectedLesson, setSelectedLesson] = useState(0);
-  const [selectedSlide, setSelectedSlide]   = useState(0);
+  const [selectedSlide, setSelectedSlide] = useState(0);
 
   const lessons = form.lessons || [];
-  const lesson  = lessons[selectedLesson];
+  const lesson = lessons[selectedLesson];
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -318,16 +319,14 @@ function ModulePreview({ form, onClose }) {
                   <button
                     key={i}
                     onClick={() => { setSelectedLesson(i); setSelectedSlide(0); }}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition-colors ${
-                      selectedLesson === i
+                    className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition-colors ${selectedLesson === i
                         ? 'bg-blue-600 text-white'
                         : 'hover:bg-gray-200 text-gray-700'
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center gap-2">
-                      <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 ${
-                        selectedLesson === i ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'
-                      }`}>{i + 1}</span>
+                      <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center flex-shrink-0 ${selectedLesson === i ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-700'
+                        }`}>{i + 1}</span>
                       <span className="text-xs font-medium truncate">{l.title || `Lesson ${i + 1}`}</span>
                     </div>
                     {selectedLesson === i && (l.slides || []).length > 0 && (
@@ -398,11 +397,10 @@ function ModulePreview({ form, onClose }) {
                             key={si}
                             onClick={() => setSelectedSlide(si)}
                             title={`Slide ${si + 1}`}
-                            className={`rounded-full transition-all ${
-                              selectedSlide === si
+                            className={`rounded-full transition-all ${selectedSlide === si
                                 ? 'w-6 h-2.5 bg-blue-600'
                                 : 'w-2.5 h-2.5 bg-gray-300 hover:bg-blue-300'
-                            }`}
+                              }`}
                           />
                         ))}
                         <span className="ml-2 text-xs text-gray-400">
@@ -606,11 +604,11 @@ function PreviewSlide({ slide }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { id: 'info',       label: 'Module Info',      icon: Icons.Info,            desc: 'Title, description, level, outcomes' },
-  { id: 'lessons',    label: 'Lessons',           icon: Icons.BookOpen,        desc: 'Build lessons with slides and quizzes' },
-  { id: 'resources',  label: 'Module Resources',  icon: Icons.Link,            desc: 'Bibliography, datasets, links' },
-  { id: 'assessment', label: 'Final Assessment',  icon: Icons.ClipboardCheck,  desc: 'Certificate-granting assessment' },
-  { id: 'review',     label: 'Review & Preview',  icon: Icons.Eye,             desc: 'Preview as student & submit' },
+  { id: 'info', label: 'Module Info', icon: Icons.Info, desc: 'Title, description, level, outcomes' },
+  { id: 'lessons', label: 'Lessons', icon: Icons.BookOpen, desc: 'Build lessons with slides and quizzes' },
+  { id: 'resources', label: 'Module Resources', icon: Icons.Link, desc: 'Bibliography, datasets, links' },
+  { id: 'assessment', label: 'Final Assessment', icon: Icons.ClipboardCheck, desc: 'Certificate-granting assessment' },
+  { id: 'review', label: 'Review & Preview', icon: Icons.Eye, desc: 'Preview as student & submit' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -656,20 +654,37 @@ const defaultForm = {
 
 export default function CreateModulePage() {
   const router = useRouter();
-  const [step, setStep]             = useState(0);
-  const [form, setForm]             = useState(defaultForm);
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState(defaultForm);
   const [categories, setCategories] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [savingModuleDraft, setSavingModuleDraft] = useState(false);
+
+  // Track whether this draft was already persisted as a real module (status:'draft')
+  const [savedModuleId, setSavedModuleId] = useState(() => {
+    try { return localStorage.getItem('instructor_draft_module_id') || null; } catch { return null; }
+  });
+
+  const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel } = useDraft(
+    'module_instructor_draft_new',
+    form,
+    { contentType: 'module', title: form.title || 'New Module' }
+  );
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  useEffect(() => {
+    if (hasDraft) setShowDraftBanner(true);
+  }, [hasDraft]);
 
   useEffect(() => {
     categoryService.getAllCategories()
       .then((d) => setCategories(d || []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const updateForm = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
-  const progress   = Math.round(((step + 1) / STEPS.length) * 100);
+  const progress = Math.round(((step + 1) / STEPS.length) * 100);
 
   // Extract case studies from lessons before submitting
   const buildPayload = () => {
@@ -679,9 +694,9 @@ export default function CreateModulePage() {
         caseStudyName: l._caseStudy.name,
         lessons: [
           { lessonType: 'Introduction', content: l._caseStudy.introduction || '', resources: [] },
-          { lessonType: 'Dataset',      content: l._caseStudy.dataset || '',      resources: [] },
-          { lessonType: 'AI Task',      content: l._caseStudy.aiTask || '',       resources: [] },
-          { lessonType: 'Key Readings', content: l._caseStudy.keyReadings || '',  resources: [] },
+          { lessonType: 'Dataset', content: l._caseStudy.dataset || '', resources: [] },
+          { lessonType: 'AI Task', content: l._caseStudy.aiTask || '', resources: [] },
+          { lessonType: 'Key Readings', content: l._caseStudy.keyReadings || '', resources: [] },
         ],
       }));
 
@@ -697,6 +712,31 @@ export default function CreateModulePage() {
     };
   };
 
+  // Save as a real draft module in the DB so it shows up in My Modules → Drafts
+  const handleSaveDraft = async () => {
+    saveDraft(); // persist to draft store (for restore banner)
+    setSavingModuleDraft(true);
+    try {
+      const payload = buildPayload();
+      let moduleId = savedModuleId;
+      if (moduleId) {
+        await moduleService.updateModule(moduleId, payload);
+      } else {
+        const created = await moduleService.createModule(payload);
+        moduleId = created?._id || created?.id;
+        if (moduleId) {
+          setSavedModuleId(moduleId);
+          try { localStorage.setItem('instructor_draft_module_id', moduleId); } catch {}
+        }
+      }
+      toast.success('Draft saved! You can find it under My Modules → Drafts.');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to save draft');
+    } finally {
+      setSavingModuleDraft(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!form.title || !form.description || !form.categoryId || !form.level) {
       toast.error('Please fill in all required fields in Module Info.');
@@ -705,11 +745,22 @@ export default function CreateModulePage() {
     }
     setSubmitting(true);
     try {
-      const created = await moduleService.createModule(buildPayload());
+      let newId;
+      const payload = buildPayload();
+      if (savedModuleId) {
+        // Update the existing draft module instead of creating a duplicate
+        await moduleService.updateModule(savedModuleId, payload);
+        newId = savedModuleId;
+      } else {
+        const created = await moduleService.createModule(payload);
+        newId = created?._id || created?.id;
+      }
+      discardDraft();
+      try { localStorage.removeItem('instructor_draft_module_id'); } catch {}
+      setSavedModuleId(null);
       toast.success('Module created successfully!');
       // Redirect to the new module's detail page with ?new=true so the
       // "Submit for Review" guidance banner is shown immediately.
-      const newId = created?._id || created?.id;
       if (newId) {
         router.push(`/instructor/modules/${newId}?new=true`);
       } else {
@@ -720,6 +771,21 @@ export default function CreateModulePage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleRestoreDraft = () => {
+    const draft = getDraft();
+    if (draft?.data) {
+      setForm(draft.data);
+      setShowDraftBanner(false);
+      toast.success('Draft restored!');
+    }
+  };
+  const handleDiscardDraft = () => {
+    discardDraft();
+    setShowDraftBanner(false);
+    setSavedModuleId(null);
+    try { localStorage.removeItem('instructor_draft_module_id'); } catch {}
   };
 
   // ── Step content ─────────────────────────────────────────────────────────
@@ -883,6 +949,8 @@ export default function CreateModulePage() {
             <LessonBuilder
               lessons={form.lessons || []}
               onChange={(v) => updateForm('lessons', v)}
+              onSaveDraft={handleSaveDraft}
+              draftStatus={savingModuleDraft ? 'saving' : draftStatus}
             />
           </div>
         );
@@ -975,10 +1043,10 @@ export default function CreateModulePage() {
                       <div className={`w-9 h-9 rounded-lg bg-${color}-100 flex items-center justify-center flex-shrink-0`}>
                         <Icon className={`w-4 h-4 text-${color}-600`} />
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-400 font-medium uppercase">{label}</p>
-                        <p className="font-semibold text-gray-900 mt-0.5">{value}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{sub}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">{label}</p>
+                        <p className="font-semibold text-gray-900 mt-0.5 break-words leading-snug">{value}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 break-words">{sub}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -987,16 +1055,14 @@ export default function CreateModulePage() {
             </div>
 
             {/* Learning outcomes preview */}
-            {form.learningOutcomes.length > 0 && (
+            {form.learningOutcomes && form.learningOutcomes.length > 0 && form.learningOutcomes !== '<p><br></p>' && (
               <div className="space-y-2">
                 <p className="text-sm font-semibold text-gray-600">Module Learning Outcomes</p>
-                <div className="space-y-1.5">
-                  {form.learningOutcomes.map((o, i) => (
-                    <div key={i} className="flex items-start gap-2 text-sm">
-                      <Icons.CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700">{o}</span>
-                    </div>
-                  ))}
+                <div className="border rounded-xl p-4 bg-gray-50/50">
+                  <div
+                    className="prose prose-sm max-w-none text-gray-700 [&_p]:leading-relaxed [&_p]:mb-2 [&_ul]:pl-4 [&_li]:mb-1"
+                    dangerouslySetInnerHTML={{ __html: form.learningOutcomes }}
+                  />
                 </div>
               </div>
             )}
@@ -1008,10 +1074,10 @@ export default function CreateModulePage() {
                 <AlertDescription className="text-amber-700 text-sm">
                   <strong>Missing required fields:</strong>{' '}
                   {[
-                    !form.title       && 'Module title',
+                    !form.title && 'Module title',
                     !form.description && 'Description',
-                    !form.categoryId  && 'Category',
-                    !form.level       && 'Level',
+                    !form.categoryId && 'Category',
+                    !form.level && 'Level',
                   ].filter(Boolean).join(', ')}.
                   Go back to Module Info to fill them in.
                 </AlertDescription>
@@ -1034,37 +1100,102 @@ export default function CreateModulePage() {
         <ModulePreview form={form} onClose={() => setShowPreview(false)} />
       )}
 
-      {/* ── Top header ──────────────────────────────────────────────────── */}
-      <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => router.back()}>
-            <Icons.ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Create New Module</h1>
-            <p className="text-sm text-gray-500">
-              Step {step + 1} of {STEPS.length} —{' '}
-              <span className="font-medium text-gray-700">{STEPS[step].label}</span>
-            </p>
+      {/* ── Top header + draft banner (sticky together below fixed app navbar) */}
+      <div className="sticky top-24 z-10">
+        <div className="bg-white border-b px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => router.back()}>
+              <Icons.ArrowLeft className="w-5 h-5" />
+            </Button>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Create New Module</h1>
+              <p className="text-sm text-gray-500">
+                Step {step + 1} of {STEPS.length} —{' '}
+                <span className="font-medium text-gray-700">{STEPS[step].label}</span>
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setShowPreview(true)}
-            className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
-          >
-            <Icons.Eye className="w-4 h-4" /> Preview
-          </Button>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-400">{progress}%</span>
-            <div className="w-32">
-              <Progress value={progress} className="h-2" />
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowPreview(true)}
+              className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
+            >
+              <Icons.Eye className="w-4 h-4" /> Preview
+            </Button>
+            {draftStatus === 'unsaved' && (
+              <span className="text-xs text-amber-600 hidden sm:flex items-center gap-1">
+                <Icons.Circle className="w-2.5 h-2.5 fill-amber-500" />
+                Unsaved changes
+              </span>
+            )}
+            {draftStatus === 'saving' && (
+              <span className="text-xs text-blue-500 hidden sm:flex items-center gap-1 animate-pulse">
+                <Icons.Loader2 className="w-3 h-3 animate-spin" />
+                Saving…
+              </span>
+            )}
+            {(draftStatus === 'saved' || savedAgoLabel) && (
+              <span className="text-xs text-emerald-600 hidden sm:flex items-center gap-1">
+                <Icons.CheckCircle2 className="w-3 h-3" />
+                {savedAgoLabel || 'Saved'}
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSaveDraft}
+              disabled={draftStatus === 'saving' || savingModuleDraft}
+              className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hidden sm:flex"
+            >
+              {savingModuleDraft
+                ? <><Icons.Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
+                : <><Icons.Save className="w-3.5 h-3.5" /> Save Draft</>
+              }
+            </Button>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-400">{progress}%</span>
+              <div className="w-32">
+                <Progress value={progress} className="h-2" />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+
+        {/* Draft restore banner — inside the sticky wrapper so it's never hidden */}
+        {showDraftBanner && (
+          <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-amber-800">
+              <Icons.Clock className="w-4 h-4 text-amber-600" />
+              <span>You have an unsaved draft. Restore it to continue where you left off.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={handleDiscardDraft} className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100">
+                Discard
+              </Button>
+              <Button size="sm" onClick={handleRestoreDraft} className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white">
+                Restore Draft
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Saved-to-modules banner — shows after first Save Draft */}
+        {savedModuleId && !showDraftBanner && (
+          <div className="bg-emerald-50 border-b border-emerald-200 px-6 py-2 flex items-center gap-2 text-sm text-emerald-800">
+            <Icons.CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+            <span>Draft saved to <strong>My Modules → Drafts</strong>. You can return and continue editing any time.</span>
+            <button
+              onClick={() => router.push('/instructor/modules')}
+              className="ml-auto text-xs text-emerald-700 underline hover:text-emerald-900"
+            >
+              View in My Modules
+            </button>
+          </div>
+        )}
+      </div>{/* end sticky wrapper */}
 
       <div className="max-w-7xl mx-auto px-6 py-8 flex gap-6">
 
@@ -1073,18 +1204,17 @@ export default function CreateModulePage() {
           <div className="sticky top-24 space-y-1">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-3 mb-2">Steps</p>
             {STEPS.map((s, i) => {
-              const Icon   = s.icon;
-              const done   = i < step;
+              const Icon = s.icon;
+              const done = i < step;
               const active = i === step;
               return (
                 <button
                   key={s.id}
                   onClick={() => setStep(i)}
-                  className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left transition-all ${
-                    active ? 'bg-blue-600 text-white shadow-sm' :
-                    done   ? 'bg-green-50 text-green-800 hover:bg-green-100' :
-                             'text-gray-500 hover:bg-gray-100'
-                  }`}
+                  className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left transition-all ${active ? 'bg-blue-600 text-white shadow-sm' :
+                      done ? 'bg-green-50 text-green-800 hover:bg-green-100' :
+                        'text-gray-500 hover:bg-gray-100'
+                    }`}
                 >
                   <div className="flex-shrink-0 mt-0.5">
                     {done

@@ -6,6 +6,7 @@ import * as Icons from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import adminService from '@/lib/api/adminService';
 import categoryService from '@/lib/api/categoryService';
+import { useDraft } from '@/hooks/useDraft';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
@@ -495,6 +496,17 @@ export default function AdminCreateModulePage() {
   // 'existing' | 'pending'
   const [assignMode, setAssignMode]   = useState('existing');
 
+  const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel } = useDraft(
+    'module_admin_draft_new',
+    form,
+    { contentType: 'module', title: form.title || 'New Module' }
+  );
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  useEffect(() => {
+    if (hasDraft) setShowDraftBanner(true);
+  }, [hasDraft]);
+
   useEffect(() => {
     categoryService.getAllCategories()
       .then((d) => setCategories(d || []))
@@ -557,6 +569,7 @@ export default function AdminCreateModulePage() {
     setSubmitting(true);
     try {
       const created = await adminService.createModuleAsAdmin(buildPayload());
+      discardDraft();
       toast.success('Module created successfully!');
       const newId = created?._id || created?.id;
       if (newId) {
@@ -569,6 +582,19 @@ export default function AdminCreateModulePage() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleRestoreDraft = () => {
+    const draft = getDraft();
+    if (draft?.data) {
+      setForm(draft.data);
+      setShowDraftBanner(false);
+      toast.success('Draft restored!');
+    }
+  };
+  const handleDiscardDraft = () => {
+    discardDraft();
+    setShowDraftBanner(false);
   };
 
   // ── Step content ─────────────────────────────────────────────────────────
@@ -825,6 +851,8 @@ export default function AdminCreateModulePage() {
             <LessonBuilder
               lessons={form.lessons || []}
               onChange={(v) => updateForm('lessons', v)}
+              onSaveDraft={saveDraft}
+              draftStatus={draftStatus}
             />
           </div>
         );
@@ -978,6 +1006,23 @@ export default function AdminCreateModulePage() {
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-right" />
 
+      {showDraftBanner && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-amber-800">
+            <Icons.Clock className="w-4 h-4 text-amber-600" />
+            <span>You have an unsaved draft. Restore it to continue where you left off.</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" onClick={handleDiscardDraft} className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100">
+              Discard
+            </Button>
+            <Button size="sm" onClick={handleRestoreDraft} className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white">
+              Restore Draft
+            </Button>
+          </div>
+        </div>
+      )}
+
       {showPreview && (
         <ModulePreview form={form} onClose={() => setShowPreview(false)} />
       )}
@@ -1007,6 +1052,35 @@ export default function AdminCreateModulePage() {
             className="gap-1.5 text-blue-600 border-blue-200 hover:bg-blue-50"
           >
             <Icons.Eye className="w-4 h-4" /> Preview
+          </Button>
+          {draftStatus === 'unsaved' && (
+            <span className="text-xs text-amber-600 hidden sm:flex items-center gap-1">
+              <Icons.Circle className="w-2.5 h-2.5 fill-amber-500" />
+              Unsaved changes
+            </span>
+          )}
+          {draftStatus === 'saving' && (
+            <span className="text-xs text-blue-500 hidden sm:flex items-center gap-1 animate-pulse">
+              <Icons.Loader2 className="w-3 h-3 animate-spin" />
+              Saving…
+            </span>
+          )}
+          {(draftStatus === 'saved' || savedAgoLabel) && (
+            <span className="text-xs text-emerald-600 hidden sm:flex items-center gap-1">
+              <Icons.CheckCircle2 className="w-3 h-3" />
+              {savedAgoLabel || 'Saved'}
+            </span>
+          )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={saveDraft}
+            disabled={draftStatus === 'saving'}
+            className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hidden sm:flex"
+          >
+            <Icons.Save className="w-3.5 h-3.5" />
+            {draftStatus === 'saving' ? 'Saving…' : 'Save Draft'}
           </Button>
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-400">{progress}%</span>

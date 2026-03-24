@@ -6,6 +6,7 @@ import * as Icons from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import adminService from '@/lib/api/adminService';
 import categoryService from '@/lib/api/categoryService';
+import { useDraft } from '@/hooks/useDraft';
 import AdminSidebar from '@/components/Admin/AdminSidebar';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
@@ -115,6 +116,19 @@ export default function AdminModuleEditPage() {
   const updateForm = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
   const progress   = Math.round(((step + 1) / STEPS.length) * 100);
 
+  // ── Draft autosave ─────────────────────────────────────────────────────────
+  const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel } = useDraft(
+    `module_admin_draft_${id}`,
+    form,
+    { enabled: !loading, contentType: 'module', entityId: id, title: form.title || 'Module' }
+  );
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  // Show restore banner if a draft exists (only after initial data loads)
+  useEffect(() => {
+    if (!loading && hasDraft) setShowDraftBanner(true);
+  }, [loading, hasDraft]);
+
   // ── Load data ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -134,6 +148,7 @@ export default function AdminModuleEditPage() {
           title: l.title || '',
           description: l.description || '',
           learningOutcomes: Array.isArray(l.learningOutcomes) ? l.learningOutcomes : [],
+          slidesTitle: l.slidesTitle || '',
           slides: Array.isArray(l.slides) ? l.slides : [],
           assessmentQuiz: Array.isArray(l.assessmentQuiz)
             ? l.assessmentQuiz
@@ -191,6 +206,7 @@ export default function AdminModuleEditPage() {
       const { lessons: _lessons, ...metaPayload } = form;
       await adminService.updateModule(id, { ...metaPayload, lessons: cleanLessons });
 
+      discardDraft();
       toast.success('Module updated successfully!');
       router.push(`/admin/modules/${id}`);
     } catch (err) {
@@ -199,6 +215,19 @@ export default function AdminModuleEditPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleRestoreDraft = () => {
+    const draft = getDraft();
+    if (draft?.data) {
+      setForm(draft.data);
+      setShowDraftBanner(false);
+      toast.success('Draft restored!');
+    }
+  };
+  const handleDiscardDraft = () => {
+    discardDraft();
+    setShowDraftBanner(false);
   };
 
   // ── Loading state ──────────────────────────────────────────────────────────
@@ -380,6 +409,8 @@ export default function AdminModuleEditPage() {
             <LessonBuilder
               lessons={form.lessons}
               onChange={(v) => updateForm('lessons', v)}
+              onSaveDraft={saveDraft}
+              draftStatus={draftStatus}
             />
           </div>
         );
@@ -470,6 +501,24 @@ export default function AdminModuleEditPage() {
       <div className="lg:ml-4 min-h-screen bg-gray-50">
         <Toaster position="top-right" />
 
+        {/* Draft restore banner */}
+        {showDraftBanner && (
+          <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-amber-800">
+              <Icons.Clock className="w-4 h-4 text-amber-600" />
+              <span>You have an unsaved draft for this module.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={handleDiscardDraft} className="h-7 text-xs border-amber-300 text-amber-700 hover:bg-amber-100">
+                Discard
+              </Button>
+              <Button size="sm" onClick={handleRestoreDraft} className="h-7 text-xs bg-amber-600 hover:bg-amber-700 text-white">
+                Restore Draft
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* ── Top header ── */}
         <div className="bg-white border-b px-6 py-4 flex items-center justify-between sticky top-0 z-10">
           <div className="flex items-center gap-3">
@@ -496,6 +545,35 @@ export default function AdminModuleEditPage() {
             <span className="text-sm text-gray-400 hidden sm:block truncate max-w-xs">
               {originalModule?.title}
             </span>
+            {draftStatus === 'unsaved' && (
+              <span className="text-xs text-amber-600 hidden sm:flex items-center gap-1">
+                <Icons.Circle className="w-2.5 h-2.5 fill-amber-500" />
+                Unsaved changes
+              </span>
+            )}
+            {draftStatus === 'saving' && (
+              <span className="text-xs text-blue-500 hidden sm:flex items-center gap-1 animate-pulse">
+                <Icons.Loader2 className="w-3 h-3 animate-spin" />
+                Saving…
+              </span>
+            )}
+            {(draftStatus === 'saved' || savedAgoLabel) && (
+              <span className="text-xs text-emerald-600 hidden sm:flex items-center gap-1">
+                <Icons.CheckCircle2 className="w-3 h-3" />
+                {savedAgoLabel || 'Saved'}
+              </span>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={saveDraft}
+              disabled={draftStatus === 'saving'}
+              className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50 hidden sm:flex"
+            >
+              <Icons.Save className="w-3.5 h-3.5" />
+              {draftStatus === 'saving' ? 'Saving…' : 'Save Draft'}
+            </Button>
             <div className="flex items-center gap-2">
               <span className="text-sm text-gray-400">{progress}%</span>
               <div className="w-32">

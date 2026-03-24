@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import categoryService from '@/lib/api/categoryService';
+import { useDraft } from '@/hooks/useDraft';
 import InstructorSidebar from '@/components/instructor/InstructorSidebar';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
 import RichTextEditor from '@/components/ui/RichTextEditor';
@@ -208,6 +209,18 @@ export default function EditModulePage() {
         passingScore: 70, maxAttempts: 3, timeLimit: null,
     });
 
+    const draftData = useMemo(() => ({ moduleData, lessons, finalAssessment }), [moduleData, lessons, finalAssessment]);
+    const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel } = useDraft(
+        `module_instructor_draft_${moduleId}`,
+        draftData,
+        { enabled: !initialLoading, contentType: 'module', entityId: moduleId, title: moduleData.title || 'Module' }
+    );
+    const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+    useEffect(() => {
+        if (!initialLoading && hasDraft) setShowDraftBanner(true);
+    }, [initialLoading, hasDraft]);
+
     useEffect(() => { loadModuleData(); }, [moduleId]);
 
     const loadModuleData = async () => {
@@ -239,6 +252,7 @@ export default function EditModulePage() {
                 title: lesson.title || '',
                 description: lesson.description || '',
                 learningOutcomes: Array.isArray(lesson.learningOutcomes) ? lesson.learningOutcomes : [],
+                slidesTitle: lesson.slidesTitle || '',
                 slides: Array.isArray(lesson.slides) ? lesson.slides : [],
                 assessmentQuiz: Array.isArray(lesson.assessmentQuiz)
                     ? lesson.assessmentQuiz
@@ -318,6 +332,7 @@ export default function EditModulePage() {
             // 2. Update final assessment
             await moduleService.setFinalAssessment(moduleId, finalAssessment);
 
+            discardDraft();
             alert('Module updated successfully!');
             router.push('/instructor/modules');
         } catch (err) {
@@ -326,6 +341,21 @@ export default function EditModulePage() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleRestoreDraft = () => {
+        const draft = getDraft();
+        if (draft?.data) {
+            const { moduleData: md, lessons: ls, finalAssessment: fa } = draft.data;
+            if (md) setModuleData(md);
+            if (ls) setLessons(ls);
+            if (fa) setFinalAssessment(fa);
+            setShowDraftBanner(false);
+        }
+    };
+    const handleDiscardDraft = () => {
+        discardDraft();
+        setShowDraftBanner(false);
     };
 
     // Loading state
@@ -374,9 +404,38 @@ export default function EditModulePage() {
                         <button onClick={() => router.push('/instructor/modules')} className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-gray-900 mb-3">
                             <Icons.ArrowLeft className="w-4 h-4" /> Back to Modules
                         </button>
-                        <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-                            <Icons.Edit2 className="w-8 h-8 text-emerald-600" /> Edit Module
-                        </h1>
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                            <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
+                                <Icons.Edit2 className="w-8 h-8 text-emerald-600" /> Edit Module
+                            </h1>
+                            {draftStatus === 'unsaved' && (
+                                <span className="text-xs text-amber-600 flex items-center gap-1">
+                                    <Icons.Circle className="w-2.5 h-2.5 fill-amber-500" />
+                                    Unsaved changes
+                                </span>
+                            )}
+                            {draftStatus === 'saving' && (
+                                <span className="text-xs text-blue-500 flex items-center gap-1 animate-pulse">
+                                    <Icons.Loader2 className="w-3 h-3 animate-spin" />
+                                    Saving…
+                                </span>
+                            )}
+                            {(draftStatus === 'saved' || savedAgoLabel) && (
+                                <span className="text-xs text-emerald-600 flex items-center gap-1">
+                                    <Icons.CheckCircle2 className="w-3 h-3" />
+                                    {savedAgoLabel || 'Saved'}
+                                </span>
+                            )}
+                            <button
+                                type="button"
+                                onClick={saveDraft}
+                                disabled={draftStatus === 'saving'}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-emerald-300 text-emerald-700 text-xs font-medium rounded-lg hover:bg-emerald-50 disabled:opacity-50"
+                            >
+                                <Icons.Save className="w-3.5 h-3.5" />
+                                {draftStatus === 'saving' ? 'Saving…' : 'Save Draft'}
+                            </button>
+                        </div>
                         <p className="mt-1 text-sm text-gray-600">
                             Editing: <strong>{originalModule?.title}</strong>
                             {originalModule?.status === 'published' && (
@@ -397,6 +456,24 @@ export default function EditModulePage() {
                                     <p className="text-sm font-semibold text-red-900 mb-1">Rejection Reason:</p>
                                     <p className="text-sm text-red-700">{originalModule.rejectionReason}</p>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Draft restore banner */}
+                    {showDraftBanner && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg mb-6 px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-sm text-amber-800">
+                                <Icons.Clock className="w-4 h-4 text-amber-600" />
+                                <span>You have an unsaved draft. Restore it to continue where you left off.</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button onClick={handleDiscardDraft} className="px-3 py-1.5 text-xs border border-amber-300 text-amber-700 rounded-lg hover:bg-amber-100">
+                                    Discard
+                                </button>
+                                <button onClick={handleRestoreDraft} className="px-3 py-1.5 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700">
+                                    Restore Draft
+                                </button>
                             </div>
                         </div>
                     )}
@@ -491,9 +568,20 @@ export default function EditModulePage() {
                                 <LessonBuilder
                                     lessons={lessons}
                                     onChange={setLessons}
+                                    onSaveDraft={saveDraft}
+                                    draftStatus={draftStatus}
                                 />
                                 <div className="flex justify-between pt-6 border-t border-gray-200">
                                     <button onClick={handlePrevious} className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200"><Icons.ChevronLeft className="w-5 h-5" /> Previous</button>
+                                    <button
+                                        type="button"
+                                        onClick={saveDraft}
+                                        disabled={draftStatus === 'saving'}
+                                        className="inline-flex items-center gap-2 px-4 py-2 border border-emerald-300 text-emerald-700 font-medium rounded-lg hover:bg-emerald-50 disabled:opacity-50"
+                                    >
+                                        <Icons.Save className="w-4 h-4" />
+                                        {draftStatus === 'saving' ? 'Saving…' : 'Save Draft'}
+                                    </button>
                                     <button onClick={handleNext} className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Next: Final Assessment <Icons.ChevronRight className="w-5 h-5" /></button>
                                 </div>
                             </div>
