@@ -36,13 +36,29 @@ export default function RichTextEditor({
 }) {
     const quillRef = useRef(null);
     const containerRef = useRef(null);
+    const unmountedRef = useRef(false);
 
     const getEditor = useCallback(() => {
+        if (unmountedRef.current) return null;
         const ref = quillRef.current;
         if (!ref) return null;
         if (typeof ref.getEditor === 'function') return ref.getEditor();
         if (ref.editor) return ref.editor;
         return null;
+    }, []);
+
+    // Disable Quill before React tears down the DOM to prevent removeChild conflicts
+    useEffect(() => {
+        unmountedRef.current = false;
+        return () => {
+            unmountedRef.current = true;
+            try {
+                const ref = quillRef.current;
+                if (!ref) return;
+                const editor = typeof ref.getEditor === 'function' ? ref.getEditor() : ref.editor;
+                if (editor) editor.enable(false);
+            } catch {}
+        };
     }, []);
 
     // ── Intercept paste events to preserve table HTML from Word / Google Docs ──

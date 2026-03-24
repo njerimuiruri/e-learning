@@ -662,9 +662,9 @@ export default function CreateModulePage() {
   const [savingModuleDraft, setSavingModuleDraft] = useState(false);
 
   // Track whether this draft was already persisted as a real module (status:'draft')
-  const [savedModuleId, setSavedModuleId] = useState(() => {
-    try { return localStorage.getItem('instructor_draft_module_id') || null; } catch { return null; }
-  });
+  // Must start null on both server and client to avoid hydration mismatch;
+  // the real value is loaded in useEffect after mount.
+  const [savedModuleId, setSavedModuleId] = useState(null);
 
   const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel } = useDraft(
     'module_instructor_draft_new',
@@ -676,6 +676,14 @@ export default function CreateModulePage() {
   useEffect(() => {
     if (hasDraft) setShowDraftBanner(true);
   }, [hasDraft]);
+
+  useEffect(() => {
+    // Read localStorage only after mount (safe from hydration mismatch)
+    try {
+      const stored = localStorage.getItem('instructor_draft_module_id');
+      if (stored) setSavedModuleId(stored);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     categoryService.getAllCategories()
@@ -759,13 +767,15 @@ export default function CreateModulePage() {
       try { localStorage.removeItem('instructor_draft_module_id'); } catch {}
       setSavedModuleId(null);
       toast.success('Module created successfully!');
-      // Redirect to the new module's detail page with ?new=true so the
-      // "Submit for Review" guidance banner is shown immediately.
-      if (newId) {
-        router.push(`/instructor/modules/${newId}?new=true`);
-      } else {
-        router.push('/instructor/modules');
-      }
+      // Small delay lets React flush state updates and Quill disable itself
+      // before navigation tears down the DOM (prevents removeChild errors).
+      setTimeout(() => {
+        if (newId) {
+          router.push(`/instructor/modules/${newId}?new=true`);
+        } else {
+          router.push('/instructor/modules');
+        }
+      }, 100);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to create module');
     } finally {
