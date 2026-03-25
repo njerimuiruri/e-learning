@@ -29,6 +29,31 @@ function ModuleLearningContent() {
     const [completing, setCompleting] = useState(false);
     const [submittingAssessment, setSubmittingAssessment] = useState(false);
 
+    // Download state
+    const [downloading, setDownloading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
+    const [downloadError, setDownloadError] = useState('');
+
+    const handleDownload = async () => {
+        if (downloading) return;
+        setDownloading(true);
+        setDownloadProgress(0);
+        setDownloadError('');
+        try {
+            await moduleService.downloadModuleZip(
+                moduleId,
+                moduleData?.title || 'module',
+                (pct) => setDownloadProgress(pct),
+            );
+        } catch (err) {
+            setDownloadError('Download failed. Please try again.');
+            setTimeout(() => setDownloadError(''), 4000);
+        } finally {
+            setDownloading(false);
+            setDownloadProgress(0);
+        }
+    };
+
     // Lesson assessment answers
     const [lessonAnswers, setLessonAnswers] = useState({});
     const [lessonAssessmentResult, setLessonAssessmentResult] = useState(null);
@@ -319,8 +344,8 @@ function ModuleLearningContent() {
                         />
                     </div>
 
-                    {/* Discussion Forum link */}
-                    <div className="flex-shrink-0 p-3 border-t border-gray-100">
+                    {/* Discussion Forum + Download */}
+                    <div className="flex-shrink-0 p-3 border-t border-gray-100 space-y-2">
                         <button
                             onClick={() => router.push(`/student/modules/${moduleId}/discussions`)}
                             className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold text-sm transition-all"
@@ -328,6 +353,43 @@ function ModuleLearningContent() {
                             <Icons.MessageCircle className="w-4 h-4" />
                             Discussion Forum
                         </button>
+
+                        {/* Download module ZIP */}
+                        <button
+                            onClick={handleDownload}
+                            disabled={downloading}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-semibold text-sm transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                            {downloading ? (
+                                <>
+                                    <Icons.Loader2 className="w-4 h-4 animate-spin" />
+                                    <span className="flex-1 text-left">
+                                        {downloadProgress > 0 ? `Downloading… ${downloadProgress}%` : 'Preparing…'}
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <Icons.Download className="w-4 h-4" />
+                                    Download Module
+                                </>
+                            )}
+                        </button>
+
+                        {/* Progress bar */}
+                        {downloading && (
+                            <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                    className={`bg-emerald-500 h-1.5 rounded-full transition-all duration-300 ${downloadProgress === 0 ? 'animate-pulse' : ''}`}
+                                    style={{ width: downloadProgress > 0 ? `${downloadProgress}%` : '40%' }}
+                                />
+                            </div>
+                        )}
+
+                        {downloadError && (
+                            <p className="text-xs text-red-600 flex items-center gap-1">
+                                <Icons.AlertCircle className="w-3 h-3" /> {downloadError}
+                            </p>
+                        )}
                     </div>
                 </aside>
 
@@ -358,14 +420,28 @@ function ModuleLearningContent() {
                             </h1>
                         </div>
                         {/* Progress — desktop only (sidebar already shows it) */}
-                        <div className="hidden lg:flex items-center gap-2">
-                            <div className="w-28 bg-gray-200 rounded-full h-1.5">
-                                <div
-                                    className="bg-gradient-to-r from-[#021d49] to-blue-500 h-1.5 rounded-full transition-all duration-500"
-                                    style={{ width: `${safeProgress}%` }}
-                                />
+                        <div className="hidden lg:flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <div className="w-28 bg-gray-200 rounded-full h-1.5">
+                                    <div
+                                        className="bg-gradient-to-r from-[#021d49] to-blue-500 h-1.5 rounded-full transition-all duration-500"
+                                        style={{ width: `${safeProgress}%` }}
+                                    />
+                                </div>
+                                <span className="text-xs font-bold text-[#021d49]">{safeProgress}%</span>
                             </div>
-                            <span className="text-xs font-bold text-[#021d49]">{safeProgress}%</span>
+                            {/* Download button — desktop top bar */}
+                            <button
+                                onClick={handleDownload}
+                                disabled={downloading}
+                                title="Download module as ZIP"
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold transition-all disabled:opacity-60 disabled:cursor-not-allowed border border-emerald-200"
+                            >
+                                {downloading
+                                    ? <><Icons.Loader2 className="w-3.5 h-3.5 animate-spin" />{downloadProgress > 0 ? `${downloadProgress}%` : 'Preparing…'}</>
+                                    : <><Icons.Download className="w-3.5 h-3.5" />Download</>
+                                }
+                            </button>
                         </div>
                     </div>
 

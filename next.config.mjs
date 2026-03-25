@@ -12,6 +12,22 @@ const nextConfig = {
       },
     ];
   },
+
+  // Prevent browsers from caching stale build assets between deployments.
+  // This eliminates the "Failed to find Server Action" error after a redeploy.
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, must-revalidate",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

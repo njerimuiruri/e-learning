@@ -125,6 +125,25 @@ const moduleService = {
     const response = await api.delete(`/${moduleId}`);
     return response.data;
   },
+
+  async downloadModuleZip(moduleId: string, moduleTitle: string, onProgress?: (pct: number) => void): Promise<void> {
+    const response = await api.get(`/${moduleId}/download`, {
+      responseType: 'blob',
+      onDownloadProgress: (evt) => {
+        if (onProgress && evt.total) {
+          onProgress(Math.round((evt.loaded / evt.total) * 100));
+        }
+      },
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/zip' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${moduleTitle || 'module'}.zip`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+  },
 };
 
 export default moduleService;
