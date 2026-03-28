@@ -767,7 +767,7 @@ export default function AdminModulesPage() {
                                         {selectedModule.learningOutcomes.map((outcome, i) => (
                                             <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
                                                 <Icons.CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
-                                                {outcome}
+                                                <span dangerouslySetInnerHTML={{ __html: outcome }} />
                                             </li>
                                         ))}
                                     </ul>

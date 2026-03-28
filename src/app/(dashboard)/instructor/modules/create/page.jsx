@@ -9,6 +9,7 @@ import categoryService from '@/lib/api/categoryService';
 import { useDraft } from '@/hooks/useDraft';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
+import ResourceUploader from '@/components/ui/ResourceUploader';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
 import InteractiveCodeEditor from '@/components/student/InteractiveCodeEditor';
 
@@ -69,11 +70,31 @@ function BulletList({ label, hint, values, onChange, placeholder, required }) {
 }
 
 /** Resource entry — name, URL, description, type */
-function ResourceList({ label, hint, values, onChange }) {
+function ResourceList({ label, hint, values = [], onChange }) {
   const blank = () => ({ url: '', name: '', description: '', fileType: '' });
   const add = () => onChange([...values, blank()]);
   const update = (i, f, v) => { const n = [...values]; n[i] = { ...n[i], [f]: v }; onChange(n); };
   const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
+
+  const mapExtensionToType = (fileName) => {
+    const ext = (fileName || '').split('.').pop()?.toLowerCase();
+    if (!ext) return 'other';
+    if (['pdf'].includes(ext)) return 'pdf';
+    if (['doc', 'docx'].includes(ext)) return 'notebook';
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return 'dataset';
+    if (['ppt', 'pptx'].includes(ext)) return 'dataset';
+    return 'other';
+  };
+
+  const handleUploadResources = (uploadedResources) => {
+    const mapped = (uploadedResources || []).map((r) => ({
+      url: r.url || (typeof r === 'string' ? r : ''),
+      name: r.name || r.originalName || (typeof r === 'string' ? r.split('/').pop() : '') || 'Resource',
+      description: r.description || '',
+      fileType: r.fileType || mapExtensionToType(r.name || r.originalName || r.url),
+    }));
+    onChange(mapped);
+  };
 
   return (
     <div className="space-y-3">
@@ -81,13 +102,38 @@ function ResourceList({ label, hint, values, onChange }) {
         <Label className="font-semibold">{label}</Label>
         {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
       </div>
+      <div className="mb-3">
+        <ResourceUploader value={values} onChange={handleUploadResources} label="Upload documents" />
+      </div>
       {values.map((r, i) => (
         <div key={i} className="border rounded-xl p-4 space-y-3 bg-gray-50/50">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
-            <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)}>
-              <Icons.Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {r.url && (() => {
+                const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
+                const isPdf = ext === 'pdf';
+                const href = isPdf ? r.url : r.url.replace('/upload/', '/upload/fl_attachment/');
+                return (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    {...(!isPdf && { download: r.name })}
+                    className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                    title={isPdf ? 'Open PDF' : 'Download'}
+                  >
+                    {isPdf
+                      ? <Icons.ExternalLink className="w-3.5 h-3.5" />
+                      : <Icons.Download className="w-3.5 h-3.5" />
+                    }
+                  </a>
+                );
+              })()}
+              <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)}>
+                <Icons.Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -310,6 +356,37 @@ function ModulePreview({ form, onClose }) {
               )}
             </div>
 
+            {/* Module-level resources in sidebar */}
+            {(form.moduleResources || []).length > 0 && (
+              <div className="px-2 py-3 border-b border-gray-200">
+                <p className="text-[10px] font-semibold text-gray-400 uppercase px-2 mb-2">Module Resources</p>
+                <div className="space-y-1">
+                  {(form.moduleResources || []).map((r, i) => {
+                    const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
+                    const isPdf = ext === 'pdf';
+                    const href = isPdf ? r.url : r.url?.replace('/upload/', '/upload/fl_attachment/');
+                    return (
+                      <a
+                        key={i}
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        {...(!isPdf && { download: r.name })}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-teal-50 text-xs text-gray-700 hover:text-teal-800 transition-colors"
+                      >
+                        <Icons.FileText className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />
+                        <span className="truncate flex-1">{r.name}</span>
+                        {isPdf
+                          ? <Icons.ExternalLink className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                          : <Icons.Download className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                        }
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="p-2">
               <p className="text-[10px] font-semibold text-gray-400 uppercase px-2 mb-1">Lessons</p>
               {lessons.length === 0 ? (
@@ -320,8 +397,8 @@ function ModulePreview({ form, onClose }) {
                     key={i}
                     onClick={() => { setSelectedLesson(i); setSelectedSlide(0); }}
                     className={`w-full text-left px-3 py-2.5 rounded-lg mb-1 transition-colors ${selectedLesson === i
-                        ? 'bg-blue-600 text-white'
-                        : 'hover:bg-gray-200 text-gray-700'
+                      ? 'bg-blue-600 text-white'
+                      : 'hover:bg-gray-200 text-gray-700'
                       }`}
                   >
                     <div className="flex items-center gap-2">
@@ -398,8 +475,8 @@ function ModulePreview({ form, onClose }) {
                             onClick={() => setSelectedSlide(si)}
                             title={`Slide ${si + 1}`}
                             className={`rounded-full transition-all ${selectedSlide === si
-                                ? 'w-6 h-2.5 bg-blue-600'
-                                : 'w-2.5 h-2.5 bg-gray-300 hover:bg-blue-300'
+                              ? 'w-6 h-2.5 bg-blue-600'
+                              : 'w-2.5 h-2.5 bg-gray-300 hover:bg-blue-300'
                               }`}
                           />
                         ))}
@@ -452,23 +529,42 @@ function ModulePreview({ form, onClose }) {
                 )}
 
                 {/* Resources */}
-                {(lesson.resources || []).length > 0 && (
+                {(lesson.lessonResources || lesson.resources || []).length > 0 && (
                   <div className="mx-8 mb-6 border border-teal-200 rounded-xl overflow-hidden">
                     <div className="flex items-center gap-2 px-4 py-3 bg-teal-50 border-b border-teal-100">
                       <Icons.Link className="w-4 h-4 text-teal-600" />
                       <span className="text-sm font-semibold text-teal-800">Lesson Resources</span>
                     </div>
                     <div className="divide-y divide-teal-50">
-                      {lesson.resources.map((r, i) => (
+                      {(lesson.lessonResources || lesson.resources || []).map((r, i) => (
                         <div key={i} className="flex items-center gap-3 px-4 py-3">
                           <Icons.FileText className="w-4 h-4 text-teal-500 flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium text-gray-800 truncate">{r.name}</p>
                             {r.description && <p className="text-xs text-gray-500">{r.description}</p>}
                           </div>
-                          {r.url && (
-                            <Badge variant="secondary" className="text-xs flex-shrink-0">{r.fileType || 'link'}</Badge>
-                          )}
+                          <div className="flex items-center gap-2 flex-shrink-0">
+                            {r.fileType && <Badge variant="secondary" className="text-xs">{r.fileType}</Badge>}
+                            {r.url && (() => {
+                              const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
+                              const isPdf = ext === 'pdf';
+                              const href = isPdf ? r.url : r.url.replace('/upload/', '/upload/fl_attachment/');
+                              return (
+                                <a
+                                  href={href}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  {...(!isPdf && { download: r.name })}
+                                  className="text-teal-500 hover:text-teal-700"
+                                >
+                                  {isPdf
+                                    ? <Icons.ExternalLink className="w-3.5 h-3.5" />
+                                    : <Icons.Download className="w-3.5 h-3.5" />
+                                  }
+                                </a>
+                              );
+                            })()}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -682,7 +778,7 @@ export default function CreateModulePage() {
     try {
       const stored = localStorage.getItem('instructor_draft_module_id');
       if (stored) setSavedModuleId(stored);
-    } catch {}
+    } catch { }
   }, []);
 
   useEffect(() => {
@@ -734,7 +830,7 @@ export default function CreateModulePage() {
         moduleId = created?._id || created?.id;
         if (moduleId) {
           setSavedModuleId(moduleId);
-          try { localStorage.setItem('instructor_draft_module_id', moduleId); } catch {}
+          try { localStorage.setItem('instructor_draft_module_id', moduleId); } catch { }
         }
       }
       toast.success('Draft saved! You can find it under My Modules → Drafts.');
@@ -764,7 +860,7 @@ export default function CreateModulePage() {
         newId = created?._id || created?.id;
       }
       discardDraft();
-      try { localStorage.removeItem('instructor_draft_module_id'); } catch {}
+      try { localStorage.removeItem('instructor_draft_module_id'); } catch { }
       setSavedModuleId(null);
       toast.success('Module created successfully!');
       // Small delay lets React flush state updates and Quill disable itself
@@ -795,7 +891,7 @@ export default function CreateModulePage() {
     discardDraft();
     setShowDraftBanner(false);
     setSavedModuleId(null);
-    try { localStorage.removeItem('instructor_draft_module_id'); } catch {}
+    try { localStorage.removeItem('instructor_draft_module_id'); } catch { }
   };
 
   // ── Step content ─────────────────────────────────────────────────────────
@@ -1222,8 +1318,8 @@ export default function CreateModulePage() {
                   key={s.id}
                   onClick={() => setStep(i)}
                   className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left transition-all ${active ? 'bg-blue-600 text-white shadow-sm' :
-                      done ? 'bg-green-50 text-green-800 hover:bg-green-100' :
-                        'text-gray-500 hover:bg-gray-100'
+                    done ? 'bg-green-50 text-green-800 hover:bg-green-100' :
+                      'text-gray-500 hover:bg-gray-100'
                     }`}
                 >
                   <div className="flex-shrink-0 mt-0.5">

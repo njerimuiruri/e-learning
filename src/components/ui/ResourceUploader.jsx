@@ -41,13 +41,14 @@ export default function ResourceUploader({ value = [], onChange, label = 'Lesson
         onChange(updated);
     };
 
-    const getFileIcon = (name) => {
-        const ext = name?.split('.').pop()?.toLowerCase();
+    const getFileIcon = (nameOrUrl) => {
+        const name = typeof nameOrUrl === 'string' ? nameOrUrl : '';
+        const ext = name.split('.').pop()?.toLowerCase();
         switch (ext) {
             case 'pdf': return <Icons.FileText className="w-4 h-4 text-red-500" />;
             case 'doc': case 'docx': return <Icons.FileText className="w-4 h-4 text-blue-500" />;
             case 'ppt': case 'pptx': return <Icons.Presentation className="w-4 h-4 text-orange-500" />;
-            case 'xls': case 'xlsx': return <Icons.Table className="w-4 h-4 text-green-500" />;
+            case 'xls': case 'xlsx': case 'csv': return <Icons.Table className="w-4 h-4 text-green-500" />;
             case 'zip': return <Icons.Archive className="w-4 h-4 text-purple-500" />;
             default: return <Icons.File className="w-4 h-4 text-gray-500" />;
         }
@@ -69,15 +70,28 @@ export default function ResourceUploader({ value = [], onChange, label = 'Lesson
                             <span className="text-sm text-gray-700 flex-1 truncate">
                                 {typeof resource === 'string' ? resource : resource.name}
                             </span>
-                            <a
-                                href={typeof resource === 'string' ? resource : resource.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <Icons.ExternalLink className="w-3.5 h-3.5" />
-                            </a>
+                            {(() => {
+                                const resUrl = typeof resource === 'string' ? resource : resource.url;
+                                const resName = typeof resource === 'string' ? resource : resource.name;
+                                const ext = (resName || resUrl || '').split('.').pop()?.toLowerCase();
+                                const isPdf = ext === 'pdf';
+                                const href = isPdf ? resUrl : resUrl?.replace('/upload/', '/upload/fl_attachment/');
+                                return (
+                                    <a
+                                        href={href}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        {...(!isPdf && { download: resName })}
+                                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {isPdf
+                                            ? <Icons.ExternalLink className="w-3.5 h-3.5" />
+                                            : <Icons.Download className="w-3.5 h-3.5" />
+                                        }
+                                    </a>
+                                );
+                            })()}
                             <button
                                 onClick={() => removeResource(index)}
                                 className="p-1 text-gray-400 hover:text-red-500 transition-colors"
@@ -107,7 +121,7 @@ export default function ResourceUploader({ value = [], onChange, label = 'Lesson
                         <p className="text-sm text-gray-600">
                             Click to upload resources
                         </p>
-                        <p className="text-xs text-gray-400">PDF, DOC, PPT, XLS, ZIP - Max 20MB each</p>
+                        <p className="text-xs text-gray-400">CSV, XLSX, PDF, DOC/DOCX, PPT/PPTX, TXT, ZIP - Max 20MB each</p>
                     </div>
                 )}
             </button>
@@ -116,7 +130,7 @@ export default function ResourceUploader({ value = [], onChange, label = 'Lesson
                 ref={inputRef}
                 type="file"
                 multiple
-                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"
+                accept=".csv,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"
                 className="hidden"
                 onChange={(e) => handleFiles(e.target.files)}
             />

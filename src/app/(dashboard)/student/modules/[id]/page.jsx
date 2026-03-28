@@ -344,6 +344,36 @@ function ModuleLearningContent() {
                         />
                     </div>
 
+                    {/* Resources quick-access in sidebar */}
+                    {(() => {
+                        const lessonRes = currentLesson ? (currentLesson.lessonResources || currentLesson.resources || []) : [];
+                        const moduleRes = moduleData?.resources || moduleData?.moduleResources || [];
+                        const total = lessonRes.length + moduleRes.length;
+                        if (total === 0 || showFinalAssessment) return null;
+                        return (
+                            <div className="flex-shrink-0 px-3 pb-2 border-b border-gray-100">
+                                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1.5">Resources</p>
+                                <div className="space-y-1">
+                                    {lessonRes.length > 0 && (
+                                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-[#021d49]/5 text-xs text-[#021d49] font-medium">
+                                            <Icons.Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
+                                            <span className="flex-1 truncate">Lesson Resources</span>
+                                            <span className="bg-[#021d49]/10 text-[#021d49] px-1.5 py-0.5 rounded-full text-[10px] font-bold">{lessonRes.length}</span>
+                                        </div>
+                                    )}
+                                    {moduleRes.length > 0 && (
+                                        <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-teal-50 text-xs text-teal-700 font-medium">
+                                            <Icons.FolderOpen className="w-3.5 h-3.5 flex-shrink-0" />
+                                            <span className="flex-1 truncate">Module Resources</span>
+                                            <span className="bg-teal-200 text-teal-800 px-1.5 py-0.5 rounded-full text-[10px] font-bold">{moduleRes.length}</span>
+                                        </div>
+                                    )}
+                                    <p className="text-[10px] text-gray-400 px-1 pt-0.5">Scroll down in the lesson to access files</p>
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                     {/* Discussion Forum + Download */}
                     <div className="flex-shrink-0 p-3 border-t border-gray-100 space-y-2">
                         <button
@@ -563,56 +593,6 @@ function ModuleLearningContent() {
                                                 </div>
                                             )}
 
-                                            {/* Resources */}
-                                            {currentLesson.resources?.length > 0 && (
-                                                <div className="bg-white rounded-2xl border-2 border-gray-100 p-6 mb-6">
-                                                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                                        <Icons.Paperclip className="w-5 h-5 text-[#021d49]" />
-                                                        Lesson Resources
-                                                        <span className="ml-auto text-xs font-normal text-gray-400">
-                                                            {currentLesson.resources.length} file{currentLesson.resources.length !== 1 ? 's' : ''}
-                                                        </span>
-                                                    </h3>
-                                                    <div className="space-y-2">
-                                                        {currentLesson.resources.map((res, idx) => {
-                                                            const url = typeof res === 'string' ? res : res.url;
-                                                            const name = typeof res === 'string'
-                                                                ? (url.split('/').pop() || `Resource ${idx + 1}`)
-                                                                : (res.name || url.split('/').pop() || `Resource ${idx + 1}`);
-                                                            const ext = (typeof res === 'string' ? res : (res.fileType || res.url))
-                                                                ?.split('.').pop()?.toLowerCase() || '';
-
-                                                            // Color by file type
-                                                            const iconColor =
-                                                                ext === 'pdf' ? 'text-red-600 bg-red-50' :
-                                                                ext === 'pptx' || ext === 'ppt' ? 'text-orange-600 bg-orange-50' :
-                                                                ext === 'xlsx' || ext === 'xls' ? 'text-green-600 bg-green-50' :
-                                                                ext === 'docx' || ext === 'doc' ? 'text-blue-600 bg-blue-50' :
-                                                                ext === 'zip' ? 'text-purple-600 bg-purple-50' :
-                                                                'text-gray-600 bg-gray-100';
-
-                                                            return (
-                                                                <a
-                                                                    key={idx}
-                                                                    href={url}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-[#021d49]/40 hover:bg-blue-50 transition-all group"
-                                                                >
-                                                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${iconColor}`}>
-                                                                        <Icons.FileText className="w-4 h-4" />
-                                                                    </div>
-                                                                    <span className="flex-1 text-sm font-medium text-gray-800 group-hover:text-[#021d49] truncate">
-                                                                        {name}
-                                                                    </span>
-                                                                    <Icons.Download className="w-4 h-4 text-gray-400 group-hover:text-[#021d49] flex-shrink-0" />
-                                                                </a>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </div>
-                                            )}
-
                                             {/* Tasks */}
                                             {currentLesson.tasks?.length > 0 && (
                                                 <div className="bg-white rounded-2xl border-2 border-blue-100 p-6 mb-6">
@@ -716,6 +696,101 @@ function ModuleLearningContent() {
                                             </div>
                                         </>
                                     )}
+
+                                    {/* ── Resources: shown for ALL lesson types (slides + non-slides) ── */}
+                                    {!showLessonAssessment && (() => {
+                                        const lessonRes = currentLesson.lessonResources || currentLesson.resources || [];
+                                        const moduleRes = moduleData?.resources || moduleData?.moduleResources || [];
+                                        if (lessonRes.length === 0 && moduleRes.length === 0) return null;
+                                        const iconColor = (ext) =>
+                                            ext === 'pdf' ? 'text-red-600 bg-red-50' :
+                                            ext === 'pptx' || ext === 'ppt' ? 'text-orange-600 bg-orange-50' :
+                                            ext === 'xlsx' || ext === 'xls' || ext === 'csv' ? 'text-green-600 bg-green-50' :
+                                            ext === 'docx' || ext === 'doc' ? 'text-blue-600 bg-blue-50' :
+                                            ext === 'zip' ? 'text-purple-600 bg-purple-50' : 'text-gray-600 bg-gray-100';
+                                        return (
+                                            <div className="space-y-4 mt-6">
+                                                {/* Lesson Resources */}
+                                                {lessonRes.length > 0 && (
+                                                    <div className="bg-white rounded-2xl border-2 border-[#021d49]/10 p-6">
+                                                        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                                            <Icons.Paperclip className="w-5 h-5 text-[#021d49]" />
+                                                            Lesson Resources
+                                                            <span className="ml-auto text-xs font-normal text-gray-400">
+                                                                {lessonRes.length} file{lessonRes.length !== 1 ? 's' : ''}
+                                                            </span>
+                                                        </h3>
+                                                        <div className="space-y-2">
+                                                            {lessonRes.map((res, idx) => {
+                                                                const url = typeof res === 'string' ? res : res.url;
+                                                                const name = typeof res === 'string'
+                                                                    ? (url?.split('/').pop() || `Resource ${idx + 1}`)
+                                                                    : (res.name || url?.split('/').pop() || `Resource ${idx + 1}`);
+                                                                const ext = (res.fileType || name || url || '').split('.').pop()?.toLowerCase() || '';
+                                                                const isPdf = ext === 'pdf';
+                                                                return (
+                                                                    <a key={idx}
+                                                                        href={isPdf ? url : url?.replace('/upload/', '/upload/fl_attachment/')}
+                                                                        {...(!isPdf && { download: name })}
+                                                                        target="_blank" rel="noopener noreferrer"
+                                                                        className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-[#021d49]/40 hover:bg-blue-50 transition-all group"
+                                                                    >
+                                                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${iconColor(ext)}`}>
+                                                                            <Icons.FileText className="w-4 h-4" />
+                                                                        </div>
+                                                                        <span className="flex-1 text-sm font-medium text-gray-800 group-hover:text-[#021d49] truncate">{name}</span>
+                                                                        {isPdf
+                                                                            ? <Icons.ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-[#021d49] flex-shrink-0" />
+                                                                            : <Icons.Download className="w-4 h-4 text-gray-400 group-hover:text-[#021d49] flex-shrink-0" />
+                                                                        }
+                                                                    </a>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {/* Module Resources */}
+                                                {moduleRes.length > 0 && (
+                                                    <div className="bg-white rounded-2xl border-2 border-teal-100 p-6">
+                                                        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                                            <Icons.FolderOpen className="w-5 h-5 text-teal-600" />
+                                                            Module Resources
+                                                            <span className="ml-auto text-xs font-normal text-gray-400">
+                                                                {moduleRes.length} file{moduleRes.length !== 1 ? 's' : ''}
+                                                            </span>
+                                                        </h3>
+                                                        <div className="space-y-2">
+                                                            {moduleRes.map((res, idx) => {
+                                                                const url = typeof res === 'string' ? res : res.url;
+                                                                const name = typeof res === 'string'
+                                                                    ? (url?.split('/').pop() || `Resource ${idx + 1}`)
+                                                                    : (res.name || res.originalName || url?.split('/').pop() || `Resource ${idx + 1}`);
+                                                                const ext = (res.fileType || name || url || '').split('.').pop()?.toLowerCase() || '';
+                                                                const isPdf = ext === 'pdf';
+                                                                return (
+                                                                    <a key={idx}
+                                                                        href={isPdf ? url : url?.replace('/upload/', '/upload/fl_attachment/')}
+                                                                        {...(!isPdf && { download: name })}
+                                                                        target="_blank" rel="noopener noreferrer"
+                                                                        className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-teal-400/60 hover:bg-teal-50 transition-all group"
+                                                                    >
+                                                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${iconColor(ext)}`}>
+                                                                            <Icons.FileText className="w-4 h-4" />
+                                                                        </div>
+                                                                        <span className="flex-1 text-sm font-medium text-gray-800 group-hover:text-teal-800 truncate">{name}</span>
+                                                                        {isPdf
+                                                                            ? <Icons.ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-teal-700 flex-shrink-0" />
+                                                                            : <Icons.Download className="w-4 h-4 text-gray-400 group-hover:text-teal-700 flex-shrink-0" />
+                                                                        }
+                                                                    </a>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </>
                             )}
                         </div>
@@ -753,24 +828,24 @@ function LessonSidebarList({
                             ${isCurrent
                                 ? 'bg-[#021d49] shadow-md'
                                 : completed
-                                ? 'bg-green-50 hover:bg-green-100 border border-green-200'
-                                : accessible
-                                ? 'hover:bg-gray-100 border border-transparent'
-                                : 'opacity-40 cursor-not-allowed border border-transparent'}
+                                    ? 'bg-green-50 hover:bg-green-100 border border-green-200'
+                                    : accessible
+                                        ? 'hover:bg-gray-100 border border-transparent'
+                                        : 'opacity-40 cursor-not-allowed border border-transparent'}
                         `}
                     >
                         {/* Status icon */}
                         <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold mt-0.5
                             ${isCurrent ? 'bg-white text-[#021d49]'
-                              : completed ? 'bg-green-500 text-white'
-                              : isLocked ? 'bg-gray-200 text-gray-400'
-                              : 'bg-gray-200 text-gray-600'}
+                                : completed ? 'bg-green-500 text-white'
+                                    : isLocked ? 'bg-gray-200 text-gray-400'
+                                        : 'bg-gray-200 text-gray-600'}
                         `}>
                             {completed
                                 ? <Icons.CheckCircle className="w-4 h-4" />
                                 : isLocked
-                                ? <Icons.Lock className="w-3 h-3" />
-                                : <span>{idx + 1}</span>
+                                    ? <Icons.Lock className="w-3 h-3" />
+                                    : <span>{idx + 1}</span>
                             }
                         </div>
 
@@ -778,9 +853,9 @@ function LessonSidebarList({
                         <div className="flex-1 min-w-0">
                             <p className={`text-sm font-semibold leading-snug break-words
                                 ${isCurrent ? 'text-white'
-                                  : completed ? 'text-green-900'
-                                  : isLocked ? 'text-gray-400'
-                                  : 'text-gray-800'}
+                                    : completed ? 'text-green-900'
+                                        : isLocked ? 'text-gray-400'
+                                            : 'text-gray-800'}
                             `}>
                                 {lesson.title || `Lesson ${idx + 1}`}
                             </p>
@@ -793,8 +868,8 @@ function LessonSidebarList({
                                 {hasQuiz && (
                                     <span className={`text-xs flex items-center gap-0.5
                                         ${isCurrent ? 'text-blue-200'
-                                          : lessonProg?.assessmentPassed ? 'text-green-600'
-                                          : 'text-indigo-500'}
+                                            : lessonProg?.assessmentPassed ? 'text-green-600'
+                                                : 'text-indigo-500'}
                                     `}>
                                         <Icons.FileQuestion className="w-3 h-3" />
                                         {lessonProg?.assessmentPassed ? 'Quiz passed' : 'Has quiz'}
@@ -827,15 +902,15 @@ function LessonSidebarList({
                 >
                     <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5
                         ${showFinalAssessment ? 'bg-white text-indigo-600'
-                          : enrollment.finalAssessmentPassed ? 'bg-green-500 text-white'
-                          : allLessonsCompleted ? 'bg-indigo-200 text-indigo-700'
-                          : 'bg-gray-200 text-gray-400'}
+                            : enrollment.finalAssessmentPassed ? 'bg-green-500 text-white'
+                                : allLessonsCompleted ? 'bg-indigo-200 text-indigo-700'
+                                    : 'bg-gray-200 text-gray-400'}
                     `}>
                         {enrollment.finalAssessmentPassed
                             ? <Icons.CheckCircle className="w-4 h-4" />
                             : allLessonsCompleted
-                            ? <Icons.Target className="w-3.5 h-3.5" />
-                            : <Icons.Lock className="w-3 h-3" />
+                                ? <Icons.Target className="w-3.5 h-3.5" />
+                                : <Icons.Lock className="w-3 h-3" />
                         }
                     </div>
                     <div className="flex-1 min-w-0">
@@ -1269,15 +1344,13 @@ function QuestionRenderer({ question, index, answer, onChange }) {
     const correctOptionText = isChecked ? getCorrectText(question) : null;
 
     return (
-        <div className={`rounded-xl border-2 p-5 transition-all ${
-            isChecked
-                ? isCorrect ? 'border-green-300 bg-green-50' : 'border-red-200 bg-red-50'
-                : 'bg-gray-50 border-gray-200'
-        }`}>
+        <div className={`rounded-xl border-2 p-5 transition-all ${isChecked
+            ? isCorrect ? 'border-green-300 bg-green-50' : 'border-red-200 bg-red-50'
+            : 'bg-gray-50 border-gray-200'
+            }`}>
             <div className="flex items-start gap-3 mb-4">
-                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white ${
-                    isChecked ? (isCorrect ? 'bg-green-500' : 'bg-red-500') : 'bg-[#021d49]'
-                }`}>
+                <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white ${isChecked ? (isCorrect ? 'bg-green-500' : 'bg-red-500') : 'bg-[#021d49]'
+                    }`}>
                     {isChecked ? (isCorrect ? '✓' : '✗') : index + 1}
                 </span>
                 <div className="flex-1">
@@ -1306,17 +1379,16 @@ function QuestionRenderer({ question, index, answer, onChange }) {
                         return (
                             <label
                                 key={optIdx}
-                                className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${isTrueFalse ? 'flex-1 justify-center' : ''} ${
-                                    isChecked
-                                        ? isThisCorrect
-                                            ? 'border-green-400 bg-green-100 text-green-900'
-                                            : isThisWrong
+                                className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition-all ${isTrueFalse ? 'flex-1 justify-center' : ''} ${isChecked
+                                    ? isThisCorrect
+                                        ? 'border-green-400 bg-green-100 text-green-900'
+                                        : isThisWrong
                                             ? 'border-red-400 bg-red-100 text-red-900'
                                             : 'border-gray-200 bg-white text-gray-400 opacity-60'
-                                        : isSelected
+                                    : isSelected
                                         ? 'border-[#021d49] bg-blue-50'
                                         : 'border-gray-200 hover:border-gray-300'
-                                }`}
+                                    }`}
                             >
                                 <input
                                     type="radio"
@@ -1363,9 +1435,8 @@ function QuestionRenderer({ question, index, answer, onChange }) {
 
             {/* Feedback + explanation */}
             {isChecked && (
-                <div className={`mt-4 ml-10 rounded-lg p-3 border ${
-                    isCorrect ? 'bg-green-100 border-green-300' : 'bg-red-100 border-red-300'
-                }`}>
+                <div className={`mt-4 ml-10 rounded-lg p-3 border ${isCorrect ? 'bg-green-100 border-green-300' : 'bg-red-100 border-red-300'
+                    }`}>
                     <p className={`text-sm font-bold mb-1 ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
                         {isCorrect ? '✓ Correct!' : '✗ Incorrect'}
                         {!isCorrect && correctOptionText && (
@@ -1400,11 +1471,10 @@ function StarRatingInput({ value, onChange }) {
                         className="focus:outline-none transition-transform hover:scale-110"
                     >
                         <Icons.Star
-                            className={`w-9 h-9 transition-colors ${
-                                star <= (hovered || value)
-                                    ? 'fill-amber-400 text-amber-400'
-                                    : 'text-gray-300'
-                            }`}
+                            className={`w-9 h-9 transition-colors ${star <= (hovered || value)
+                                ? 'fill-amber-400 text-amber-400'
+                                : 'text-gray-300'
+                                }`}
                         />
                     </button>
                 ))}
@@ -1437,7 +1507,7 @@ function CompletionScreen({ enrollment, moduleId, router }) {
                     setReview(res.data.review || '');
                 }
             })
-            .catch(() => {});
+            .catch(() => { });
     }, [moduleId]);
 
     const handleSubmitRating = async () => {

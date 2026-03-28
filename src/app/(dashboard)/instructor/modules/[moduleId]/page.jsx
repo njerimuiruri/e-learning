@@ -122,6 +122,20 @@ export default function ModuleDetailPage() {
         );
     };
 
+    const normalizeResourceArray = (value) => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string' && value.trim().length > 0) {
+            try {
+                const parsed = JSON.parse(value);
+                if (Array.isArray(parsed)) return parsed;
+            } catch {
+                return [value];
+            }
+            return [value];
+        }
+        return [];
+    };
+
     const getLevelBadge = (level) => {
         const badges = {
             beginner: { color: 'bg-blue-50 text-blue-600 border-blue-200', label: 'Beginner' },
@@ -423,9 +437,9 @@ export default function ModuleDetailPage() {
                                                                         <Icons.Video className="w-3 h-3" /> Video
                                                                     </span>
                                                                 )}
-                                                                {lesson.resources?.length > 0 && (
+                                                                {(lesson.lessonResources || lesson.resources || []).length > 0 && (
                                                                     <span className="text-xs text-purple-600 flex items-center gap-1">
-                                                                        <Icons.Paperclip className="w-3 h-3" /> {lesson.resources.length} resource(s)
+                                                                        <Icons.Paperclip className="w-3 h-3" /> {(lesson.lessonResources || lesson.resources || []).length} resource(s)
                                                                     </span>
                                                                 )}
                                                                 {lesson.assessment?.questions?.length > 0 && (
@@ -441,7 +455,7 @@ export default function ModuleDetailPage() {
                                                 {expandedLessons[idx] && (
                                                     <div className="border-t border-gray-200 p-4 bg-gray-50 space-y-3">
                                                         {lesson.description && (
-                                                            <p className="text-sm text-gray-600">{lesson.description}</p>
+                                                            <div className="prose prose-sm max-w-none text-gray-600" dangerouslySetInnerHTML={{ __html: lesson.description }} />
                                                         )}
                                                         {lesson.content && (
                                                             <div className="prose prose-sm max-w-none bg-white rounded-lg p-4 border" dangerouslySetInnerHTML={{ __html: lesson.content }} />
@@ -452,22 +466,30 @@ export default function ModuleDetailPage() {
                                                                 <a href={lesson.videoUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">View Video</a>
                                                             </div>
                                                         )}
-                                                        {lesson.resources?.length > 0 && (
+                                                        {(lesson.lessonResources || lesson.resources || []).length > 0 && (
                                                             <div>
                                                                 <p className="text-sm font-medium text-gray-700 mb-2">Resources:</p>
                                                                 <div className="flex flex-wrap gap-2">
-                                                                    {lesson.resources.map((resource, rIdx) => (
-                                                                        <a
-                                                                            key={rIdx}
-                                                                            href={typeof resource === 'string' ? resource : resource.url}
-                                                                            target="_blank"
-                                                                            rel="noopener noreferrer"
-                                                                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-50"
-                                                                        >
-                                                                            <Icons.Download className="w-3 h-3" />
-                                                                            {typeof resource === 'string' ? `Resource ${rIdx + 1}` : resource.originalName}
-                                                                        </a>
-                                                                    ))}
+                                                                    {(lesson.lessonResources || lesson.resources || []).map((resource, rIdx) => {
+                                                                        const url = typeof resource === 'string' ? resource : resource.url;
+                                                                        const name = typeof resource === 'string' ? `Resource ${rIdx + 1}` : (resource.name || resource.originalName || resource.url?.split('/').pop() || `Resource ${rIdx + 1}`);
+                                                                        const ext = (name || url || '').split('.').pop()?.toLowerCase();
+                                                                        const isPdf = ext === 'pdf';
+                                                                        const href = isPdf ? url : url?.replace('/upload/', '/upload/fl_attachment/');
+                                                                        return url ? (
+                                                                            <a
+                                                                                key={rIdx}
+                                                                                href={href}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                {...(!isPdf && { download: name })}
+                                                                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-50"
+                                                                            >
+                                                                                {isPdf ? <Icons.ExternalLink className="w-3 h-3" /> : <Icons.Download className="w-3 h-3" />}
+                                                                                {name}
+                                                                            </a>
+                                                                        ) : null;
+                                                                    })}
                                                                 </div>
                                                             </div>
                                                         )}
@@ -489,6 +511,53 @@ export default function ModuleDetailPage() {
                                     <p className="text-gray-500 text-sm">No lessons added yet.</p>
                                 )}
                             </div>
+
+                            {/* Module Resources */}
+                            {(module?.resources?.length > 0 || module?.moduleResources?.length > 0) && (() => {
+                                const resources = module?.resources || module?.moduleResources || [];
+                                return (
+                                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                                        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                                            <Icons.FolderOpen className="w-5 h-5 text-emerald-600" /> Module Resources ({resources.length})
+                                        </h3>
+                                        <div className="space-y-2">
+                                            {resources.map((res, idx) => {
+                                                const url = typeof res === 'string' ? res : res.url;
+                                                const name = typeof res === 'string'
+                                                    ? (url?.split('/').pop() || `Resource ${idx + 1}`)
+                                                    : (res.name || res.originalName || url?.split('/').pop() || `Resource ${idx + 1}`);
+                                                const desc = typeof res === 'object' ? res.description : '';
+                                                const fileType = typeof res === 'object' ? (res.fileType || '') : '';
+                                                const ext = (fileType || url || '').split('.').pop()?.toLowerCase() || '';
+                                                const isPdf = ext === 'pdf';
+                                                return url ? (
+                                                    <a
+                                                        key={idx}
+                                                        href={isPdf ? url : url.replace('/upload/', '/upload/fl_attachment/')}
+                                                        {...(!isPdf && { download: name })}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 hover:border-emerald-400/60 hover:bg-emerald-50 transition-all group"
+                                                    >
+                                                        <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+                                                            <Icons.FileText className="w-4 h-4 text-emerald-600" />
+                                                        </div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <span className="text-sm font-medium text-gray-800 group-hover:text-emerald-800 truncate block">{name}</span>
+                                                            {desc && <span className="text-xs text-gray-500 truncate block">{desc}</span>}
+                                                        </div>
+                                                        {fileType && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded flex-shrink-0">{fileType}</span>}
+                                                        {isPdf
+                                                            ? <Icons.ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-emerald-700 flex-shrink-0" />
+                                                            : <Icons.Download className="w-4 h-4 text-gray-400 group-hover:text-emerald-700 flex-shrink-0" />
+                                                        }
+                                                    </a>
+                                                ) : null;
+                                            })}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Final Assessment */}
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -603,16 +672,16 @@ export default function ModuleDetailPage() {
                             </div>
 
                             {/* Learning Outcomes */}
-                            {module.learningOutcomes?.length > 0 && (
+                            {normalizeResourceArray(module?.learningOutcomes).length > 0 && (
                                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                                     <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                                         <Icons.Target className="w-4 h-4 text-emerald-600" /> Learning Outcomes
                                     </h3>
                                     <ul className="space-y-2">
-                                        {module.learningOutcomes.map((outcome, idx) => (
+                                        {normalizeResourceArray(module?.learningOutcomes).map((outcome, idx) => (
                                             <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
                                                 <Icons.Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
-                                                {outcome}
+                                                <span dangerouslySetInnerHTML={{ __html: outcome }} />
                                             </li>
                                         ))}
                                     </ul>
@@ -620,13 +689,13 @@ export default function ModuleDetailPage() {
                             )}
 
                             {/* Objectives */}
-                            {module.moduleObjectives?.length > 0 && (
+                            {normalizeResourceArray(module?.moduleObjectives).length > 0 && (
                                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                                     <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                                         <Icons.ListChecks className="w-4 h-4 text-emerald-600" /> Objectives
                                     </h3>
                                     <ul className="space-y-2">
-                                        {module.moduleObjectives.map((obj, idx) => (
+                                        {normalizeResourceArray(module?.moduleObjectives).map((obj, idx) => (
                                             <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
                                                 <Icons.Check className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
                                                 {obj}
@@ -637,13 +706,13 @@ export default function ModuleDetailPage() {
                             )}
 
                             {/* Target Audience */}
-                            {module.targetAudience?.length > 0 && (
+                            {normalizeResourceArray(module?.targetAudience).length > 0 && (
                                 <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                                     <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
                                         <Icons.Users className="w-4 h-4 text-emerald-600" /> Target Audience
                                     </h3>
                                     <ul className="space-y-2">
-                                        {module.targetAudience.map((audience, idx) => (
+                                        {normalizeResourceArray(module?.targetAudience).map((audience, idx) => (
                                             <li key={idx} className="flex items-start gap-2 text-sm text-gray-700">
                                                 <Icons.User className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
                                                 {audience}

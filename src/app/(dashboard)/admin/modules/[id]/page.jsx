@@ -12,11 +12,11 @@ function stripHtml(html) {
 }
 
 const STATUS_BADGE = {
-    draft:     'bg-gray-100 text-gray-700',
+    draft: 'bg-gray-100 text-gray-700',
     submitted: 'bg-yellow-100 text-yellow-700',
-    approved:  'bg-blue-100 text-blue-700',
+    approved: 'bg-blue-100 text-blue-700',
     published: 'bg-green-100 text-green-700',
-    rejected:  'bg-red-100 text-red-700',
+    rejected: 'bg-red-100 text-red-700',
 };
 
 export default function AdminModuleDetailPage() {
@@ -248,11 +248,10 @@ export default function AdminModuleDetailPage() {
                             <button
                                 onClick={handleAction}
                                 disabled={acting}
-                                className={`flex-1 py-3 rounded-xl font-bold text-white transition-all disabled:opacity-60 ${
-                                    actionType === 'approve' ? 'bg-blue-600 hover:bg-blue-700' :
-                                    actionType === 'publish' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                                    'bg-red-600 hover:bg-red-700'
-                                }`}
+                                className={`flex-1 py-3 rounded-xl font-bold text-white transition-all disabled:opacity-60 ${actionType === 'approve' ? 'bg-blue-600 hover:bg-blue-700' :
+                                        actionType === 'publish' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                                            'bg-red-600 hover:bg-red-700'
+                                    }`}
                             >
                                 {acting ? 'Processing...' : `Confirm ${actionType.charAt(0).toUpperCase() + actionType.slice(1)}`}
                             </button>
@@ -342,7 +341,7 @@ export default function AdminModuleDetailPage() {
                                     <h3 className="font-bold text-gray-900">{section.label}</h3>
                                 </div>
                                 <div className="overflow-x-auto">
-                                  <div className="text-gray-700 text-sm leading-relaxed prose max-w-none break-words" dangerouslySetInnerHTML={{ __html: mod[section.key] }} />
+                                    <div className="text-gray-700 text-sm leading-relaxed prose max-w-none break-words" dangerouslySetInnerHTML={{ __html: mod[section.key] }} />
                                 </div>
                             </div>
                         ))}
@@ -375,7 +374,7 @@ export default function AdminModuleDetailPage() {
                                         </ul>
                                     ) : (
                                         <div className="overflow-x-auto">
-                                          <div className="text-gray-700 text-sm leading-relaxed prose max-w-none break-words" dangerouslySetInnerHTML={{ __html: val }} />
+                                            <div className="text-gray-700 text-sm leading-relaxed prose max-w-none break-words" dangerouslySetInnerHTML={{ __html: val }} />
                                         </div>
                                     )}
                                 </div>
@@ -428,7 +427,7 @@ export default function AdminModuleDetailPage() {
                                                                     {topic.learningOutcomes.map((o, oi) => (
                                                                         <li key={oi} className="text-amber-700 flex items-start gap-1.5">
                                                                             <Icons.CheckCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                                                                            <span>{typeof o === 'string' ? o : o.text}</span>
+                                                                            <span dangerouslySetInnerHTML={{ __html: typeof o === 'string' ? o : o.text }} />
                                                                         </li>
                                                                     ))}
                                                                 </ul>
@@ -450,7 +449,7 @@ export default function AdminModuleDetailPage() {
                                                                                 {lesson.duration && <span className="text-xs text-gray-500">{lesson.duration}</span>}
                                                                                 {hasQuiz && <span className="text-xs text-indigo-600 font-medium flex items-center gap-1"><Icons.FileQuestion className="w-3 h-3" /> Quiz ({lesson.assessment.questions.length})</span>}
                                                                                 {hasTasks && <span className="text-xs text-purple-600 font-medium flex items-center gap-1"><Icons.ClipboardList className="w-3 h-3" /> Tasks</span>}
-                                                                                {lesson.resources?.length > 0 && <span className="text-xs text-teal-600 font-medium flex items-center gap-1"><Icons.Paperclip className="w-3 h-3" /> {lesson.resources.length} Resources</span>}
+                                                                                {(lesson.lessonResources || lesson.resources || []).length > 0 && <span className="text-xs text-teal-600 font-medium flex items-center gap-1"><Icons.Paperclip className="w-3 h-3" /> {(lesson.lessonResources || lesson.resources || []).length} Resources</span>}
                                                                             </div>
                                                                         </div>
                                                                         <Icons.ChevronDown className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${isLessonOpen ? 'rotate-180' : ''}`} />
@@ -463,7 +462,7 @@ export default function AdminModuleDetailPage() {
                                                                                 <div>
                                                                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Lesson Content</p>
                                                                                     <div className="overflow-x-auto border border-gray-100 rounded-lg bg-gray-50">
-                                                                                      <div className="text-sm text-gray-700 prose max-w-none leading-relaxed break-words p-4" dangerouslySetInnerHTML={{ __html: lesson.content }} />
+                                                                                        <div className="text-sm text-gray-700 prose max-w-none leading-relaxed break-words p-4" dangerouslySetInnerHTML={{ __html: lesson.content }} />
                                                                                     </div>
                                                                                 </div>
                                                                             )}
@@ -543,18 +542,22 @@ export default function AdminModuleDetailPage() {
                                                                             )}
 
                                                                             {/* Resources */}
-                                                                            {lesson.resources?.length > 0 && (
+                                                                            {(lesson.lessonResources || lesson.resources || []).length > 0 && (
                                                                                 <div>
                                                                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Resources</p>
                                                                                     <div className="space-y-1">
-                                                                                        {lesson.resources.map((res, ri) => {
+                                                                                        {(lesson.lessonResources || lesson.resources || []).map((res, ri) => {
                                                                                             const name = typeof res === 'string' ? res : (res.name || res.url);
                                                                                             const url = typeof res === 'string' ? res : res.url;
+                                                                                            const ext = (name || url || '').split('.').pop()?.toLowerCase();
+                                                                                            const isPdf = ext === 'pdf';
+                                                                                            const href = isPdf ? url : url?.replace('/upload/', '/upload/fl_attachment/');
                                                                                             return (
-                                                                                                <a key={ri} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-medium transition-colors">
+                                                                                                <a key={ri} href={href} target="_blank" rel="noopener noreferrer" {...(!isPdf && { download: name })} className="flex items-center gap-2 p-2 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-700 text-xs font-medium transition-colors">
                                                                                                     <Icons.Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
                                                                                                     <span className="truncate">{name}</span>
                                                                                                     {res.fileType && <span className="bg-teal-200 text-teal-800 px-1.5 py-0.5 rounded text-xs ml-auto flex-shrink-0">{res.fileType}</span>}
+                                                                                                    {isPdf ? <Icons.ExternalLink className="w-3 h-3 flex-shrink-0" /> : <Icons.Download className="w-3 h-3 flex-shrink-0" />}
                                                                                                 </a>
                                                                                             );
                                                                                         })}
@@ -596,7 +599,7 @@ export default function AdminModuleDetailPage() {
                                         const isOpen = expandedDirectLessons.includes(li);
                                         const slides = lesson.slides || [];
                                         const quiz = lesson.assessmentQuiz || [];
-                                        const resources = lesson.resources || [];
+                                        const resources = lesson.lessonResources || lesson.resources || [];
                                         const outcomes = lesson.learningOutcomes || [];
                                         return (
                                             <div key={li}>
@@ -640,7 +643,7 @@ export default function AdminModuleDetailPage() {
                                                             <div>
                                                                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Description</p>
                                                                 <div className="overflow-x-auto bg-white rounded-xl border border-gray-100">
-                                                                  <div className="text-sm text-gray-700 prose max-w-none leading-relaxed break-words p-4" dangerouslySetInnerHTML={{ __html: lesson.description }} />
+                                                                    <div className="text-sm text-gray-700 prose max-w-none leading-relaxed break-words p-4" dangerouslySetInnerHTML={{ __html: lesson.description }} />
                                                                 </div>
                                                             </div>
                                                         )}
@@ -699,7 +702,7 @@ export default function AdminModuleDetailPage() {
                                                                                     <div className="px-4 pb-4 pt-1 border-t border-gray-100 space-y-3">
                                                                                         {slide.type === 'text' && slide.content && (
                                                                                             <div className="overflow-x-auto">
-                                                                                              <div className="text-sm text-gray-700 prose max-w-none break-words" dangerouslySetInnerHTML={{ __html: slide.content }} />
+                                                                                                <div className="text-sm text-gray-700 prose max-w-none break-words" dangerouslySetInnerHTML={{ __html: slide.content }} />
                                                                                             </div>
                                                                                         )}
                                                                                         {slide.type === 'image' && (
@@ -825,11 +828,16 @@ export default function AdminModuleDetailPage() {
                                                                                     {desc && <p className="text-xs text-teal-600 truncate">{desc}</p>}
                                                                                 </div>
                                                                                 {fileType && <span className="text-xs bg-teal-200 text-teal-800 px-1.5 py-0.5 rounded flex-shrink-0">{fileType}</span>}
-                                                                                {url && (
-                                                                                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-teal-600 hover:text-teal-800 flex-shrink-0">
-                                                                                        <Icons.ExternalLink className="w-3.5 h-3.5" />
-                                                                                    </a>
-                                                                                )}
+                                                                                {url && (() => {
+                                                                                    const ext = (name || url || '').split('.').pop()?.toLowerCase();
+                                                                                    const isPdf = ext === 'pdf';
+                                                                                    const href = isPdf ? url : url.replace('/upload/', '/upload/fl_attachment/');
+                                                                                    return (
+                                                                                        <a href={href} target="_blank" rel="noopener noreferrer" {...(!isPdf && { download: name })} className="text-teal-600 hover:text-teal-800 flex-shrink-0">
+                                                                                            {isPdf ? <Icons.ExternalLink className="w-3.5 h-3.5" /> : <Icons.Download className="w-3.5 h-3.5" />}
+                                                                                        </a>
+                                                                                    );
+                                                                                })()}
                                                                             </div>
                                                                         );
                                                                     })}
@@ -868,7 +876,7 @@ export default function AdminModuleDetailPage() {
                                                     <div key={section.key} className={`bg-${section.color}-50 rounded-xl p-4 border border-${section.color}-100`}>
                                                         <p className={`font-semibold text-${section.color}-800 text-sm mb-2`}>{section.label}</p>
                                                         <div className="overflow-x-auto">
-                                                          <div className={`text-${section.color}-900 text-sm prose max-w-none break-words`} dangerouslySetInnerHTML={{ __html: cs[section.key] }} />
+                                                            <div className={`text-${section.color}-900 text-sm prose max-w-none break-words`} dangerouslySetInnerHTML={{ __html: cs[section.key] }} />
                                                         </div>
                                                         {cs[`${section.key}Resources`]?.length > 0 && (
                                                             <div className="mt-2 space-y-1">
@@ -901,8 +909,10 @@ export default function AdminModuleDetailPage() {
                                 </div>
                                 <div className="space-y-2">
                                     {moduleResources.map((res, ri) => {
-                                        const name = typeof res === 'string' ? res : (res.name || res.url);
                                         const url = typeof res === 'string' ? res : res.url;
+                                        const name = typeof res === 'string'
+                                            ? `Resource ${ri + 1}`
+                                            : (res.name || res.originalName || res.url?.split('/').pop() || `Resource ${ri + 1}`);
                                         const desc = typeof res === 'object' ? res.description : '';
                                         const fileType = typeof res === 'object' ? res.fileType : '';
                                         return (
@@ -915,11 +925,16 @@ export default function AdminModuleDetailPage() {
                                                     {desc && <p className="text-xs text-gray-500 truncate">{desc}</p>}
                                                 </div>
                                                 {fileType && <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded flex-shrink-0">{fileType}</span>}
-                                                {url && (
-                                                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-[#021d49] hover:text-blue-700 flex-shrink-0">
-                                                        <Icons.ExternalLink className="w-4 h-4" />
-                                                    </a>
-                                                )}
+                                                {url && (() => {
+                                                    const ext = (name || url || '').split('.').pop()?.toLowerCase();
+                                                    const isPdf = ext === 'pdf';
+                                                    const href = isPdf ? url : url.replace('/upload/', '/upload/fl_attachment/');
+                                                    return (
+                                                        <a href={href} target="_blank" rel="noopener noreferrer" {...(!isPdf && { download: name })} className="text-[#021d49] hover:text-blue-700 flex-shrink-0">
+                                                            {isPdf ? <Icons.ExternalLink className="w-4 h-4" /> : <Icons.Download className="w-4 h-4" />}
+                                                        </a>
+                                                    );
+                                                })()}
                                             </div>
                                         );
                                     })}

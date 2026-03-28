@@ -9,6 +9,7 @@ import categoryService from '@/lib/api/categoryService';
 import { useDraft } from '@/hooks/useDraft';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
+import ResourceUploader from '@/components/ui/ResourceUploader';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
 import InteractiveCodeEditor from '@/components/student/InteractiveCodeEditor';
 
@@ -29,9 +30,9 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 // ─────────────────────────────────────────────────────────────────────────────
 
 function BulletList({ label, hint, values, onChange, placeholder, required }) {
-  const add    = ()      => onChange([...values, '']);
-  const update = (i, v)  => { const n = [...values]; n[i] = v; onChange(n); };
-  const remove = (i)     => onChange(values.filter((_, idx) => idx !== i));
+  const add = () => onChange([...values, '']);
+  const update = (i, v) => { const n = [...values]; n[i] = v; onChange(n); };
+  const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
 
   return (
     <div className="space-y-2">
@@ -67,25 +68,69 @@ function BulletList({ label, hint, values, onChange, placeholder, required }) {
   );
 }
 
-function ResourceList({ label, hint, values, onChange }) {
-  const blank  = ()         => ({ url: '', name: '', description: '', fileType: '' });
-  const add    = ()         => onChange([...values, blank()]);
+function ResourceList({ label, hint, values = [], onChange }) {
+  const blank = () => ({ url: '', name: '', description: '', fileType: '' });
+  const add = () => onChange([...values, blank()]);
   const update = (i, f, v) => { const n = [...values]; n[i] = { ...n[i], [f]: v }; onChange(n); };
-  const remove = (i)        => onChange(values.filter((_, idx) => idx !== i));
+  const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
+
+  const mapExtensionToType = (fileName) => {
+    const ext = (fileName || '').split('.').pop()?.toLowerCase();
+    if (!ext) return 'other';
+    if (['pdf'].includes(ext)) return 'pdf';
+    if (['doc', 'docx'].includes(ext)) return 'notebook';
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return 'dataset';
+    if (['ppt', 'pptx'].includes(ext)) return 'dataset';
+    return 'other';
+  };
+
+  const handleUploadResources = (uploadedResources) => {
+    const mapped = (uploadedResources || []).map((r) => ({
+      url: r.url || (typeof r === 'string' ? r : ''),
+      name: r.name || r.originalName || (typeof r === 'string' ? r.split('/').pop() : '') || 'Resource',
+      description: r.description || '',
+      fileType: r.fileType || mapExtensionToType(r.name || r.originalName || r.url),
+    }));
+    onChange(mapped);
+  };
 
   return (
     <div className="space-y-3">
       <div>
         <Label className="font-semibold">{label}</Label>
-        {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
+        {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}</div>
+      <div className="mb-3">
+        <ResourceUploader value={values} onChange={handleUploadResources} label="Upload documents" />
       </div>
       {values.map((r, i) => (
         <div key={i} className="border rounded-xl p-4 space-y-3 bg-gray-50/50">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
-            <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)}>
-              <Icons.Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {r.url && (() => {
+                const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
+                const isPdf = ext === 'pdf';
+                const href = isPdf ? r.url : r.url.replace('/upload/', '/upload/fl_attachment/');
+                return (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    {...(!isPdf && { download: r.name })}
+                    className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                    title={isPdf ? 'Open PDF' : 'Download'}
+                  >
+                    {isPdf
+                      ? <Icons.ExternalLink className="w-3.5 h-3.5" />
+                      : <Icons.Download className="w-3.5 h-3.5" />
+                    }
+                  </a>
+                );
+              })()}
+              <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)}>
+                <Icons.Trash2 className="w-4 h-4 text-gray-400 hover:text-red-500" />
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -130,10 +175,10 @@ function ResourceList({ label, hint, values, onChange }) {
 
 function FinalAssessmentStep({ assessment, onChange }) {
   const update = (field, value) => onChange({ ...assessment, [field]: value });
-  const blank  = () => ({ text: '', type: 'multiple-choice', points: 1, options: ['', '', '', ''], correctAnswer: '', explanation: '', rubric: '' });
+  const blank = () => ({ text: '', type: 'multiple-choice', points: 1, options: ['', '', '', ''], correctAnswer: '', explanation: '', rubric: '' });
 
-  const addQ    = ()         => update('questions', [...(assessment.questions || []), blank()]);
-  const removeQ = (i)        => update('questions', assessment.questions.filter((_, idx) => idx !== i));
+  const addQ = () => update('questions', [...(assessment.questions || []), blank()]);
+  const removeQ = (i) => update('questions', assessment.questions.filter((_, idx) => idx !== i));
   const updateQ = (i, f, v) => { const n = [...assessment.questions]; n[i] = { ...n[i], [f]: v }; update('questions', n); };
   const updateOption = (qi, oi, v) => {
     const n = [...assessment.questions];
@@ -342,10 +387,10 @@ function PreviewSlide({ slide }) {
 
 function ModulePreview({ form, onClose }) {
   const [selectedLesson, setSelectedLesson] = useState(0);
-  const [selectedSlide, setSelectedSlide]   = useState(0);
+  const [selectedSlide, setSelectedSlide] = useState(0);
 
   const lessons = form.lessons || [];
-  const lesson  = lessons[selectedLesson];
+  const lesson = lessons[selectedLesson];
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -374,9 +419,8 @@ function ModulePreview({ form, onClose }) {
                   <button
                     key={i}
                     onClick={() => { setSelectedLesson(i); setSelectedSlide(0); }}
-                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                      i === selectedLesson ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 text-gray-700'
-                    }`}
+                    className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${i === selectedLesson ? 'bg-blue-600 text-white' : 'hover:bg-gray-100 text-gray-700'
+                      }`}
                   >
                     <p className="font-medium truncate">{l.title || `Lesson ${i + 1}`}</p>
                     <p className={`text-xs mt-0.5 ${i === selectedLesson ? 'text-blue-100' : 'text-gray-400'}`}>
@@ -396,7 +440,7 @@ function ModulePreview({ form, onClose }) {
               <div>
                 <div className="px-8 pt-8 pb-4 border-b bg-white">
                   <h2 className="text-xl font-bold text-gray-900">{lesson.title || 'Untitled Lesson'}</h2>
-                  {lesson.description && <p className="text-sm text-gray-500 mt-1">{lesson.description}</p>}
+                  {lesson.description && <div className="prose prose-sm max-w-none text-gray-500 mt-1" dangerouslySetInnerHTML={{ __html: lesson.description }} />}
                 </div>
                 {(lesson.slides || []).length > 0 && (
                   <div className="flex gap-2 px-8 py-3 border-b bg-gray-50 flex-wrap">
@@ -404,9 +448,8 @@ function ModulePreview({ form, onClose }) {
                       <button
                         key={i}
                         onClick={() => setSelectedSlide(i)}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                          i === selectedSlide ? 'bg-blue-600 text-white' : 'bg-white border text-gray-600 hover:bg-gray-100'
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${i === selectedSlide ? 'bg-blue-600 text-white' : 'bg-white border text-gray-600 hover:bg-gray-100'
+                          }`}
                       >
                         {i + 1}. {s.type}
                       </button>
@@ -434,11 +477,11 @@ function ModulePreview({ form, onClose }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STEPS = [
-  { id: 'info',       label: 'Module Info',      icon: Icons.Info,            desc: 'Title, description, level, instructor' },
-  { id: 'lessons',    label: 'Lessons',           icon: Icons.BookOpen,        desc: 'Build lessons with slides and quizzes' },
-  { id: 'resources',  label: 'Module Resources',  icon: Icons.Link,            desc: 'Bibliography, datasets, links' },
-  { id: 'assessment', label: 'Final Assessment',  icon: Icons.ClipboardCheck,  desc: 'Certificate-granting assessment' },
-  { id: 'review',     label: 'Review & Preview',  icon: Icons.Eye,             desc: 'Preview as student & submit' },
+  { id: 'info', label: 'Module Info', icon: Icons.Info, desc: 'Title, description, level, instructor' },
+  { id: 'lessons', label: 'Lessons', icon: Icons.BookOpen, desc: 'Build lessons with slides and quizzes' },
+  { id: 'resources', label: 'Module Resources', icon: Icons.Link, desc: 'Bibliography, datasets, links' },
+  { id: 'assessment', label: 'Final Assessment', icon: Icons.ClipboardCheck, desc: 'Certificate-granting assessment' },
+  { id: 'review', label: 'Review & Preview', icon: Icons.Eye, desc: 'Preview as student & submit' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -487,14 +530,14 @@ const defaultForm = {
 
 export default function AdminCreateModulePage() {
   const router = useRouter();
-  const [step, setStep]               = useState(0);
-  const [form, setForm]               = useState(defaultForm);
-  const [categories, setCategories]   = useState([]);
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState(defaultForm);
+  const [categories, setCategories] = useState([]);
   const [instructors, setInstructors] = useState([]);
-  const [submitting, setSubmitting]   = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   // 'existing' | 'pending'
-  const [assignMode, setAssignMode]   = useState('existing');
+  const [assignMode, setAssignMode] = useState('existing');
 
   const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel } = useDraft(
     'module_admin_draft_new',
@@ -510,15 +553,15 @@ export default function AdminCreateModulePage() {
   useEffect(() => {
     categoryService.getAllCategories()
       .then((d) => setCategories(d || []))
-      .catch(() => {});
+      .catch(() => { });
 
     adminService.getAllInstructors({ status: 'approved', limit: 200 })
       .then((d) => setInstructors(d?.instructors || d || []))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const updateForm = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
-  const progress   = Math.round(((step + 1) / STEPS.length) * 100);
+  const progress = Math.round(((step + 1) / STEPS.length) * 100);
 
   const buildPayload = () => {
     const caseStudies = (form.lessons || [])
@@ -527,9 +570,9 @@ export default function AdminCreateModulePage() {
         caseStudyName: l._caseStudy.name,
         lessons: [
           { lessonType: 'Introduction', content: l._caseStudy.introduction || '', resources: [] },
-          { lessonType: 'Dataset',      content: l._caseStudy.dataset || '',      resources: [] },
-          { lessonType: 'AI Task',      content: l._caseStudy.aiTask || '',       resources: [] },
-          { lessonType: 'Key Readings', content: l._caseStudy.keyReadings || '',  resources: [] },
+          { lessonType: 'Dataset', content: l._caseStudy.dataset || '', resources: [] },
+          { lessonType: 'AI Task', content: l._caseStudy.aiTask || '', resources: [] },
+          { lessonType: 'Key Readings', content: l._caseStudy.keyReadings || '', resources: [] },
         ],
       }));
 
@@ -985,10 +1028,10 @@ export default function AdminCreateModulePage() {
                 <AlertDescription className="text-amber-700 text-sm">
                   <strong>Missing required fields:</strong>{' '}
                   {[
-                    !form.title       && 'Module title',
+                    !form.title && 'Module title',
                     !form.description && 'Description',
-                    !form.categoryId  && 'Category',
-                    !form.level       && 'Level',
+                    !form.categoryId && 'Category',
+                    !form.level && 'Level',
                   ].filter(Boolean).join(', ')}.
                   Go back to Module Info to fill them in.
                 </AlertDescription>
@@ -1098,18 +1141,17 @@ export default function AdminCreateModulePage() {
           <div className="sticky top-24 space-y-1">
             <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-3 mb-2">Steps</p>
             {STEPS.map((s, i) => {
-              const Icon   = s.icon;
-              const done   = i < step;
+              const Icon = s.icon;
+              const done = i < step;
               const active = i === step;
               return (
                 <button
                   key={s.id}
                   onClick={() => setStep(i)}
-                  className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left transition-all ${
-                    active ? 'bg-blue-600 text-white shadow-sm' :
-                    done   ? 'bg-green-50 text-green-800 hover:bg-green-100' :
-                             'text-gray-500 hover:bg-gray-100'
-                  }`}
+                  className={`w-full flex items-start gap-3 px-3 py-3 rounded-xl text-left transition-all ${active ? 'bg-blue-600 text-white shadow-sm' :
+                    done ? 'bg-green-50 text-green-800 hover:bg-green-100' :
+                      'text-gray-500 hover:bg-gray-100'
+                    }`}
                 >
                   <div className="flex-shrink-0 mt-0.5">
                     {done

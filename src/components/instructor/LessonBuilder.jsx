@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import dynamic from 'next/dynamic';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import InteractiveCodeEditor from '@/components/student/InteractiveCodeEditor';
+import ResourceUploader from '@/components/ui/ResourceUploader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -229,24 +230,24 @@ function DiagramSlideEditor({ slide, onUpdate, disabled }) {
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const SLIDE_TYPES = [
-  { value: 'text',        label: 'Text',    Icon: Icons.FileText,   desc: 'Rich text with images & formatting' },
-  { value: 'image',       label: 'Image',   Icon: Icons.Image,      desc: 'Image with caption' },
-  { value: 'video',       label: 'Video',   Icon: Icons.Video,      desc: 'YouTube or video link' },
-  { value: 'diagram',     label: 'Diagram', Icon: Icons.BarChart2,  desc: 'SVG or diagram image' },
-  { value: 'codeSnippet', label: 'Code',    Icon: Icons.Code2,      desc: 'Interactive Python/R editor' },
+  { value: 'text', label: 'Text', Icon: Icons.FileText, desc: 'Rich text with images & formatting' },
+  { value: 'image', label: 'Image', Icon: Icons.Image, desc: 'Image with caption' },
+  { value: 'video', label: 'Video', Icon: Icons.Video, desc: 'YouTube or video link' },
+  { value: 'diagram', label: 'Diagram', Icon: Icons.BarChart2, desc: 'SVG or diagram image' },
+  { value: 'codeSnippet', label: 'Code', Icon: Icons.Code2, desc: 'Interactive Python/R editor' },
 ];
 
 const QUIZ_TYPES = [
   { value: 'multiple-choice', label: 'Multiple Choice' },
-  { value: 'true-false',      label: 'True / False' },
-  { value: 'short-answer',    label: 'Short Answer' },
+  { value: 'true-false', label: 'True / False' },
+  { value: 'short-answer', label: 'Short Answer' },
 ];
 
 const CS_SECTIONS = [
-  { key: 'introduction', label: 'Introduction', Icon: Icons.BookOpen,     placeholder: 'Describe the case study background and why it matters...' },
-  { key: 'dataset',      label: 'Dataset',      Icon: Icons.Database,     placeholder: 'Describe the datasets used — name, source, what it contains...' },
-  { key: 'aiTask',       label: 'AI Task',      Icon: Icons.BrainCircuit, placeholder: 'Describe the AI/ML approach, algorithms, and expected outputs...' },
-  { key: 'keyReadings',  label: 'Key Readings', Icon: Icons.ScrollText,   placeholder: 'List key papers and reading materials with citations...' },
+  { key: 'introduction', label: 'Introduction', Icon: Icons.BookOpen, placeholder: 'Describe the case study background and why it matters...' },
+  { key: 'dataset', label: 'Dataset', Icon: Icons.Database, placeholder: 'Describe the datasets used — name, source, what it contains...' },
+  { key: 'aiTask', label: 'AI Task', Icon: Icons.BrainCircuit, placeholder: 'Describe the AI/ML approach, algorithms, and expected outputs...' },
+  { key: 'keyReadings', label: 'Key Readings', Icon: Icons.ScrollText, placeholder: 'List key papers and reading materials with citations...' },
 ];
 
 const RESOURCE_TYPES = ['link', 'pdf', 'notebook', 'dataset', 'video', 'other'];
@@ -274,14 +275,14 @@ const emptyCaseStudy = () => ({
 export const emptyLesson = (idx = 0) => ({
   title: '', description: '', learningOutcomes: [],
   slides: [], assessmentQuiz: [], quizPassingScore: 70, quizMaxAttempts: 3,
-  resources: [], _caseStudy: null, order: idx,
+  lessonResources: [], _caseStudy: null, order: idx,
 });
 
 // ─── Main component ─────────────────────────────────────────────────────────────
 
 export default function LessonBuilder({ lessons = [], onChange, disabled = false, onSaveDraft, draftStatus }) {
   const [expandedLesson, setExpandedLesson] = useState(null);
-  const [deleteDialog, setDeleteDialog]     = useState(null);
+  const [deleteDialog, setDeleteDialog] = useState(null);
 
   const update = (newLessons) => onChange?.(newLessons);
 
@@ -300,8 +301,8 @@ export default function LessonBuilder({ lessons = [], onChange, disabled = false
       .filter((_, i) => i !== idx)
       .map((l, i) => ({ ...l, order: i }));
     update(updated);
-    if (expandedLesson === idx)        setExpandedLesson(null);
-    else if (expandedLesson > idx)     setExpandedLesson(expandedLesson - 1);
+    if (expandedLesson === idx) setExpandedLesson(null);
+    else if (expandedLesson > idx) setExpandedLesson(expandedLesson - 1);
     setDeleteDialog(null);
   };
 
@@ -420,24 +421,21 @@ export default function LessonBuilder({ lessons = [], onChange, disabled = false
 
 function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disabled }) {
   const slideCount = (lesson.slides || []).length;
-  const quizCount  = (lesson.assessmentQuiz || []).length;
-  const hasCS      = !!lesson._caseStudy;
-  const resCount   = (lesson.resources || []).length;
+  const quizCount = (lesson.assessmentQuiz || []).length;
+  const hasCS = !!lesson._caseStudy;
+  const resCount = (lesson.lessonResources || lesson.resources || []).length;
 
   return (
-    <div className={`border rounded-xl overflow-hidden transition-all ${
-      expanded ? 'shadow-md border-blue-200' : 'border-gray-200 hover:border-gray-300'
-    }`}>
+    <div className={`border rounded-xl overflow-hidden transition-all ${expanded ? 'shadow-md border-blue-200' : 'border-gray-200 hover:border-gray-300'
+      }`}>
       {/* Accordion header */}
       <div
-        className={`flex items-center gap-3 px-4 py-3 cursor-pointer select-none transition-colors ${
-          expanded ? 'bg-blue-50' : 'bg-gray-50/70 hover:bg-gray-100/70'
-        }`}
+        className={`flex items-center gap-3 px-4 py-3 cursor-pointer select-none transition-colors ${expanded ? 'bg-blue-50' : 'bg-gray-50/70 hover:bg-gray-100/70'
+          }`}
         onClick={onToggle}
       >
-        <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 transition-colors ${
-          expanded ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
-        }`}>
+        <span className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center flex-shrink-0 transition-colors ${expanded ? 'bg-blue-600 text-white' : 'bg-blue-100 text-blue-700'
+          }`}>
           {idx + 1}
         </span>
 
@@ -567,8 +565,8 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
             {/* ── Resources ────────────────────────────────────────────── */}
             <TabsContent value="resources" className="mt-0">
               <ResourcesTab
-                resources={lesson.resources || []}
-                onChange={(v) => onChange('resources', v)}
+                resources={lesson.lessonResources || lesson.resources || []}
+                onChange={(v) => onChange('lessonResources', v)}
                 disabled={disabled}
               />
             </TabsContent>
@@ -595,9 +593,9 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
 // ─── Learning Outcomes ──────────────────────────────────────────────────────────
 
 function LessonOutcomes({ outcomes, onChange, disabled }) {
-  const add    = ()     => onChange([...outcomes, '']);
+  const add = () => onChange([...outcomes, '']);
   const update = (i, v) => { const n = [...outcomes]; n[i] = v; onChange(n); };
-  const remove = (i)    => onChange(outcomes.filter((_, idx) => idx !== i));
+  const remove = (i) => onChange(outcomes.filter((_, idx) => idx !== i));
 
   return (
     <div className="space-y-2">
@@ -644,7 +642,7 @@ function SlidesTab({ slides, onChange, disabled }) {
   const [expandedSlide, setExpandedSlide] = useState(null);
 
   const addSlide = (type) => {
-    const slide   = { ...emptySlide(type), order: slides.length };
+    const slide = { ...emptySlide(type), order: slides.length };
     const updated = [...slides, slide];
     onChange(updated);
     setExpandedSlide(updated.length - 1);
@@ -652,8 +650,8 @@ function SlidesTab({ slides, onChange, disabled }) {
 
   const removeSlide = (idx) => {
     onChange(slides.filter((_, i) => i !== idx).map((s, i) => ({ ...s, order: i })));
-    if (expandedSlide === idx)     setExpandedSlide(null);
-    else if (expandedSlide > idx)  setExpandedSlide(expandedSlide - 1);
+    if (expandedSlide === idx) setExpandedSlide(null);
+    else if (expandedSlide > idx) setExpandedSlide(expandedSlide - 1);
   };
 
   const updateSlide = (idx, field, value) =>
@@ -1033,16 +1031,39 @@ function CaseStudyTab({ caseStudy, onChange, disabled }) {
 
 // ─── Resources Tab ──────────────────────────────────────────────────────────────
 
-function ResourcesTab({ resources, onChange, disabled }) {
-  const blank  = ()         => ({ url: '', name: '', description: '', fileType: '' });
-  const add    = ()         => onChange([...resources, blank()]);
-  const remove = (i)        => onChange(resources.filter((_, idx) => idx !== i));
+function ResourcesTab({ resources = [], onChange, disabled }) {
+  const blank = () => ({ url: '', name: '', description: '', fileType: '' });
+  const add = () => onChange([...resources, blank()]);
+  const remove = (i) => onChange(resources.filter((_, idx) => idx !== i));
   const update = (i, f, v) => {
     const n = [...resources]; n[i] = { ...n[i], [f]: v }; onChange(n);
   };
 
+  const mapExtensionToType = (fileName) => {
+    const ext = (fileName || '').split('.').pop()?.toLowerCase();
+    if (!ext) return 'other';
+    if (['pdf'].includes(ext)) return 'pdf';
+    if (['doc', 'docx'].includes(ext)) return 'notebook';
+    if (['xls', 'xlsx', 'csv'].includes(ext)) return 'dataset';
+    if (['ppt', 'pptx'].includes(ext)) return 'dataset';
+    return 'other';
+  };
+
+  const handleUploadResources = (uploadedResources) => {
+    const mapped = (uploadedResources || []).map((r) => ({
+      url: r.url || (typeof r === 'string' ? r : ''),
+      name: r.name || r.originalName || (typeof r === 'string' ? r.split('/').pop() : '') || 'Resource',
+      description: r.description || '',
+      fileType: r.fileType || mapExtensionToType(r.name || r.originalName || r.url),
+    }));
+    onChange(mapped);
+  };
+
   return (
     <div className="space-y-3">
+      <div className="mb-3">
+        <ResourceUploader value={resources} onChange={handleUploadResources} label="Upload lesson resources" />
+      </div>
       {resources.length === 0 ? (
         <div className="text-center py-10 text-sm text-gray-400 border border-dashed border-gray-200 rounded-xl">
           <Icons.Link className="w-10 h-10 text-gray-200 mx-auto mb-2" />
@@ -1055,15 +1076,37 @@ function ResourcesTab({ resources, onChange, disabled }) {
             <div key={i} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/50">
               <div className="flex justify-between items-center">
                 <span className="text-xs font-semibold text-gray-600">Resource {i + 1}</span>
-                {!disabled && (
-                  <button
-                    type="button"
-                    onClick={() => remove(i)}
-                    className="text-gray-400 hover:text-red-500 transition-colors"
-                  >
-                    <Icons.Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
+                <div className="flex items-center gap-1">
+                  {r.url && (() => {
+                    const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
+                    const isPdf = ext === 'pdf';
+                    const href = isPdf ? r.url : r.url.replace('/upload/', '/upload/fl_attachment/');
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        {...(!isPdf && { download: r.name })}
+                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
+                        title={isPdf ? 'Open PDF' : 'Download'}
+                      >
+                        {isPdf
+                          ? <Icons.ExternalLink className="w-3.5 h-3.5" />
+                          : <Icons.Download className="w-3.5 h-3.5" />
+                        }
+                      </a>
+                    );
+                  })()}
+                  {!disabled && (
+                    <button
+                      type="button"
+                      onClick={() => remove(i)}
+                      className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <Icons.Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -1132,8 +1175,8 @@ function ResourcesTab({ resources, onChange, disabled }) {
 // ─── Quiz Tab ───────────────────────────────────────────────────────────────────
 
 function QuizTab({ quiz, passingScore, maxAttempts, onQuizChange, onPassingScoreChange, onMaxAttemptsChange, disabled }) {
-  const addQ    = ()         => onQuizChange([...quiz, emptyQuestion()]);
-  const removeQ = (i)        => onQuizChange(quiz.filter((_, idx) => idx !== i));
+  const addQ = () => onQuizChange([...quiz, emptyQuestion()]);
+  const removeQ = (i) => onQuizChange(quiz.filter((_, idx) => idx !== i));
   const updateQ = (i, f, v) => {
     const n = [...quiz]; n[i] = { ...n[i], [f]: v }; onQuizChange(n);
   };
@@ -1144,7 +1187,7 @@ function QuizTab({ quiz, passingScore, maxAttempts, onQuizChange, onPassingScore
     n[qi] = { ...n[qi], options: opts };
     onQuizChange(n);
   };
-  const addOption    = (qi) => {
+  const addOption = (qi) => {
     const n = [...quiz];
     n[qi] = { ...n[qi], options: [...(n[qi].options || []), ''] };
     onQuizChange(n);
