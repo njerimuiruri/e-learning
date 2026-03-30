@@ -17,7 +17,6 @@ export default function AdminSidebar() {
     const [pendingInstructorsCount, setPendingInstructorsCount] = useState(0);
 
     useEffect(() => {
-        // Load admin user details from localStorage
         const user = localStorage.getItem('user');
         if (user) {
             try {
