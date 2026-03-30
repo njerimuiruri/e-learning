@@ -11,6 +11,37 @@ import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
 import LessonViewer from '@/components/student/LessonViewer';
 import { Button } from '@/components/ui/button';
 
+// ── Smart video player (handles YouTube, Vimeo, and direct files) ─────────────
+function VideoPlayer({ url, className = '' }) {
+    if (!url) return null;
+    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
+    if (ytMatch) {
+        return (
+            <iframe
+                src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+                className={`w-full aspect-video rounded-xl ${className}`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                frameBorder="0"
+            />
+        );
+    }
+    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+    if (vimeoMatch) {
+        return (
+            <iframe
+                src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
+                className={`w-full aspect-video rounded-xl ${className}`}
+                allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+                frameBorder="0"
+            />
+        );
+    }
+    // Direct video file
+    return <video src={url} controls className={`w-full max-h-[420px] object-contain ${className}`} />;
+}
+
 // ── Resource helpers ───────────────────────────────────────────────────────────
 function resourceHref(res) {
     const url = typeof res === 'string' ? res : res.url;
@@ -29,7 +60,7 @@ function fileIconColor(ext) {
 }
 
 // ── Circular lesson progress indicator ────────────────────────────────────────
-function CircleProgress({ completed, progress, total, isCurrent, locked }) {
+function CircleProgress({ completed, progress, total, locked }) {
     if (completed) {
         return (
             <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 shadow-sm">
@@ -598,12 +629,7 @@ function ModuleLearningContent() {
                                     )}
                                 </div>
                                 <div className="rounded-2xl overflow-hidden bg-black shadow-xl border border-gray-200">
-                                    <video
-                                        src={moduleData.introVideoUrl}
-                                        controls
-                                        autoPlay={false}
-                                        className="w-full max-h-[420px] object-contain"
-                                    />
+                                    <VideoPlayer url={moduleData.introVideoUrl} />
                                 </div>
                                 <div className="flex justify-end">
                                     <button

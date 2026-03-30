@@ -24,7 +24,16 @@ export default function LessonViewer({
   const hasAssessment = (lesson?.assessmentQuiz || []).length > 0;
 
   const [phase, setPhase] = useState(isAlreadyCompleted ? 'slides' : 'intro');
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(() => {
+    // Restore last slide position from localStorage on mount
+    if (typeof window === 'undefined' || !enrollment?._id) return 0;
+    const saved = localStorage.getItem(`slide-pos-${enrollment._id}-${lessonIndex}`);
+    if (saved !== null) {
+      const idx = parseInt(saved, 10);
+      if (!isNaN(idx) && idx >= 0) return idx;
+    }
+    return 0;
+  });
   const [completedSlides, setCompletedSlides] = useState(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState({});
@@ -56,6 +65,22 @@ export default function LessonViewer({
     const done = new Set(lp.slideProgress.filter((sp) => sp.isCompleted).map((sp) => sp.slideIndex));
     setCompletedSlides(done);
   }, [enrollment, lessonIndex]);
+
+  // Restore phase to 'slides' if we have a saved slide position
+  useEffect(() => {
+    if (!enrollment?._id || isAlreadyCompleted) return;
+    const saved = localStorage.getItem(`slide-pos-${enrollment._id}-${lessonIndex}`);
+    if (saved !== null) {
+      const idx = parseInt(saved, 10);
+      if (!isNaN(idx) && idx > 0 && idx < slides.length) setPhase('slides');
+    }
+  }, [enrollment?._id, lessonIndex]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Persist slide position
+  useEffect(() => {
+    if (!enrollment?._id || phase !== 'slides') return;
+    localStorage.setItem(`slide-pos-${enrollment._id}-${lessonIndex}`, String(currentSlideIndex));
+  }, [currentSlideIndex, phase, enrollment?._id, lessonIndex]);
 
   const isFirstMount = useRef(true);
   useEffect(() => {
@@ -377,7 +402,7 @@ export default function LessonViewer({
       </div>
 
       {/* ── Bottom bar ───────────────────────────────────────────────────────── */}
-      <div className={`flex-shrink-0 flex items-center gap-3 px-4 py-3 border-t ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <div className={`flex-shrink-0 flex items-center gap-3 px-4 py-3.5 border-t shadow-[0_-2px_8px_rgba(0,0,0,0.06)] ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
 
         {/* Overview link */}
         <button
@@ -422,7 +447,7 @@ export default function LessonViewer({
             <button
               onClick={goNext}
               disabled={!nextButtonEnabled}
-              className={`flex items-center gap-1.5 text-xs px-4 py-2 rounded-xl font-semibold transition-all shadow-sm hover:shadow-md
+              className={`flex items-center gap-2 text-sm px-5 py-2.5 rounded-xl font-semibold transition-all shadow-sm hover:shadow-md
                 ${nextButtonEnabled
                   ? 'bg-green-600 hover:bg-green-700 active:bg-green-800 text-white'
                   : darkMode
@@ -430,25 +455,25 @@ export default function LessonViewer({
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                 }`}
             >
-              Next <Icons.ChevronRight className="w-3.5 h-3.5" />
+              Next <Icons.ChevronRight className="w-4 h-4" />
             </button>
           )}
           {isLastSlide && allSlidesCompleted && (
             hasAssessment ? (
               <button
                 onClick={() => setPhase('assessment')}
-                className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold transition-all shadow-sm hover:shadow-md"
+                className="flex items-center gap-2 text-sm px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold transition-all shadow-sm hover:shadow-md"
               >
-                <Icons.HelpCircle className="w-3.5 h-3.5" /> Take Quiz
+                <Icons.HelpCircle className="w-4 h-4" /> Take Quiz
               </button>
             ) : (
               <button
                 onClick={handleCompleteLesson}
                 disabled={submitting}
-                className="flex items-center gap-1.5 text-xs px-4 py-2 rounded-xl bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold disabled:opacity-50 transition-all shadow-sm hover:shadow-md"
+                className="flex items-center gap-2 text-sm px-5 py-2.5 rounded-xl bg-green-600 hover:bg-green-700 active:bg-green-800 text-white font-semibold disabled:opacity-50 transition-all shadow-sm hover:shadow-md"
               >
-                {submitting ? <Icons.Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icons.CheckCircle className="w-3.5 h-3.5" />}
-                {submitting ? 'Saving…' : 'Complete'}
+                {submitting ? <Icons.Loader2 className="w-4 h-4 animate-spin" /> : <Icons.CheckCircle className="w-4 h-4" />}
+                {submitting ? 'Saving…' : 'Complete Lesson'}
               </button>
             )
           )}
