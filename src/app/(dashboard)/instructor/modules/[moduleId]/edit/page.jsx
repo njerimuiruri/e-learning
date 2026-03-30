@@ -10,6 +10,7 @@ import InstructorSidebar from '@/components/instructor/InstructorSidebar';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
+import VideoUploader from '@/components/ui/VideoUploader';
 
 // ========== HELPER: Dynamic String List ==========
 function DynamicStringList({ label, values, onChange, placeholder }) {
@@ -271,7 +272,10 @@ export default function EditModulePage() {
                 setFinalAssessment({
                     title: moduleResult.finalAssessment.title || 'Module Final Assessment',
                     description: moduleResult.finalAssessment.description || '',
-                    questions: moduleResult.finalAssessment.questions || [],
+                    questions: (moduleResult.finalAssessment.questions || []).map(q => ({
+                        ...q,
+                        type: q.type === 'short-answer' ? 'essay' : q.type,
+                    })),
                     passingScore: moduleResult.finalAssessment.passingScore ?? 70,
                     maxAttempts: moduleResult.finalAssessment.maxAttempts ?? 3,
                     timeLimit: moduleResult.finalAssessment.timeLimit || null,
@@ -547,6 +551,7 @@ export default function EditModulePage() {
                                     </div>
                                 </div>
                                 <BannerUploader value={moduleData.bannerUrl} onChange={(url) => setModuleData({ ...moduleData, bannerUrl: url })} />
+                                <VideoUploader label="Module Intro Video (optional)" value={moduleData.introVideoUrl || ''} onChange={(url) => setModuleData({ ...moduleData, introVideoUrl: url })} />
                                 <DynamicStringList label="Module Objectives" values={moduleData.moduleObjectives} onChange={(vals) => setModuleData({ ...moduleData, moduleObjectives: vals })} placeholder="What specific objectives will this module achieve?" />
                                 <DynamicStringList label="Expected Learning Outcomes" values={moduleData.learningOutcomes} onChange={(vals) => setModuleData({ ...moduleData, learningOutcomes: vals })} placeholder="What will students be able to do?" />
                                 <DynamicStringList label="Target Audience" values={moduleData.targetAudience} onChange={(vals) => setModuleData({ ...moduleData, targetAudience: vals })} placeholder="Who is this module designed for?" />

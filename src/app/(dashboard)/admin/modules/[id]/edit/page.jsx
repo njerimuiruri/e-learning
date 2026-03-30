@@ -10,6 +10,7 @@ import { useDraft } from '@/hooks/useDraft';
 import AdminSidebar from '@/components/Admin/AdminSidebar';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
+import VideoUploader from '@/components/ui/VideoUploader';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -110,6 +111,7 @@ export default function AdminModuleEditPage() {
     moduleTopics: '', coreReadingMaterials: '',
     targetAudience: [], prerequisites: [],
     bannerUrl: '',
+    introVideoUrl: '',
     lessons: [],
   });
 
@@ -260,6 +262,12 @@ export default function AdminModuleEditPage() {
             <section className="space-y-4">
               <SectionHeading number={1} title="Banner Image" subtitle="Recommended: 1200 × 400 px" />
               <BannerUploader value={form.bannerUrl} onChange={(v) => updateForm('bannerUrl', v)} />
+            </section>
+
+            {/* Intro Video */}
+            <section className="space-y-4">
+              <SectionHeading number={2} title="Module Intro Video" subtitle="Optional — shown to students before they start the first lesson" />
+              <VideoUploader value={form.introVideoUrl} onChange={(v) => updateForm('introVideoUrl', v)} />
             </section>
 
             {/* Basic details */}

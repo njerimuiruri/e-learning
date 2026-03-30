@@ -9,6 +9,7 @@ import categoryService from '@/lib/api/categoryService';
 import { useDraft } from '@/hooks/useDraft';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
+import VideoUploader from '@/components/ui/VideoUploader';
 import ResourceUploader from '@/components/ui/ResourceUploader';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
 import InteractiveCodeEditor from '@/components/student/InteractiveCodeEditor';
@@ -238,7 +239,7 @@ function FinalAssessmentStep({ assessment, onChange }) {
       <div className="space-y-4">
         <div>
           <h3 className="font-semibold text-gray-800">Questions</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Supports multiple choice, true/false, short answer, and essay questions.</p>
+          <p className="text-xs text-gray-500 mt-0.5">Supports multiple choice, true/false, and essay questions.</p>
         </div>
 
         {(assessment.questions || []).map((q, i) => (
@@ -257,7 +258,6 @@ function FinalAssessmentStep({ assessment, onChange }) {
                   <SelectItem value="multiple-choice">Multiple Choice</SelectItem>
                   <SelectItem value="essay">Essay</SelectItem>
                   <SelectItem value="true-false">True / False</SelectItem>
-                  <SelectItem value="short-answer">Short Answer</SelectItem>
                 </SelectContent>
               </Select>
               <Input type="number" className="w-28" value={q.points} onChange={(e) => updateQ(i, 'points', Number(e.target.value))} placeholder="Points" min={1} />
@@ -273,7 +273,7 @@ function FinalAssessmentStep({ assessment, onChange }) {
                 ))}
               </div>
             )}
-            {q.type !== 'essay' && q.type !== 'short-answer' && (
+            {q.type !== 'essay' && (
               <div className="space-y-1.5">
                 <Label className="text-xs">Correct Answer</Label>
                 {q.type === 'true-false' ? (
@@ -732,6 +732,7 @@ const defaultForm = {
   prerequisites: [],
   coreReadingMaterials: '',
   bannerUrl: '',
+  introVideoUrl: '',
   moduleResources: [],
   lessons: [],
   finalAssessment: {
@@ -1037,6 +1038,12 @@ export default function CreateModulePage() {
             <section className="space-y-4">
               <SectionHeading number={7} title="Banner Image" />
               <BannerUploader value={form.bannerUrl} onChange={(v) => updateForm('bannerUrl', v)} />
+            </section>
+
+            {/* Intro Video */}
+            <section className="space-y-4">
+              <SectionHeading number={8} title="Module Intro Video" subtitle="Optional — shown to students before they start the first lesson" />
+              <VideoUploader value={form.introVideoUrl} onChange={(v) => updateForm('introVideoUrl', v)} />
             </section>
           </div>
         );
