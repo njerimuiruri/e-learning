@@ -42,6 +42,7 @@
     "react-quill-new": "^3.8.3",
     "recharts": "^3.8.0",
     "swagger-ui-express": "^5.0.1",
+    "swr": "^2.4.1",
     "tailwind-merge": "^3.5.0",
     "tailwindcss-animate": "^1.0.7",
     "xlsx": "^0.18.5"

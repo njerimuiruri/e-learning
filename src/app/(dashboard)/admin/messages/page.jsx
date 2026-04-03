@@ -1,38 +1,22 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
+import useSWR from 'swr';
 import * as Icons from 'lucide-react';
 
+const fetchConversations = async () => {
+    const token = localStorage.getItem('token');
+    const response = await fetch('https://api.elearning.arin-africa.orgmessages/admin/all-conversations', {
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!response.ok) throw new Error('Failed to fetch conversations');
+    const data = await response.json();
+    return data.data || [];
+};
+
 export default function AdminMessagesPage() {
-    const [conversations, setConversations] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-
-    useEffect(() => {
-        fetchAllConversations();
-    }, []);
-
-    const fetchAllConversations = async () => {
-        try {
-            setLoading(true);
-            const token = localStorage.getItem('token');
-            const response = await fetch('https://api.elearning.arin-africa.orgmessages/admin/all-conversations', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) throw new Error('Failed to fetch conversations');
-
-            const data = await response.json();
-            console.log('Admin conversations:', data);
-            setConversations(data.data || []);
-        } catch (err) {
-            console.error('Error fetching conversations:', err);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const { data: conversations = [], isLoading: loading } = useSWR('admin-conversations', fetchConversations);
 
     const filteredConversations = conversations.filter(conv => {
         const searchLower = searchQuery.toLowerCase();

@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import {
     ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-    BarChart, Bar, Cell,
 } from 'recharts';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,9 +15,24 @@ import {
     DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import adminService from '@/lib/api/adminService';
+import useSWR from 'swr';
+
+const fetchDashboard = async () => {
+    const [statsData, pendingData, fellowsData, activityData] = await Promise.all([
+        adminService.getDashboardStats(),
+        adminService.getPendingInstructors(),
+        adminService.getFellowsAtRisk(),
+        adminService.getRecentActivity(50),
+    ]);
+    return {
+        statsRaw: statsData,
+        pendingInstructors: pendingData.instructors || [],
+        fellowsAtRisk: fellowsData.fellows || [],
+        recentActivity: activityData.activities || [],
+    };
+};
 
 // ─── colour palette ────────────────────────────────────────────────
 const STAT_CARDS = [
@@ -67,50 +81,27 @@ const CustomTooltip = ({ active, payload, label }) => {
 
 export default function AdminDashboardPage() {
     const router = useRouter();
-    const [loading, setLoading]                   = useState(true);
-    const [statsRaw, setStatsRaw]                 = useState(null);
-    const [pendingInstructors, setPendingInstructors] = useState([]);
-    const [fellowsAtRisk, setFellowsAtRisk]       = useState([]);
-    const [recentActivity, setRecentActivity]     = useState([]);
-    const [totalActivities, setTotalActivities]   = useState(0);
-    const [activityFilter, setActivityFilter]     = useState('all');
-    const [activityPage, setActivityPage]         = useState(1);
+    const { data, isLoading: loading, mutate } = useSWR('admin-dashboard', fetchDashboard);
+
+    const statsRaw          = data?.statsRaw ?? null;
+    const pendingInstructors = data?.pendingInstructors ?? [];
+    const fellowsAtRisk     = data?.fellowsAtRisk ?? [];
+    const recentActivity    = data?.recentActivity ?? [];
+
+    const [activityFilter, setActivityFilter] = useState('all');
+    const [activityPage, setActivityPage]     = useState(1);
     const activitiesPerPage = 10;
 
     // ── dialogs ────────────────────────────────────────────────────
-    const [approveDialog, setApproveDialog]       = useState({ open: false, instructor: null });
-    const [rejectDialog, setRejectDialog]         = useState({ open: false, instructor: null, reason: '' });
-    const [reminderDialog, setReminderDialog]     = useState({ open: false, fellow: null, message: '' });
-    const [actionLoading, setActionLoading]       = useState(false);
-    const [toast, setToast]                       = useState(null);
-
-    useEffect(() => { fetchDashboardData(); }, []);
+    const [approveDialog, setApproveDialog]   = useState({ open: false, instructor: null });
+    const [rejectDialog, setRejectDialog]     = useState({ open: false, instructor: null, reason: '' });
+    const [reminderDialog, setReminderDialog] = useState({ open: false, fellow: null, message: '' });
+    const [actionLoading, setActionLoading]   = useState(false);
+    const [toast, setToast]                   = useState(null);
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 4000);
-    };
-
-    const fetchDashboardData = async () => {
-        try {
-            setLoading(true);
-            const [statsData, pendingData, fellowsData, activityData] = await Promise.all([
-                adminService.getDashboardStats(),
-                adminService.getPendingInstructors(),
-                adminService.getFellowsAtRisk(),
-                adminService.getRecentActivity(50),
-            ]);
-            setStatsRaw(statsData);
-            setPendingInstructors(pendingData.instructors || []);
-            setFellowsAtRisk(fellowsData.fellows || []);
-            setRecentActivity(activityData.activities || []);
-            setTotalActivities(activityData.total || 0);
-        } catch (error) {
-            console.error('Error fetching dashboard data:', error);
-            showToast('Failed to load dashboard data', 'error');
-        } finally {
-            setLoading(false);
-        }
     };
 
     // ── derived stat values ─────────────────────────────────────────
@@ -145,7 +136,7 @@ export default function AdminDashboardPage() {
             await adminService.approveInstructor(approveDialog.instructor._id);
             showToast(`${approveDialog.instructor.firstName} approved!`);
             setApproveDialog({ open: false, instructor: null });
-            fetchDashboardData();
+            mutate();
         } catch (e) {
             showToast(e.message || 'Failed to approve', 'error');
         } finally {
@@ -160,7 +151,7 @@ export default function AdminDashboardPage() {
             await adminService.rejectInstructor(rejectDialog.instructor._id, rejectDialog.reason);
             showToast(`${rejectDialog.instructor.firstName} rejected`);
             setRejectDialog({ open: false, instructor: null, reason: '' });
-            fetchDashboardData();
+            mutate();
         } catch (e) {
             showToast(e.message || 'Failed to reject', 'error');
         } finally {
@@ -221,7 +212,7 @@ export default function AdminDashboardPage() {
                         <p className="text-gray-500 text-sm mt-1">Platform overview and management</p>
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={fetchDashboardData}>
+                        <Button variant="outline" size="sm" onClick={mutate}>
                             <Icons.RefreshCw className="w-4 h-4 mr-1" /> Refresh
                         </Button>
                         <Button size="sm" onClick={() => router.push('/admin/analytics')}>
