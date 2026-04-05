@@ -2,6 +2,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/ToastProvider";
 import SessionProvider from "@/components/SessionProvider";
+import ScrollToTop from "@/components/ui/ScrollToTop";
 import Script from "next/script";
 
 const inter = Inter({
@@ -25,6 +26,7 @@ export default function RootLayout({ children }) {
       >
         <SessionProvider>
           <ToastProvider>{children}</ToastProvider>
+          <ScrollToTop />
         </SessionProvider>
       </body>
     </html>

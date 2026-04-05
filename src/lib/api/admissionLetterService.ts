@@ -89,6 +89,7 @@ const admissionLetterService = {
     name: string;
     pdfUrl: string;
     pdfPublicId: string;
+    originalFileName?: string;
   }): Promise<{ success: boolean; template: PdfTemplate }> => {
     const { data } = await api.post('/pdfs', payload);
     return data;
@@ -142,6 +143,11 @@ const admissionLetterService = {
     totalRecipients: number;
   }> => {
     const { data } = await api.post('/send', payload);
+    return data;
+  },
+
+  deleteLog: async (id: string) => {
+    const { data } = await api.delete(`/logs/${id}`);
     return data;
   },
 

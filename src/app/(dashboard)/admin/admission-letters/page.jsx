@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 import {
   Upload,
   FileText,
-  Users,
   Mail,
   Send,
   ChevronRight,
@@ -19,9 +18,7 @@ import {
   RefreshCw,
   Clock,
   CheckCircle,
-  XCircle,
   AlertCircle,
-  ChevronDown,
   Loader2,
 } from 'lucide-react';
 import admissionLetterService from '@/lib/api/admissionLetterService';
@@ -120,8 +117,13 @@ function PdfStep({ selected, onSelect, templates, onUpload, onDelete, loading })
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') {
-      toast.error('Please select a PDF file');
+    const allowed = [
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ];
+    if (!allowed.includes(file.type)) {
+      toast.error('Please select a PDF or Word (.docx) file');
       return;
     }
     if (file.size > 20 * 1024 * 1024) {
@@ -129,9 +131,8 @@ function PdfStep({ selected, onSelect, templates, onUpload, onDelete, loading })
       return;
     }
     setPendingFile(file);
-    setNameInput(file.name.replace(/\.pdf$/i, ''));
+    setNameInput(file.name.replace(/\.(pdf|docx|doc)$/i, ''));
     setShowNameModal(true);
-    // reset input so same file can be re-selected if needed
     e.target.value = '';
   };
 
@@ -156,6 +157,7 @@ function PdfStep({ selected, onSelect, templates, onUpload, onDelete, loading })
         name: nameInput.trim(),
         pdfUrl: uploadResult.url,
         pdfPublicId: uploadResult.publicId || uploadResult.public_id || uploadResult.url,
+        originalFileName: pendingFile.name,
       });
       toast.success('PDF uploaded successfully');
     } catch (err) {
@@ -184,11 +186,11 @@ function PdfStep({ selected, onSelect, templates, onUpload, onDelete, loading })
         ) : (
           <>
             <Upload className="mx-auto text-blue-400 mb-2" size={32} />
-            <p className="text-sm font-medium text-gray-700">Click to upload PDF</p>
-            <p className="text-xs text-gray-400 mt-1">PDF only · Max 20 MB</p>
+            <p className="text-sm font-medium text-gray-700">Click to upload PDF or Word document</p>
+            <p className="text-xs text-gray-400 mt-1">PDF, DOC, DOCX · Max 20 MB</p>
           </>
         )}
-        <input ref={fileRef} type="file" accept="application/pdf" className="hidden" onChange={handleFileChange} />
+        <input ref={fileRef} type="file" accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="hidden" onChange={handleFileChange} />
       </div>
 
       {/* Existing templates */}
@@ -416,12 +418,12 @@ function RecipientsStep({ selected, onToggle, onSelectAll, ccEmails, onCcChange 
                   />
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
                     <span className="text-xs font-semibold text-blue-700">
-                      {f.firstName?.[0]}{f.lastName?.[0]}
+                      {([f.firstName, f.lastName].filter(Boolean).join('') || f.fullName || f.email || '?')[0]?.toUpperCase()}
                     </span>
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-800 truncate">
-                      {f.firstName} {f.lastName}
+                      {[f.firstName, f.lastName].filter(Boolean).join(' ') || f.fullName || f.email}
                     </p>
                     <p className="text-xs text-gray-400 truncate">{f.email}</p>
                   </div>
@@ -583,9 +585,13 @@ function ComposeStep({ form, onChange, fromEmails, onAddFromEmail }) {
           rows={4}
           value={form.bodyHtml}
           onChange={(e) => onChange('bodyHtml', e.target.value)}
-          placeholder="Add a personal message to accompany the PDF…"
+          placeholder="Add a personal message to accompany the PDF… Use {{name}} or {{firstName}} to personalise per fellow."
           className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
         />
+        <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+          <AlertCircle size={11} />
+          Use <code className="bg-gray-100 px-1 rounded text-gray-600">{'{{name}}'}</code> or <code className="bg-gray-100 px-1 rounded text-gray-600">{'{{firstName}}'}</code> — replaced with each fellow&apos;s name when sent.
+        </p>
       </div>
 
       {/* Sign-off */}
@@ -741,9 +747,13 @@ function LogsTab() {
   const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const fetchLogs = useCallback(async (page = 1) => {
     setLoading(true);
+    setSelected(new Set());
     try {
       const res = await admissionLetterService.getLogs({ page, limit: 15 });
       setLogs(res.logs || []);
@@ -754,6 +764,46 @@ function LogsTab() {
       setLoading(false);
     }
   }, []);
+
+  const handleDelete = async (id) => {
+    if (!confirm('Delete this record? This cannot be undone.')) return;
+    setDeletingId(id);
+    try {
+      await admissionLetterService.deleteLog(id);
+      setLogs((prev) => prev.filter((l) => l._id !== id));
+      setSelected((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      toast.success('Record deleted');
+    } catch {
+      toast.error('Failed to delete record');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    if (!confirm(`Delete ${selected.size} selected record${selected.size > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    setBulkDeleting(true);
+    try {
+      await Promise.all([...selected].map((id) => admissionLetterService.deleteLog(id)));
+      setLogs((prev) => prev.filter((l) => !selected.has(l._id)));
+      setSelected(new Set());
+      toast.success(`${selected.size} record${selected.size > 1 ? 's' : ''} deleted`);
+    } catch {
+      toast.error('Some records could not be deleted');
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
+
+  const toggleSelect = (id) => setSelected((prev) => {
+    const n = new Set(prev);
+    n.has(id) ? n.delete(id) : n.add(id);
+    return n;
+  });
+
+  const allSelected = logs.length > 0 && logs.every((l) => selected.has(l._id));
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(logs.map((l) => l._id)));
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
@@ -773,11 +823,33 @@ function LogsTab() {
 
   return (
     <div>
+      {/* Header row */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-base font-semibold text-gray-900">Send History</h3>
-        <button onClick={() => fetchLogs()} className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
-          <RefreshCw size={13} /> Refresh
-        </button>
+        <div className="flex items-center gap-3">
+          <h3 className="text-base font-semibold text-gray-900">Send History</h3>
+          {selected.size > 0 && (
+            <span className="text-xs font-semibold bg-red-50 text-red-600 px-2.5 py-1 rounded-full">
+              {selected.size} selected
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {selected.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDeleting}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-red-500 hover:bg-red-600 text-white rounded-lg transition-colors disabled:opacity-50"
+            >
+              {bulkDeleting
+                ? <Loader2 size={12} className="animate-spin" />
+                : <Trash2 size={12} />}
+              Delete {selected.size}
+            </button>
+          )}
+          <button onClick={() => fetchLogs()} className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1">
+            <RefreshCw size={13} /> Refresh
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -793,8 +865,16 @@ function LogsTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
+                  <th className="px-4 py-3 w-8">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Subject</th>
+                  <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
                   <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sent</th>
                   <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Opened</th>
                   <th className="text-center px-3 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ack'd</th>
@@ -804,12 +884,20 @@ function LogsTab() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {logs.map((log) => (
-                  <tr key={log._id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={log._id} className={`transition-colors ${selected.has(log._id) ? 'bg-red-50/40' : 'hover:bg-gray-50'}`}>
                     <td className="px-4 py-3">
-                      <p className="font-medium text-gray-800 truncate max-w-[200px]">{log.subject}</p>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(log._id)}
+                        onChange={() => toggleSelect(log._id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-3 py-3">
+                      <p className="font-medium text-gray-800 truncate max-w-[180px]">{log.subject}</p>
                       <p className="text-xs text-gray-400">{log.fromEmail}</p>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap text-xs">
+                    <td className="px-3 py-3 text-gray-600 whitespace-nowrap text-xs">
                       {new Date(log.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </td>
                     <td className="px-3 py-3 text-center">
@@ -821,12 +909,24 @@ function LogsTab() {
                     <td className="px-3 py-3 text-center text-green-600 font-semibold">{log.acknowledgedCount}</td>
                     <td className="px-3 py-3 text-center text-red-500 font-semibold">{log.failureCount}</td>
                     <td className="px-3 py-3 text-right">
-                      <button
-                        onClick={() => openDetail(log._id)}
-                        className="text-xs text-blue-600 hover:text-blue-700 font-medium"
-                      >
-                        View
-                      </button>
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          onClick={() => openDetail(log._id)}
+                          className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleDelete(log._id)}
+                          disabled={deletingId === log._id}
+                          className="text-red-400 hover:text-red-600 transition-colors disabled:opacity-40"
+                          title="Delete"
+                        >
+                          {deletingId === log._id
+                            ? <Loader2 size={13} className="animate-spin" />
+                            : <Trash2 size={13} />}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}

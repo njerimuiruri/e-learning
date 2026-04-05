@@ -106,6 +106,11 @@ export default function AdminSidebar() {
             badge: pendingInstructorsCount,
         },
         {
+            icon: 'Mail',
+            label: 'Admission Letters',
+            path: '/admin/admission-letters',
+        },
+        {
             icon: 'Award',
             label: 'Certificates',
             path: '/admin/certificates',
