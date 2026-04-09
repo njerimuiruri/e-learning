@@ -430,10 +430,16 @@ export default function EditModulePage() {
                                     Saving…
                                 </span>
                             )}
-                            {(draftStatus === 'saved' || savedAgoLabel) && (
+                            {draftStatus === 'saved' && (
                                 <span className="text-xs text-emerald-600 flex items-center gap-1">
                                     <Icons.CheckCircle2 className="w-3 h-3" />
                                     {savedAgoLabel || 'Saved'}
+                                </span>
+                            )}
+                            {draftStatus === 'local_only' && (
+                                <span className="text-xs text-orange-500 flex items-center gap-1" title="Saved on this device only. Use 'Save Draft' to save to your account.">
+                                    <Icons.AlertTriangle className="w-3 h-3" />
+                                    Saved locally only
                                 </span>
                             )}
                             <button

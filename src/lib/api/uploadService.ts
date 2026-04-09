@@ -15,41 +15,46 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// If the backend returns a relative path (/uploads/...) we prepend the API URL
+// so the returned URL works in <img src> and <a href> on the frontend domain.
+function toAbsoluteUrl(url: string): string {
+  if (!url) return url;
+  return url.startsWith('/') ? `${API_URL}${url}` : url;
+}
+
 const uploadService = {
-  uploadImage: async (file) => {
+  uploadImage: async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     const response = await api.post('/upload/image', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return response.data.url;
+    return toAbsoluteUrl(response.data.url);
   },
 
-  uploadVideo: async (file) => {
+  uploadVideo: async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('file', file);
 
     const response = await api.post('/upload/video', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
+    // Videos go to Cloudinary — already a full URL
     return response.data.url;
   },
 
-  uploadDocument: async (file) => {
+  uploadDocument: async (file: File): Promise<{ url: string; originalName: string }> => {
     const formData = new FormData();
     formData.append('file', file);
 
     const response = await api.post('/upload/document', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
+      headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return { url: response.data.url, originalName: response.data.originalName || file.name };
+    return {
+      url: toAbsoluteUrl(response.data.url),
+      originalName: response.data.originalName || file.name,
+    };
   },
 };
 

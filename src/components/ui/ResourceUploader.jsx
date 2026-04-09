@@ -75,13 +75,17 @@ export default function ResourceUploader({ value = [], onChange, label = 'Lesson
                                 const resName = typeof resource === 'string' ? resource : resource.name;
                                 const ext = (resName || resUrl || '').split('.').pop()?.toLowerCase();
                                 const isPdf = ext === 'pdf';
-                                const href = isPdf ? resUrl : resUrl?.replace('/upload/', '/upload/fl_attachment/');
+                                // Only apply Cloudinary force-download trick for Cloudinary URLs
+                                const isCloudinary = resUrl?.includes('cloudinary.com');
+                                const href = isCloudinary && !isPdf
+                                    ? resUrl?.replace('/upload/', '/upload/fl_attachment/')
+                                    : resUrl;
                                 return (
                                     <a
                                         href={href}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        {...(!isPdf && { download: resName })}
+                                        download={!isPdf && !isCloudinary ? resName : undefined}
                                         className="p-1 text-gray-400 hover:text-blue-500 transition-colors"
                                         onClick={(e) => e.stopPropagation()}
                                     >

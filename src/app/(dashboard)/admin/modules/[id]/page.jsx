@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import adminService from '@/lib/api/adminService';
+import ModuleStudentPreview from '@/components/shared/ModuleStudentPreview';
 
 
 function stripHtml(html) {
@@ -37,6 +38,7 @@ export default function AdminModuleDetailPage() {
     const [toast, setToast] = useState(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
 
     // Assessment review state
     const [showAssessmentAction, setShowAssessmentAction] = useState(false);
@@ -287,6 +289,12 @@ export default function AdminModuleDetailPage() {
                                 <Icons.Globe className="w-4 h-4" /> Publish
                             </button>
                         )}
+                        <button
+                            onClick={() => setShowPreview(true)}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-blue-200 text-blue-600 rounded-xl font-semibold text-sm hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                        >
+                            <Icons.Eye className="w-4 h-4" /> Student Preview
+                        </button>
                         <button onClick={() => setShowDeleteConfirm(true)} className="flex items-center gap-2 px-4 py-2 bg-white border border-red-200 text-red-600 rounded-xl font-semibold text-sm hover:bg-red-50 hover:border-red-300 transition-colors">
                             <Icons.Trash2 className="w-4 h-4" /> Delete
                         </button>
@@ -1166,6 +1174,11 @@ export default function AdminModuleDetailPage() {
                     </div>
                 </div>
             </div>
+
+            {/* Student Preview modal */}
+            {showPreview && (
+                <ModuleStudentPreview module={mod} onClose={() => setShowPreview(false)} />
+            )}
         </div>
     );
 }

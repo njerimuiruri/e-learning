@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import adminService from '@/lib/api/adminService';
 import moduleRatingService from '@/lib/api/moduleRatingService';
+import ModuleStudentPreview from '@/components/shared/ModuleStudentPreview';
 
 const STATUS_CONFIG = {
     draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700', icon: 'FileEdit' },
@@ -36,6 +37,7 @@ export default function AdminModulesPage() {
     const [selectedModule, setSelectedModule] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showStudentPreviewModal, setShowStudentPreviewModal] = useState(false);
     const [rejectReason, setRejectReason] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
     const [modalReviews, setModalReviews] = useState([]);
@@ -152,6 +154,11 @@ export default function AdminModulesPage() {
 
     const openModuleDetail = (mod) => {
         router.push(`/admin/modules/${mod._id}`);
+    };
+
+    const openStudentPreview = (mod) => {
+        setSelectedModule(mod);
+        setShowStudentPreviewModal(true);
     };
 
     const getInstructorNames = (instructorIds) => {
@@ -414,10 +421,16 @@ export default function AdminModulesPage() {
 
                                         {/* Quick Actions */}
                                         {mod.status === 'draft' && (
-                                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                            <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); openStudentPreview(mod); }}
+                                                    className="flex-1 px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-100 transition-colors"
+                                                >
+                                                    Student Preview
+                                                </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handlePublish(mod._id); }}
-                                                    className="w-full px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                                                    className="flex-1 px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors"
                                                 >
                                                     Publish Directly
                                                 </button>
@@ -425,6 +438,12 @@ export default function AdminModulesPage() {
                                         )}
                                         {mod.status === 'submitted' && (
                                             <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); openStudentPreview(mod); }}
+                                                    className="flex-1 px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-100 transition-colors"
+                                                >
+                                                    Preview
+                                                </button>
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleApprove(mod._id); }}
                                                     className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -439,13 +458,13 @@ export default function AdminModulesPage() {
                                                 </button>
                                             </div>
                                         )}
-                                        {['approved', 'submitted'].includes(mod.status) && (
+                                        {['approved', 'published'].includes(mod.status) && (
                                             <div className="mt-3 pt-3 border-t border-gray-100">
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); handlePublish(mod._id); }}
-                                                    className="w-full px-3 py-1.5 bg-green-600 text-white text-xs font-medium rounded-lg hover:bg-green-700 transition-colors"
+                                                    onClick={(e) => { e.stopPropagation(); openStudentPreview(mod); }}
+                                                    className="w-full px-3 py-1.5 bg-blue-50 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-100 transition-colors"
                                                 >
-                                                    Publish Module
+                                                    Student Preview
                                                 </button>
                                             </div>
                                         )}
@@ -517,6 +536,13 @@ export default function AdminModulesPage() {
                                                 <td className="px-4 py-3 text-sm text-gray-500">{formatDate(mod.createdAt)}</td>
                                                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center gap-1">
+                                                        <button
+                                                            onClick={() => openStudentPreview(mod)}
+                                                            className="p-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                                                            title="Student Preview"
+                                                        >
+                                                            <Icons.Eye className="w-4 h-4" />
+                                                        </button>
                                                         {mod.status === 'draft' && (
                                                             <button
                                                                 onClick={() => handlePublish(mod._id)}
@@ -553,13 +579,6 @@ export default function AdminModulesPage() {
                                                                 <Icons.Globe className="w-4 h-4" />
                                                             </button>
                                                         )}
-                                                        <button
-                                                            onClick={() => openModuleDetail(mod)}
-                                                            className="p-1.5 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 transition-colors"
-                                                            title="View Details"
-                                                        >
-                                                            <Icons.Eye className="w-4 h-4" />
-                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -603,7 +622,7 @@ export default function AdminModulesPage() {
                                         className={`px-3 py-1.5 text-sm rounded-lg ${pagination.page === pageNum
                                             ? 'bg-blue-600 text-white'
                                             : 'border border-gray-300 hover:bg-gray-50'
-                                        }`}
+                                            }`}
                                     >
                                         {pageNum}
                                     </button>
@@ -905,6 +924,14 @@ export default function AdminModulesPage() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Student Preview Modal */}
+            {showStudentPreviewModal && selectedModule && (
+                <ModuleStudentPreview
+                    module={selectedModule}
+                    onClose={() => setShowStudentPreviewModal(false)}
+                />
             )}
         </div>
     );

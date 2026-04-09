@@ -8,11 +8,12 @@ const LS_PREFIX = 'arinlms_draft_';
  * useDraft — DB-first autosave with localStorage fallback.
  *
  * Status values:
- *   'idle'     — no unsaved changes yet
- *   'unsaved'  — changes detected, save pending
- *   'saving'   — save in progress
- *   'saved'    — successfully saved
- *   'error'    — save failed (DB and localStorage both failed)
+ *   'idle'        — no unsaved changes yet
+ *   'unsaved'     — changes detected, save pending
+ *   'saving'      — save in progress
+ *   'saved'       — successfully saved to server (DB)
+ *   'local_only'  — saved to localStorage only (DB failed — not visible on other devices)
+ *   'error'       — save failed everywhere
  */
 export function useDraft(draftKey, data, {
   enabled    = true,
@@ -117,10 +118,10 @@ export function useDraft(draftKey, data, {
       setStatus('saved');
     } catch {
       if (lsOk) {
-        // localStorage saved — treat as saved with fallback note
+        // localStorage only — warn the instructor this is device-specific
         setSavedAt(Date.now());
         setHasDraft(true);
-        setStatus('saved');
+        setStatus('local_only');
       } else {
         setStatus('error');
       }

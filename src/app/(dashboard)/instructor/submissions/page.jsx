@@ -353,31 +353,31 @@ export default function SubmissionsPage() {
                                                     : 'border-red-300 bg-red-50'
                                                 }`}
                                         >
-                                            <div className="flex items-start justify-between mb-4">
-                                                <div className="flex-1">
+                                            <div className="flex items-start justify-between mb-4 gap-4">
+                                                <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-3 flex-wrap">
-                                                        <span className="text-sm font-semibold text-gray-700 bg-white px-3 py-1 rounded-full">
+                                                        <span className="text-sm font-semibold text-gray-700 bg-white px-3 py-1 rounded-full flex-shrink-0">
                                                             Question {idx + 1}
                                                         </span>
                                                         {isEssay ? (
-                                                            <span className="text-xs px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold">
+                                                            <span className="text-xs px-3 py-1 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full font-semibold flex-shrink-0">
                                                                 ✏️ Essay Question
                                                             </span>
                                                         ) : (
-                                                            <span className="text-xs px-2 py-1 bg-gray-200 rounded">
+                                                            <span className="text-xs px-2 py-1 bg-gray-200 rounded flex-shrink-0">
                                                                 {answerType}
                                                             </span>
                                                         )}
                                                         {isEssay && answer?.gradedAt && (
-                                                            <span className={`text-xs px-3 py-1 rounded-full font-semibold ${answer?.isCorrect
-                                                                    ? 'bg-green-100 text-green-700'
-                                                                    : 'bg-red-100 text-red-700'
+                                                            <span className={`text-xs px-3 py-1 rounded-full font-semibold flex-shrink-0 ${answer?.isCorrect
+                                                                ? 'bg-green-100 text-green-700'
+                                                                : 'bg-red-100 text-red-700'
                                                                 }`}>
                                                                 {answer?.isCorrect ? '✓ Graded as Correct' : '✗ Graded as Incorrect'}
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="font-bold text-gray-900 mb-3 text-lg">
+                                                    <p className="font-bold text-gray-900 mb-3 text-lg break-words whitespace-normal">
                                                         {question.text}
                                                     </p>
                                                 </div>
@@ -394,7 +394,7 @@ export default function SubmissionsPage() {
                                                 <p className="text-sm text-gray-600 font-semibold mb-2">
                                                     📝 Student Answer:
                                                 </p>
-                                                <div className={`text-gray-900 whitespace-pre-wrap p-3 rounded ${isEssay ? 'bg-purple-50 border border-purple-100 min-h-[150px]' : 'bg-gray-50'}`}>
+                                                <div className={`text-gray-900 whitespace-pre-wrap break-words p-3 rounded overflow-x-auto ${isEssay ? 'bg-purple-50 border border-purple-100 min-h-[150px] max-h-[400px] overflow-y-auto' : 'bg-gray-50 max-h-[200px] overflow-y-auto'}`}>
                                                     {studentAnswer || '(Not answered)'}
                                                 </div>
                                             </div>
@@ -404,7 +404,7 @@ export default function SubmissionsPage() {
                                                     <p className="text-sm text-gray-600 font-semibold mb-1">
                                                         Correct Answer:
                                                     </p>
-                                                    <p className="text-green-700 font-semibold">
+                                                    <p className="text-green-700 font-semibold break-words whitespace-normal">
                                                         {question.correctAnswer}
                                                     </p>
                                                 </div>
@@ -415,7 +415,7 @@ export default function SubmissionsPage() {
                                                     <p className="text-sm text-blue-700 font-semibold mb-1">
                                                         Previous Feedback:
                                                     </p>
-                                                    <p className="text-blue-900">{answer.instructorFeedback}</p>
+                                                    <p className="text-blue-900 break-words whitespace-normal">{answer.instructorFeedback}</p>
                                                 </div>
                                             )}
 
@@ -436,8 +436,8 @@ export default function SubmissionsPage() {
                                                         </p>
                                                         <div className="grid grid-cols-2 gap-3">
                                                             <label className={`flex items-center gap-3 cursor-pointer p-4 rounded-lg border-2 transition ${feedback[idx]?.isCorrect === true
-                                                                    ? 'border-green-500 bg-green-100'
-                                                                    : 'border-gray-300 bg-white hover:border-green-300'
+                                                                ? 'border-green-500 bg-green-100'
+                                                                : 'border-gray-300 bg-white hover:border-green-300'
                                                                 }`}>
                                                                 <input
                                                                     type="radio"
@@ -453,8 +453,8 @@ export default function SubmissionsPage() {
                                                                 </span>
                                                             </label>
                                                             <label className={`flex items-center gap-3 cursor-pointer p-4 rounded-lg border-2 transition ${feedback[idx]?.isCorrect === false
-                                                                    ? 'border-red-500 bg-red-100'
-                                                                    : 'border-gray-300 bg-white hover:border-red-300'
+                                                                ? 'border-red-500 bg-red-100'
+                                                                : 'border-gray-300 bg-white hover:border-red-300'
                                                                 }`}>
                                                                 <input
                                                                     type="radio"

@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import InteractiveCodeEditor from '@/components/student/InteractiveCodeEditor';
 import ResourceUploader from '@/components/ui/ResourceUploader';
+import uploadService from '@/lib/api/uploadService';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -105,27 +106,109 @@ function CodeEditor({
   );
 }
 
+// ─── ImageSlideEditor ─────────────────────────────────────────────────────────
+// Upload a file OR paste a URL for an image slide.
+
+function ImageSlideEditor({ slide, onUpdate, disabled }) {
+  const fileRef = React.useRef(null);
+  const [uploading, setUploading] = React.useState(false);
+
+  const handleFile = async (file) => {
+    if (!file || !file.type.startsWith('image/')) return;
+    setUploading(true);
+    try {
+      const url = await uploadService.uploadImage(file);
+      onUpdate('imageUrl', url);
+    } catch (err) {
+      console.error('Image upload failed:', err);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-gray-600">Image</Label>
+        <div className="flex gap-2">
+          <Input
+            type="url"
+            value={slide.imageUrl || ''}
+            onChange={(e) => onUpdate('imageUrl', e.target.value)}
+            disabled={disabled || uploading}
+            placeholder="Paste a URL — or upload a file →"
+            className="text-sm flex-1"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => fileRef.current?.click()}
+            disabled={disabled || uploading}
+            className="flex-shrink-0 gap-1.5"
+          >
+            {uploading
+              ? <><div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-600" /> Uploading…</>
+              : <><Icons.Upload className="w-3.5 h-3.5" /> Upload</>
+            }
+          </Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            className="hidden"
+            onChange={(e) => handleFile(e.target.files?.[0])}
+          />
+        </div>
+        <p className="text-xs text-gray-400">JPEG, PNG, GIF, WebP · Max 10 MB</p>
+      </div>
+      {slide.imageUrl && (
+        <img src={slide.imageUrl} alt="preview" className="max-h-40 rounded-lg border border-gray-200 object-contain bg-gray-50" />
+      )}
+      <div className="space-y-1.5">
+        <Label className="text-xs font-semibold text-gray-600">Caption</Label>
+        <Input
+          value={slide.imageCaption || ''}
+          onChange={(e) => onUpdate('imageCaption', e.target.value)}
+          disabled={disabled}
+          placeholder="Optional image caption…"
+          className="text-sm"
+        />
+      </div>
+    </div>
+  );
+}
+
 // ─── DiagramSlideEditor ────────────────────────────────────────────────────────
 // Extracted as its own component so it can use hooks (useRef) safely.
 
 function DiagramSlideEditor({ slide, onUpdate, disabled }) {
   const fileRef = React.useRef(null);
+  const [uploading, setUploading] = React.useState(false);
 
-  const loadImageFile = (file) => {
+  const uploadImageFile = async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => onUpdate('imageUrl', e.target.result);
-    reader.readAsDataURL(file);
+    setUploading(true);
+    try {
+      const url = await uploadService.uploadImage(file);
+      onUpdate('imageUrl', url);
+    } catch (err) {
+      console.error('Diagram image upload failed:', err);
+      alert('Failed to upload image. Please try again.');
+    } finally {
+      setUploading(false);
+    }
   };
 
-  const handleFileChange = (e) => loadImageFile(e.target.files?.[0]);
+  const handleFileChange = (e) => uploadImageFile(e.target.files?.[0]);
 
   const handlePaste = (e) => {
     const items = Array.from(e.clipboardData?.items || []);
     const imgItem = items.find(i => i.type.startsWith('image/'));
     if (imgItem) {
       e.preventDefault();
-      loadImageFile(imgItem.getAsFile());
+      uploadImageFile(imgItem.getAsFile());
     }
   };
 
@@ -151,7 +234,12 @@ function DiagramSlideEditor({ slide, onUpdate, disabled }) {
           tabIndex={0}
           className="relative rounded-xl border-2 border-dashed border-amber-200 bg-amber-50/40 hover:border-amber-400 focus:border-amber-400 focus:outline-none transition-colors"
         >
-          {slide.imageUrl ? (
+          {uploading ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-8 px-4 text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
+              <p className="text-sm text-amber-700">Uploading image…</p>
+            </div>
+          ) : slide.imageUrl ? (
             <div className="p-3 space-y-2">
               <img
                 src={slide.imageUrl}
@@ -162,7 +250,7 @@ function DiagramSlideEditor({ slide, onUpdate, disabled }) {
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
-                  disabled={disabled}
+                  disabled={disabled || uploading}
                   className="text-xs text-amber-700 hover:text-amber-900 underline"
                 >
                   Replace image
@@ -807,32 +895,7 @@ function SlideEditor({ slide, idx, expanded, onToggle, onUpdate, onDelete, disab
 
           {/* IMAGE slide */}
           {slide.type === 'image' && (
-            <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-gray-600">Image URL</Label>
-                <Input
-                  type="url"
-                  value={slide.imageUrl || ''}
-                  onChange={(e) => onUpdate('imageUrl', e.target.value)}
-                  disabled={disabled}
-                  placeholder="https://..."
-                  className="text-sm"
-                />
-              </div>
-              {slide.imageUrl && (
-                <img src={slide.imageUrl} alt="preview" className="max-h-32 rounded-lg border border-gray-200 object-cover" />
-              )}
-              <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-gray-600">Caption</Label>
-                <Input
-                  value={slide.imageCaption || ''}
-                  onChange={(e) => onUpdate('imageCaption', e.target.value)}
-                  disabled={disabled}
-                  placeholder="Optional image caption..."
-                  className="text-sm"
-                />
-              </div>
-            </div>
+            <ImageSlideEditor slide={slide} onUpdate={onUpdate} disabled={disabled} />
           )}
 
           {/* DIAGRAM slide */}
