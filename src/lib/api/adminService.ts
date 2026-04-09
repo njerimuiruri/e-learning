@@ -128,6 +128,36 @@ const adminService = {
     return data;
   },
 
+  // Fellow Progress Tracking
+  getFellowProgressStats: async () => {
+    const { data } = await api.get('/fellows/progress/stats');
+    return data;
+  },
+  getFellowsProgress: async (filters: {
+    status?: string;
+    categoryId?: string;
+    cohort?: string;
+    risk?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  } = {}) => {
+    const { data } = await api.get('/fellows/progress', { params: filters });
+    return data;
+  },
+  getFellowProgressDetail: async (id: string) => {
+    const { data } = await api.get(`/fellows/${id}/progress`);
+    return data;
+  },
+  updateFellowProgressAction: async (
+    id: string,
+    action: 'allow_proceed' | 'deactivate' | 'mark_completed',
+    note?: string,
+  ) => {
+    const { data } = await api.put(`/fellows/${id}/progress-action`, { action, note });
+    return data;
+  },
+
   // Courses
   getPendingCourses: async (filters: { page?: number; limit?: number } = {}) => {
     const { data } = await api.get('/courses/pending', { params: filters });
@@ -201,6 +231,86 @@ const adminService = {
   },
   rejectAssessment: async (id: string, reason: string) => {
     const { data } = await api.put(`/modules/${id}/reject-assessment`, { reason });
+    return data;
+  },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bulk Email API — routed through /api/bulk-messaging (not /api/admin)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const bulkEmailApi = axios.create({
+  baseURL: `${API_URL}/bulk-messaging`,
+});
+
+bulkEmailApi.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+  return config;
+});
+
+export type BulkEmailFilterType =
+  | 'all_fellows'
+  | 'by_category'
+  | 'by_cohort'
+  | 'all_students'
+  | 'all_instructors'
+  | 'manual';
+
+export interface CcBccEntry { email: string; name?: string }
+export interface BulkEmailAttachment { filename: string; url: string; mimeType: string; size?: number }
+
+export interface PreviewRecipientsPayload {
+  filterType: BulkEmailFilterType;
+  filterCategoryIds?: string[];
+  filterCohorts?: string[];
+  manualUserIds?: string[];
+}
+
+export interface SendBulkEmailPayload extends PreviewRecipientsPayload {
+  subject: string;
+  body: string;
+  cc?: CcBccEntry[];
+  bcc?: CcBccEntry[];
+  attachments?: BulkEmailAttachment[];
+}
+
+export const bulkEmailService = {
+  /** Preview recipients before sending */
+  previewRecipients: async (payload: PreviewRecipientsPayload) => {
+    const { data } = await bulkEmailApi.post('/admin/bulk-email/preview-recipients', payload);
+    return data;
+  },
+
+  /** Compose and send bulk email (starts background job) */
+  send: async (payload: SendBulkEmailPayload) => {
+    const { data } = await bulkEmailApi.post('/admin/bulk-email/send', payload);
+    return data;
+  },
+
+  /** List all campaigns */
+  getCampaigns: async (limit = 20, offset = 0) => {
+    const { data } = await bulkEmailApi.get('/admin/bulk-email', { params: { limit, offset } });
+    return data;
+  },
+
+  /** Get single campaign with per-recipient delivery status */
+  getCampaign: async (id: string) => {
+    const { data } = await bulkEmailApi.get(`/admin/bulk-email/${id}`);
+    return data;
+  },
+
+  /** Upload an attachment and get back { url, filename, mimeType, size } */
+  uploadAttachment: async (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const { data } = await bulkEmailApi.post('/admin/bulk-email/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return data;
   },
 };

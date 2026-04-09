@@ -111,7 +111,12 @@ export default function AdminModulesPage() {
     };
 
     const handlePublish = async (moduleId) => {
-        if (!confirm('Are you sure you want to publish this module? It will become visible to students.')) return;
+        const mod = modules.find(m => m._id === moduleId);
+        const isDraft = mod?.status === 'draft';
+        const msg = isDraft
+            ? 'This module is still a draft. Publishing it directly will bypass submission and approval. It will immediately be visible to students. Continue?'
+            : 'Are you sure you want to publish this module? It will become visible to students.';
+        if (!confirm(msg)) return;
         setActionLoading(true);
         try {
             await adminService.publishModule(moduleId);
@@ -193,7 +198,7 @@ export default function AdminModulesPage() {
 
                 {/* Stats Cards */}
                 {stats && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
                         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -202,6 +207,18 @@ export default function AdminModulesPage() {
                             </div>
                             <p className="text-2xl font-bold text-gray-900">{stats.totalModules}</p>
                             <p className="text-xs text-gray-500">Total Modules</p>
+                        </div>
+                        <div
+                            className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm cursor-pointer hover:border-gray-300"
+                            onClick={() => { setStatusFilter('draft'); setPagination(p => ({ ...p, page: 1 })); }}
+                        >
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                                    <Icons.FileEdit className="w-4 h-4 text-gray-600" />
+                                </div>
+                            </div>
+                            <p className="text-2xl font-bold text-gray-700">{stats.modulesByStatus?.draft || 0}</p>
+                            <p className="text-xs text-gray-500">Drafts</p>
                         </div>
                         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                             <div className="flex items-center gap-2 mb-2">
@@ -395,7 +412,17 @@ export default function AdminModulesPage() {
                                             <span>{formatDate(mod.createdAt)}</span>
                                         </div>
 
-                                        {/* Quick Actions for submitted modules */}
+                                        {/* Quick Actions */}
+                                        {mod.status === 'draft' && (
+                                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handlePublish(mod._id); }}
+                                                    className="w-full px-3 py-1.5 bg-emerald-600 text-white text-xs font-medium rounded-lg hover:bg-emerald-700 transition-colors"
+                                                >
+                                                    Publish Directly
+                                                </button>
+                                            </div>
+                                        )}
                                         {mod.status === 'submitted' && (
                                             <div className="mt-3 pt-3 border-t border-gray-100 flex gap-2">
                                                 <button
@@ -412,7 +439,7 @@ export default function AdminModulesPage() {
                                                 </button>
                                             </div>
                                         )}
-                                        {mod.status === 'approved' && (
+                                        {['approved', 'submitted'].includes(mod.status) && (
                                             <div className="mt-3 pt-3 border-t border-gray-100">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handlePublish(mod._id); }}
@@ -490,6 +517,15 @@ export default function AdminModulesPage() {
                                                 <td className="px-4 py-3 text-sm text-gray-500">{formatDate(mod.createdAt)}</td>
                                                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center gap-1">
+                                                        {mod.status === 'draft' && (
+                                                            <button
+                                                                onClick={() => handlePublish(mod._id)}
+                                                                className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-colors"
+                                                                title="Publish Directly"
+                                                            >
+                                                                <Icons.Globe className="w-4 h-4" />
+                                                            </button>
+                                                        )}
                                                         {mod.status === 'submitted' && (
                                                             <>
                                                                 <button
@@ -508,7 +544,7 @@ export default function AdminModulesPage() {
                                                                 </button>
                                                             </>
                                                         )}
-                                                        {mod.status === 'approved' && (
+                                                        {['approved', 'submitted'].includes(mod.status) && (
                                                             <button
                                                                 onClick={() => handlePublish(mod._id)}
                                                                 className="p-1.5 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors"

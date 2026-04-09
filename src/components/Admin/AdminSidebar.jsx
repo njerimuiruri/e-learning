@@ -95,6 +95,11 @@ export default function AdminSidebar() {
             path: '/admin/fellows',
         },
         {
+            icon: 'Activity',
+            label: 'Fellow Progress',
+            path: '/admin/fellows/progress',
+        },
+        {
             icon: 'BookOpen',
             label: 'Module Management',
             path: '/admin/modules',
@@ -109,6 +114,11 @@ export default function AdminSidebar() {
             icon: 'Mail',
             label: 'Admission Letters',
             path: '/admin/admission-letters',
+        },
+        {
+            icon: 'SendHorizonal',
+            label: 'Bulk Email',
+            path: '/admin/bulk-email',
         },
         {
             icon: 'Award',

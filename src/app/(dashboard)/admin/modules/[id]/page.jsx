@@ -231,7 +231,8 @@ export default function AdminModuleDetailPage() {
                         <h3 className="text-xl font-bold text-gray-900 mb-2 capitalize">{actionType} Module</h3>
                         <p className="text-gray-500 text-sm mb-4">
                             {actionType === 'approve' && 'This will approve the module for publishing.'}
-                            {actionType === 'publish' && 'This will make the module visible to students.'}
+                            {actionType === 'publish' && mod?.status === 'draft' && 'This will publish the draft module directly, bypassing the submission and approval steps. It will be immediately visible to students.'}
+                            {actionType === 'publish' && mod?.status !== 'draft' && 'This will make the module visible to students.'}
                             {actionType === 'reject' && 'Please provide a reason for rejection.'}
                         </p>
                         {actionType === 'reject' && (
@@ -280,8 +281,8 @@ export default function AdminModuleDetailPage() {
                                 <Icons.XCircle className="w-4 h-4" /> Reject
                             </button>
                         )}
-                        {/* Publish — only after approval */}
-                        {mod.status === 'approved' && (
+                        {/* Publish — for approved modules, or directly from draft (admin override) */}
+                        {['approved', 'draft', 'submitted'].includes(mod.status) && (
                             <button onClick={() => { setActionType('publish'); setShowAction(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-700">
                                 <Icons.Globe className="w-4 h-4" /> Publish
                             </button>
@@ -1144,9 +1145,9 @@ export default function AdminModuleDetailPage() {
                                     </button>
                                 </>
                             )}
-                            {mod.status === 'approved' && (
+                            {['approved', 'draft', 'submitted'].includes(mod.status) && (
                                 <button onClick={() => { setActionType('publish'); setShowAction(true); }} className="w-full flex items-center justify-center gap-2 py-3 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-700 transition-colors">
-                                    <Icons.Globe className="w-4 h-4" /> Publish Module
+                                    <Icons.Globe className="w-4 h-4" /> {mod.status === 'draft' ? 'Publish Directly' : 'Publish Module'}
                                 </button>
                             )}
                             {mod.status === 'published' && (

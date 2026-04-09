@@ -236,12 +236,19 @@ export default function EditModulePage() {
             setOriginalModule(moduleResult);
 
             const categoryId = typeof moduleResult.categoryId === 'object' ? moduleResult.categoryId._id : moduleResult.categoryId;
+            // learningOutcomes is stored as a string in the DB; normalise to string[] for the UI
+            const learningOutcomesArr = (() => {
+                const raw = moduleResult.learningOutcomes;
+                if (Array.isArray(raw) && raw.length > 0) return raw;
+                if (typeof raw === 'string' && raw.trim()) return raw.split('\n').filter(Boolean);
+                return [''];
+            })();
+
             setModuleData({
                 title: moduleResult.title || '', description: moduleResult.description || '',
                 welcomeMessage: moduleResult.welcomeMessage || '', moduleAim: moduleResult.moduleAim || '',
                 moduleObjectives: moduleResult.moduleObjectives?.length > 0 ? moduleResult.moduleObjectives : [''],
-                learningOutcomes: Array.isArray(moduleResult.learningOutcomes) && moduleResult.learningOutcomes.length > 0
-                    ? moduleResult.learningOutcomes : [''],
+                learningOutcomes: learningOutcomesArr,
                 targetAudience: moduleResult.targetAudience?.length > 0 ? moduleResult.targetAudience : [''],
                 categoryId: categoryId || '', level: moduleResult.level || 'beginner',
                 deliveryMode: moduleResult.deliveryMode || '', duration: moduleResult.duration || '',
@@ -325,9 +332,8 @@ export default function EditModulePage() {
                 categoryId: moduleData.categoryId, level: moduleData.level,
                 deliveryMode: moduleData.deliveryMode, duration: moduleData.duration,
                 bannerUrl: moduleData.bannerUrl,
-                learningOutcomes: moduleData.learningOutcomes.filter(o => o.trim()),
+                learningOutcomes: moduleData.learningOutcomes.filter(o => o.trim()).join('\n'),
                 targetAudience: moduleData.targetAudience.filter(a => a.trim()),
-                moduleObjectives: moduleData.moduleObjectives.filter(o => o.trim()),
                 prerequisites: moduleData.prerequisites,
                 lessons: cleanLessons,
             };
