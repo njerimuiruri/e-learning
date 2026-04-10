@@ -61,14 +61,49 @@ export default function RichTextEditor({
         };
     }, []);
 
-    // ── Intercept paste events to preserve table HTML from Word / Google Docs ──
+    // ── Upload an image file and insert the URL into Quill ────────────────────
+    const uploadAndInsertImage = useCallback(async (file) => {
+        if (!file) return;
+        if (file.size > 10 * 1024 * 1024) {
+            alert('Image must be less than 10MB');
+            return;
+        }
+        try {
+            const url = await uploadService.uploadImage(file);
+            const quill = getEditor();
+            if (quill) {
+                const range = quill.getSelection(true) || { index: quill.getLength() - 1 };
+                quill.insertEmbed(range.index, 'image', url);
+                quill.setSelection(range.index + 1);
+            }
+        } catch {
+            alert('Failed to upload image. Please try again.');
+        }
+    }, [getEditor]);
+
+    // ── Intercept paste/drop to prevent base64 embedding ──────────────────────
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
 
         const handlePaste = (e) => {
+            const items = e.clipboardData?.items;
+
+            // 1. If clipboard has an image file, upload it instead of letting Quill embed base64
+            if (items) {
+                for (const item of Array.from(items)) {
+                    if (item.kind === 'file' && item.type.startsWith('image/')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        uploadAndInsertImage(item.getAsFile());
+                        return;
+                    }
+                }
+            }
+
+            // 2. Preserve table HTML from Word / Google Docs
             const html = e.clipboardData?.getData('text/html') || '';
-            if (!html.includes('<table')) return; // let Quill handle non-table pastes normally
+            if (!html.includes('<table')) return; // let Quill handle all other pastes normally
 
             e.preventDefault();
             e.stopPropagation();
@@ -89,10 +124,27 @@ export default function RichTextEditor({
             quill.clipboard.dangerouslyPasteHTML(range.index, cleaned);
         };
 
-        // Use capture so we intercept before Quill's own handler
+        const handleDrop = (e) => {
+            const files = e.dataTransfer?.files;
+            if (!files) return;
+            for (const file of Array.from(files)) {
+                if (file.type.startsWith('image/')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    uploadAndInsertImage(file);
+                    return;
+                }
+            }
+        };
+
+        // Use capture so we intercept before Quill's own handlers
         container.addEventListener('paste', handlePaste, true);
-        return () => container.removeEventListener('paste', handlePaste, true);
-    }, [getEditor]);
+        container.addEventListener('drop', handleDrop, true);
+        return () => {
+            container.removeEventListener('paste', handlePaste, true);
+            container.removeEventListener('drop', handleDrop, true);
+        };
+    }, [getEditor, uploadAndInsertImage]);
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 

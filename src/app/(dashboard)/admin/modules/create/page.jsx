@@ -540,7 +540,7 @@ export default function AdminCreateModulePage() {
   // 'existing' | 'pending'
   const [assignMode, setAssignMode] = useState('existing');
 
-  const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel } = useDraft(
+  const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel, dbError: draftDbError } = useDraft(
     'module_admin_draft_new',
     form,
     { contentType: 'module', title: form.title || 'New Module' }
@@ -1121,10 +1121,13 @@ export default function AdminCreateModulePage() {
               {savedAgoLabel || 'Saved'}
             </span>
           )}
-          {draftStatus === 'local_only' && (
-            <span className="text-xs text-orange-500 hidden sm:flex items-center gap-1" title="Saved on this device only. Use 'Save Draft' to save to your account.">
+          {draftStatus === 'error' && (
+            <span
+              className="text-xs text-red-500 hidden sm:flex items-center gap-1 cursor-help"
+              title={draftDbError || 'Draft could not be saved — click Save Draft to retry.'}
+            >
               <Icons.AlertTriangle className="w-3 h-3" />
-              Saved locally only
+              {draftDbError || 'Save failed — retry'}
             </span>
           )}
           <Button

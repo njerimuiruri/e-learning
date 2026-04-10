@@ -6,6 +6,7 @@ import * as Icons from 'lucide-react';
 import { useToast } from '@/components/ui/ToastProvider';
 import authService from '@/lib/api/authService';
 import adminService from '@/lib/api/adminService';
+import NotificationBell from '@/components/shared/NotificationBell';
 
 export default function AdminSidebar() {
     const router = useRouter();
@@ -136,6 +137,11 @@ export default function AdminSidebar() {
             path: '/admin/analytics',
         },
         {
+            icon: 'MessageCircle',
+            label: 'Messages',
+            path: '/admin/messages',
+        },
+        {
             icon: 'Settings',
             label: 'System Settings',
             path: '/admin/settings',
@@ -164,10 +170,7 @@ export default function AdminSidebar() {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="relative p-2 hover:bg-gray-100 rounded-lg transition-colors">
-                            <Icons.Bell className="w-5 h-5 text-gray-600" />
-                            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                        </button>
+                        <NotificationBell />
 
                         <button className="hidden md:flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors">
                             <Icons.Search className="w-4 h-4 text-gray-500" />

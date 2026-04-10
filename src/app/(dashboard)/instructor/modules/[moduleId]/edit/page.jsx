@@ -211,7 +211,7 @@ export default function EditModulePage() {
     });
 
     const draftData = useMemo(() => ({ moduleData, lessons, finalAssessment }), [moduleData, lessons, finalAssessment]);
-    const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel } = useDraft(
+    const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel, dbError: draftDbError } = useDraft(
         `module_instructor_draft_${moduleId}`,
         draftData,
         { enabled: !initialLoading, contentType: 'module', entityId: moduleId, title: moduleData.title || 'Module' }
@@ -436,10 +436,13 @@ export default function EditModulePage() {
                                     {savedAgoLabel || 'Saved'}
                                 </span>
                             )}
-                            {draftStatus === 'local_only' && (
-                                <span className="text-xs text-orange-500 flex items-center gap-1" title="Saved on this device only. Use 'Save Draft' to save to your account.">
+                            {draftStatus === 'error' && (
+                                <span
+                                    className="text-xs text-red-500 flex items-center gap-1 cursor-help"
+                                    title={draftDbError || 'Draft could not be saved — click Save Draft to retry.'}
+                                >
                                     <Icons.AlertTriangle className="w-3 h-3" />
-                                    Saved locally only
+                                    {draftDbError || 'Save failed — retry'}
                                 </span>
                             )}
                             <button

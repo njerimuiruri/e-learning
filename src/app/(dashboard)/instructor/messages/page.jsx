@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import ProtectedInstructorRoute from '@/components/ProtectedInstructorRoute';
+import messageService from '@/lib/api/messageService';
 
 function InstructorMessagesContent() {
     const router = useRouter();
@@ -50,26 +51,8 @@ function InstructorMessagesContent() {
     const fetchConversations = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
-            const response = await fetch('https://api.elearning.arin-africa.orgmessages/conversations', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API Error:', response.status, errorText);
-                throw new Error('Failed to fetch conversations');
-            }
-
-            const result = await response.json();
-            console.log('Conversations response:', result);
-
-            const conversationsData = result.data || result.conversations || [];
-            console.log('Parsed conversations:', conversationsData);
-
-            setConversations(conversationsData);
+            const data = await messageService.getConversations();
+            setConversations(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error('Error fetching conversations:', err);
             setConversations([]);
@@ -79,41 +62,11 @@ function InstructorMessagesContent() {
     };
 
     const fetchMessages = async (userId) => {
-        if (!userId) {
-            console.error('No userId provided to fetchMessages');
-            return;
-        }
-
+        if (!userId) return;
         try {
-            console.log('Fetching messages for user:', userId);
-            const token = localStorage.getItem('token');
-            const response = await fetch(`https://api.elearning.arin-africa.orgmessages/conversation/${userId}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API Error fetching messages:', response.status, errorText);
-                throw new Error('Failed to fetch messages');
-            }
-
-            const result = await response.json();
-            console.log('Messages response:', result);
-
-            const messagesData = result.data || result.messages || [];
-            console.log('Parsed messages:', messagesData);
-            setMessages(messagesData);
-
-            // Mark conversation as read
-            await fetch(`https://api.elearning.arin-africa.orgmessages/conversation/${userId}/read`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
+            const data = await messageService.getConversation(userId, 100);
+            setMessages(Array.isArray(data) ? data : []);
+            await messageService.markConversationAsRead(userId);
             fetchConversations();
         } catch (err) {
             console.error('Error fetching messages:', err);
@@ -124,32 +77,17 @@ function InstructorMessagesContent() {
     const handleSendMessage = async (e) => {
         e.preventDefault();
         if (!newMessage.trim() || !selectedConversation) return;
-
+        const text = newMessage.trim();
+        setNewMessage('');
         try {
             setSending(true);
-            const token = localStorage.getItem('token');
-            const response = await fetch('https://api.elearning.arin-africa.orgmessages', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    receiverId: selectedConversation.user._id,
-                    content: newMessage,
-                    attachments: attachments.length > 0 ? attachments : undefined
-                })
-            });
-
-            if (!response.ok) throw new Error('Failed to send message');
-
-            const data = await response.json();
-            setMessages([...messages, data.data]);
-            setNewMessage('');
-            setAttachments([]);
+            const receiverId = selectedConversation.user?._id || selectedConversation.user?.id;
+            await messageService.sendMessage({ receiverId, content: text });
+            await fetchMessages(receiverId);
             fetchConversations();
         } catch (err) {
             console.error('Error sending message:', err);
+            setNewMessage(text);
             alert('Failed to send message');
         } finally {
             setSending(false);
@@ -159,39 +97,17 @@ function InstructorMessagesContent() {
     const handleFileUpload = async (e) => {
         const files = Array.from(e.target.files);
         if (files.length === 0) return;
-
         setUploading(true);
         try {
-            const token = localStorage.getItem('token');
-            const uploadedUrls = [];
-
-            for (const file of files) {
-                const formData = new FormData();
-                formData.append('file', file);
-
-                const response = await fetch('https://api.elearning.arin-africa.orgupload/document', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: formData
-                });
-
-                if (response.ok) {
-                    const data = await response.json();
-                    uploadedUrls.push(data.url);
-                }
-            }
-
-            setAttachments([...attachments, ...uploadedUrls]);
+            const { default: uploadService } = await import('@/lib/api/uploadService');
+            const urls = await Promise.all(files.map(f => uploadService.uploadDocument(f).then(r => r.url)));
+            setAttachments(prev => [...prev, ...urls.filter(Boolean)]);
         } catch (err) {
             console.error('Error uploading file:', err);
             alert('Failed to upload file');
         } finally {
             setUploading(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
+            if (fileInputRef.current) fileInputRef.current.value = '';
         }
     };
 
@@ -201,16 +117,8 @@ function InstructorMessagesContent() {
 
     const fetchUnreadCount = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await fetch('https://api.elearning.arin-africa.orgmessages/unread-count', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) return;
-            const data = await response.json();
-            const count = data?.data?.count ?? data?.count ?? 0;
+            const result = await messageService.getUnreadCount();
+            const count = result?.count ?? 0;
             if (count > unreadCount) {
                 setToast({
                     title: 'New message',

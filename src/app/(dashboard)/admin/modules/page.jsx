@@ -6,6 +6,7 @@ import * as Icons from 'lucide-react';
 import adminService from '@/lib/api/adminService';
 import moduleRatingService from '@/lib/api/moduleRatingService';
 import ModuleStudentPreview from '@/components/shared/ModuleStudentPreview';
+import draftService from '@/lib/api/draftService';
 
 const STATUS_CONFIG = {
     draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700', icon: 'FileEdit' },
@@ -41,6 +42,11 @@ export default function AdminModulesPage() {
     const [rejectReason, setRejectReason] = useState('');
     const [actionLoading, setActionLoading] = useState(false);
     const [modalReviews, setModalReviews] = useState([]);
+
+    // Form-backup drafts from all users
+    const [adminView, setAdminView] = useState('modules'); // 'modules' | 'formDrafts'
+    const [allFormDrafts, setAllFormDrafts] = useState([]);
+    const [formDraftsLoading, setFormDraftsLoading] = useState(false);
 
     useEffect(() => {
         fetchModules();
@@ -83,6 +89,18 @@ export default function AdminModulesPage() {
             setStats(data);
         } catch (error) {
             console.error('Error fetching module stats:', error);
+        }
+    };
+
+    const fetchAllFormDrafts = async () => {
+        setFormDraftsLoading(true);
+        try {
+            const res = await draftService.listAll();
+            setAllFormDrafts(res?.data || []);
+        } catch (err) {
+            console.error('Failed to load form drafts:', err);
+        } finally {
+            setFormDraftsLoading(false);
         }
     };
 
@@ -190,21 +208,118 @@ export default function AdminModulesPage() {
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                 {/* Page Header */}
-                <div className="mb-8 flex items-center justify-between">
+                <div className="mb-8 flex items-center justify-between flex-wrap gap-3">
                     <div>
                         <h1 className="text-2xl font-bold text-gray-900">Module Management</h1>
                         <p className="text-gray-600 mt-1">Review, approve, and manage learning modules</p>
                     </div>
-                    <button
-                        onClick={() => router.push('/admin/modules/create')}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
-                    >
-                        <Icons.Plus className="w-4 h-4" /> Create Module
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* View toggle: Modules | Form Drafts */}
+                        <div className="flex bg-gray-100 rounded-lg p-1 text-xs font-medium">
+                            <button
+                                onClick={() => setAdminView('modules')}
+                                className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${adminView === 'modules' ? 'bg-white shadow text-blue-700' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <Icons.LayoutGrid className="w-3.5 h-3.5" /> Modules
+                            </button>
+                            <button
+                                onClick={() => { setAdminView('formDrafts'); fetchAllFormDrafts(); }}
+                                className={`px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5 ${adminView === 'formDrafts' ? 'bg-white shadow text-amber-600' : 'text-gray-500 hover:text-gray-700'}`}
+                            >
+                                <Icons.CloudUpload className="w-3.5 h-3.5" /> Form Drafts
+                                {allFormDrafts.length > 0 && (
+                                    <span className="bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{allFormDrafts.length}</span>
+                                )}
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => router.push('/admin/modules/create')}
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium shadow-sm"
+                        >
+                            <Icons.Plus className="w-4 h-4" /> Create Module
+                        </button>
+                    </div>
                 </div>
 
-                {/* Stats Cards */}
-                {stats && (
+                {/* ── FORM DRAFTS VIEW (all instructors' auto-saved form backups) ── */}
+                {adminView === 'formDrafts' && (
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-8">
+                        <div className="px-6 py-4 border-b bg-amber-50 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 bg-amber-100 rounded-lg flex items-center justify-center">
+                                    <Icons.CloudUpload className="w-5 h-5 text-amber-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-sm font-bold text-gray-900">Instructors' Auto-saved Form Drafts</h2>
+                                    <p className="text-xs text-gray-500">In-progress module forms saved to DB — visible here even if the instructor never clicked "Save Draft"</p>
+                                </div>
+                            </div>
+                            <button onClick={fetchAllFormDrafts} className="p-2 hover:bg-amber-100 rounded-lg transition-colors" title="Refresh">
+                                <Icons.RefreshCw className={`w-4 h-4 text-amber-600 ${formDraftsLoading ? 'animate-spin' : ''}`} />
+                            </button>
+                        </div>
+
+                        {formDraftsLoading ? (
+                            <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
+                                <div className="w-5 h-5 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+                                Loading form drafts…
+                            </div>
+                        ) : allFormDrafts.length === 0 ? (
+                            <div className="py-16 text-center text-gray-400">
+                                <Icons.CloudOff className="w-10 h-10 mx-auto mb-3 text-gray-200" />
+                                <p className="text-sm">No form drafts found</p>
+                                <p className="text-xs mt-1">Instructors' auto-saved work will appear here</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {allFormDrafts.map((fd) => {
+                                    const lastSaved = fd.lastSavedAt
+                                        ? new Date(fd.lastSavedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                        : '—';
+                                    const hasModule = !!fd.entityId;
+                                    return (
+                                        <div key={fd._id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50">
+                                            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                                <Icons.FilePen className="w-5 h-5 text-amber-600" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <p className="text-sm font-semibold text-gray-800 truncate">
+                                                        {fd.title || 'Untitled draft'}
+                                                    </p>
+                                                    {hasModule ? (
+                                                        <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-semibold">Module saved</span>
+                                                    ) : (
+                                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-semibold">Form only — not yet a module</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-3 flex-wrap">
+                                                    <span className="flex items-center gap-1"><Icons.User className="w-3 h-3" /> User ID: {fd.userId}</span>
+                                                    <span className="flex items-center gap-1"><Icons.Clock className="w-3 h-3" /> {lastSaved}</span>
+                                                    <span className="flex items-center gap-1"><Icons.Key className="w-3 h-3" /> {fd.draftKey}</span>
+                                                </p>
+                                            </div>
+                                            {hasModule && (
+                                                <button
+                                                    onClick={() => router.push(`/admin/modules/${fd.entityId}`)}
+                                                    className="flex-shrink-0 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors flex items-center gap-1.5"
+                                                >
+                                                    <Icons.ExternalLink className="w-3.5 h-3.5" /> View Module
+                                                </button>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        <div className="px-6 py-3 bg-gray-50 border-t text-xs text-gray-400">
+                            {allFormDrafts.length} form draft{allFormDrafts.length !== 1 ? 's' : ''} across all instructors
+                        </div>
+                    </div>
+                )}
+
+                {/* ── MODULES VIEW ─────────────────────────────────────────── */}
+                {adminView === 'modules' && stats && (
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
                         <div className="bg-white rounded-xl p-4 border border-gray-200 shadow-sm">
                             <div className="flex items-center gap-2 mb-2">
@@ -274,6 +389,9 @@ export default function AdminModulesPage() {
                         </div>
                     </div>
                 )}
+
+                {/* Filters, module list, modals — only shown in modules view */}
+                {adminView === 'modules' && <>
 
                 {/* Filters & Search */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
@@ -638,6 +756,7 @@ export default function AdminModulesPage() {
                         </div>
                     </div>
                 )}
+            </> /* end adminView === 'modules' */}
             </div>
 
             {/* Module Detail Modal */}

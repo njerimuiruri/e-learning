@@ -32,6 +32,12 @@ const messageService = {
     const response = await api.get('/messages/unread-count');
     return response.data?.data ?? response.data;
   },
+
+  /** Get the admin user's contact info so any user can start a support chat */
+  async getAdminContact() {
+    const response = await api.get('/api/users/admin-contact');
+    return response.data?.data ?? response.data;
+  },
 };
 
 export default messageService;

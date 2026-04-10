@@ -12,7 +12,6 @@ import BannerUploader from '@/components/ui/BannerUploader';
 import VideoUploader from '@/components/ui/VideoUploader';
 import ResourceUploader from '@/components/ui/ResourceUploader';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
-import InteractiveCodeEditor from '@/components/student/InteractiveCodeEditor';
 import ModuleStudentPreview from '@/components/shared/ModuleStudentPreview';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,7 +24,6 @@ import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SHARED HELPERS
@@ -391,29 +389,25 @@ export default function CreateModulePage() {
   const [showPreview, setShowPreview] = useState(false);
   const [savingModuleDraft, setSavingModuleDraft] = useState(false);
 
-  // Track whether this draft was already persisted as a real module (status:'draft')
-  // Must start null on both server and client to avoid hydration mismatch;
-  // the real value is loaded in useEffect after mount.
+  // Track whether this draft was already persisted as a real module (status:'draft').
+  // Loaded from the DB draft's entityId so it works on any device — no localStorage.
   const [savedModuleId, setSavedModuleId] = useState(null);
 
-  const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel } = useDraft(
+  const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel, dbError: draftDbError, loadedEntityId } = useDraft(
     'module_instructor_draft_new',
     form,
-    { contentType: 'module', title: form.title || 'New Module' }
+    { contentType: 'module', entityId: savedModuleId, title: form.title || 'New Module' }
   );
   const [showDraftBanner, setShowDraftBanner] = useState(false);
+
+  // When the DB draft loads and it has an entityId (module ID), restore it
+  useEffect(() => {
+    if (loadedEntityId && !savedModuleId) setSavedModuleId(loadedEntityId);
+  }, [loadedEntityId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (hasDraft) setShowDraftBanner(true);
   }, [hasDraft]);
-
-  useEffect(() => {
-    // Read localStorage only after mount (safe from hydration mismatch)
-    try {
-      const stored = localStorage.getItem('instructor_draft_module_id');
-      if (stored) setSavedModuleId(stored);
-    } catch { }
-  }, []);
 
   useEffect(() => {
     categoryService.getAllCategories()
@@ -450,9 +444,9 @@ export default function CreateModulePage() {
     };
   };
 
-  // Save as a real draft module in the DB so it shows up in My Modules → Drafts
+  // Save as a real draft module in the DB so it shows up in My Modules → Drafts.
+  // The module ID is stored in the DB draft (via useDraft entityId) — no localStorage.
   const handleSaveDraft = async () => {
-    saveDraft(); // persist to draft store (for restore banner)
     setSavingModuleDraft(true);
     try {
       const payload = buildPayload();
@@ -462,11 +456,11 @@ export default function CreateModulePage() {
       } else {
         const created = await moduleService.createModule(payload);
         moduleId = created?._id || created?.id;
-        if (moduleId) {
-          setSavedModuleId(moduleId);
-          try { localStorage.setItem('instructor_draft_module_id', moduleId); } catch { }
-        }
+        if (moduleId) setSavedModuleId(moduleId);
       }
+      // Persist form state + entityId to DB draft immediately (pass moduleId so the
+      // ref is updated without waiting for a React re-render of the entityId prop)
+      await saveDraft(moduleId ?? savedModuleId);
       toast.success('Draft saved! You can find it under My Modules → Drafts.');
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to save draft');
@@ -888,10 +882,13 @@ export default function CreateModulePage() {
                 {savedAgoLabel || 'Saved'}
               </span>
             )}
-            {draftStatus === 'local_only' && (
-              <span className="text-xs text-orange-500 hidden sm:flex items-center gap-1" title="Saved on this device only. Use 'Save Draft' to save to your account.">
+            {draftStatus === 'error' && (
+              <span
+                className="text-xs text-red-500 hidden sm:flex items-center gap-1 cursor-help"
+                title={draftDbError || 'Draft could not be saved — click Save Draft to retry.'}
+              >
                 <Icons.AlertTriangle className="w-3 h-3" />
-                Saved locally only
+                {draftDbError || 'Save failed — retry'}
               </span>
             )}
             <Button

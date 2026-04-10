@@ -38,6 +38,12 @@ const draftService = {
     return data;
   },
 
+  /** Admin only — returns every user's drafts */
+  listAll: async () => {
+    const { data } = await api.get('/admin/all');
+    return data;
+  },
+
   discard: async (draftKey: string) => {
     const { data } = await api.delete(`/${draftKey}`);
     return data;

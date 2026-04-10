@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Menu, X, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen, Play } from 'lucide-react';
 import courseService from '@/lib/api/courseService';
 import authService from '@/lib/api/authService';
+import NotificationBell from '@/components/shared/NotificationBell';
 
 const Navbar = () => {
     const router = useRouter();
@@ -259,6 +260,9 @@ const Navbar = () => {
                                         </span>
                                         <span className="xl:hidden">Dashboard</span>
                                     </button>
+
+                                    {/* Notification bell — only for logged-in non-admin users (admin has its own bell in AdminSidebar) */}
+                                    {userRole !== 'admin' && <NotificationBell />}
 
                                     <div className="relative profile-menu">
                                         <button

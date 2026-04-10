@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import moduleService from '@/lib/api/moduleService';
+import draftService from '@/lib/api/draftService';
 
 // shadcn components
 import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -239,10 +240,13 @@ export default function InstructorModulesPage() {
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
     // Dialog states
-    const [deleteTarget, setDeleteTarget] = useState(null);   // module to delete
-    const [submitTarget, setSubmitTarget] = useState(null);   // module to submit
-    const [detailModule, setDetailModule] = useState(null);   // module for detail dialog
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [submitTarget, setSubmitTarget] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
+
+    // Form-backup drafts (auto-saved form state from useDraft)
+    const [formDrafts, setFormDrafts] = useState([]);
+    const [formDraftsLoading, setFormDraftsLoading] = useState(false);
 
     const fetchModules = async () => {
         try {
@@ -261,7 +265,16 @@ export default function InstructorModulesPage() {
         }
     };
 
-    useEffect(() => { fetchModules(); }, []);
+    const fetchFormDrafts = async () => {
+        setFormDraftsLoading(true);
+        try {
+            const res = await draftService.list();
+            setFormDrafts(res?.data || []);
+        } catch { /* silently ignore — form drafts are supplementary */ }
+        finally { setFormDraftsLoading(false); }
+    };
+
+    useEffect(() => { fetchModules(); fetchFormDrafts(); }, []);
 
     // Derived counts
     const counts = useMemo(() => ({
@@ -587,6 +600,92 @@ export default function InstructorModulesPage() {
                             <span>Showing {filtered.length} of {modules.length} modules</span>
                         </div>
                     </Card>
+                )}
+
+                {/* ── FORM-BACKUP DRAFTS (auto-saved, in-progress) ─────────── */}
+                {activeTab === 'draft' && (
+                    <div className="mt-6">
+                        <div className="flex items-center gap-2 mb-3">
+                            <Icons.CloudUpload className="w-4 h-4 text-amber-500" />
+                            <h3 className="text-sm font-semibold text-gray-700">Auto-saved In Progress</h3>
+                            <span className="text-xs text-gray-400">— saved to server, accessible from any device</span>
+                        </div>
+
+                        {formDraftsLoading ? (
+                            <div className="flex items-center gap-2 text-sm text-gray-400 py-4">
+                                <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-500 rounded-full animate-spin" />
+                                Loading auto-saved drafts…
+                            </div>
+                        ) : formDrafts.length === 0 ? (
+                            <div className="border border-dashed border-gray-200 rounded-xl py-8 text-center text-gray-400 text-sm">
+                                <Icons.CloudOff className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                                No auto-saved drafts yet. Start creating a module and it will auto-save here.
+                            </div>
+                        ) : (
+                            <div className="space-y-2">
+                                {formDrafts.map((fd) => {
+                                    const isNew = fd.draftKey === 'module_instructor_draft_new';
+                                    const editModuleId = !isNew
+                                        ? fd.draftKey.replace('module_instructor_draft_', '')
+                                        : null;
+                                    const resumeHref = isNew
+                                        ? '/instructor/modules/create'
+                                        : `/instructor/modules/${editModuleId}/edit`;
+                                    const lastSaved = fd.lastSavedAt
+                                        ? new Date(fd.lastSavedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                        : '—';
+
+                                    return (
+                                        <div key={fd._id} className="flex items-center gap-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                            <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                                <Icons.FilePen className="w-4 h-4 text-amber-600" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-gray-800 truncate">
+                                                    {fd.title || 'Untitled draft'}
+                                                </p>
+                                                <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                                                    <Icons.Clock className="w-3 h-3" />
+                                                    Last saved {lastSaved}
+                                                    {fd.entityId && (
+                                                        <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-700 rounded text-[10px] font-medium">
+                                                            Module saved
+                                                        </span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <div className="flex items-center gap-2 flex-shrink-0">
+                                                <Button
+                                                    size="sm"
+                                                    className="bg-amber-500 hover:bg-amber-600 text-white text-xs gap-1.5"
+                                                    onClick={() => router.push(resumeHref)}
+                                                >
+                                                    <Icons.PenLine className="w-3.5 h-3.5" />
+                                                    Resume
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="text-red-400 hover:text-red-600 hover:bg-red-50 text-xs"
+                                                    onClick={async () => {
+                                                        try {
+                                                            await draftService.discard(fd.draftKey);
+                                                            setFormDrafts(prev => prev.filter(d => d._id !== fd._id));
+                                                            toast.success('Draft discarded');
+                                                        } catch {
+                                                            toast.error('Failed to discard draft');
+                                                        }
+                                                    }}
+                                                >
+                                                    <Icons.Trash2 className="w-3.5 h-3.5" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 )}
 
                 {/* ── DELETE CONFIRM ───────────────────────────────────────── */}
