@@ -20,7 +20,24 @@ function formatTime(date) {
 function getIdStr(val) {
     if (!val) return '';
     if (typeof val === 'string') return val;
-    return val._id?.toString() || val.id?.toString() || '';
+    // Handle { $oid: "..." } Mongoose JSON serialization
+    if (val.$oid) return val.$oid;
+    if (val._id !== undefined) {
+        const id = val._id;
+        if (!id) return '';
+        if (typeof id === 'string') return id;
+        if (id.$oid) return id.$oid;
+        const str = String(id);
+        if (str && str !== '[object Object]') return str;
+    }
+    if (val.id !== undefined) {
+        const id = val.id;
+        if (!id) return '';
+        if (typeof id === 'string') return id;
+        const str = String(id);
+        if (str && str !== '[object Object]') return str;
+    }
+    return '';
 }
 
 function initials(first, last) {
@@ -154,6 +171,10 @@ export default function StudentMessagesPage() {
     };
 
     const fetchMessages = async (userId, scrollToBottom = true) => {
+        if (!userId || typeof userId !== 'string') {
+            console.warn('fetchMessages: invalid userId', userId);
+            return;
+        }
         try {
             const data = await messageService.getConversation(userId, 100);
             setMessages(Array.isArray(data) ? data : []);
@@ -166,12 +187,17 @@ export default function StudentMessagesPage() {
     const handleSend = async (e) => {
         e.preventDefault();
         if (!newMessage.trim() || !selected) return;
+        const receiverId = selected.userId;
+        if (!receiverId) {
+            console.error('handleSend: no receiverId on selected conversation', selected);
+            return;
+        }
         const text = newMessage.trim();
         setNewMessage('');
         setSending(true);
         try {
-            await messageService.sendMessage({ receiverId: selected.userId, content: text });
-            await fetchMessages(selected.userId);
+            await messageService.sendMessage({ receiverId, content: text });
+            await fetchMessages(receiverId);
             // Refresh conversations list so last message updates
             const data = await messageService.getConversations();
             const raw = Array.isArray(data) ? data : [];
@@ -194,6 +220,10 @@ export default function StudentMessagesPage() {
     const handleStartAdminChat = () => {
         if (!adminContact) return;
         const adminId = getIdStr(adminContact);
+        if (!adminId) {
+            console.error('handleStartAdminChat: could not extract admin ID from', adminContact);
+            return;
+        }
         // Check if we already have this convo in the list
         const existing = conversations.find(c => c.userId === adminId);
         if (existing) {
@@ -212,11 +242,11 @@ export default function StudentMessagesPage() {
 
     // Build the full conversation list: admin support pinned at top, then others
     const adminId = adminContact ? getIdStr(adminContact) : null;
-    const hasAdminConv = conversations.some(c => c.userId === adminId);
+    const hasAdminConv = adminId ? conversations.some(c => c.userId === adminId) : false;
 
     const allConvs = [
         // Pin admin support at top if exists in convs, or always show if admin is available
-        ...(adminContact && !hasAdminConv
+        ...(adminContact && adminId && !hasAdminConv
             ? [{ userId: adminId, user: adminContact, isAdmin: true, lastMessage: null, unreadCount: 0 }]
             : []),
         ...conversations,

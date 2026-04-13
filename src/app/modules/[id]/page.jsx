@@ -6,7 +6,7 @@ import {
     Users, BookOpen, Award, DollarSign, Unlock, Star,
     Play, Clock, UserCheck, Mail, ChevronDown,
     Target, GraduationCap, Lightbulb, BookMarked, FileQuestion,
-    Crosshair, ListChecks, MessageSquare, FolderOpen
+    Crosshair, ListChecks, MessageSquare, FolderOpen, Sparkles
 } from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import categoryService from '@/lib/api/categoryService';
@@ -395,6 +395,33 @@ export default function ModuleDetailPage() {
                                     )}
                                 </div>
                             </div>
+
+                            {/* Category Welcome Message */}
+                            {category?.welcomeMessage?.trim() && (
+                                <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                                    {/* Header strip */}
+                                    <div className="bg-gradient-to-r from-[#021d49] to-blue-700 px-8 py-5 flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                                            <Sparkles className="w-5 h-5 text-white" />
+                                        </div>
+                                        <div>
+                                            <p className="text-white/60 text-[11px] font-semibold uppercase tracking-widest leading-none mb-0.5">Programme Welcome</p>
+                                            <p className="text-white font-bold text-base leading-tight">{category.name}</p>
+                                        </div>
+                                    </div>
+                                    {/* Body */}
+                                    <div
+                                        className="px-8 py-6 prose prose-base max-w-none
+                                            prose-p:text-gray-600 prose-p:leading-relaxed prose-p:my-3
+                                            prose-li:text-gray-600 prose-li:leading-relaxed
+                                            prose-strong:text-gray-800 prose-strong:font-semibold
+                                            prose-h1:text-gray-900 prose-h2:text-gray-900 prose-h3:text-gray-800
+                                            prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+                                            prose-ol:pl-5 prose-ul:pl-5"
+                                        dangerouslySetInnerHTML={{ __html: category.welcomeMessage }}
+                                    />
+                                </div>
+                            )}
 
                             {/* Info sections: welcome, aim, objectives, capstone */}
                             {visibleInfoSections.length > 0 && (

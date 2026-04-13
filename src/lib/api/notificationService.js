@@ -15,13 +15,13 @@ const notificationService = {
 
     /** Mark a notification as read */
     markAsRead: async (notificationId) => {
-        const response = await api.patch(`/notifications/${notificationId}/read`);
+        const response = await api.put(`/notifications/${notificationId}/read`);
         return response.data;
     },
 
     /** Mark all notifications as read */
     markAllAsRead: async () => {
-        const response = await api.patch('/notifications/read-all');
+        const response = await api.put('/notifications/read-all');
         return response.data;
     },
 

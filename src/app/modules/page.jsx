@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import {
     ArrowRight, Layers, BookOpen, Users, Star, Award,
     DollarSign, Unlock, Search, Filter, ChevronDown,
-    CheckCircle, Target, FileText, X, GraduationCap, Clock
+    CheckCircle, Target, FileText, X, GraduationCap, Clock, Sparkles
 } from 'lucide-react';
 import Navbar from '@/components/navbar/navbar';
 import Footer from '@/components/Footer/Footer';
@@ -435,6 +435,31 @@ const ModulesPage = () => {
                                         )}
                                     </div>
                                 </div>
+
+                                {/* Welcome Message */}
+                                {cat.welcomeMessage?.trim() && (
+                                    <div className="mt-8 bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
+                                        <div className="bg-gradient-to-r from-[#021d49] to-blue-700 px-8 py-5 flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center flex-shrink-0">
+                                                <Sparkles className="w-5 h-5 text-white" />
+                                            </div>
+                                            <div>
+                                                <p className="text-white/60 text-[11px] font-semibold uppercase tracking-widest leading-none mb-0.5">Programme Welcome</p>
+                                                <p className="text-white font-bold text-base leading-tight">{cat.name}</p>
+                                            </div>
+                                        </div>
+                                        <div
+                                            className="px-8 py-6 prose prose-base max-w-none
+                                                prose-p:text-gray-600 prose-p:leading-relaxed prose-p:my-3
+                                                prose-li:text-gray-600 prose-li:leading-relaxed
+                                                prose-strong:text-gray-800 prose-strong:font-semibold
+                                                prose-h1:text-gray-900 prose-h2:text-gray-900 prose-h3:text-gray-800
+                                                prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+                                                prose-ol:pl-5 prose-ul:pl-5"
+                                            dangerouslySetInnerHTML={{ __html: cat.welcomeMessage }}
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Rich content grid */}
                                 {hasRichContent && (

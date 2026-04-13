@@ -52,6 +52,7 @@ const ACCESS_TYPES = [
 const emptyForm = {
     name: '',
     description: '',
+    welcomeMessage: '',
     accessType: 'fellows_only', // UI value — mapped to backend on submit
     price: 0,
     courseDescription: '',
@@ -116,6 +117,7 @@ export default function CategoriesPage() {
         setFormData({
             name: category.name || '',
             description: category.description || '',
+            welcomeMessage: category.welcomeMessage || '',
             accessType: toUiAccessType(category),
             price: category.price || 0,
             courseDescription: category.courseDescription || '',
@@ -137,10 +139,6 @@ export default function CategoriesPage() {
 
     const handleSubmit = async () => {
         if (!formData.name.trim()) { setError('Category name is required'); return; }
-        if (!formData.price || formData.price <= 0) {
-            setError('Please enter a valid price. Both category types require a price — it is charged to non-fellows and the general public.');
-            return;
-        }
         try {
             setSaving(true);
             setError('');
@@ -148,6 +146,7 @@ export default function CategoriesPage() {
             const payload = {
                 name: formData.name,
                 description: formData.description,
+                welcomeMessage: formData.welcomeMessage,
                 courseDescription: formData.courseDescription,
                 overallObjectives: formData.overallObjectives,
                 learningOutcomes: formData.learningOutcomes,
@@ -262,6 +261,18 @@ export default function CategoriesPage() {
                                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                 />
                             </div>
+                            <div>
+                                <p className="text-xs text-gray-400 mb-3">
+                                    The welcome message is displayed to students at the top of the category panel when they browse modules. Use it to greet and orient them.
+                                </p>
+                                <RichTextEditor
+                                    label="Welcome Message"
+                                    value={formData.welcomeMessage}
+                                    onChange={val => setFormData({ ...formData, welcomeMessage: val })}
+                                    placeholder="e.g. Welcome to the AI for Climate Resilience programme! This course will guide you through the core concepts..."
+                                    height={160}
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -333,17 +344,17 @@ export default function CategoriesPage() {
                         {/* Price — always required for both options */}
                         <div className={`mt-5 rounded-xl p-4 border ${formData.accessType === 'fellows_only' ? 'bg-purple-50 border-purple-200' : 'bg-orange-50 border-orange-200'}`}>
                             <label className={`block text-sm font-semibold mb-2 ${formData.accessType === 'fellows_only' ? 'text-purple-800' : 'text-orange-800'}`}>
-                                Enrollment Price <span className="text-red-500">*</span>
+                                Enrollment Price
                                 <span className={`font-normal ml-1 ${formData.accessType === 'fellows_only' ? 'text-purple-600' : 'text-orange-600'}`}>
-                                    (charged to non-assigned users and the general public)
+                                    (optional — charged to non-assigned users and the general public)
                                 </span>
                             </label>
                             <div className="relative max-w-xs">
                                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">$</span>
                                 <input
                                     type="number"
-                                    min="1"
-                                    value={formData.price || ''}
+                                    min="0"
+                                    value={formData.price ?? ''}
                                     onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                                     placeholder="e.g. 5000"
                                     className={`w-full pl-7 pr-4 py-2 rounded-lg focus:ring-2 focus:border-transparent bg-white text-sm border ${formData.accessType === 'fellows_only' ? 'border-purple-300 focus:ring-purple-500' : 'border-orange-300 focus:ring-orange-500'}`}
@@ -351,7 +362,7 @@ export default function CategoriesPage() {
                             </div>
                             <p className={`text-xs mt-2 ${formData.accessType === 'fellows_only' ? 'text-purple-600' : 'text-orange-600'}`}>
                                 Fellows you specifically assign to <strong>this category</strong> always enroll for free.
-                                Everyone else — including fellows assigned to other categories — must pay this price.
+                                Everyone else — including fellows assigned to other categories — must pay this price. Leave at 0 if you want non-fellows to have free access too.
                             </p>
                         </div>
                     </div>

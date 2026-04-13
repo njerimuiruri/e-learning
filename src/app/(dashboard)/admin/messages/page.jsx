@@ -21,7 +21,23 @@ function formatTime(date) {
 function getIdStr(val) {
     if (!val) return '';
     if (typeof val === 'string') return val;
-    return val._id?.toString() || val.id?.toString() || '';
+    if (val.$oid) return val.$oid;
+    if (val._id !== undefined) {
+        const id = val._id;
+        if (!id) return '';
+        if (typeof id === 'string') return id;
+        if (id.$oid) return id.$oid;
+        const str = String(id);
+        if (str && str !== '[object Object]') return str;
+    }
+    if (val.id !== undefined) {
+        const id = val.id;
+        if (!id) return '';
+        if (typeof id === 'string') return id;
+        const str = String(id);
+        if (str && str !== '[object Object]') return str;
+    }
+    return '';
 }
 
 function initials(user) {
@@ -45,14 +61,12 @@ function Avatar({ user, size = 'md' }) {
 }
 
 /* ─── Conversation Row ─── */
-function ConvRow({ conv, isActive, onClick, currentUserId }) {
-    // Find the "other" user (not admin)
-    const other = conv.users?.find(u => getIdStr(u) !== currentUserId) || conv.users?.[0];
-    const me    = conv.users?.find(u => getIdStr(u) === currentUserId);
-    const name  = other ? `${other.firstName || ''} ${other.lastName || ''}`.trim() : 'Unknown';
+function ConvRow({ conv, isActive, onClick }) {
+    // The API returns conv.user as the "other" participant
+    const other   = conv.user || {};
+    const name    = `${other.firstName || ''} ${other.lastName || ''}`.trim() || 'Unknown';
     const lastMsg = conv.lastMessage?.content || '';
     const time    = formatTime(conv.lastMessage?.createdAt);
-    const isAdminSide = me?.role === 'admin';
 
     return (
         <button
@@ -67,7 +81,7 @@ function ConvRow({ conv, isActive, onClick, currentUserId }) {
                 </div>
                 <div className="flex items-center justify-between gap-2">
                     <p className="text-xs text-gray-500 truncate flex-1">{lastMsg || 'No messages yet'}</p>
-                    {conv.unreadCount > 0 && isAdminSide && (
+                    {conv.unreadCount > 0 && (
                         <span className="min-w-[1.25rem] h-5 px-1.5 bg-blue-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center flex-shrink-0">
                             {conv.unreadCount}
                         </span>
@@ -156,6 +170,10 @@ export default function AdminMessagesPage() {
     }, []);
 
     const fetchMessages = useCallback(async (userId, markRead = true) => {
+        if (!userId || typeof userId !== 'string') {
+            console.warn('fetchMessages: invalid userId', userId);
+            return;
+        }
         try {
             const data = await messageService.getConversation(userId, 150);
             setMessages(Array.isArray(data) ? data : []);
@@ -166,9 +184,9 @@ export default function AdminMessagesPage() {
     }, []);
 
     const handleSelectConv = (conv) => {
-        // Find the other user in the conversation
-        const otherUser = conv.user || conv.users?.find(u => getIdStr(u) !== currentUserId) || conv.users?.[0];
+        const otherUser = conv.user || {};
         const otherId   = getIdStr(otherUser);
+        if (!otherId) { console.error('handleSelectConv: no otherId', conv); return; }
         setSelected({ ...conv, otherId, otherUser });
         setMobileShowChat(true);
         fetchMessages(otherId);
@@ -203,14 +221,11 @@ export default function AdminMessagesPage() {
     };
 
     const filtered = conversations.filter(conv => {
-        const users = conv.user
-            ? [conv.user]
-            : Array.isArray(conv.users) ? conv.users : [];
+        const u = conv.user || {};
         const q = searchQuery.toLowerCase();
-        return users.some(u =>
-            `${u?.firstName || ''} ${u?.lastName || ''}`.toLowerCase().includes(q) ||
-            (u?.email || '').toLowerCase().includes(q)
-        ) || (conv.lastMessage?.content || '').toLowerCase().includes(q);
+        return `${u.firstName || ''} ${u.lastName || ''}`.toLowerCase().includes(q) ||
+               (u.email || '').toLowerCase().includes(q) ||
+               (conv.lastMessage?.content || '').toLowerCase().includes(q);
     });
 
     const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
@@ -286,9 +301,8 @@ export default function AdminMessagesPage() {
                                     <ConvRow
                                         key={conv.user ? getIdStr(conv.user) : idx}
                                         conv={conv}
-                                        isActive={selected?.otherId === getIdStr(conv.user || conv.users?.find(u => getIdStr(u) !== currentUserId))}
+                                        isActive={selected?.otherId === getIdStr(conv.user)}
                                         onClick={() => handleSelectConv(conv)}
-                                        currentUserId={currentUserId}
                                     />
                                 ))
                             )}

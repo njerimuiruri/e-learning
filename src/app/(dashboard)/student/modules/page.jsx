@@ -337,58 +337,88 @@ function ModuleBrowsingContent() {
                         const catIsPaid = cat.isPaid || cat.accessType === 'paid' || cat.accessType === 'restricted';
                         const catPrice = cat.price;
                         const desc = stripHtml(cat.description || '');
+                        const welcomeMsg = cat.welcomeMessage?.trim() || '';
                         const programmeDesc = stripHtml(cat.courseDescription || '');
                         const objectives = stripHtml(cat.overallObjectives || '');
                         const outcomes = stripHtml(cat.learningOutcomes || '');
                         const hasRichContent = programmeDesc || objectives || outcomes;
                         return (
-                            <div id="category-info-panel" className="rounded-2xl overflow-hidden shadow-xl border border-white/10" style={{ background: 'linear-gradient(135deg, #021d49 0%, #0a2d6e 50%, #1e3a8a 100%)' }}>
+                            <div id="category-info-panel" className="rounded-2xl overflow-hidden shadow-sm border border-gray-100 bg-white">
 
-                                {/* ── Top section ── */}
-                                <div className="p-6">
-                                    {/* Breadcrumb */}
-                                    <div className="flex items-center gap-1.5 text-blue-300 text-xs mb-4">
+                                {/* ── Header bar ── */}
+                                <div className="bg-gradient-to-r from-[#021d49] to-blue-700 px-6 py-4 flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-white/70 text-xs">
                                         <Icons.Layers className="w-3.5 h-3.5" />
                                         <span>Category</span>
                                         <Icons.ChevronRight className="w-3 h-3" />
                                         <span className="text-white font-semibold">{cat.name}</span>
                                     </div>
+                                    <button
+                                        onClick={clearFilters}
+                                        className="text-white/60 hover:text-white text-xs flex items-center gap-1 transition-colors"
+                                    >
+                                        <Icons.X className="w-3 h-3" /> Clear
+                                    </button>
+                                </div>
 
+                                {/* ── Welcome Message ── */}
+                                {welcomeMsg && (
+                                    <div className="mx-6 mt-6 mb-2 rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+                                        <div className="flex items-center gap-2.5 px-5 py-3 bg-gray-50 border-b border-gray-100">
+                                            <Icons.Sparkles className="w-4 h-4 text-[#021d49] flex-shrink-0" />
+                                            <p className="text-[#021d49] text-[11px] font-bold uppercase tracking-widest">
+                                                Programme Welcome
+                                            </p>
+                                        </div>
+                                        <div
+                                            className="px-5 py-4 prose prose-sm max-w-none
+                                                prose-p:text-gray-600 prose-p:leading-relaxed prose-p:my-2
+                                                prose-li:text-gray-600 prose-strong:text-gray-800
+                                                prose-h1:text-gray-900 prose-h2:text-gray-800 prose-h3:text-gray-800
+                                                prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+                                                prose-ol:pl-5 prose-ul:pl-5"
+                                            dangerouslySetInnerHTML={{ __html: welcomeMsg }}
+                                        />
+                                    </div>
+                                )}
+
+                                {/* ── Top section ── */}
+                                <div className="p-6">
                                     <div className="flex flex-col lg:flex-row lg:items-start gap-6">
 
                                         {/* Left: name + description + stats */}
                                         <div className="flex-1 min-w-0">
-                                            <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 leading-tight">
+                                            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-3 leading-tight">
                                                 {cat.name}
                                             </h2>
                                             {desc && (
-                                                <p className="text-blue-200 text-sm leading-relaxed mb-4">{desc}</p>
+                                                <p className="text-gray-500 text-sm leading-relaxed mb-4">{desc}</p>
                                             )}
 
                                             {/* Quick stats row */}
-                                            <div className="flex flex-wrap items-center gap-4">
-                                                <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-3 py-1.5">
-                                                    <Icons.BookOpen className="w-3.5 h-3.5 text-blue-300" />
-                                                    <span className="text-white text-xs font-semibold">
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg px-3 py-1.5">
+                                                    <Icons.BookOpen className="w-3.5 h-3.5 text-gray-500" />
+                                                    <span className="text-gray-700 text-xs font-semibold">
                                                         {totalModules} Module{totalModules !== 1 ? 's' : ''}
                                                     </span>
                                                 </div>
                                                 {catIsFellowRestricted && (
-                                                    <div className="flex items-center gap-1.5 bg-purple-500/20 rounded-lg px-3 py-1.5">
-                                                        <Icons.Award className="w-3.5 h-3.5 text-purple-300" />
-                                                        <span className="text-purple-200 text-xs font-semibold">Fellows Priority</span>
+                                                    <div className="flex items-center gap-1.5 bg-purple-50 border border-purple-100 rounded-lg px-3 py-1.5">
+                                                        <Icons.Award className="w-3.5 h-3.5 text-purple-500" />
+                                                        <span className="text-purple-700 text-xs font-semibold">Fellows Priority</span>
                                                     </div>
                                                 )}
                                                 {catIsPaid && catPrice > 0 && (
-                                                    <div className="flex items-center gap-1.5 bg-amber-500/20 rounded-lg px-3 py-1.5">
-                                                        <Icons.DollarSign className="w-3.5 h-3.5 text-amber-300" />
-                                                        <span className="text-amber-200 text-xs font-semibold">KES {catPrice.toLocaleString()} one-time</span>
+                                                    <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
+                                                        <Icons.DollarSign className="w-3.5 h-3.5 text-amber-600" />
+                                                        <span className="text-amber-700 text-xs font-semibold">KES {catPrice.toLocaleString()} one-time</span>
                                                     </div>
                                                 )}
                                                 {!catIsPaid && !catIsFellowRestricted && (
-                                                    <div className="flex items-center gap-1.5 bg-emerald-500/20 rounded-lg px-3 py-1.5">
-                                                        <Icons.Unlock className="w-3.5 h-3.5 text-emerald-300" />
-                                                        <span className="text-emerald-200 text-xs font-semibold">Free Access</span>
+                                                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1.5">
+                                                        <Icons.Unlock className="w-3.5 h-3.5 text-emerald-600" />
+                                                        <span className="text-emerald-700 text-xs font-semibold">Free Access</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -398,32 +428,32 @@ function ModuleBrowsingContent() {
                                         <div className="flex-shrink-0 w-full lg:w-60 space-y-3">
                                             {/* Fellows badge */}
                                             {catIsFellowRestricted && cat.accessType !== 'paid' && (
-                                                <div className="bg-purple-500/20 border border-purple-400/30 rounded-xl p-4">
+                                                <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
                                                     <div className="flex items-center gap-2 mb-1.5">
-                                                        <Icons.Award className="w-4 h-4 text-purple-300 flex-shrink-0" />
-                                                        <p className="text-purple-200 font-bold text-sm">Fellows Priority</p>
+                                                        <Icons.Award className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                                        <p className="text-purple-700 font-bold text-sm">Fellows Priority</p>
                                                     </div>
-                                                    <p className="text-purple-300 text-xs leading-relaxed">
-                                                        Approved fellows get <strong className="text-purple-100">free access</strong> to all modules in this category.
+                                                    <p className="text-purple-600 text-xs leading-relaxed">
+                                                        Approved fellows get <strong className="text-purple-800">free access</strong> to all modules in this category.
                                                     </p>
                                                 </div>
                                             )}
 
                                             {/* Paid pricing card */}
                                             {catIsPaid && catPrice > 0 && (
-                                                <div className="bg-white/10 border border-white/20 rounded-xl p-4">
-                                                    <p className="text-blue-300 text-[10px] font-bold uppercase tracking-widest mb-1">
+                                                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
+                                                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">
                                                         One-Time Category Price
                                                     </p>
-                                                    <p className="text-4xl font-extrabold text-white mb-0.5">
+                                                    <p className="text-4xl font-extrabold text-gray-900 mb-0.5">
                                                         KES {catPrice.toLocaleString()}
                                                     </p>
-                                                    <p className="text-blue-200 text-xs mb-3">
-                                                        Pay once · unlock <strong className="text-white">all {totalModules} modules</strong>
+                                                    <p className="text-gray-500 text-xs mb-3">
+                                                        Pay once · unlock <strong className="text-gray-800">all {totalModules} modules</strong>
                                                     </p>
-                                                    <div className="bg-amber-500/15 border border-amber-400/25 rounded-lg px-3 py-2">
-                                                        <p className="text-amber-200 text-[10px] leading-relaxed">
-                                                            💡 You will <strong className="text-amber-100">not be charged again</strong> for other modules in <strong className="text-amber-100">{cat.name}</strong> once paid.
+                                                    <div className="bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+                                                        <p className="text-amber-700 text-[10px] leading-relaxed">
+                                                            💡 You will <strong className="text-amber-800">not be charged again</strong> for other modules in <strong className="text-amber-800">{cat.name}</strong> once paid.
                                                         </p>
                                                     </div>
                                                 </div>
@@ -431,12 +461,12 @@ function ModuleBrowsingContent() {
 
                                             {/* Free / open access card */}
                                             {!catIsPaid && !catIsFellowRestricted && (
-                                                <div className="bg-emerald-500/15 border border-emerald-400/25 rounded-xl p-4">
+                                                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
                                                     <div className="flex items-center gap-2 mb-1.5">
-                                                        <Icons.Unlock className="w-4 h-4 text-emerald-300 flex-shrink-0" />
-                                                        <p className="text-emerald-200 font-bold text-sm">Free Open Access</p>
+                                                        <Icons.Unlock className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                                                        <p className="text-emerald-700 font-bold text-sm">Free Open Access</p>
                                                     </div>
-                                                    <p className="text-emerald-300 text-xs leading-relaxed">
+                                                    <p className="text-emerald-600 text-xs leading-relaxed">
                                                         No payment required. Sign in and enroll in any module for free.
                                                     </p>
                                                 </div>
@@ -447,49 +477,43 @@ function ModuleBrowsingContent() {
 
                                 {/* ── Rich content sections ── */}
                                 {hasRichContent && (
-                                    <div className="border-t border-white/15 px-6 py-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <div className="border-t border-gray-100 px-6 py-5 grid sm:grid-cols-2 lg:grid-cols-3 gap-4 bg-gray-50/50">
                                         {programmeDesc && (
                                             <div>
                                                 <div className="flex items-center gap-1.5 mb-2">
-                                                    <Icons.FileText className="w-3.5 h-3.5 text-blue-300" />
-                                                    <p className="text-blue-300 text-[10px] font-bold uppercase tracking-wider">Programme Description</p>
+                                                    <Icons.FileText className="w-3.5 h-3.5 text-gray-400" />
+                                                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Programme Description</p>
                                                 </div>
-                                                <p className="text-blue-100 text-xs leading-relaxed">{programmeDesc}</p>
+                                                <p className="text-gray-600 text-xs leading-relaxed">{programmeDesc}</p>
                                             </div>
                                         )}
                                         {objectives && (
                                             <div>
                                                 <div className="flex items-center gap-1.5 mb-2">
-                                                    <Icons.Target className="w-3.5 h-3.5 text-indigo-300" />
-                                                    <p className="text-indigo-300 text-[10px] font-bold uppercase tracking-wider">Objectives</p>
+                                                    <Icons.Target className="w-3.5 h-3.5 text-gray-400" />
+                                                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Objectives</p>
                                                 </div>
-                                                <p className="text-blue-100 text-xs leading-relaxed">{objectives}</p>
+                                                <p className="text-gray-600 text-xs leading-relaxed">{objectives}</p>
                                             </div>
                                         )}
                                         {outcomes && (
                                             <div>
                                                 <div className="flex items-center gap-1.5 mb-2">
-                                                    <Icons.Lightbulb className="w-3.5 h-3.5 text-amber-300" />
-                                                    <p className="text-amber-300 text-[10px] font-bold uppercase tracking-wider">Learning Outcomes</p>
+                                                    <Icons.Lightbulb className="w-3.5 h-3.5 text-gray-400" />
+                                                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-wider">Learning Outcomes</p>
                                                 </div>
-                                                <p className="text-blue-100 text-xs leading-relaxed">{outcomes}</p>
+                                                <p className="text-gray-600 text-xs leading-relaxed">{outcomes}</p>
                                             </div>
                                         )}
                                     </div>
                                 )}
 
                                 {/* ── Footer hint ── */}
-                                <div className="border-t border-white/10 bg-black/15 px-6 py-3 flex items-center justify-between">
-                                    <p className="text-blue-300 text-xs flex items-center gap-2">
+                                <div className="border-t border-gray-100 bg-gray-50 px-6 py-3 flex items-center justify-between">
+                                    <p className="text-gray-400 text-xs flex items-center gap-2">
                                         <Icons.ChevronDown className="w-3.5 h-3.5" />
                                         {totalModules} module{totalModules !== 1 ? 's' : ''} available below — click any to view details
                                     </p>
-                                    <button
-                                        onClick={clearFilters}
-                                        className="text-blue-400 hover:text-white text-xs flex items-center gap-1 transition-colors"
-                                    >
-                                        <Icons.X className="w-3 h-3" /> Clear filter
-                                    </button>
                                 </div>
                             </div>
                         );
