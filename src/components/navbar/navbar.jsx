@@ -80,7 +80,8 @@ const Navbar = () => {
 
     const getFullName = () => {
         if (currentUser) {
-            return `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
+            const combined = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
+            return combined || currentUser.fullName || 'User';
         }
         return 'User';
     };
@@ -239,7 +240,7 @@ const Navbar = () => {
                                     {userRole === 'student' && (
                                         <button
                                             onClick={handleContinueLearning}
-                                            className="flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white font-medium px-3 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm"
+                                            className="flex items-center gap-1.5 bg-[#1e40af] hover:bg-[#1a35a0] text-white font-medium px-3 py-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md text-sm"
                                         >
                                             <Play size={16} />
                                             <span className="hidden xl:inline">Continue Learning</span>
@@ -280,7 +281,7 @@ const Navbar = () => {
                                                     {getInitials()}
                                                 </div>
                                             )}
-                                            <span className="text-gray-700 font-medium hidden sm:inline">{currentUser?.firstName || 'User'}</span>
+                                            <span className="text-gray-700 font-medium hidden sm:inline">{getFullName()}</span>
                                         </button>
 
                                         {showProfileMenu && (

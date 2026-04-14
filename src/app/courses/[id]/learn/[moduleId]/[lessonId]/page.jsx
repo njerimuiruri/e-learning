@@ -672,6 +672,10 @@ const CourseLearningPage = () => {
                                 lesson={activeLesson}
                                 answers={answers}
                                 onAnswer={handleAnswer}
+                                onSubmit={() => {
+                                    handleNext();
+                                    setAnswers({});
+                                }}
                             />
                         )}
 
@@ -1143,7 +1147,41 @@ const formatLessonNotes = (notes) => {
     return processedSections.join("\n");
 };
 
-const QuestionsSection = ({ lesson, answers, onAnswer }) => {
+const QuestionsSection = ({ lesson, answers, onAnswer, onSubmit }) => {
+    const [submitting, setSubmitting] = useState(false);
+    const [allAnswered, setAllAnswered] = useState(false);
+
+    useEffect(() => {
+        if (!lesson?.questions || lesson.questions.length === 0) return;
+
+        // Check if all questions are answered
+        const answered = lesson.questions.every(question => {
+            const questionId = question.id || question._id;
+            return answers[questionId] !== undefined && answers[questionId] !== null && answers[questionId] !== '';
+        });
+        setAllAnswered(answered);
+    }, [answers, lesson?.questions]);
+
+    const handleSubmitQuestions = async () => {
+        if (!allAnswered) {
+            alert("Please answer all questions before proceeding.");
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            // Questions answered - proceed to next lesson
+            if (onSubmit) {
+                onSubmit();
+            }
+        } catch (error) {
+            console.error("Error submitting questions:", error);
+            alert("Failed to submit. Please try again.");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     if (!lesson?.questions || lesson.questions.length === 0) {
         return (
             <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
@@ -1165,59 +1203,104 @@ const QuestionsSection = ({ lesson, answers, onAnswer }) => {
                     Check Your Understanding
                 </h2>
                 <p className="text-gray-600 text-lg">
-                    Answer the following questions to reinforce your learning.
+                    Answer the following questions to reinforce your learning. You must answer all questions to proceed.
                 </p>
             </div>
 
             <div className="space-y-6">
-                {lesson.questions.map((question, idx) => (
-                    <div
-                        key={question.id || question._id || idx}
-                        className="border-2 border-gray-200 rounded-xl p-6 bg-gray-50"
-                    >
-                        <p className="font-bold text-gray-900 mb-4 text-lg flex items-start gap-3">
-                            <span className="bg-[#021d49] text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
-                                {idx + 1}
-                            </span>
-                            {question.question || question.text || 'Question text not available'}
-                        </p>
+                {lesson.questions.map((question, idx) => {
+                    const questionId = question.id || question._id || idx;
+                    const isAnswered = answers[questionId] !== undefined && answers[questionId] !== null && answers[questionId] !== '';
 
-                        {(question.type === "multiple_choice" || question.type === "mcq") && question.options?.length > 0 ? (
-                            <div className="space-y-3">
-                                {question.options.map((option, optIdx) => {
-                                    const questionId = question.id || question._id || idx;
-                                    return (
-                                        <label
-                                            key={optIdx}
-                                            className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${answers[questionId] == optIdx
-                                                ? "border-[#021d49] bg-blue-50"
-                                                : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
-                                                }`}
-                                        >
-                                            <input
-                                                type="radio"
-                                                name={`question-${questionId}`}
-                                                value={optIdx}
-                                                onChange={(e) => onAnswer(questionId, e.target.value)}
-                                                checked={answers[questionId] == optIdx}
-                                                className="w-5 h-5 mt-0.5 text-[#021d49] focus:ring-[#021d49]"
-                                            />
-                                            <span className="text-gray-700 flex-1">{option}</span>
-                                        </label>
-                                    );
-                                })}
-                            </div>
-                        ) : (
-                            <textarea
-                                placeholder="Type your answer here..."
-                                value={answers[question.id || question._id || idx] || ""}
-                                onChange={(e) => onAnswer(question.id || question._id || idx, e.target.value)}
-                                className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#021d49] transition-all"
-                                rows="5"
-                            />
-                        )}
-                    </div>
-                ))}
+                    return (
+                        <div
+                            key={questionId}
+                            className={`border-2 rounded-xl p-6 transition-all ${isAnswered
+                                    ? 'border-green-300 bg-green-50'
+                                    : 'border-gray-200 bg-gray-50'
+                                }`}
+                        >
+                            <p className="font-bold text-gray-900 mb-4 text-lg flex items-start gap-3">
+                                <span className="bg-[#021d49] text-white w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm">
+                                    {idx + 1}
+                                </span>
+                                {question.question || question.text || 'Question text not available'}
+                            </p>
+
+                            {(question.type === "multiple_choice" || question.type === "mcq") && question.options?.length > 0 ? (
+                                <div className="space-y-3">
+                                    {question.options.map((option, optIdx) => {
+                                        return (
+                                            <label
+                                                key={optIdx}
+                                                className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${answers[questionId] == optIdx
+                                                    ? "border-[#021d49] bg-blue-50"
+                                                    : "border-gray-200 hover:border-blue-300 hover:bg-gray-50"
+                                                    }`}
+                                            >
+                                                <input
+                                                    type="radio"
+                                                    name={`question-${questionId}`}
+                                                    value={optIdx}
+                                                    onChange={(e) => onAnswer(questionId, e.target.value)}
+                                                    checked={answers[questionId] == optIdx}
+                                                    className="w-5 h-5 mt-0.5 text-[#021d49] focus:ring-[#021d49]"
+                                                />
+                                                <span className="text-gray-700 flex-1">{option}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <textarea
+                                    placeholder="Type your answer here..."
+                                    value={answers[question.id || question._id || idx] || ""}
+                                    onChange={(e) => onAnswer(question.id || question._id || idx, e.target.value)}
+                                    className="w-full p-4 border-2 border-gray-200 rounded-lg focus:outline-none focus:border-[#021d49] transition-all"
+                                    rows="5"
+                                />
+                            )}
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                    <span className="font-semibold">Progress:</span> {Object.keys(answers).filter(k => answers[k] !== undefined && answers[k] !== '' && answers[k] !== null).length} of {lesson.questions.length} questions answered
+                </p>
+            </div>
+
+            <div className="flex gap-4">
+                <button
+                    disabled={true}
+                    className="flex-1 py-4 px-6 bg-white border-2 border-gray-300 rounded-xl hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed font-semibold transition-all flex items-center justify-center gap-2 shadow-sm"
+                >
+                    <ChevronLeft className="w-5 h-5" />
+                    Previous
+                </button>
+                <button
+                    onClick={handleSubmitQuestions}
+                    disabled={!allAnswered || submitting}
+                    className="flex-1 py-4 px-6 bg-gradient-to-r from-[#021d49] to-blue-700 text-white rounded-xl hover:from-[#032e6b] hover:to-blue-800 font-semibold transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {submitting ? (
+                        <>
+                            <Clock className="w-5 h-5 animate-spin" />
+                            Submitting...
+                        </>
+                    ) : !allAnswered ? (
+                        <>
+                            <AlertCircle className="w-5 h-5" />
+                            Answer All Questions
+                        </>
+                    ) : (
+                        <>
+                            <CheckCircle2 className="w-5 h-5" />
+                            Submit & Continue
+                        </>
+                    )}
+                </button>
             </div>
         </div>
     );

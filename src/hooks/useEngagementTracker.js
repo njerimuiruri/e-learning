@@ -49,21 +49,30 @@ export function useEngagementTracker({
     const container = containerRef.current;
     if (!container) return;
 
+    const checkWindowScroll = () => {
+      const { scrollY, innerHeight } = window;
+      const totalH = document.documentElement.scrollHeight;
+      if ((scrollY + innerHeight) / totalH >= 0.85) setScrolledToBottom(true);
+    };
+
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      if (scrollHeight <= clientHeight) {
-        setScrolledToBottom(true);
+      // If the container itself isn't scrollable, fall back to window scroll
+      if (scrollHeight <= clientHeight + 10) {
+        checkWindowScroll();
         return;
       }
-      if ((scrollTop + clientHeight) / scrollHeight >= 0.9) {
-        setScrolledToBottom(true);
-      }
+      if ((scrollTop + clientHeight) / scrollHeight >= 0.9) setScrolledToBottom(true);
     };
 
     // Check immediately (short content auto-satisfies scroll)
     handleScroll();
     container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, [scrollTrackingEnabled, scrolledToBottom]);
 
   // ── Auto-satisfy scroll for content that doesn't need scrolling ───────────

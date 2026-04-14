@@ -41,6 +41,13 @@ function LoginContent() {
     const searchParams = useSearchParams();
     const redirectParam = searchParams.get('redirect');
 
+    // Decode base64url-encoded email from invitation links (?ref=...)
+    const refParam = searchParams.get('ref') || '';
+    const emailFromRef = (() => {
+        if (!refParam) return '';
+        try { return atob(refParam.replace(/-/g, '+').replace(/_/g, '/')); } catch { return ''; }
+    })();
+
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -51,7 +58,7 @@ function LoginContent() {
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [userDataForRedirect, setUserDataForRedirect] = useState(null);
-    const [formData, setFormData] = useState({ email: '', password: '', rememberMe: false });
+    const [formData, setFormData] = useState({ email: emailFromRef, password: '', rememberMe: false });
 
     useEffect(() => {
         if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('isLoggingOut');
@@ -70,7 +77,8 @@ function LoginContent() {
         try {
             const response = await authService.login({ email: formData.email, password: formData.password });
             if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem('isLoggingOut');
-            showToast(`Welcome back, ${response.user.firstName}!`, 'success');
+            const displayName = response.user.fullName || `${response.user.firstName || ''} ${response.user.lastName || ''}`.trim() || response.user.firstName;
+            showToast(`Welcome back, ${displayName}!`, 'success');
 
             if (response.user.mustSetPassword) {
                 setUserDataForRedirect(response.user);
@@ -268,6 +276,15 @@ function LoginContent() {
                             </CardHeader>
 
                             <CardContent className="px-7 pb-7 pt-2">
+
+                                {emailFromRef && (
+                                    <div className="mb-4 flex gap-2 items-start bg-green-50 border border-green-200 rounded-lg px-3 py-2.5">
+                                        <CheckCircle className="h-3.5 w-3.5 text-green-600 mt-0.5 flex-shrink-0" />
+                                        <p className="text-xs text-green-700">
+                                            Your email has been filled in. Enter the <strong>temporary password</strong> from your invitation email to continue.
+                                        </p>
+                                    </div>
+                                )}
 
                                 {error && (
                                     <Alert variant="destructive" className="mb-4 py-2.5 border-red-200 bg-red-50 text-red-700 rounded-lg">

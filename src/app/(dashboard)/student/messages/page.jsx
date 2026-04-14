@@ -10,10 +10,10 @@ function formatTime(date) {
     const now = new Date();
     const diff = now - d;
     const mins = Math.floor(diff / 60000);
-    if (mins < 1)  return 'Just now';
+    if (mins < 1) return 'Just now';
     if (mins < 60) return `${mins}m ago`;
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24)  return `${hrs}h ago`;
+    if (hrs < 24) return `${hrs}h ago`;
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
@@ -61,7 +61,7 @@ function UserAvatar({ user, size = 'md', isAdmin = false }) {
 function ConvRow({ conv, isActive, onClick }) {
     const name = conv.isAdmin
         ? 'Admin Support'
-        : `${conv.user?.firstName || ''} ${conv.user?.lastName || ''}`.trim() || 'Instructor';
+        : conv.user?.fullName || `${conv.user?.firstName || ''} ${conv.user?.lastName || ''}`.trim() || 'Instructor';
     const time = conv.lastMessage?.createdAt ? formatTime(conv.lastMessage.createdAt) : '';
 
     return (
@@ -97,11 +97,10 @@ function MessageBubble({ message, currentUserId }) {
     const isOwn = senderId === currentUserId;
     return (
         <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'} mb-3`}>
-            <div className={`max-w-xs sm:max-w-md px-4 py-2.5 rounded-2xl shadow-sm ${
-                isOwn
+            <div className={`max-w-xs sm:max-w-md px-4 py-2.5 rounded-2xl shadow-sm ${isOwn
                     ? 'bg-blue-600 text-white rounded-br-sm'
                     : 'bg-white text-gray-900 border border-gray-100 rounded-bl-sm'
-            }`}>
+                }`}>
                 <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                 <p className={`text-[10px] mt-1 ${isOwn ? 'text-blue-100' : 'text-gray-400'} text-right`}>
                     {formatTime(message.createdAt)}
@@ -115,16 +114,16 @@ function MessageBubble({ message, currentUserId }) {
 /* ─── Main Page ─── */
 export default function StudentMessagesPage() {
     const [conversations, setConversations] = useState([]);
-    const [adminContact, setAdminContact]   = useState(null);
-    const [selected, setSelected]           = useState(null);
-    const [messages, setMessages]           = useState([]);
-    const [newMessage, setNewMessage]       = useState('');
-    const [loading, setLoading]             = useState(true);
-    const [sending, setSending]             = useState(false);
-    const [searchQuery, setSearchQuery]     = useState('');
+    const [adminContact, setAdminContact] = useState(null);
+    const [selected, setSelected] = useState(null);
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [sending, setSending] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
     const [mobileShowChat, setMobileShowChat] = useState(false);
-    const messagesEndRef                    = useRef(null);
-    const pollRef                           = useRef(null);
+    const messagesEndRef = useRef(null);
+    const pollRef = useRef(null);
 
     const currentUserId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
 
@@ -255,7 +254,7 @@ export default function StudentMessagesPage() {
     const filtered = allConvs.filter(conv => {
         const name = conv.isAdmin ? 'admin support' : `${conv.user?.firstName || ''} ${conv.user?.lastName || ''}`.toLowerCase();
         return name.includes(searchQuery.toLowerCase()) ||
-               (conv.lastMessage?.content || '').toLowerCase().includes(searchQuery.toLowerCase());
+            (conv.lastMessage?.content || '').toLowerCase().includes(searchQuery.toLowerCase());
     });
 
     const selectedUser = selected?.user || {};

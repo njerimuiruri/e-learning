@@ -67,3 +67,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── Slide rich content: consistent word spacing & wrapping ── */
+.slide-rich-content {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.slide-rich-content p,
+.slide-rich-content li {
+  text-align: left;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.slide-rich-content * {
+  max-width: 100%;
+  overflow-x: hidden;
+}

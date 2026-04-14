@@ -223,7 +223,7 @@ export default function StudentManagementPage() {
                             {filteredStudents.map(student => (
                                 <tr key={student._id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 text-sm">
-                                        <div className="font-medium text-gray-900">{student.firstName} {student.lastName}</div>
+                                        <div className="font-medium text-gray-900">{student.fullName || `${student.firstName} ${student.lastName}`}</div>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-600">{student.email}</td>
                                     <td className="px-6 py-4 text-sm text-gray-600">{student.phoneNumber || '-'}</td>
@@ -268,7 +268,7 @@ export default function StudentManagementPage() {
                                     <Icons.User className="text-blue-600" size={24} />
                                 </div>
                                 <div>
-                                    <h3 className="font-semibold text-gray-900">{student.firstName} {student.lastName}</h3>
+                                    <h3 className="font-semibold text-gray-900">{student.fullName || `${student.firstName} ${student.lastName}`}</h3>
                                     <p className="text-sm text-gray-600">{student.email}</p>
                                 </div>
                             </div>

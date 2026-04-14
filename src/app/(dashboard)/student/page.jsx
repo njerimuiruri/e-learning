@@ -23,9 +23,9 @@ import { Separator } from '@/components/ui/separator';
    HELPERS
 ══════════════════════════════════════════ */
 const levelConfig = {
-    beginner:     { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', bar: 'bg-emerald-500' },
-    intermediate: { badge: 'bg-amber-100 text-amber-700 border-amber-200',       dot: 'bg-amber-500',   bar: 'bg-amber-500'   },
-    advanced:     { badge: 'bg-rose-100 text-rose-700 border-rose-200',          dot: 'bg-rose-500',    bar: 'bg-rose-500'    },
+    beginner: { badge: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500', bar: 'bg-blue-500' },
+    intermediate: { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500', bar: 'bg-amber-500' },
+    advanced: { badge: 'bg-rose-100 text-rose-700 border-rose-200', dot: 'bg-rose-500', bar: 'bg-rose-500' },
 };
 const getLvl = (level) => levelConfig[level] || levelConfig.beginner;
 
@@ -50,7 +50,7 @@ const stripHtml = (html) => {
 const timeAgo = (date) => {
     if (!date) return '';
     const diff = Math.floor((Date.now() - new Date(date)) / 1000);
-    if (diff < 60)   return 'just now';
+    if (diff < 60) return 'just now';
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
@@ -59,27 +59,27 @@ const timeAgo = (date) => {
 
 const getAssessmentStatus = (enrollment) => {
     const hasSubmitted = (enrollment.finalAssessmentAttempts || 0) > 0;
-    const hasPending   = (enrollment.pendingManualGradingCount || 0) > 0;
-    if (hasPending)                      return 'pending_review';
+    const hasPending = (enrollment.pendingManualGradingCount || 0) > 0;
+    if (hasPending) return 'pending_review';
     if (enrollment.requiresModuleRepeat) return 'repeat_required';
-    if (!hasSubmitted)                   return 'ready';
+    if (!hasSubmitted) return 'ready';
     if (hasSubmitted && !enrollment.finalAssessmentPassed && enrollment.finalAssessmentAttempts < 3) return 'retry';
     if (enrollment.finalAssessmentAttempts >= 3 && !enrollment.finalAssessmentPassed) return 'failed';
     return 'ready';
 };
 
 const notificationIconMap = {
-    LESSON_COMPLETED:      { icon: 'CheckCircle', color: 'text-emerald-500', bg: 'bg-emerald-50' },
-    ASSESSMENT_PASSED:     { icon: 'Trophy',      color: 'text-yellow-500',  bg: 'bg-yellow-50'  },
-    ASSESSMENT_FAILED:     { icon: 'XCircle',     color: 'text-red-500',     bg: 'bg-red-50'     },
-    CERTIFICATE_EARNED:    { icon: 'Award',       color: 'text-violet-500',  bg: 'bg-violet-50'  },
-    MODULE_ENROLLED:       { icon: 'BookOpen',    color: 'text-blue-500',    bg: 'bg-blue-50'    },
-    ESSAY_GRADED:          { icon: 'FileText',    color: 'text-indigo-500',  bg: 'bg-indigo-50'  },
-    DISCUSSION_REPLY:      { icon: 'MessageCircle', color: 'text-teal-500',  bg: 'bg-teal-50'    },
-    LEVEL_UNLOCKED:        { icon: 'Unlock',      color: 'text-purple-500',  bg: 'bg-purple-50'  },
-    INSTRUCTOR_REMINDER:   { icon: 'Bell',        color: 'text-amber-500',   bg: 'bg-amber-50'   },
-    ADMIN_REMINDER:        { icon: 'Megaphone',   color: 'text-blue-500',    bg: 'bg-blue-50'    },
-    DEFAULT:               { icon: 'Bell',        color: 'text-gray-500',    bg: 'bg-gray-50'    },
+    LESSON_COMPLETED: { icon: 'CheckCircle', color: 'text-blue-500', bg: 'bg-blue-50' },
+    ASSESSMENT_PASSED: { icon: 'Trophy', color: 'text-yellow-500', bg: 'bg-yellow-50' },
+    ASSESSMENT_FAILED: { icon: 'XCircle', color: 'text-red-500', bg: 'bg-red-50' },
+    CERTIFICATE_EARNED: { icon: 'Award', color: 'text-violet-500', bg: 'bg-violet-50' },
+    MODULE_ENROLLED: { icon: 'BookOpen', color: 'text-blue-500', bg: 'bg-blue-50' },
+    ESSAY_GRADED: { icon: 'FileText', color: 'text-indigo-500', bg: 'bg-indigo-50' },
+    DISCUSSION_REPLY: { icon: 'MessageCircle', color: 'text-teal-500', bg: 'bg-teal-50' },
+    LEVEL_UNLOCKED: { icon: 'Unlock', color: 'text-purple-500', bg: 'bg-purple-50' },
+    INSTRUCTOR_REMINDER: { icon: 'Bell', color: 'text-amber-500', bg: 'bg-amber-50' },
+    ADMIN_REMINDER: { icon: 'Megaphone', color: 'text-blue-500', bg: 'bg-blue-50' },
+    DEFAULT: { icon: 'Bell', color: 'text-gray-500', bg: 'bg-gray-50' },
 };
 const getNotifStyle = (type) => notificationIconMap[type] || notificationIconMap.DEFAULT;
 
@@ -120,8 +120,8 @@ function QuickLink({ icon, label, sub, color, bgColor, onClick }) {
 
 /* Continue learning row card */
 function ContinueLearningCard({ enrollment, onClick }) {
-    const mod      = enrollment.moduleId || {};
-    const lvl      = getLvl(mod.level);
+    const mod = enrollment.moduleId || {};
+    const lvl = getLvl(mod.level);
     const progress = clamp(enrollment.progress);
     return (
         <Card
@@ -168,17 +168,17 @@ function ContinueLearningCard({ enrollment, onClick }) {
 
 /* Assessment alert row */
 function AssessmentAlertCard({ enrollment, onClick }) {
-    const mod    = enrollment.moduleId || {};
+    const mod = enrollment.moduleId || {};
     const status = getAssessmentStatus(enrollment);
     const configs = {
-        ready:           { label: 'Take Assessment',  color: 'border-l-emerald-500 bg-emerald-50/50',  btn: 'bg-emerald-600 hover:bg-emerald-700', icon: 'Play'       },
-        retry:           { label: 'Retry Assessment', color: 'border-l-orange-500 bg-orange-50/50',   btn: 'bg-orange-500 hover:bg-orange-600',   icon: 'RefreshCw'  },
-        pending_review:  { label: 'Under Review',     color: 'border-l-amber-500 bg-amber-50/50',     btn: 'bg-amber-400 cursor-not-allowed',     icon: 'Clock'      },
-        repeat_required: { label: 'Repeat Module',    color: 'border-l-rose-500 bg-rose-50/50',       btn: 'bg-rose-500 hover:bg-rose-600',       icon: 'RotateCcw'  },
-        failed:          { label: 'Max Attempts',     color: 'border-l-red-400 bg-red-50/50',         btn: 'bg-gray-400 cursor-not-allowed',      icon: 'XCircle'    },
+        ready: { label: 'Take Assessment', color: 'border-l-blue-500 bg-blue-50/50', btn: 'bg-blue-700 hover:bg-blue-800', icon: 'Play' },
+        retry: { label: 'Retry Assessment', color: 'border-l-orange-500 bg-orange-50/50', btn: 'bg-orange-500 hover:bg-orange-600', icon: 'RefreshCw' },
+        pending_review: { label: 'Under Review', color: 'border-l-amber-500 bg-amber-50/50', btn: 'bg-amber-400 cursor-not-allowed', icon: 'Clock' },
+        repeat_required: { label: 'Repeat Module', color: 'border-l-rose-500 bg-rose-50/50', btn: 'bg-rose-500 hover:bg-rose-600', icon: 'RotateCcw' },
+        failed: { label: 'Max Attempts', color: 'border-l-red-400 bg-red-50/50', btn: 'bg-gray-400 cursor-not-allowed', icon: 'XCircle' },
     };
     const cfg = configs[status] || configs.ready;
-    const Ic  = Icons[cfg.icon];
+    const Ic = Icons[cfg.icon];
     return (
         <div className={`border-l-4 rounded-r-xl p-3 flex items-center justify-between gap-3 ${cfg.color}`}>
             <div className="min-w-0">
@@ -199,7 +199,7 @@ function AssessmentAlertCard({ enrollment, onClick }) {
 
 /* Available module card (grid) */
 function AvailableModuleCard({ mod, onDetails, onEnroll }) {
-    const lvl   = getLvl(mod.level);
+    const lvl = getLvl(mod.level);
     const clean = stripHtml(mod.description);
     return (
         <Card className="group border-gray-100 hover:border-[#021d49]/20 hover:shadow-md transition-all duration-200 flex flex-col h-full">
@@ -212,13 +212,20 @@ function AvailableModuleCard({ mod, onDetails, onEnroll }) {
                     </Badge>
                     {mod.price > 0
                         ? <Badge className="text-[10px] bg-amber-100 text-amber-700 border-0 font-semibold">Paid</Badge>
-                        : <Badge className="text-[10px] bg-emerald-100 text-emerald-700 border-0 font-semibold">Free</Badge>
+                        : <Badge className="text-[10px] bg-blue-100 text-blue-700 border-0 font-semibold">Free</Badge>
                     }
                 </div>
-                {/* Category */}
-                {mod.categoryId?.name && (
-                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">{mod.categoryId.name}</p>
-                )}
+                {/* Category and Module Label */}
+                <div className="flex items-center justify-between gap-2 mb-1">
+                    {mod.categoryId?.name && (
+                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{mod.categoryId.name}</p>
+                    )}
+                    {mod.order && (
+                        <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-[#021d49]/10 text-[#021d49]">
+                            Module {mod.order}
+                        </span>
+                    )}
+                </div>
                 {/* Title */}
                 <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-[#021d49] transition-colors mb-1.5">
                     {mod.title}
@@ -261,7 +268,7 @@ function AvailableModuleCard({ mod, onDetails, onEnroll }) {
 /* Notification / Activity feed item */
 function ActivityItem({ notification, onRead }) {
     const style = getNotifStyle(notification.type);
-    const Ic    = Icons[style.icon];
+    const Ic = Icons[style.icon];
     return (
         <div
             className={`flex items-start gap-3 p-3 rounded-xl transition-colors cursor-pointer hover:bg-gray-50 ${!notification.isRead ? 'bg-blue-50/40' : ''}`}
@@ -310,7 +317,7 @@ function ReminderCard({ reminder }) {
 /* Module detail drawer */
 function ModuleDrawer({ mod, onClose, onNavigate }) {
     if (!mod) return null;
-    const lvl   = getLvl(mod.level);
+    const lvl = getLvl(mod.level);
     const clean = stripHtml(mod.description);
     return (
         <Sheet open={!!mod} onOpenChange={onClose}>
@@ -329,8 +336,8 @@ function ModuleDrawer({ mod, onClose, onNavigate }) {
                 </SheetHeader>
                 <div className="grid grid-cols-2 gap-3 mb-5">
                     {[
-                        { icon: 'Users',    label: 'Students', value: mod.enrollmentCount || 0 },
-                        { icon: 'BookOpen', label: 'Lessons',  value: mod.totalLessons || 0    },
+                        { icon: 'Users', label: 'Students', value: mod.enrollmentCount || 0 },
+                        { icon: 'BookOpen', label: 'Lessons', value: mod.totalLessons || 0 },
                     ].map(({ icon, label, value }) => {
                         const Ic = Icons[icon];
                         return (
@@ -388,16 +395,17 @@ function Empty({ icon, title, sub, action, onAction }) {
 function StudentDashboardContent() {
     const router = useRouter();
 
-    const [enrollments, setEnrollments]           = useState([]);
-    const [progressions, setProgressions]         = useState([]);
+    const [enrollments, setEnrollments] = useState([]);
+    const [progressions, setProgressions] = useState([]);
     const [availableModules, setAvailableModules] = useState([]);
-    const [notifications, setNotifications]       = useState([]);
-    const [reminders, setReminders]               = useState([]);
-    const [loading, setLoading]                   = useState(true);
-    const [user, setUser]                         = useState(null);
-    const [drawerMod, setDrawerMod]               = useState(null);
-    const [modulesTab, setModulesTab]             = useState('available'); // 'available' | 'progress'
-    const [showAllActivity, setShowAllActivity]   = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [reminders, setReminders] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(false);
+    const [user, setUser] = useState(null);
+    const [drawerMod, setDrawerMod] = useState(null);
+    const [modulesTab, setModulesTab] = useState('available'); // 'available' | 'progress'
+    const [showAllActivity, setShowAllActivity] = useState(false);
 
     useEffect(() => {
         const u = authService.getCurrentUser?.() || null;
@@ -408,10 +416,11 @@ function StudentDashboardContent() {
     const fetchAll = useCallback(async () => {
         try {
             setLoading(true);
+            setFetchError(false);
             const [enrollData, progData, modsData, notifData, remindData] = await Promise.allSettled([
                 moduleEnrollmentService.getMyEnrollments(),
                 progressionService.getMyProgressions(),
-                moduleService.getAllModules({ limit: 12 }),
+                moduleService.getAllModules({ limit: 50 }),
                 notificationService.getMyNotifications(20),
                 notificationService.getMyReminders(),
             ]);
@@ -430,7 +439,7 @@ function StudentDashboardContent() {
 
             // Available modules (filter out already enrolled)
             if (modsData.status === 'fulfilled') {
-                const allMods    = Array.isArray(modsData.value) ? modsData.value : modsData.value?.modules || [];
+                const allMods = Array.isArray(modsData.value) ? modsData.value : modsData.value?.modules || [];
                 const enrolledIds = new Set(eList.map(e => e.moduleId?._id?.toString() || e.moduleId?.toString()));
                 setAvailableModules(allMods.filter(m => !enrolledIds.has(m._id?.toString())));
             }
@@ -448,6 +457,7 @@ function StudentDashboardContent() {
             }
         } catch (err) {
             console.error(err);
+            setFetchError(true);
         } finally {
             setLoading(false);
         }
@@ -457,13 +467,13 @@ function StudentDashboardContent() {
         try {
             await notificationService.markAsRead(id);
             setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
-        } catch (_) {}
+        } catch (_) { }
     };
 
     /* ── Derived data ── */
     const inProgress = enrollments.filter(e => {
         if (e.isCompleted) return false;
-        const hasPending   = (e.pendingManualGradingCount || 0) > 0;
+        const hasPending = (e.pendingManualGradingCount || 0) > 0;
         const hasSubmitted = (e.finalAssessmentAttempts || 0) > 0;
         if (hasSubmitted && hasPending) return false;
         if (e.completedLessons >= e.totalLessons && e.totalLessons > 0 && !hasSubmitted) return false;
@@ -473,19 +483,19 @@ function StudentDashboardContent() {
     const pendingAssessments = enrollments.filter(e => {
         if (e.isCompleted) return false;
         const hasSubmitted = (e.finalAssessmentAttempts || 0) > 0;
-        const hasPending   = (e.pendingManualGradingCount || 0) > 0;
-        const allDone      = e.completedLessons >= e.totalLessons && e.totalLessons > 0;
+        const hasPending = (e.pendingManualGradingCount || 0) > 0;
+        const allDone = e.completedLessons >= e.totalLessons && e.totalLessons > 0;
         return (allDone && !hasSubmitted) ||
-               (hasSubmitted && !e.finalAssessmentPassed) ||
-               hasPending;
+            (hasSubmitted && !e.finalAssessmentPassed) ||
+            hasPending;
     });
 
-    const completed        = enrollments.filter(e => e.isCompleted);
-    const certsEarned      = completed.filter(e => e.certificateEarned).length;
-    const avgProgress      = inProgress.length
+    const completed = enrollments.filter(e => e.isCompleted);
+    const certsEarned = completed.filter(e => e.certificateEarned).length;
+    const avgProgress = inProgress.length
         ? clamp(inProgress.reduce((s, e) => s + clamp(e.progress), 0) / inProgress.length) : 0;
-    const unreadCount      = notifications.filter(n => !n.isRead).length;
-    const visibleNotifs    = showAllActivity ? notifications : notifications.slice(0, 5);
+    const unreadCount = notifications.filter(n => !n.isRead).length;
+    const visibleNotifs = showAllActivity ? notifications : notifications.slice(0, 5);
 
     if (loading) {
         return (
@@ -506,9 +516,29 @@ function StudentDashboardContent() {
         );
     }
 
-    const firstName = user?.firstName || 'there';
-    const fullName  = user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : '';
-    const initials  = user ? `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase() : 'S';
+    if (fetchError) {
+        return (
+            <>
+                <Navbar />
+                <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                    <div className="text-center px-6">
+                        <Icons.WifiOff className="w-14 h-14 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-base font-bold text-gray-800 mb-1">Couldn't load your dashboard</h3>
+                        <p className="text-sm text-gray-500 mb-5">The server may be temporarily unavailable. Please try again.</p>
+                        <Button className="bg-[#021d49] hover:bg-[#032a66] text-white" onClick={fetchAll}>
+                            <Icons.RefreshCw className="w-4 h-4 mr-2" /> Retry
+                        </Button>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    const fullName = user ? (`${user.firstName || ''} ${user.lastName || ''}`.trim() || user.fullName || '') : '';
+    const firstName = user?.firstName || user?.fullName?.split(' ')[0] || 'there';
+    const initials = user ? (
+        `${(user.firstName || user.fullName || '')[0] || ''}${(user.lastName || (user.fullName || '').split(' ').slice(-1)[0] || '')[0] || ''}`
+    ).toUpperCase() || 'S' : 'S';
 
     return (
         <>
@@ -538,10 +568,10 @@ function StudentDashboardContent() {
                             </div>
                             {/* Right: Hero stats */}
                             <div className="flex items-center gap-2 flex-wrap">
-                                <HeroStat icon="BookOpen"   label="Enrolled"    value={enrollments.length} />
-                                <HeroStat icon="Zap"        label="In Progress" value={inProgress.length}  />
-                                <HeroStat icon="CheckCircle" label="Completed"  value={completed.length}   />
-                                <HeroStat icon="Award"      label="Certificates" value={certsEarned}       />
+                                <HeroStat icon="BookOpen" label="Enrolled" value={enrollments.length} />
+                                <HeroStat icon="Zap" label="In Progress" value={inProgress.length} />
+                                <HeroStat icon="CheckCircle" label="Completed" value={completed.length} />
+                                <HeroStat icon="Award" label="Certificates" value={certsEarned} />
                             </div>
                         </div>
 
@@ -594,11 +624,11 @@ function StudentDashboardContent() {
                                 <CardContent className="px-5 pb-5">
                                     <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
                                         {[
-                                            { icon: 'BookOpen',      label: 'Browse',       sub: 'All modules',  color: 'text-blue-600',   bgColor: 'bg-blue-50',   href: '/student/modules'      },
-                                            { icon: 'MessageSquare', label: 'Discussions',  sub: 'Forums',       color: 'text-teal-600',   bgColor: 'bg-teal-50',   href: '/student/modules'      },
-                                            { icon: 'Award',         label: 'Certificates', sub: 'My awards',    color: 'text-violet-600', bgColor: 'bg-violet-50', href: '/student/certificates'  },
-                                            { icon: 'Trophy',        label: 'Achievements', sub: 'Progress',     color: 'text-amber-600',  bgColor: 'bg-amber-50',  href: '/student/achievements'  },
-                                            { icon: 'User',          label: 'Profile',      sub: 'My account',   color: 'text-gray-600',   bgColor: 'bg-gray-100',  href: '/student/profile'       },
+                                            { icon: 'BookOpen', label: 'Browse', sub: 'All modules', color: 'text-blue-600', bgColor: 'bg-blue-50', href: '/student/modules' },
+                                            { icon: 'MessageSquare', label: 'Discussions', sub: 'Forums', color: 'text-teal-600', bgColor: 'bg-teal-50', href: '/student/modules' },
+                                            { icon: 'Award', label: 'Certificates', sub: 'My awards', color: 'text-violet-600', bgColor: 'bg-violet-50', href: '/student/certificates' },
+                                            { icon: 'Trophy', label: 'Achievements', sub: 'Progress', color: 'text-amber-600', bgColor: 'bg-amber-50', href: '/student/achievements' },
+                                            { icon: 'User', label: 'Profile', sub: 'My account', color: 'text-gray-600', bgColor: 'bg-gray-100', href: '/student/profile' },
                                         ].map((ql) => (
                                             <QuickLink key={ql.label} {...ql} onClick={() => router.push(ql.href)} />
                                         ))}
@@ -698,6 +728,13 @@ function StudentDashboardContent() {
                                     {modulesTab === 'available' ? (
                                         availableModules.length > 0 ? (
                                             <>
+                                                {/* Sequential learning notice */}
+                                                <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 mb-3">
+                                                    <Icons.ListOrdered className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                                                    <p className="text-[11px] text-amber-800 leading-relaxed">
+                                                        <span className="font-semibold">Sequential Learning:</span> You must complete Module 1 before accessing Module 2, and so on within each programme.
+                                                    </p>
+                                                </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                                                     {availableModules.slice(0, 6).map((mod) => (
                                                         <AvailableModuleCard
@@ -729,14 +766,14 @@ function StudentDashboardContent() {
                                         enrollments.length > 0 ? (
                                             <div className="space-y-2">
                                                 {enrollments.map((e) => {
-                                                    const mod  = e.moduleId || {};
-                                                    const lvl  = getLvl(mod.level);
+                                                    const mod = e.moduleId || {};
+                                                    const lvl = getLvl(mod.level);
                                                     const prog = clamp(e.progress);
 
                                                     // Status label
                                                     let statusBadge;
                                                     if (e.isCompleted) {
-                                                        statusBadge = <Badge className="text-[9px] bg-emerald-100 text-emerald-700 border-0 font-semibold shrink-0"><Icons.CheckCircle className="w-2.5 h-2.5 mr-0.5 inline" />Done</Badge>;
+                                                        statusBadge = <Badge className="text-[9px] bg-blue-100 text-blue-700 border-0 font-semibold shrink-0"><Icons.CheckCircle className="w-2.5 h-2.5 mr-0.5 inline" />Done</Badge>;
                                                     } else if ((e.pendingManualGradingCount || 0) > 0) {
                                                         statusBadge = <Badge className="text-[9px] bg-amber-100 text-amber-700 border-0 font-semibold shrink-0"><Icons.Clock className="w-2.5 h-2.5 mr-0.5 inline" />Review</Badge>;
                                                     } else if (e.completedLessons >= e.totalLessons && e.totalLessons > 0) {
@@ -749,9 +786,9 @@ function StudentDashboardContent() {
                                                         <div key={e._id}
                                                             className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-blue-50/40 cursor-pointer transition-colors group border border-transparent hover:border-blue-100"
                                                             onClick={() => router.push(`/student/modules/${mod._id}`)}>
-                                                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${e.isCompleted ? 'bg-emerald-100' : 'bg-[#021d49]/8'}`}>
+                                                            <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${e.isCompleted ? 'bg-blue-100' : 'bg-[#021d49]/8'}`}>
                                                                 {e.isCompleted
-                                                                    ? <Icons.CheckCircle className="w-4 h-4 text-emerald-500" />
+                                                                    ? <Icons.CheckCircle className="w-4 h-4 text-blue-600" />
                                                                     : <Icons.BookOpen className="w-4 h-4 text-[#021d49]" />
                                                                 }
                                                             </div>
@@ -767,7 +804,12 @@ function StudentDashboardContent() {
                                                                     <span className="text-[10px] font-bold text-[#021d49] shrink-0 w-8 text-right">{prog}%</span>
                                                                 </div>
                                                                 <div className="flex items-center justify-between mt-1">
-                                                                    <span className="text-[10px] text-gray-400">{Math.min(e.completedLessons || 0, e.totalLessons || 0)}/{e.totalLessons || 0} lessons</span>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[10px] text-gray-400">{Math.min(e.completedLessons || 0, e.totalLessons || 0)}/{e.totalLessons || 0} lessons</span>
+                                                                        {mod.order && (
+                                                                            <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-[#021d49]/10 text-[#021d49]">Module {mod.order}</span>
+                                                                        )}
+                                                                    </div>
                                                                     <Badge variant="outline" className={`text-[9px] border ${lvl.badge}`}>{mod.level}</Badge>
                                                                 </div>
                                                             </div>
@@ -797,13 +839,13 @@ function StudentDashboardContent() {
                                     </CardHeader>
                                     <CardContent className="px-5 pb-5 space-y-3">
                                         {progressions.map((prog) => {
-                                            const catName    = prog.categoryId?.name || prog.categoryName || 'Category';
-                                            const levels     = ['beginner', 'intermediate', 'advanced'];
+                                            const catName = prog.categoryId?.name || prog.categoryName || 'Category';
+                                            const levels = ['beginner', 'intermediate', 'advanced'];
                                             const currentIdx = levels.indexOf(prog.currentLevel || 'beginner');
                                             const levelColors = {
-                                                beginner:     { active: 'bg-emerald-600 text-white', done: 'bg-emerald-100 text-emerald-700', locked: 'bg-gray-100 text-gray-400' },
-                                                intermediate: { active: 'bg-amber-500 text-white',  done: 'bg-amber-100 text-amber-700',     locked: 'bg-gray-100 text-gray-400' },
-                                                advanced:     { active: 'bg-rose-600 text-white',   done: 'bg-rose-100 text-rose-700',       locked: 'bg-gray-100 text-gray-400' },
+                                                beginner: { active: 'bg-blue-700 text-white', done: 'bg-blue-100 text-blue-700', locked: 'bg-gray-100 text-gray-400' },
+                                                intermediate: { active: 'bg-amber-500 text-white', done: 'bg-amber-100 text-amber-700', locked: 'bg-gray-100 text-gray-400' },
+                                                advanced: { active: 'bg-rose-600 text-white', done: 'bg-rose-100 text-rose-700', locked: 'bg-gray-100 text-gray-400' },
                                             };
                                             return (
                                                 <div key={prog._id} className="bg-gray-50 rounded-xl p-4">
@@ -818,15 +860,15 @@ function StudentDashboardContent() {
                                                     <div className="grid grid-cols-3 gap-2">
                                                         {levels.map((level, li) => {
                                                             const isUnlocked = li <= currentIdx;
-                                                            const isCurrent  = li === currentIdx;
-                                                            const ld         = prog.levels?.[level] || {};
-                                                            const c          = levelColors[level];
+                                                            const isCurrent = li === currentIdx;
+                                                            const ld = prog.levels?.[level] || {};
+                                                            const c = levelColors[level];
                                                             return (
                                                                 <div key={level} className={`rounded-lg p-3 text-center ${isCurrent ? `${c.active} ring-2 ring-offset-1 shadow-sm` : isUnlocked ? c.done : c.locked}`}>
                                                                     <div className="flex justify-center mb-1">
-                                                                        {isCurrent  ? <Icons.Zap className="w-3.5 h-3.5" /> :
-                                                                         isUnlocked ? <Icons.CheckCircle className="w-3.5 h-3.5" /> :
-                                                                                      <Icons.Lock className="w-3.5 h-3.5" />}
+                                                                        {isCurrent ? <Icons.Zap className="w-3.5 h-3.5" /> :
+                                                                            isUnlocked ? <Icons.CheckCircle className="w-3.5 h-3.5" /> :
+                                                                                <Icons.Lock className="w-3.5 h-3.5" />}
                                                                     </div>
                                                                     <p className="text-[10px] font-bold capitalize">{level}</p>
                                                                     <p className="text-[10px] opacity-75">{ld.completedModules || 0}/{ld.totalModules || 0}</p>
@@ -866,10 +908,10 @@ function StudentDashboardContent() {
                                     <p className="text-xs text-white/60 font-medium mb-3">Your Summary</p>
                                     <div className="space-y-3">
                                         {[
-                                            { label: 'Lessons Completed', value: (() => { const total = enrollments.reduce((s,e)=>s+(e.totalLessons||0),0); const done = enrollments.reduce((s,e)=>s+Math.min(e.completedLessons||0,e.totalLessons||0),0); return `${done}/${total}`; })(), icon: 'BookOpen' },
-                                            { label: 'Avg Progress',      value: `${avgProgress}%`,  icon: 'BarChart2' },
-                                            { label: 'Certificates',      value: certsEarned,        icon: 'Award'     },
-                                            { label: 'Completed Modules', value: completed.length,   icon: 'CheckCircle' },
+                                            { label: 'Lessons Completed', value: (() => { const total = enrollments.reduce((s, e) => s + (e.totalLessons || 0), 0); const done = enrollments.reduce((s, e) => s + Math.min(e.completedLessons || 0, e.totalLessons || 0), 0); return `${done}/${total}`; })(), icon: 'BookOpen' },
+                                            { label: 'Avg Progress', value: `${avgProgress}%`, icon: 'BarChart2' },
+                                            { label: 'Certificates', value: certsEarned, icon: 'Award' },
+                                            { label: 'Completed Modules', value: completed.length, icon: 'CheckCircle' },
                                         ].map(({ label, value, icon }) => {
                                             const Ic = Icons[icon];
                                             return (
@@ -939,7 +981,7 @@ function StudentDashboardContent() {
                                                     try {
                                                         await notificationService.markAllAsRead();
                                                         setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-                                                    } catch (_) {}
+                                                    } catch (_) { }
                                                 }}>
                                                 Mark all read
                                             </button>
@@ -1031,9 +1073,9 @@ function StudentDashboardContent() {
                                     <CardHeader className="px-4 pt-4 pb-2">
                                         <div className="flex items-center justify-between">
                                             <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
-                                                <Icons.CheckCircle className="w-4 h-4 text-emerald-500" />
+                                                <Icons.CheckCircle className="w-4 h-4 text-blue-600" />
                                                 Completed
-                                                <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-emerald-600 text-white border-0 rounded-full">
+                                                <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-blue-700 text-white border-0 rounded-full">
                                                     {completed.length}
                                                 </Badge>
                                             </CardTitle>
@@ -1052,11 +1094,11 @@ function StudentDashboardContent() {
                                             const lvl = getLvl(mod.level);
                                             return (
                                                 <div key={e._id}
-                                                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-emerald-50/50 cursor-pointer transition-colors group"
+                                                    className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-blue-50/50 cursor-pointer transition-colors group"
                                                     onClick={() => router.push(`/student/modules/${mod._id}`)}>
-                                                    <Icons.CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                                                    <Icons.CheckCircle className="w-4 h-4 text-blue-600 shrink-0" />
                                                     <div className="flex-1 min-w-0">
-                                                        <p className="text-xs font-semibold text-gray-800 line-clamp-1 group-hover:text-emerald-700 transition-colors">{mod.title}</p>
+                                                        <p className="text-xs font-semibold text-gray-800 line-clamp-1 group-hover:text-blue-700 transition-colors">{mod.title}</p>
                                                     </div>
                                                     <div className="flex items-center gap-1 shrink-0">
                                                         <Badge variant="outline" className={`text-[9px] border ${lvl.badge}`}>{mod.level}</Badge>

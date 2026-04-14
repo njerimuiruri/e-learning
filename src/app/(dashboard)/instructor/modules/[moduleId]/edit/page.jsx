@@ -198,7 +198,7 @@ export default function EditModulePage() {
     const [moduleData, setModuleData] = useState({
         title: '', description: '', welcomeMessage: '', moduleAim: '',
         moduleObjectives: [''], learningOutcomes: [''], targetAudience: [''],
-        categoryId: '', level: 'beginner', deliveryMode: '', duration: '', bannerUrl: '', prerequisites: [],
+        categoryId: '', level: 'beginner', deliveryMode: '', duration: '', order: '', bannerUrl: '', prerequisites: [],
     });
 
     // Step 2: Lessons (LessonBuilder format with slides)
@@ -252,6 +252,7 @@ export default function EditModulePage() {
                 targetAudience: moduleResult.targetAudience?.length > 0 ? moduleResult.targetAudience : [''],
                 categoryId: categoryId || '', level: moduleResult.level || 'beginner',
                 deliveryMode: moduleResult.deliveryMode || '', duration: moduleResult.duration || '',
+                order: moduleResult.order != null ? moduleResult.order : '',
                 bannerUrl: moduleResult.bannerUrl || '', prerequisites: moduleResult.prerequisites || [],
             });
 
@@ -331,6 +332,7 @@ export default function EditModulePage() {
                 welcomeMessage: moduleData.welcomeMessage, moduleAim: moduleData.moduleAim,
                 categoryId: moduleData.categoryId, level: moduleData.level,
                 deliveryMode: moduleData.deliveryMode, duration: moduleData.duration,
+                order: moduleData.order !== '' ? Number(moduleData.order) : undefined,
                 bannerUrl: moduleData.bannerUrl,
                 learningOutcomes: moduleData.learningOutcomes.filter(o => o.trim()).join('\n'),
                 targetAudience: moduleData.targetAudience.filter(a => a.trim()),
@@ -527,9 +529,16 @@ export default function EditModulePage() {
                                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Module Overview</h2>
                                     <p className="text-gray-600">Update your module's identity and learning goals</p>
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">Module Title <span className="text-red-500">*</span></label>
-                                    <input type="text" value={moduleData.title} onChange={(e) => setModuleData({ ...moduleData, title: e.target.value })} placeholder="e.g., Introduction to Digital Marketing" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                                <div className="grid grid-cols-4 gap-4">
+                                    <div className="col-span-3">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Module Title <span className="text-red-500">*</span></label>
+                                        <input type="text" value={moduleData.title} onChange={(e) => setModuleData({ ...moduleData, title: e.target.value })} placeholder="e.g., Introduction to Digital Marketing" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">Module Order</label>
+                                        <input type="number" min="1" value={moduleData.order} onChange={(e) => setModuleData({ ...moduleData, order: e.target.value === '' ? '' : parseInt(e.target.value) })} placeholder="e.g. 1" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent" />
+                                        <p className="text-xs text-gray-400 mt-1">Controls sequence (1 = first)</p>
+                                    </div>
                                 </div>
                                 <RichTextEditor label="Description" required value={moduleData.description} onChange={(val) => setModuleData({ ...moduleData, description: val })} placeholder="What will students learn..." height={180} />
                                 <RichTextEditor label="Welcome Message" value={moduleData.welcomeMessage} onChange={(val) => setModuleData({ ...moduleData, welcomeMessage: val })} placeholder="A warm welcome message..." height={120} />

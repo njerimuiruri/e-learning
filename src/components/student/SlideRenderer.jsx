@@ -15,44 +15,44 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
   const dm = darkMode; // shorthand
 
   return (
-    <div className="w-full h-full flex flex-col">
+    <div className="w-full flex flex-col">
       <RichContentStyles darkMode={dm} />
 
       {/* ── Section title ────────────────────────────────────────────────── */}
       {sectionTitle && (
-        <div className={`flex items-center gap-3 px-5 pt-4 pb-2 flex-shrink-0`}>
-          <div className="flex-shrink-0 w-1 h-6 rounded-full bg-green-500" />
+        <div className={`flex items-center gap-2 px-2 pt-2 pb-0.5 sm:px-3 sm:pt-2 sm:pb-1 flex-shrink-0`}>
+          <div className="flex-shrink-0 w-1 h-6 rounded-full bg-[#1e40af]" />
           <h2 className={`text-base font-bold leading-tight ${dm ? 'text-white' : 'text-gray-900'}`}>{sectionTitle}</h2>
         </div>
       )}
 
       {/* ── TEXT SLIDE ─────────────────────────────────────────────────────── */}
       {type === 'text' && (
-        <div className={`flex-1 flex flex-col overflow-hidden rounded-xl mx-3 my-3 border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+        <div className={`flex flex-col rounded-xl mx-1 mt-1 mb-2 sm:mx-2 sm:mt-1 sm:mb-3 border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
           {/* Header */}
-          <div className={`flex-shrink-0 flex items-center gap-2.5 px-5 py-3 border-b ${dm ? 'border-gray-700 bg-gray-800/80' : 'border-gray-100 bg-gray-50'}`}>
-            <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${dm ? 'bg-green-900/50' : 'bg-green-100'}`}>
-              <svg className={`w-4 h-4 ${dm ? 'text-green-400' : 'text-green-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className={`flex items-center gap-2.5 px-5 py-3 border-b ${dm ? 'border-gray-700 bg-gray-800/80' : 'border-gray-100 bg-gray-50'}`}>
+            <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${dm ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+              <svg className={`w-4 h-4 ${dm ? 'text-blue-400' : 'text-[#1e40af]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </span>
             <div>
-              <span className={`text-xs font-bold uppercase tracking-widest ${dm ? 'text-green-400' : 'text-green-600'}`}>Reading</span>
+              <span className={`text-xs font-bold uppercase tracking-widest ${dm ? 'text-blue-400' : 'text-[#1e40af]'}`}>Reading</span>
               <p className={`text-xs mt-0.5 ${dm ? 'text-gray-500' : 'text-gray-400'}`}>{slideNumber} of {totalSlides}</p>
             </div>
           </div>
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="px-4 py-4 sm:px-5 sm:py-5">
             <div
-              className={`slide-rich-content prose prose-base max-w-none break-words
+              className={`slide-rich-content prose prose-base max-w-full break-words overflow-x-hidden
                 prose-headings:font-bold prose-headings:text-left prose-headings:mt-5 prose-headings:mb-2
-                prose-p:leading-[1.85] prose-p:text-justify prose-p:mb-3
-                prose-li:leading-relaxed prose-li:text-justify
+                prose-p:leading-relaxed prose-p:text-left prose-p:mb-3 prose-p:break-words
+                prose-li:leading-relaxed prose-li:text-left
                 prose-ul:my-3 prose-ol:my-3
                 prose-a:no-underline hover:prose-a:underline
                 ${dm
-                  ? 'prose-invert prose-headings:text-white prose-p:text-gray-300 prose-li:text-gray-300 prose-strong:text-white prose-a:text-green-400'
-                  : 'prose-headings:text-gray-900 prose-p:text-gray-700 prose-li:text-gray-700 prose-strong:text-gray-900 prose-a:text-green-600'
+                  ? 'prose-invert prose-headings:text-white prose-p:text-gray-300 prose-li:text-gray-300 prose-strong:text-white prose-a:text-blue-400'
+                  : 'prose-headings:text-gray-900 prose-p:text-gray-700 prose-li:text-gray-700 prose-strong:text-gray-900 prose-a:text-[#1e40af]'
                 }`}
               dangerouslySetInnerHTML={{ __html: slide.content || '' }}
             />
@@ -62,19 +62,19 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
 
       {/* ── IMAGE SLIDE ────────────────────────────────────────────────────── */}
       {type === 'image' && (
-        <div className={`flex-1 flex flex-col overflow-hidden rounded-xl mx-3 my-3 border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <div className={`flex-shrink-0 flex items-center gap-2.5 px-5 py-3 border-b ${dm ? 'border-gray-700 bg-gray-800/80' : 'border-gray-100 bg-gray-50'}`}>
-            <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${dm ? 'bg-emerald-900/50' : 'bg-emerald-100'}`}>
-              <svg className={`w-4 h-4 ${dm ? 'text-emerald-400' : 'text-emerald-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className={`flex flex-col rounded-xl mx-1 mt-1 mb-2 sm:mx-2 sm:mt-1 sm:mb-3 border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`flex items-center gap-2.5 px-5 py-3 border-b ${dm ? 'border-gray-700 bg-gray-800/80' : 'border-gray-100 bg-gray-50'}`}>
+            <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${dm ? 'bg-blue-900/50' : 'bg-blue-100'}`}>
+              <svg className={`w-4 h-4 ${dm ? 'text-blue-400' : 'text-[#1e40af]'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </span>
             <div>
-              <span className={`text-xs font-bold uppercase tracking-widest ${dm ? 'text-emerald-400' : 'text-emerald-600'}`}>Visual</span>
+              <span className={`text-xs font-bold uppercase tracking-widest ${dm ? 'text-blue-400' : 'text-[#1e40af]'}`}>Visual</span>
               <p className={`text-xs mt-0.5 ${dm ? 'text-gray-500' : 'text-gray-400'}`}>{slideNumber} of {totalSlides}</p>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-5 flex flex-col items-center justify-center gap-4">
+          <div className="p-4 sm:p-5 flex flex-col items-center gap-4">
             {slide.imageUrl ? (
               <>
                 <img
@@ -100,8 +100,8 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
 
       {/* ── VIDEO SLIDE ────────────────────────────────────────────────────── */}
       {type === 'video' && (
-        <div className={`flex-1 flex flex-col overflow-hidden rounded-xl mx-3 my-3 border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <div className={`flex-shrink-0 flex items-center gap-2.5 px-5 py-3 border-b ${dm ? 'border-gray-700 bg-gray-800/80' : 'border-gray-100 bg-gray-50'}`}>
+        <div className={`flex flex-col rounded-xl mx-1 mt-1 mb-2 sm:mx-2 sm:mt-1 sm:mb-3 border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`flex items-center gap-2.5 px-5 py-3 border-b ${dm ? 'border-gray-700 bg-gray-800/80' : 'border-gray-100 bg-gray-50'}`}>
             <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${dm ? 'bg-purple-900/50' : 'bg-purple-100'}`}>
               <svg className={`w-4 h-4 ${dm ? 'text-purple-400' : 'text-purple-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
@@ -113,7 +113,7 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
               <p className={`text-xs mt-0.5 ${dm ? 'text-gray-500' : 'text-gray-400'}`}>{slideNumber} of {totalSlides}</p>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-4 justify-center">
+          <div className="p-4 sm:p-5 flex flex-col gap-4">
             {slide.videoUrl ? (
               <>
                 <div className="relative w-full rounded-xl overflow-hidden shadow-lg bg-black" style={{ paddingTop: '56.25%' }}>
@@ -148,8 +148,8 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
 
       {/* ── DIAGRAM SLIDE ──────────────────────────────────────────────────── */}
       {type === 'diagram' && (
-        <div className={`flex-1 flex flex-col overflow-hidden rounded-xl mx-3 my-3 border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <div className={`flex-shrink-0 flex items-center gap-2.5 px-5 py-3 border-b ${dm ? 'border-gray-700 bg-gray-800/80' : 'border-gray-100 bg-gray-50'}`}>
+        <div className={`flex flex-col rounded-xl mx-1 mt-1 mb-2 sm:mx-2 sm:mt-1 sm:mb-3 border shadow-sm ${dm ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+          <div className={`flex items-center gap-2.5 px-5 py-3 border-b ${dm ? 'border-gray-700 bg-gray-800/80' : 'border-gray-100 bg-gray-50'}`}>
             <span className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${dm ? 'bg-amber-900/50' : 'bg-amber-100'}`}>
               <svg className={`w-4 h-4 ${dm ? 'text-amber-400' : 'text-amber-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
@@ -160,7 +160,7 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
               <p className={`text-xs mt-0.5 ${dm ? 'text-gray-500' : 'text-gray-400'}`}>{slideNumber} of {totalSlides}</p>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div className="p-4 sm:p-5 space-y-4">
             {slide.imageUrl && (
               <div className="flex flex-col items-center gap-2">
                 <img
@@ -174,9 +174,9 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
               </div>
             )}
             {slide.content && (
-              <div className={`rounded-xl border p-4 overflow-x-auto ${dm ? 'bg-gray-700/50 border-gray-600' : 'bg-amber-50 border-amber-100'}`}>
+              <div className={`rounded-xl border p-4 overflow-x-hidden ${dm ? 'bg-gray-700/50 border-gray-600' : 'bg-amber-50 border-amber-100'}`}>
                 <div
-                  className={`slide-rich-content text-justify prose max-w-none ${dm ? 'prose-invert text-gray-300' : 'text-gray-800'}`}
+                  className={`slide-rich-content text-left prose max-w-full break-words overflow-x-hidden ${dm ? 'prose-invert text-gray-300' : 'text-gray-800'}`}
                   dangerouslySetInnerHTML={{ __html: slide.content }}
                 />
               </div>
@@ -192,27 +192,27 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
 
       {/* ── CODE SNIPPET SLIDE ─────────────────────────────────────────────── */}
       {type === 'codeSnippet' && (
-        <div className="flex-1 flex flex-col overflow-hidden rounded-xl mx-3 my-3 border border-gray-700 bg-gray-950 shadow-lg">
-          <div className="flex-shrink-0 flex items-center gap-2.5 px-5 py-3 border-b border-gray-800">
+        <div className="flex flex-col rounded-xl mx-1 mt-1 mb-2 sm:mx-2 sm:mt-1 sm:mb-3 border border-gray-700 bg-gray-950 shadow-lg">
+          <div className="flex-shrink-0 flex items-center gap-2.5 px-4 py-2 border-b border-gray-800">
             <div className="flex gap-1.5">
               <span className="w-3 h-3 rounded-full bg-red-500 opacity-80" />
               <span className="w-3 h-3 rounded-full bg-yellow-500 opacity-80" />
               <span className="w-3 h-3 rounded-full bg-green-500 opacity-80" />
             </div>
             <span className="w-7 h-7 rounded-lg bg-gray-800 flex items-center justify-center ml-1 flex-shrink-0">
-              <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
               </svg>
             </span>
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-green-400">Interactive Code</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-blue-400">Interactive Code</span>
               <p className="text-xs text-gray-500 mt-0.5">{slideNumber} of {totalSlides}</p>
             </div>
             <span className="ml-auto text-xs bg-gray-800 text-gray-400 px-2 py-1 rounded-lg font-mono">
               {slide.codeLanguage || slide.language || 'python'}
             </span>
           </div>
-          <div className="flex-1 overflow-hidden p-4">
+          <div className="p-2 sm:p-4">
             <InteractiveCodeEditor
               language={slide.codeLanguage || slide.language || 'python'}
               instructions={slide.codeInstructions || slide.instructions || ''}
@@ -230,6 +230,11 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
 function RichContentStyles({ darkMode }) {
   return (
     <style jsx global>{`
+      .slide-rich-content {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
       .slide-rich-content table {
         border-collapse: collapse;
         width: 100%;
@@ -242,6 +247,7 @@ function RichContentStyles({ darkMode }) {
         padding: 8px 12px;
         text-align: left;
         word-break: break-word;
+        overflow-wrap: break-word;
       }
       .slide-rich-content table th {
         background: ${darkMode ? '#1f2937' : '#f3f4f6'};
@@ -252,18 +258,26 @@ function RichContentStyles({ darkMode }) {
         background: ${darkMode ? '#111827' : '#f9fafb'};
       }
       .slide-rich-content table tr:hover td {
-        background: ${darkMode ? '#1f2937' : '#f0fdf4'};
+        background: ${darkMode ? '#1f2937' : '#eff6ff'};
       }
       .slide-rich-content p,
       .slide-rich-content li {
-        text-align: justify;
-        hyphens: auto;
+        text-align: left;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
       .slide-rich-content h1,
       .slide-rich-content h2,
       .slide-rich-content h3,
       .slide-rich-content h4 {
         text-align: left;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+      .slide-rich-content a {
+        word-break: break-all;
       }
     `}</style>
   );

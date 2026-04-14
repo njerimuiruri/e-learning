@@ -63,7 +63,7 @@ function fileIconColor(ext) {
 function CircleProgress({ completed, progress, total, locked }) {
     if (completed) {
         return (
-            <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center flex-shrink-0 shadow-sm">
+            <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-sm">
                 <Icons.Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
             </div>
         );
@@ -82,7 +82,7 @@ function CircleProgress({ completed, progress, total, locked }) {
         <svg width="24" height="24" className="flex-shrink-0 -rotate-90">
             <circle cx="12" cy="12" r={r} fill="none" stroke="#e5e7eb" strokeWidth="2.5" />
             <circle cx="12" cy="12" r={r} fill="none"
-                stroke="#16a34a"
+                stroke="#021d49"
                 strokeWidth="2.5"
                 strokeDasharray={circumference}
                 strokeDashoffset={circumference * (1 - pct / 100)}
@@ -104,6 +104,7 @@ function ModuleLearningContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
+    const [liveSlideIndex, setLiveSlideIndex] = useState(0);
     const [showFinalAssessment, setShowFinalAssessment] = useState(false);
     const [completing, setCompleting] = useState(false);
     const [submittingAssessment, setSubmittingAssessment] = useState(false);
@@ -133,7 +134,7 @@ function ModuleLearningContent() {
             } else {
                 await document.exitFullscreen();
             }
-        } catch (_) {}
+        } catch (_) { }
     };
     useEffect(() => {
         const handler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -188,7 +189,8 @@ function ModuleLearningContent() {
 
     const completedCount = enrollment?.lessonProgress?.filter(lp => lp.isCompleted).length ?? 0;
     const allLessonsCompleted = totalLessons > 0 && completedCount >= totalLessons && !enrollment?.requiresModuleRepeat;
-    const safeProgress = Math.min(100, enrollment?.progress || 0);
+    // Compute progress locally so it updates in real-time as lessons are completed
+    const safeProgress = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
 
     // All resources for resources tab
     const allResources = useMemo(() => {
@@ -278,6 +280,7 @@ function ModuleLearningContent() {
     const navigateToLesson = (index) => {
         if (!isLessonAccessible(index) && !isLessonCompleted(index)) return;
         setCurrentLessonIndex(index);
+        setLiveSlideIndex(0); // reset slide position for new lesson
         setShowFinalAssessment(false);
         setShowLessonAssessment(false);
         setLessonAssessmentResult(null);
@@ -326,14 +329,18 @@ function ModuleLearningContent() {
             <div
                 ref={containerRef}
                 className={`flex overflow-hidden transition-colors duration-200 ${darkMode ? 'bg-gray-950' : 'bg-gray-100'}`}
-                style={{ height: isFullscreen ? '100vh' : 'calc(100vh - 64px)' }}
+                style={{ height: isFullscreen ? '100vh' : 'calc(100vh - 80px)' }}
             >
                 {/* ══════════════════════════════════════════════════════
                     SIDEBAR
                 ══════════════════════════════════════════════════════ */}
                 <aside className={`
-                    flex-shrink-0 flex flex-col border-r transition-all duration-300 overflow-hidden
-                    ${sidebarCollapsed ? 'w-0' : 'w-[300px]'}
+                    flex flex-col border-r overflow-hidden transition-all duration-300
+                    fixed top-[80px] bottom-0 left-0 z-20
+                    lg:relative lg:top-auto lg:bottom-auto lg:left-auto lg:z-auto lg:flex-shrink-0
+                    ${sidebarCollapsed
+                        ? '-translate-x-full lg:translate-x-0 lg:w-0'
+                        : 'translate-x-0 w-[280px] lg:w-[300px]'}
                     ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}
                 `}>
                     {/* Tabs */}
@@ -342,7 +349,7 @@ function ModuleLearningContent() {
                             onClick={() => setActiveTab('outline')}
                             className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap
                                 ${activeTab === 'outline'
-                                    ? `border-green-600 ${darkMode ? 'text-green-400' : 'text-green-700'}`
+                                    ? `border-[#021d49] ${darkMode ? 'text-blue-300' : 'text-[#021d49]'}`
                                     : `border-transparent ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`
                                 }`}
                         >
@@ -352,7 +359,7 @@ function ModuleLearningContent() {
                             onClick={() => setActiveTab('resources')}
                             className={`flex-1 flex items-center justify-center gap-1.5 py-3.5 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap
                                 ${activeTab === 'resources'
-                                    ? `border-green-600 ${darkMode ? 'text-green-400' : 'text-green-700'}`
+                                    ? `border-[#021d49] ${darkMode ? 'text-blue-300' : 'text-[#021d49]'}`
                                     : `border-transparent ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`
                                 }`}
                         >
@@ -388,7 +395,7 @@ function ModuleLearningContent() {
                                         onClick={() => { setShowIntroVideo(true); setShowFinalAssessment(false); if (window.innerWidth < 1024) setSidebarCollapsed(true); }}
                                         className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors
                                             ${showIntroVideo
-                                                ? darkMode ? 'bg-green-900/25 text-green-400' : 'bg-green-50 text-green-700'
+                                                ? darkMode ? 'bg-blue-900/20 text-green-400' : 'bg-blue-50 text-green-700'
                                                 : darkMode ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-50'
                                             }`}
                                     >
@@ -411,7 +418,7 @@ function ModuleLearningContent() {
                                     disabled={!allLessonsCompleted}
                                     className={`w-full flex items-center justify-between px-4 py-3.5 text-sm font-bold transition-colors disabled:opacity-40 disabled:cursor-not-allowed
                                         ${showFinalAssessment
-                                            ? darkMode ? 'bg-green-900/30 text-green-400' : 'bg-green-50 text-green-700'
+                                            ? darkMode ? 'bg-green-900/30 text-green-400' : 'bg-blue-50 text-green-700'
                                             : darkMode ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-800 hover:bg-gray-50'
                                         }`}
                                 >
@@ -433,9 +440,9 @@ function ModuleLearningContent() {
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <div className={`flex-1 h-1.5 rounded-full overflow-hidden ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-                                        <div className="h-full bg-green-500 rounded-full transition-all duration-500" style={{ width: `${safeProgress}%` }} />
+                                        <div className="h-full bg-[#021d49] rounded-full transition-all duration-500" style={{ width: `${safeProgress}%` }} />
                                     </div>
-                                    <span className="text-xs font-bold text-green-600 flex-shrink-0">{safeProgress}%</span>
+                                    <span className="text-xs font-bold text-[#021d49] flex-shrink-0">{safeProgress}%</span>
                                 </div>
                                 <p className={`text-[11px] mt-1 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
                                     {completedCount} of {totalLessons} lessons completed
@@ -451,6 +458,10 @@ function ModuleLearningContent() {
                                 const lp = enrollment?.lessonProgress?.find(lp => lp.lessonIndex === idx);
                                 const completedSlideCount = lp?.slideProgress?.filter(sp => sp.isCompleted).length || 0;
                                 const totalSlides = lesson.slides?.length || 0;
+                                // If lesson is completed, show total slides; otherwise show live position or server count
+                                const displayedSlideCount = completed
+                                    ? totalSlides
+                                    : isCurrent ? Math.max(completedSlideCount, liveSlideIndex + 1) : completedSlideCount;
 
                                 return (
                                     <button
@@ -460,31 +471,30 @@ function ModuleLearningContent() {
                                         className={`w-full text-left flex items-start gap-3 px-4 py-3 border-b transition-colors disabled:cursor-not-allowed
                                             ${darkMode ? 'border-gray-800' : 'border-gray-100'}
                                             ${isCurrent
-                                                ? darkMode ? 'bg-green-900/25' : 'bg-green-50'
+                                                ? darkMode ? 'bg-blue-900/20' : 'bg-blue-50'
                                                 : accessible
                                                     ? darkMode ? 'hover:bg-gray-800' : 'hover:bg-gray-50'
                                                     : 'opacity-40'
                                             }`}
                                     >
                                         <div className="mt-0.5">
-                                            <CircleProgress completed={completed} progress={completedSlideCount} total={totalSlides} isCurrent={isCurrent} locked={locked} />
+                                            <CircleProgress completed={completed} progress={displayedSlideCount} total={totalSlides} isCurrent={isCurrent} locked={locked} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className={`text-sm leading-snug ${
-                                                isCurrent ? `font-bold ${darkMode ? 'text-green-400' : 'text-green-700'}`
-                                                : completed ? darkMode ? 'font-medium text-gray-300' : 'font-medium text-gray-700'
-                                                : locked ? 'text-gray-400'
-                                                : darkMode ? 'font-medium text-gray-300' : 'font-medium text-gray-600'
-                                            }`}>
+                                            <p className={`text-sm leading-snug ${isCurrent ? `font-bold ${darkMode ? 'text-[#93c5fd]' : 'text-[#021d49]'}`
+                                                    : completed ? darkMode ? 'font-medium text-gray-300' : 'font-medium text-gray-700'
+                                                        : locked ? 'text-gray-400'
+                                                            : darkMode ? 'font-medium text-gray-300' : 'font-medium text-gray-600'
+                                                }`}>
                                                 {lesson.title || `Lesson ${idx + 1}`}
                                             </p>
                                             {totalSlides > 0 && (
-                                                <p className={`text-[11px] mt-0.5 ${isCurrent ? 'text-green-600' : 'text-gray-400'}`}>
-                                                    {completedSlideCount} / {totalSlides}
+                                                <p className={`text-[11px] mt-0.5 ${isCurrent ? 'text-[#1e40af]' : 'text-gray-400'}`}>
+                                                    {displayedSlideCount} / {totalSlides}
                                                 </p>
                                             )}
                                         </div>
-                                        {isCurrent && <Icons.ChevronRight className="w-3.5 h-3.5 text-green-600 flex-shrink-0 mt-1" />}
+                                        {isCurrent && <Icons.ChevronRight className="w-3.5 h-3.5 text-[#1e40af] flex-shrink-0 mt-1" />}
                                     </button>
                                 );
                             })}
@@ -666,29 +676,42 @@ function ModuleLearningContent() {
                     {/* ── LESSON VIEW ── */}
                     {!showIntroVideo && !showFinalAssessment && currentLesson && (
                         <>
-                            {/* Slide-based lesson: full height LessonViewer */}
+                            {/* Slide-based lesson: scrollable LessonViewer */}
                             {hasSlides && (
-                                <div className="flex-1 overflow-hidden">
+                                <div className="flex-1 overflow-y-auto">
                                     <LessonViewer
+                                        key={currentLessonIndex}
                                         lesson={currentLesson}
                                         lessonIndex={currentLessonIndex}
                                         totalLessons={totalLessons}
                                         enrollment={enrollment}
                                         isAlreadyCompleted={isLessonCompleted(currentLessonIndex)}
                                         darkMode={darkMode}
+                                        onSlideChange={(idx) => setLiveSlideIndex(idx)}
                                         onLessonComplete={async () => {
-                                            const result = await moduleEnrollmentService.completeLesson(enrollment._id, currentLessonIndex);
-                                            const upd = result.enrollment ?? result;
-                                            setEnrollment(upd);
-                                            if (result.navigateTo === 'next_lesson' && result.nextLessonIndex != null) setCurrentLessonIndex(result.nextLessonIndex);
-                                            else if (result.navigateTo === 'final_assessment') setShowFinalAssessment(true);
+                                            try {
+                                                const result = await moduleEnrollmentService.completeLesson(enrollment._id, currentLessonIndex);
+                                                const upd = result.enrollment ?? result;
+                                                setEnrollment(upd);
+                                                setLiveSlideIndex(0);
+                                                if (result.navigateTo === 'next_lesson' && result.nextLessonIndex != null) {
+                                                    setCurrentLessonIndex(result.nextLessonIndex);
+                                                } else if (result.navigateTo === 'final_assessment') {
+                                                    setShowFinalAssessment(true);
+                                                } else if (currentLessonIndex < totalLessons - 1) {
+                                                    // Fallback: advance to next lesson
+                                                    setCurrentLessonIndex(currentLessonIndex + 1);
+                                                } else {
+                                                    setShowFinalAssessment(true);
+                                                }
+                                            } catch (err) {
+                                                console.error('Failed to complete lesson:', err);
+                                            }
                                         }}
                                         onAssessmentComplete={(res) => {
+                                            // Only update enrollment state — navigation is triggered by
+                                            // the modal's "Continue" button (via onLessonComplete below).
                                             setEnrollment(res.enrollment ?? res);
-                                            if (res.passed) {
-                                                if (res.navigateTo === 'next_lesson' && res.nextLessonIndex != null) setCurrentLessonIndex(res.nextLessonIndex);
-                                                else if (res.navigateTo === 'final_assessment') setShowFinalAssessment(true);
-                                            }
                                         }}
                                     />
                                 </div>
@@ -725,7 +748,7 @@ function ModuleLearningContent() {
                                                     </span>
                                                 )}
                                                 {(currentLesson.assessmentQuiz?.length > 0 || currentLesson.assessment?.questions?.length > 0) && (
-                                                    <span className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 px-2 py-1 rounded-lg font-medium">
+                                                    <span className="inline-flex items-center gap-1 text-xs bg-blue-50 text-green-700 px-2 py-1 rounded-lg font-medium">
                                                         <Icons.HelpCircle className="w-3 h-3" /> Quiz included
                                                     </span>
                                                 )}
@@ -885,7 +908,7 @@ function LessonAssessmentPanel({ assessment, lessonAnswers, setLessonAnswers, re
 
     return (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="flex items-center gap-4 px-6 py-5 border-b border-gray-100 bg-green-50">
+            <div className="flex items-center gap-4 px-6 py-5 border-b border-gray-100 bg-blue-50">
                 <div className="w-10 h-10 rounded-xl bg-green-600 flex items-center justify-center flex-shrink-0">
                     <Icons.HelpCircle className="w-5 h-5 text-white" />
                 </div>
@@ -1089,10 +1112,10 @@ function QuestionRenderer({ question, index, answer, onChange }) {
     const correctOptionText = isChecked ? getCorrectText(question) : null;
 
     return (
-        <div className={`rounded-xl border-2 p-5 transition-all ${isChecked ? (isCorrect ? 'border-green-300 bg-green-50' : 'border-red-200 bg-red-50') : 'bg-white border-gray-200'}`}>
+        <div className={`rounded-xl border-2 p-5 transition-all ${isChecked ? (isCorrect ? 'border-green-300 bg-blue-50' : 'border-red-200 bg-red-50') : 'bg-white border-gray-200'}`}>
             <div className="flex items-start gap-3 mb-4">
                 <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 text-white
-                    ${isChecked ? (isCorrect ? 'bg-green-500' : 'bg-red-500') : 'bg-green-600'}`}>
+                    ${isChecked ? (isCorrect ? 'bg-blue-500' : 'bg-red-500') : 'bg-green-600'}`}>
                     {isChecked ? (isCorrect ? '✓' : '✗') : index + 1}
                 </span>
                 <div className="flex-1">
@@ -1119,8 +1142,8 @@ function QuestionRenderer({ question, index, answer, onChange }) {
                                 ${isChecked
                                     ? isThisCorrect ? 'border-green-400 bg-green-100 text-green-900'
                                         : isThisWrong ? 'border-red-400 bg-red-100 text-red-900'
-                                        : 'border-gray-200 bg-white text-gray-400 opacity-60'
-                                    : isSelected ? 'border-green-600 bg-green-50 text-green-800' : 'border-gray-200 hover:border-gray-300 bg-white'
+                                            : 'border-gray-200 bg-white text-gray-400 opacity-60'
+                                    : isSelected ? 'border-green-600 bg-blue-50 text-green-800' : 'border-gray-200 hover:border-gray-300 bg-white'
                                 }`}>
                                 <input type="radio" name={`q-${index}`} value={option} checked={isSelected} onChange={() => !isChecked && handleSelect(option)} disabled={isChecked} className="accent-green-600 flex-shrink-0" />
                                 <span className="text-sm font-medium flex-1">{option}</span>
@@ -1224,7 +1247,7 @@ function CompletionScreen({ enrollment, moduleId, router }) {
                     )}
                     {(existingRating || submitted) && (
                         <div className="flex items-center gap-1 justify-center text-amber-500">
-                            {[1,2,3,4,5].map(s => <Icons.Star key={s} className={`w-5 h-5 ${s <= rating ? 'fill-amber-400' : ''}`} />)}
+                            {[1, 2, 3, 4, 5].map(s => <Icons.Star key={s} className={`w-5 h-5 ${s <= rating ? 'fill-amber-400' : ''}`} />)}
                         </div>
                     )}
                 </div>

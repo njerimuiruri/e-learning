@@ -367,6 +367,26 @@ class AuthService {
   }
 
   /**
+   * Set initial password using a one-time setup token (for admin-created accounts)
+   * @param {Object} data - { token, password, confirmPassword }
+   * @returns {Promise<Object>} Response data
+   */
+  async setInitialPassword(data) {
+    try {
+      const response = await api.post('/api/auth/set-initial-password', {
+        token: data.token,
+        password: data.password,
+        confirmPassword: data.confirmPassword,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(
+        error.response?.data?.message || 'Failed to set password'
+      );
+    }
+  }
+
+  /**
    * Change user password
    * @param {Object} data - Password change data
    * @returns {Promise<Object>} Response data

@@ -67,12 +67,12 @@ const INFO_SECTIONS = [
 ];
 
 const COLOR_MAP = {
-    blue:   { bg: 'bg-blue-50',   border: 'border-blue-200',   icon: 'text-blue-600',   label: 'text-blue-700',   text: 'text-blue-900' },
+    blue: { bg: 'bg-blue-50', border: 'border-blue-200', icon: 'text-blue-600', label: 'text-blue-700', text: 'text-blue-900' },
     indigo: { bg: 'bg-indigo-50', border: 'border-indigo-200', icon: 'text-indigo-600', label: 'text-indigo-700', text: 'text-indigo-900' },
-    green:  { bg: 'bg-green-50',  border: 'border-green-200',  icon: 'text-green-600',  label: 'text-green-700',  text: 'text-green-900' },
+    green: { bg: 'bg-green-50', border: 'border-green-200', icon: 'text-green-600', label: 'text-green-700', text: 'text-green-900' },
     purple: { bg: 'bg-purple-50', border: 'border-purple-200', icon: 'text-purple-600', label: 'text-purple-700', text: 'text-purple-900' },
-    amber:  { bg: 'bg-amber-50',  border: 'border-amber-200',  icon: 'text-amber-600',  label: 'text-amber-700',  text: 'text-amber-900' },
-    rose:   { bg: 'bg-rose-50',   border: 'border-rose-200',   icon: 'text-rose-600',   label: 'text-rose-700',   text: 'text-rose-900' },
+    amber: { bg: 'bg-amber-50', border: 'border-amber-200', icon: 'text-amber-600', label: 'text-amber-700', text: 'text-amber-900' },
+    rose: { bg: 'bg-rose-50', border: 'border-rose-200', icon: 'text-rose-600', label: 'text-rose-700', text: 'text-rose-900' },
 };
 
 export default function ModuleDetailPage() {
@@ -217,7 +217,7 @@ export default function ModuleDetailPage() {
     if (loading) return (
         <>
             <Navbar />
-            <main className="pt-20 min-h-screen bg-gray-50 flex items-center justify-center">
+            <main className="min-h-screen bg-gray-50 flex items-center justify-center">
                 <div className="text-center">
                     <Loader2 className="w-12 h-12 animate-spin text-[#021d49] mx-auto mb-4" />
                     <p className="text-gray-600 font-semibold">Loading module details...</p>
@@ -230,7 +230,7 @@ export default function ModuleDetailPage() {
     if (error || !mod) return (
         <>
             <Navbar />
-            <main className="pt-20 min-h-screen bg-gray-50 flex items-center justify-center px-4">
+            <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
                 <div className="text-center">
                     <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
                     <h2 className="text-2xl font-bold text-gray-900 mb-2">Module Not Found</h2>
@@ -263,7 +263,7 @@ export default function ModuleDetailPage() {
                 </div>
             )}
 
-            <main className="pt-20 pb-16 bg-gray-50 min-h-screen">
+            <main className="pb-16 bg-gray-50 min-h-screen">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                     <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium mb-8 group">
                         <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />

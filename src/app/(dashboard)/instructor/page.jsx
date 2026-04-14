@@ -23,11 +23,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 // ─── Status config ────────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
-    draft:     { label: 'Draft',     variant: 'secondary', color: 'bg-gray-100 text-gray-700 border-gray-200',        dot: 'bg-gray-400'    },
-    submitted: { label: 'Submitted', variant: 'default',   color: 'bg-blue-100 text-blue-700 border-blue-200',        dot: 'bg-blue-500'    },
-    approved:  { label: 'Approved',  variant: 'default',   color: 'bg-green-100 text-green-700 border-green-200',     dot: 'bg-green-500'   },
-    published: { label: 'Published', variant: 'default',   color: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-    rejected:  { label: 'Rejected',  variant: 'destructive', color: 'bg-red-100 text-red-700 border-red-200',         dot: 'bg-red-500'     },
+    draft: { label: 'Draft', variant: 'secondary', color: 'bg-gray-100 text-gray-700 border-gray-200', dot: 'bg-gray-400' },
+    submitted: { label: 'Submitted', variant: 'default', color: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
+    approved: { label: 'Approved', variant: 'default', color: 'bg-green-100 text-green-700 border-green-200', dot: 'bg-green-500' },
+    published: { label: 'Published', variant: 'default', color: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+    rejected: { label: 'Rejected', variant: 'destructive', color: 'bg-red-100 text-red-700 border-red-200', dot: 'bg-red-500' },
 };
 
 const getStatus = (s) => STATUS_CONFIG[s] || STATUS_CONFIG.draft;
@@ -53,12 +53,12 @@ const timeAgo = (d) => {
 };
 
 const QUICK_ACTIONS = [
-    { label: 'Create Module',   icon: 'PlusCircle',     href: '/instructor/modules/create', primary: true  },
-    { label: 'My Modules',      icon: 'Layers',         href: '/instructor/modules'                        },
-    { label: 'Students',        icon: 'Users',          href: '/instructor/students'                       },
-    { label: 'Assessments',     icon: 'ClipboardCheck', href: '/instructor/assessments'                    },
-    { label: 'Discussions',     icon: 'MessageSquare',  href: '/instructor/discussions'                    },
-    { label: 'Messages',        icon: 'Mail',           href: '/instructor/messages'                       },
+    { label: 'Create Module', icon: 'PlusCircle', href: '/instructor/modules/create', primary: true },
+    { label: 'My Modules', icon: 'Layers', href: '/instructor/modules' },
+    { label: 'Students', icon: 'Users', href: '/instructor/students' },
+    { label: 'Assessments', icon: 'ClipboardCheck', href: '/instructor/assessments' },
+    { label: 'Discussions', icon: 'MessageSquare', href: '/instructor/discussions' },
+    { label: 'Messages', icon: 'Mail', href: '/instructor/messages' },
 ];
 
 // ─── Module Quick-View Sheet ──────────────────────────────────────────────────
@@ -89,9 +89,9 @@ function ModuleSheet({ module, open, onClose, router }) {
                         {/* Key stats */}
                         <div className="grid grid-cols-3 gap-3">
                             {[
-                                { label: 'Lessons',  value: module.lessons?.length || 0,    icon: 'BookOpen', color: 'text-blue-600',   bg: 'bg-blue-50'    },
-                                { label: 'Students', value: module.enrollmentCount || 0,     icon: 'Users',    color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                                { label: 'Level',    value: module.level || 'N/A',           icon: 'Signal',   color: 'text-purple-600',  bg: 'bg-purple-50'  },
+                                { label: 'Lessons', value: module.lessons?.length || 0, icon: 'BookOpen', color: 'text-blue-600', bg: 'bg-blue-50' },
+                                { label: 'Students', value: module.enrollmentCount || 0, icon: 'Users', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                                { label: 'Level', value: module.level || 'N/A', icon: 'Signal', color: 'text-purple-600', bg: 'bg-purple-50' },
                             ].map((s) => {
                                 const I = Icons[s.icon];
                                 return (
@@ -282,10 +282,10 @@ function InstructorDashboardContent() {
                         {/* inline mini-stats in hero */}
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
                             {[
-                                { label: 'Modules',         value: stats?.totalModules ?? modules.length,   icon: 'Layers'      },
-                                { label: 'Students',        value: stats?.totalStudents ?? 0,               icon: 'Users'       },
-                                { label: 'Completion Rate', value: `${stats?.completionRate ?? 0}%`,        icon: 'TrendingUp'  },
-                                { label: 'Total Lessons',   value: totalLessons,                            icon: 'BookOpen'    },
+                                { label: 'Modules', value: stats?.totalModules ?? modules.length, icon: 'Layers' },
+                                { label: 'Students', value: stats?.totalStudents ?? 0, icon: 'Users' },
+                                { label: 'Completion Rate', value: `${stats?.completionRate ?? 0}%`, icon: 'TrendingUp' },
+                                { label: 'Total Lessons', value: totalLessons, icon: 'BookOpen' },
                             ].map((s) => {
                                 const I = Icons[s.icon];
                                 return (
@@ -305,10 +305,10 @@ function InstructorDashboardContent() {
                 {/* ── TABS ───────────────────────────────────────────────── */}
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
                     <TabsList className="bg-white border shadow-sm h-11 p-1 rounded-xl">
-                        <TabsTrigger value="overview"  className="rounded-lg gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+                        <TabsTrigger value="overview" className="rounded-lg gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
                             <Icons.LayoutDashboard className="w-4 h-4" /> Overview
                         </TabsTrigger>
-                        <TabsTrigger value="modules"   className="rounded-lg gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+                        <TabsTrigger value="modules" className="rounded-lg gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
                             <Icons.Layers className="w-4 h-4" /> My Modules
                             {modules.length > 0 && (
                                 <span className="ml-1 bg-emerald-100 text-emerald-700 text-xs font-bold px-1.5 py-0.5 rounded-full data-[state=active]:bg-white/20 data-[state=active]:text-white">
@@ -316,7 +316,7 @@ function InstructorDashboardContent() {
                                 </span>
                             )}
                         </TabsTrigger>
-                        <TabsTrigger value="activity"  className="rounded-lg gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
+                        <TabsTrigger value="activity" className="rounded-lg gap-2 data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
                             <Icons.Bell className="w-4 h-4" /> Activity
                             {notifications.filter(n => !n.isRead).length > 0 && (
                                 <span className="ml-1 bg-red-100 text-red-600 text-xs font-bold px-1.5 py-0.5 rounded-full">
@@ -348,11 +348,10 @@ function InstructorDashboardContent() {
                                                 <TooltipTrigger asChild>
                                                     <button
                                                         onClick={() => router.push(action.href)}
-                                                        className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all hover:scale-105 hover:shadow-md ${
-                                                            action.primary
+                                                        className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all hover:scale-105 hover:shadow-md ${action.primary
                                                                 ? 'bg-gradient-to-br from-emerald-500 to-emerald-700 text-white border-emerald-600 shadow-md'
                                                                 : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-300 hover:bg-emerald-50'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <I className={`w-6 h-6 ${action.primary ? 'text-white' : 'text-emerald-600'}`} />
                                                         <span className="text-xs font-semibold text-center leading-tight">{action.label}</span>
@@ -544,7 +543,15 @@ function InstructorDashboardContent() {
                                                                 <Icons.Layers className="w-4 h-4 text-white" />
                                                             </div>
                                                             <div className="min-w-0">
-                                                                <p className="font-semibold text-gray-900 text-sm truncate">{mod.title}</p>
+                                                                <div className="flex items-center gap-2 mb-0.5">
+                                                                    <p className="font-semibold text-gray-900 text-sm truncate">{mod.title}</p>
+                                                                    {mod.order > 0 && (
+                                                                        <span className="inline-flex items-center gap-0.5 text-xs font-bold bg-[#021d49] text-white px-1.5 py-0.5 rounded">
+                                                                            <Icons.ListOrdered className="w-3 h-3" />
+                                                                            Module {mod.order}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                                 <p className="text-xs text-gray-400">{mod.lessons?.length || 0} lessons · {formatDate(mod.createdAt)}</p>
                                                             </div>
                                                         </div>

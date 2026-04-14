@@ -252,8 +252,8 @@ export default function AdminModuleDetailPage() {
                                 onClick={handleAction}
                                 disabled={acting}
                                 className={`flex-1 py-3 rounded-xl font-bold text-white transition-all disabled:opacity-60 ${actionType === 'approve' ? 'bg-blue-600 hover:bg-blue-700' :
-                                        actionType === 'publish' ? 'bg-emerald-600 hover:bg-emerald-700' :
-                                            'bg-red-600 hover:bg-red-700'
+                                    actionType === 'publish' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                                        'bg-red-600 hover:bg-red-700'
                                     }`}
                             >
                                 {acting ? 'Processing...' : `Confirm ${actionType.charAt(0).toUpperCase() + actionType.slice(1)}`}
@@ -1049,6 +1049,7 @@ export default function AdminModuleDetailPage() {
                             <h4 className="font-bold text-gray-900 mb-4 text-sm">Module Summary</h4>
                             <div className="space-y-3 text-sm">
                                 {[
+                                    { icon: Icons.ListOrdered, label: 'Module Order', value: mod.order > 0 ? `Module ${mod.order}` : '—' },
                                     { icon: Icons.BookOpen, label: 'Lessons', value: allLessons.length || topics.reduce((acc, t) => acc + (t.lessons?.length || 0), 0) || '—' },
                                     { icon: Icons.Layers, label: 'Total Slides', value: allLessons.reduce((acc, l) => acc + (l.slides?.length || 0), 0) || '—' },
                                     { icon: Icons.FlaskConical, label: 'Case Studies', value: caseStudies.length || '—' },

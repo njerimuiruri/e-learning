@@ -107,6 +107,7 @@ export default function AdminModuleEditPage() {
   const [form, setForm] = useState({
     title: '', description: '', capstone: '',
     categoryId: '', level: '', duration: '',
+    order: '',
     learningObjectives: '', learningOutcomes: '',
     moduleTopics: '', coreReadingMaterials: '',
     targetAudience: [], prerequisites: [],
@@ -177,7 +178,9 @@ export default function AdminModuleEditPage() {
           coreReadingMaterials: mod.coreReadingMaterials || '',
           targetAudience:       Array.isArray(mod.targetAudience) ? mod.targetAudience : [],
           prerequisites:        Array.isArray(mod.prerequisites)  ? mod.prerequisites  : [],
+          order:                mod.order != null ? mod.order : '',
           bannerUrl:            mod.bannerUrl || '',
+          introVideoUrl:        mod.introVideoUrl || '',
           lessons:              mappedLessons,
         });
       })
@@ -274,14 +277,27 @@ export default function AdminModuleEditPage() {
             <section className="space-y-5">
               <SectionHeading number={2} title="Basic Details" required />
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="font-semibold">Module Title <span className="text-red-500">*</span></Label>
-                  <Input
-                    value={form.title}
-                    onChange={(e) => updateForm('title', e.target.value)}
-                    placeholder="e.g. Fundamentals of Climate Change and Policy Context"
-                    className="text-base"
-                  />
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-3 space-y-1.5">
+                    <Label className="font-semibold">Module Title <span className="text-red-500">*</span></Label>
+                    <Input
+                      value={form.title}
+                      onChange={(e) => updateForm('title', e.target.value)}
+                      placeholder="e.g. Fundamentals of Climate Change and Policy Context"
+                      className="text-base"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold">Module Order</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={form.order}
+                      onChange={(e) => updateForm('order', e.target.value === '' ? '' : parseInt(e.target.value))}
+                      placeholder="e.g. 1"
+                    />
+                    <p className="text-xs text-gray-400">Controls sequence (1 = first)</p>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1.5">

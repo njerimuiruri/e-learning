@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
+
 /* ─── Helpers ─── */
 const stripHtml = (html) => {
     if (!html) return '';
@@ -24,8 +26,13 @@ const stripHtml = (html) => {
         .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
 };
 
+const toAbsoluteUrl = (url) => {
+    if (!url) return '';
+    return url.startsWith('/') ? `${API_URL}${url}` : url;
+};
+
 const levelConfig = {
-    beginner: { badge: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500', label: 'Beginner', icon: 'Sprout' },
+    beginner: { badge: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500', label: 'Beginner', icon: 'Sprout' },
     intermediate: { badge: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-500', label: 'Intermediate', icon: 'Flame' },
     advanced: { badge: 'bg-rose-100 text-rose-700 border-rose-200', dot: 'bg-rose-500', label: 'Advanced', icon: 'Rocket' },
 };
@@ -116,6 +123,27 @@ function ModuleBrowsingContent() {
     const getEnrollmentForModule = (moduleId) =>
         myEnrollments.find(e => (e.moduleId?._id || e.moduleId)?.toString() === moduleId?.toString());
 
+    const isSequentiallyLocked = (mod) => {
+        if (!mod.order || mod.order <= 1) return false;
+        const catId = (mod.categoryId?._id || mod.categoryId)?.toString();
+        const prevMod = modules.find(m => {
+            const mCatId = (m.categoryId?._id || m.categoryId)?.toString();
+            return mCatId === catId && m.order === mod.order - 1;
+        });
+        if (!prevMod) return false;
+        return !getEnrollmentForModule(prevMod._id)?.isCompleted;
+    };
+
+    const getPrevModuleTitle = (mod) => {
+        if (!mod.order || mod.order <= 1) return null;
+        const catId = (mod.categoryId?._id || mod.categoryId)?.toString();
+        const prevMod = modules.find(m => {
+            const mCatId = (m.categoryId?._id || m.categoryId)?.toString();
+            return mCatId === catId && m.order === mod.order - 1;
+        });
+        return prevMod?.title || `Module ${mod.order - 1}`;
+    };
+
     const getCategoryPricing = (module) => {
         const cat = module.categoryId;
         if (!cat || typeof cat === 'string') return categories.find(c => c._id === (cat || module.categoryId));
@@ -133,6 +161,11 @@ function ModuleBrowsingContent() {
     };
 
     const handleEnroll = async (module) => {
+        if (isSequentiallyLocked(module)) {
+            const prevTitle = getPrevModuleTitle(module);
+            alert(`You must complete "${prevTitle}" before enrolling in this module.`);
+            return;
+        }
         try {
             setEnrollingId(module._id);
             const result = await moduleEnrollmentService.enrollInModule(module._id);
@@ -228,17 +261,15 @@ function ModuleBrowsingContent() {
                             {/* All Categories card */}
                             <button
                                 onClick={() => { setSelectedCategory(''); setCurrentPage(1); }}
-                                className={`group text-left rounded-xl border-2 p-4 transition-all duration-200 ${
-                                    !selectedCategory
+                                className={`group text-left rounded-xl border-2 p-4 transition-all duration-200 ${!selectedCategory
                                         ? 'border-[#021d49] bg-[#021d49] shadow-md'
                                         : 'border-gray-200 bg-white hover:border-[#021d49]/40 hover:shadow-sm'
-                                }`}
+                                    }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
                                     <div className="flex items-center gap-2.5">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                            !selectedCategory ? 'bg-white/20' : 'bg-[#021d49]/10'
-                                        }`}>
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${!selectedCategory ? 'bg-white/20' : 'bg-[#021d49]/10'
+                                            }`}>
                                             <Icons.LayoutGrid className={`w-4 h-4 ${!selectedCategory ? 'text-white' : 'text-[#021d49]'}`} />
                                         </div>
                                         <span className={`font-semibold text-sm ${!selectedCategory ? 'text-white' : 'text-gray-900'}`}>
@@ -254,7 +285,7 @@ function ModuleBrowsingContent() {
 
                             {/* Per-category cards */}
                             {categories.map((cat) => {
-                                const isActive = selectedCategory === cat._id;
+                                const isActive = false; // navigation now goes to dedicated page
                                 const isCatPaid = cat.isPaid || cat.accessType === 'paid' || cat.accessType === 'restricted';
                                 const isCatFellows = cat.accessType === 'free' || cat.accessType === 'restricted';
                                 const isCatFree = !isCatPaid && !isCatFellows;
@@ -263,24 +294,16 @@ function ModuleBrowsingContent() {
                                 return (
                                     <button
                                         key={cat._id}
-                                        onClick={() => {
-                                            setSelectedCategory(cat._id);
-                                            setCurrentPage(1);
-                                            setTimeout(() => {
-                                                document.getElementById('category-info-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                            }, 80);
-                                        }}
-                                        className={`group text-left rounded-xl border-2 p-4 transition-all duration-200 ${
-                                            isActive
+                                        onClick={() => router.push(`/student/modules/category/${cat._id}`)}
+                                        className={`group text-left rounded-xl border-2 p-4 transition-all duration-200 ${isActive
                                                 ? 'border-[#021d49] bg-[#021d49] shadow-md'
                                                 : 'border-gray-200 bg-white hover:border-[#021d49]/40 hover:shadow-sm'
-                                        }`}
+                                            }`}
                                     >
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="flex items-center gap-2.5 min-w-0">
-                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                                    isActive ? 'bg-white/20' : 'bg-[#021d49]/10'
-                                                }`}>
+                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isActive ? 'bg-white/20' : 'bg-[#021d49]/10'
+                                                    }`}>
                                                     <Icons.Layers className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#021d49]'}`} />
                                                 </div>
                                                 <span className={`font-semibold text-sm leading-tight line-clamp-2 ${isActive ? 'text-white' : 'text-gray-900'}`}>
@@ -293,30 +316,26 @@ function ModuleBrowsingContent() {
                                         {/* Access + price badges */}
                                         <div className="flex flex-wrap gap-1.5 mt-3 ml-10">
                                             {isCatFellows && (
-                                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                                    isActive ? 'bg-purple-400/30 text-purple-100' : 'bg-purple-100 text-purple-700'
-                                                }`}>
+                                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${isActive ? 'bg-purple-400/30 text-purple-100' : 'bg-purple-100 text-purple-700'
+                                                    }`}>
                                                     <Icons.Award className="w-2.5 h-2.5" /> Fellows Priority
                                                 </span>
                                             )}
                                             {isCatPaid && cat.price > 0 && (
-                                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                                    isActive ? 'bg-amber-400/30 text-amber-100' : 'bg-amber-100 text-amber-700'
-                                                }`}>
+                                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-amber-400/30 text-amber-100' : 'bg-amber-100 text-amber-700'
+                                                    }`}>
                                                     KES {cat.price.toLocaleString()}
                                                 </span>
                                             )}
                                             {isCatFree && (
-                                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                                    isActive ? 'bg-emerald-400/30 text-emerald-100' : 'bg-emerald-100 text-emerald-700'
-                                                }`}>
+                                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-400/30 text-blue-100' : 'bg-blue-100 text-blue-700'
+                                                    }`}>
                                                     <Icons.Unlock className="w-2.5 h-2.5" /> Free
                                                 </span>
                                             )}
                                             {catIsFellowId && (
-                                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                                                    isActive ? 'bg-white/20 text-white' : 'bg-[#021d49]/10 text-[#021d49]'
-                                                }`}>
+                                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-[#021d49]/10 text-[#021d49]'
+                                                    }`}>
                                                     <Icons.CheckCircle className="w-2.5 h-2.5" /> You're a Fellow
                                                 </span>
                                             )}
@@ -416,9 +435,9 @@ function ModuleBrowsingContent() {
                                                     </div>
                                                 )}
                                                 {!catIsPaid && !catIsFellowRestricted && (
-                                                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1.5">
-                                                        <Icons.Unlock className="w-3.5 h-3.5 text-emerald-600" />
-                                                        <span className="text-emerald-700 text-xs font-semibold">Free Access</span>
+                                                    <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5">
+                                                        <Icons.Unlock className="w-3.5 h-3.5 text-blue-700" />
+                                                        <span className="text-blue-700 text-xs font-semibold">Free Access</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -461,12 +480,12 @@ function ModuleBrowsingContent() {
 
                                             {/* Free / open access card */}
                                             {!catIsPaid && !catIsFellowRestricted && (
-                                                <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                                                <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
                                                     <div className="flex items-center gap-2 mb-1.5">
-                                                        <Icons.Unlock className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                                                        <p className="text-emerald-700 font-bold text-sm">Free Open Access</p>
+                                                        <Icons.Unlock className="w-4 h-4 text-blue-700 flex-shrink-0" />
+                                                        <p className="text-blue-700 font-bold text-sm">Free Open Access</p>
                                                     </div>
-                                                    <p className="text-emerald-600 text-xs leading-relaxed">
+                                                    <p className="text-blue-600 text-xs leading-relaxed">
                                                         No payment required. Sign in and enroll in any module for free.
                                                     </p>
                                                 </div>
@@ -519,6 +538,14 @@ function ModuleBrowsingContent() {
                         );
                     })()}
 
+                    {/* ── Sequential Learning Notice ── */}
+                    <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                        <Icons.ListOrdered className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                        <p className="text-xs text-amber-800 leading-relaxed">
+                            <span className="font-semibold">Sequential Learning:</span> Modules within each programme must be completed in order — you must finish Module 1 before you can access Module 2, and so on. Locked modules will become available once you complete the preceding one.
+                        </p>
+                    </div>
+
                     {/* ── Loading ── */}
                     {loading && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -555,7 +582,9 @@ function ModuleBrowsingContent() {
                                 const categoryName = typeof mod.categoryId === 'object'
                                     ? mod.categoryId?.name
                                     : categories.find(c => c._id === mod.categoryId)?.name || '';
-                                const isLocked = !hasLevelAccess && !isFellowBlocked;
+                                const seqLocked = !isEnrolled && isSequentiallyLocked(mod);
+                                const prevModTitle = seqLocked ? getPrevModuleTitle(mod) : null;
+                                const isLocked = (!hasLevelAccess && !isFellowBlocked) || seqLocked;
                                 const desc = stripHtml(mod.description);
                                 const instructors = (mod.instructorIds || [])
                                     .filter(i => typeof i === 'object')
@@ -565,12 +594,12 @@ function ModuleBrowsingContent() {
                                 return (
                                     <Card
                                         key={mod._id}
-                                        className={`group overflow-hidden border-gray-100 hover:shadow-md transition-all duration-200 flex flex-col ${!hasAccess ? 'opacity-75' : 'hover:border-[#021d49]/20'}`}
+                                        className={`group overflow-hidden border-gray-100 hover:shadow-md transition-all duration-200 flex flex-col ${isLocked ? 'opacity-75' : 'hover:border-[#021d49]/20'}`}
                                     >
                                         {/* Banner */}
                                         <div className="relative h-36 overflow-hidden shrink-0">
                                             {mod.bannerUrl ? (
-                                                <img src={mod.bannerUrl} alt={mod.title}
+                                                <img src={toAbsoluteUrl(mod.bannerUrl)} alt={mod.title}
                                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                                             ) : (
                                                 <div className={`w-full h-full flex items-center justify-center ${mod.level === 'advanced' ? 'bg-gradient-to-br from-rose-200 to-rose-300' :
@@ -599,7 +628,7 @@ function ModuleBrowsingContent() {
                                                         <Icons.Award className="w-2.5 h-2.5 mr-1" /> Fellows Only
                                                     </Badge>
                                                 )}
-                                                {!isEnrolled && isLocked && (
+                                                {!isEnrolled && (seqLocked || (!hasLevelAccess && !isFellowBlocked)) && (
                                                     <Badge className="text-[10px] bg-gray-800 text-white border-0">
                                                         <Icons.Lock className="w-2.5 h-2.5 mr-1" /> Locked
                                                     </Badge>
@@ -610,7 +639,7 @@ function ModuleBrowsingContent() {
                                                     </Badge>
                                                 )}
                                                 {!isEnrolled && hasAccess && isFree && (
-                                                    <Badge className="text-[10px] bg-emerald-600 text-white border-0">
+                                                    <Badge className="text-[10px] bg-blue-700 text-white border-0">
                                                         <Icons.Unlock className="w-2.5 h-2.5 mr-1" /> Free
                                                     </Badge>
                                                 )}
@@ -619,6 +648,15 @@ function ModuleBrowsingContent() {
 
                                         {/* Content */}
                                         <CardContent className="p-4 flex flex-col flex-1">
+                                            {/* Module Order Badge */}
+                                            {mod.order > 0 && (
+                                                <div className="inline-flex items-center gap-1 mb-2 w-fit">
+                                                    <span className="inline-flex items-center gap-1 text-xs font-bold bg-[#021d49] text-white px-2.5 py-1 rounded-md">
+                                                        <Icons.ListOrdered className="w-3 h-3" />
+                                                        Module {mod.order}
+                                                    </span>
+                                                </div>
+                                            )}
                                             {categoryName && (
                                                 <p className="text-[10px] font-bold text-[#021d49] uppercase tracking-wider mb-1">{categoryName}</p>
                                             )}
@@ -678,7 +716,14 @@ function ModuleBrowsingContent() {
                                                         Fellows-only module. Non-fellows must pay to access.
                                                     </p>
                                                 </div>
-                                            ) : isLocked ? (
+                                            ) : seqLocked ? (
+                                                <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 flex items-start gap-2">
+                                                    <Icons.Lock className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                                                    <p className="text-xs text-amber-700 leading-snug">
+                                                        Complete <span className="font-medium">&ldquo;{prevModTitle}&rdquo;</span> first
+                                                    </p>
+                                                </div>
+                                            ) : !hasLevelAccess && !isFellowBlocked ? (
                                                 <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 flex items-center gap-2">
                                                     <Icons.Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                                                     <p className="text-xs text-gray-500">
@@ -693,7 +738,7 @@ function ModuleBrowsingContent() {
                                                 </Button>
                                             ) : (
                                                 <Button
-                                                    className="w-full h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                    className="w-full h-8 text-xs bg-[#1e40af] hover:bg-[#1a35a0] text-white"
                                                     disabled={enrollingId === mod._id}
                                                     onClick={() => handleEnroll(mod)}>
                                                     {enrollingId === mod._id ? (

@@ -638,6 +638,13 @@ export default function ModuleDetailPage() {
                             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                                 <h3 className="text-sm font-semibold text-gray-900 mb-4">Module Info</h3>
                                 <div className="space-y-3 text-sm">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-gray-500">
+                                            <Icons.ListOrdered className="w-4 h-4" />
+                                            <span>Module Order</span>
+                                        </div>
+                                        <span className="font-semibold text-gray-900">{module.order > 0 ? `Module ${module.order}` : '—'}</span>
+                                    </div>
                                     {module.createdAt && (
                                         <div className="flex items-center justify-between">
                                             <span className="text-gray-500">Created</span>

@@ -362,6 +362,7 @@ const defaultForm = {
   targetAudience: [],
   prerequisites: [],
   coreReadingMaterials: '',
+  order: '',
   bannerUrl: '',
   introVideoUrl: '',
   moduleResources: [],
@@ -534,14 +535,27 @@ export default function CreateModulePage() {
             <section className="space-y-5">
               <SectionHeading number={1} title="Basic Details" />
               <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="font-semibold">Module Title <span className="text-red-500">*</span></Label>
-                  <Input
-                    value={form.title}
-                    onChange={(e) => updateForm('title', e.target.value)}
-                    placeholder="e.g. Leveraging AI for Climate Resilience"
-                    className="text-base"
-                  />
+                <div className="grid grid-cols-4 gap-4">
+                  <div className="col-span-3 space-y-1.5">
+                    <Label className="font-semibold">Module Title <span className="text-red-500">*</span></Label>
+                    <Input
+                      value={form.title}
+                      onChange={(e) => updateForm('title', e.target.value)}
+                      placeholder="e.g. Leveraging AI for Climate Resilience"
+                      className="text-base"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold">Module Order</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      value={form.order}
+                      onChange={(e) => updateForm('order', e.target.value === '' ? '' : parseInt(e.target.value))}
+                      placeholder="e.g. 1"
+                    />
+                    <p className="text-xs text-gray-400">Controls sequence (1 = first)</p>
+                  </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-1.5">

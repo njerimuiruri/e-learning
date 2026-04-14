@@ -20,6 +20,8 @@ function getInstructorName(mod) {
     if (mod.instructorIds && mod.instructorIds.length > 0) {
         const instructor = mod.instructorIds[0];
         if (instructor && typeof instructor === 'object') {
+            // Use fullName if available (set by admin when creating fellow)
+            if (instructor.fullName) return instructor.fullName;
             const name = `${instructor.firstName || ''} ${instructor.lastName || ''}`.trim();
             if (name) return name;
             if (instructor.email) return instructor.email;
@@ -153,15 +155,13 @@ const CoursesSection = () => {
                             {/* All */}
                             <button
                                 onClick={() => setActiveCategory(null)}
-                                className={`group flex flex-col gap-2 p-4 rounded-xl border text-left transition-all duration-150 ${
-                                    !activeCategory
+                                className={`group flex flex-col gap-2 p-4 rounded-xl border text-left transition-all duration-150 ${!activeCategory
                                         ? 'bg-[#021d49] border-[#021d49] shadow-md'
                                         : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                                }`}
+                                    }`}
                             >
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                    !activeCategory ? 'bg-white/20' : 'bg-gray-100'
-                                }`}>
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${!activeCategory ? 'bg-white/20' : 'bg-gray-100'
+                                    }`}>
                                     <Layers className={`w-4 h-4 ${!activeCategory ? 'text-white' : 'text-gray-500'}`} />
                                 </div>
                                 <div>
@@ -183,15 +183,13 @@ const CoursesSection = () => {
                                     <button
                                         key={cat._id}
                                         onClick={() => handleCategorySelect(cat._id)}
-                                        className={`group flex flex-col gap-2 p-4 rounded-xl border text-left transition-all duration-150 ${
-                                            isActive
+                                        className={`group flex flex-col gap-2 p-4 rounded-xl border text-left transition-all duration-150 ${isActive
                                                 ? 'bg-[#021d49] border-[#021d49] shadow-md'
                                                 : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                                        }`}
+                                            }`}
                                     >
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                            isActive ? 'bg-white/20' : 'bg-blue-50'
-                                        }`}>
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isActive ? 'bg-white/20' : 'bg-blue-50'
+                                            }`}>
                                             <BookOpen className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#021d49]'}`} />
                                         </div>
                                         <div>
@@ -203,19 +201,16 @@ const CoursesSection = () => {
                                                     {catModCount} module{catModCount !== 1 ? 's' : ''}
                                                 </span>
                                                 {(isFellowOnly || isRestricted) && (
-                                                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                                                        isActive ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'
-                                                    }`}>Fellows</span>
+                                                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'
+                                                        }`}>Fellows</span>
                                                 )}
                                                 {isPaid && cat.price > 0 && (
-                                                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                                                        isActive ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-700'
-                                                    }`}>KES {cat.price.toLocaleString()}</span>
+                                                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-700'
+                                                        }`}>KES {cat.price.toLocaleString()}</span>
                                                 )}
                                                 {!isPaid && !isFellowOnly && !isRestricted && (
-                                                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                                                        isActive ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'
-                                                    }`}>Free</span>
+                                                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'
+                                                        }`}>Free</span>
                                                 )}
                                             </div>
                                         </div>
@@ -494,11 +489,10 @@ const CoursesSection = () => {
                                                 </div>
                                             )}
                                             {mod.level && (
-                                                <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${
-                                                    mod.level === 'beginner' ? 'bg-emerald-100 text-emerald-700' :
-                                                    mod.level === 'intermediate' ? 'bg-amber-100 text-amber-700' :
-                                                    'bg-red-100 text-red-700'
-                                                }`}>
+                                                <span className={`absolute top-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full capitalize ${mod.level === 'beginner' ? 'bg-emerald-100 text-emerald-700' :
+                                                        mod.level === 'intermediate' ? 'bg-amber-100 text-amber-700' :
+                                                            'bg-red-100 text-red-700'
+                                                    }`}>
                                                     {mod.level}
                                                 </span>
                                             )}
