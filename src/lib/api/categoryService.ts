@@ -1,5 +1,12 @@
 import axios from 'axios';
 
+interface CategoryModuleFilters {
+  level?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
 
 const api = axios.create({
@@ -72,7 +79,7 @@ const categoryService = {
   },
 
   // Get all published modules for a specific category
-  getModulesByCategory: async (categoryId, filters: { level?: string; search?: string; page?: number; limit?: number } = {}) => {
+  getModulesByCategory: async (categoryId: string, filters: CategoryModuleFilters = {}) => {
     try {
       const params = new URLSearchParams();
       if (filters.level) params.append('level', filters.level);
@@ -99,7 +106,7 @@ const categoryService = {
       
       return response.data;
     } catch (error) {
-      console.error('[categoryService] Failed to fetch modules for category:', { categoryId, error: error.message });
+      console.error('[categoryService] Failed to fetch modules for category:', { categoryId, error: error instanceof Error ? error.message : error });
       return {
         success: true,
         data: [],
@@ -112,7 +119,7 @@ const categoryService = {
   },
 
   // Get category details with all its modules in one request
-  getCategoryWithModules: async (categoryId, filters: { level?: string; search?: string; page?: number; limit?: number } = {}) => {
+  getCategoryWithModules: async (categoryId: string, filters: CategoryModuleFilters = {}) => {
     try {
       const params = new URLSearchParams();
       if (filters.level) params.append('level', filters.level);
