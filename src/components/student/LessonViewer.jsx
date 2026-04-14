@@ -18,6 +18,7 @@ export default function LessonViewer({
   enrollment,
   onLessonComplete,
   onAssessmentComplete,
+  onLessonReset,
   onSlideChange,
   isAlreadyCompleted = false,
   darkMode = false,
@@ -41,8 +42,9 @@ export default function LessonViewer({
   const [answers, setAnswers] = useState({});
   const [checkedAnswers, setCheckedAnswers] = useState({});
   const [assessmentResult, setAssessmentResult] = useState(null);
-  const [assessmentError, setAssessmentError] = useState('');
-  const [attemptNumber, setAttemptNumber] = useState(1);
+  const [isServerConfirming, setIsServerConfirming] = useState(false);
+  // Prevent double-fire of the instant-score effect
+  const hasComputedRef = useRef(false);
 
   const currentSlide = slides[currentSlideIndex] || null;
   const allSlidesCompleted = slides.length === 0 || completedSlides.size >= slides.length;
@@ -80,7 +82,8 @@ export default function LessonViewer({
     setAnswers({});
     setCheckedAnswers({});
     setAssessmentResult(null);
-    setAssessmentError('');
+    setIsServerConfirming(false);
+    hasComputedRef.current = false;
   }, [lessonIndex, slides.length, enrollment?._id, isAlreadyCompleted]);
 
   useEffect(() => {
@@ -174,99 +177,80 @@ export default function LessonViewer({
     setPhase('assessment');
   }, [enrollment?._id, lessonIndex, submitting]);
 
-  // Ref so the Cancel button can abort an in-flight submission
-  const abortRef = useRef(null);
-
-  const submitAssessment = useCallback(async () => {
-    if (!enrollment?._id || submitting) return;
+  // ── Persist result to server in background (non-blocking) ────────────────────
+  const persistResult = useCallback(async (currentAnswers) => {
+    if (!enrollment?._id) return;
     const questions = lesson?.assessmentQuiz || [];
-    if (questions.length === 0) return;
+    if (!questions.length) return;
 
-    // Create a new abort signal for this submission attempt
-    const controller = new AbortController();
-    abortRef.current = controller;
-
-    setSubmitting(true);
-    setAssessmentError('');
-
-    // Helper: reject after `ms` milliseconds with a friendly message
-    const withTimeout = (promise, ms) =>
-      Promise.race([
-        promise,
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Request timed out. Please check your connection and try again.')), ms),
-        ),
-      ]);
-
+    setIsServerConfirming(true);
     try {
-      // Always ensure the lesson is marked complete before submitting the quiz.
-      // This is idempotent — safe even if already completed.
-      await withTimeout(
-        moduleEnrollmentService.completeLesson(enrollment._id, lessonIndex),
-        15000,
-      ).catch((e) => {
-        // Non-fatal — log and continue. The assessment endpoint will catch the
-        // "not completed" error itself if this really failed.
-        console.warn('[LessonViewer] completeLesson pre-call failed:', e?.response?.data?.message || e?.message);
-      });
-
-      if (controller.signal.aborted) return;
-
       const formattedAnswers = questions.map((_, i) => ({
         questionIndex: Number(i),
-        answer: String(answers[i] ?? ''),
+        answer: String(currentAnswers[i] ?? ''),
       }));
-
-      const res = await withTimeout(
-        moduleEnrollmentService.submitLessonAssessment(enrollment._id, lessonIndex, formattedAnswers),
-        20000,
-      );
-
-      if (controller.signal.aborted) return;
-
-      setAssessmentResult(res);
+      const res = await moduleEnrollmentService.submitLessonAssessment(enrollment._id, lessonIndex, formattedAnswers);
+      // Merge server data (authoritative attempt counts, enrollment state) into client result
+      setAssessmentResult(prev => prev ? {
+        ...prev,
+        remainingAttempts: res.remainingAttempts ?? prev.remainingAttempts,
+        lessonResetRequired: res.lessonResetRequired ?? prev.lessonResetRequired,
+        enrollment: res.enrollment,
+      } : res);
       onAssessmentComplete?.(res);
     } catch (err) {
-      if (controller.signal.aborted) return;
-      const errorMsg = err?.response?.data?.message || err?.message || 'Failed to submit assessment. Please try again.';
-      setAssessmentError(errorMsg);
+      console.warn('[LessonViewer] Background result persist failed:', err?.response?.data?.message || err?.message);
+      // Non-fatal: modal already shows client-side result; student can still continue
     } finally {
-      if (!controller.signal.aborted) setSubmitting(false);
-      abortRef.current = null;
+      setIsServerConfirming(false);
     }
-  }, [enrollment?._id, lesson?.assessmentQuiz, answers, lessonIndex, onAssessmentComplete, submitting]);
+  }, [enrollment?._id, lesson?.assessmentQuiz, lessonIndex, onAssessmentComplete]);
 
-  const autoSubmitTimeoutRef = useRef(null);
+  // ── When all questions answered: compute score instantly, show modal ──────────
+  useEffect(() => {
+    if (phase !== 'assessment' || assessmentResult || hasComputedRef.current) return;
+    const questions = lesson?.assessmentQuiz || [];
+    if (!questions.length || !enrollment?._id) return;
+
+    const allAnswered = questions.every((_, i) => answers[i] !== undefined && answers[i] !== '');
+    if (!allAnswered) return;
+
+    hasComputedRef.current = true;
+
+    // Compute score client-side immediately — no waiting for server
+    let correct = 0;
+    questions.forEach((q, i) => {
+      if (evaluateAnswer(q, answers[i])) correct++;
+    });
+    const score = questions.length > 0 ? Math.round((correct / questions.length) * 100) : 0;
+    const passed = score >= passingScore;
+
+    const lp = enrollment?.lessonProgress?.find(lp => lp.lessonIndex === lessonIndex);
+    const attemptsSoFar = lp?.assessmentAttempts ?? 0;
+    const nextAttempt = attemptsSoFar + 1;
+    const remaining = maxAttempts > 0 ? Math.max(0, maxAttempts - nextAttempt) : undefined;
+    const lessonResetRequired = !passed && maxAttempts > 0 && nextAttempt >= maxAttempts;
+
+    // Show modal immediately with client-side result
+    setAssessmentResult({
+      score,
+      passed,
+      breakdown: { correct, incorrect: questions.length - correct },
+      remainingAttempts: remaining,
+      lessonResetRequired,
+    });
+
+    // Persist to server in background
+    persistResult(answers);
+  }, [phase, answers, assessmentResult, lesson?.assessmentQuiz, enrollment, lessonIndex, passingScore, maxAttempts, persistResult]);
 
   const handleRetryAssessment = () => {
     setAssessmentResult(null);
     setAnswers({});
     setCheckedAnswers({});
-    setAssessmentError('');
-    setSubmitting(false);
+    setIsServerConfirming(false);
+    hasComputedRef.current = false;
   };
-
-  // Auto-submit assessment when all questions are answered
-  useEffect(() => {
-    if (phase !== 'assessment' || submitting || assessmentResult) return;
-    const questions = lesson?.assessmentQuiz || [];
-    if (questions.length === 0 || !enrollment?._id) return;
-
-    const allAnswered = questions.every((_, i) => answers[i]);
-    if (allAnswered) {
-      // Clear any pending timeout
-      if (autoSubmitTimeoutRef.current) clearTimeout(autoSubmitTimeoutRef.current);
-
-      // Auto-submit after a short delay to ensure checks are rendered
-      autoSubmitTimeoutRef.current = setTimeout(() => {
-        submitAssessment();
-      }, 500);
-    }
-
-    return () => {
-      if (autoSubmitTimeoutRef.current) clearTimeout(autoSubmitTimeoutRef.current);
-    };
-  }, [phase, answers, submitting, assessmentResult, lesson?.assessmentQuiz, enrollment?._id]);
 
   if (slides.length === 0 && !hasAssessment) {
     return (
@@ -375,25 +359,26 @@ export default function LessonViewer({
   // ═══════════════════════════════════════════════════════════════════════════
   if (phase === 'assessment') {
     const questions = lesson?.assessmentQuiz || [];
-    const allAnswered = questions.length > 0 && questions.every((_, i) => answers[i]);
+    const answeredCount = Object.keys(checkedAnswers).length;
+    const correctCount = Object.values(checkedAnswers).filter(c => c.correct).length;
+    const liveScorePct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
+    const lp = enrollment?.lessonProgress?.find(lp => lp.lessonIndex === lessonIndex);
+    const attemptsSoFar = lp?.assessmentAttempts ?? 0;
 
     return (
       <div className={`flex-1 overflow-y-auto ${darkMode ? 'bg-gradient-to-b from-gray-900 to-gray-800' : 'bg-gradient-to-b from-gray-50 to-white'}`}>
         <div className="max-w-4xl mx-auto px-4 py-8">
-          {/* Assessment header - cleaner design */}
+
+          {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
               <button
                 onClick={() => setPhase('slides')}
-                className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${darkMode
-                  ? 'text-gray-400 hover:text-white'
-                  : 'text-gray-600 hover:text-gray-900'
-                  }`}
+                className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
               >
                 <Icons.ChevronLeft className="w-4 h-4" /> Back to lesson
               </button>
-              <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'
-                }`}>
+              <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
                 📝 Quiz
               </span>
             </div>
@@ -405,44 +390,61 @@ export default function LessonViewer({
               Answer all {questions.length} question{questions.length !== 1 ? 's' : ''} to complete the assessment
             </p>
 
-            {/* Quiz info badges */}
+            {/* Info badges */}
             <div className="flex flex-wrap gap-2 mt-4">
-              <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg ${darkMode
-                ? 'bg-green-500/10 text-green-300'
-                : 'bg-green-50 text-green-700'
-                }`}>
-                <Icons.Target className="w-3.5 h-3.5" /> Score to pass: {lesson?.quizPassingScore || 70}%
+              <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg ${darkMode ? 'bg-green-500/10 text-green-300' : 'bg-green-50 text-green-700'}`}>
+                <Icons.Target className="w-3.5 h-3.5" /> Pass mark: {passingScore}%
               </div>
-              {lesson?.quizMaxAttempts && (
-                <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg ${darkMode
-                  ? 'bg-orange-500/10 text-orange-300'
-                  : 'bg-orange-50 text-orange-700'
-                  }`}>
-                  <Icons.Zap className="w-3.5 h-3.5" /> {lesson.quizMaxAttempts} attempts allowed
+              {maxAttempts > 0 && (
+                <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg ${darkMode ? 'bg-orange-500/10 text-orange-300' : 'bg-orange-50 text-orange-700'}`}>
+                  <Icons.Zap className="w-3.5 h-3.5" /> {maxAttempts} attempts allowed
+                </div>
+              )}
+              {attemptsSoFar > 0 && (
+                <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-2 rounded-lg ${darkMode ? 'bg-red-500/10 text-red-300' : 'bg-red-50 text-red-700'}`}>
+                  <Icons.RotateCcw className="w-3.5 h-3.5" /> Attempt {attemptsSoFar + 1} of {maxAttempts}
                 </div>
               )}
             </div>
           </div>
 
-          {/* Progress bar */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-2">
-              <span className={`text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
-                Progress
-              </span>
-              <span className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                {Object.keys(checkedAnswers).length} of {questions.length} answered
-              </span>
+          {/* Live score + progress */}
+          <div className="mb-8 space-y-3">
+            {/* Answered progress bar */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className={`text-sm font-semibold ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Questions answered</span>
+                <span className={`text-xs font-medium tabular-nums ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                  {answeredCount} / {questions.length}
+                </span>
+              </div>
+              <div className={`w-full h-2 rounded-full overflow-hidden ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300"
+                  style={{ width: `${questions.length > 0 ? (answeredCount / questions.length) * 100 : 0}%` }}
+                />
+              </div>
             </div>
-            <div className={`w-full h-2 rounded-full overflow-hidden ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>
-              <div
-                className="h-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-300"
-                style={{ width: `${(Object.keys(checkedAnswers).length / questions.length) * 100}%` }}
-              />
-            </div>
+
+            {/* Live score (only shown once at least one answer checked) */}
+            {answeredCount > 0 && (
+              <div className={`flex items-center justify-between px-4 py-2.5 rounded-xl ${darkMode ? 'bg-gray-800' : 'bg-white border border-gray-200'}`}>
+                <span className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Current score
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                    {correctCount} correct · {answeredCount - correctCount} incorrect
+                  </span>
+                  <span className={`text-base font-bold tabular-nums ${liveScorePct >= passingScore ? 'text-green-600' : 'text-red-500'}`}>
+                    {liveScorePct}%
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Questions - bigger, cleaner cards */}
+          {/* Question cards */}
           <div className="space-y-6">
             {questions.map((q, i) => (
               <QuestionCard
@@ -463,76 +465,26 @@ export default function LessonViewer({
                 darkMode={darkMode}
               />
             ))}
-
-            {/* Error message */}
-            {assessmentError && (
-              <div className={`flex items-start gap-3 p-5 rounded-xl border-2 ${darkMode
-                ? 'border-red-500/30 bg-red-500/10'
-                : 'border-red-200 bg-red-50'
-                }`}>
-                <Icons.AlertCircle className={`w-5 h-5 flex-shrink-0 mt-0.5 ${darkMode ? 'text-red-400' : 'text-red-600'}`} />
-                <div>
-                  <p className={`font-semibold ${darkMode ? 'text-red-300' : 'text-red-800'}`}>Error submitting assessment</p>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-red-200' : 'text-red-700'}`}>{assessmentError}</p>
-                  <button
-                    onClick={() => {
-                      setAssessmentError('');
-                      if (allAnswered) {
-                        setTimeout(() => submitAssessment(), 500);
-                      }
-                    }}
-                    className="text-xs font-semibold mt-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                  >
-                    Try again
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Loading state - with cancel button */}
-            {submitting && !assessmentError && (
-              <div className={`flex flex-col items-center justify-center gap-4 py-12 rounded-xl border-2 ${darkMode
-                ? 'border-blue-500/30 bg-blue-500/5'
-                : 'border-blue-200 bg-blue-50'
-                }`}>
-                <div className="relative w-12 h-12">
-                  <Icons.Loader2 className={`w-12 h-12 animate-spin ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-                </div>
-                <div className="text-center">
-                  <p className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-                    Evaluating your answers...
-                  </p>
-                  <p className={`text-sm mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                    This may take a few seconds
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    abortRef.current?.abort();
-                    setSubmitting(false);
-                    setAssessmentError('Submission cancelled. All your answers are still saved — click "Try again" to resubmit.');
-                  }}
-                  className={`text-sm font-medium px-4 py-2 rounded-lg transition-colors ${darkMode
-                    ? 'text-gray-300 border border-gray-600 hover:bg-gray-800'
-                    : 'text-gray-700 border border-gray-300 hover:bg-gray-100'
-                    }`}
-                >
-                  Cancel
-                </button>
-              </div>
-            )}
           </div>
         </div>
 
-        {/* Quiz Results Modal */}
+        {/* Quiz Results Modal — opens the instant all questions are answered */}
         <QuizResultsModal
           isOpen={!!assessmentResult}
           result={assessmentResult}
           passingScore={passingScore}
           maxAttempts={maxAttempts}
+          confirming={isServerConfirming}
           onContinue={onLessonComplete}
           onRetry={handleRetryAssessment}
-          onReturnToLesson={() => setPhase('slides')}
+          onReturnToLesson={async () => {
+            setAssessmentResult(null);
+            hasComputedRef.current = false;
+            setPhase('intro');
+            setAnswers({});
+            setCheckedAnswers({});
+            await onLessonReset?.();
+          }}
           darkMode={darkMode}
         />
       </div>

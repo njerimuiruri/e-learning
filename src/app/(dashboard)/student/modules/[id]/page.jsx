@@ -185,7 +185,14 @@ function ModuleLearningContent() {
     }, [enrollment]);
 
     const isLessonCompleted = useCallback((index) => getLessonProgress(index)?.isCompleted || false, [getLessonProgress]);
-    const isLessonAccessible = useCallback((index) => index === 0 || isLessonCompleted(index - 1), [isLessonCompleted]);
+    const isLessonAccessible = useCallback((index) => {
+        if (index === 0) return true;
+        const prevLesson = lessons[index - 1];
+        const prevLP = getLessonProgress(index - 1);
+        const hasQuiz = (prevLesson?.assessmentQuiz?.length ?? 0) > 0;
+        if (hasQuiz) return prevLP?.assessmentPassed === true;
+        return prevLP?.isCompleted === true;
+    }, [lessons, getLessonProgress]);
 
     const completedCount = enrollment?.lessonProgress?.filter(lp => lp.isCompleted).length ?? 0;
     const allLessonsCompleted = totalLessons > 0 && completedCount >= totalLessons && !enrollment?.requiresModuleRepeat;
@@ -699,19 +706,35 @@ function ModuleLearningContent() {
                                                 } else if (result.navigateTo === 'final_assessment') {
                                                     setShowFinalAssessment(true);
                                                 } else if (currentLessonIndex < totalLessons - 1) {
-                                                    // Fallback: advance to next lesson
                                                     setCurrentLessonIndex(currentLessonIndex + 1);
                                                 } else {
                                                     setShowFinalAssessment(true);
                                                 }
                                             } catch (err) {
                                                 console.error('Failed to complete lesson:', err);
+                                                // Fallback: navigate anyway
+                                                setLiveSlideIndex(0);
+                                                if (currentLessonIndex < totalLessons - 1) {
+                                                    setCurrentLessonIndex(currentLessonIndex + 1);
+                                                } else {
+                                                    setShowFinalAssessment(true);
+                                                }
                                             }
                                         }}
                                         onAssessmentComplete={(res) => {
                                             // Only update enrollment state — navigation is triggered by
-                                            // the modal's "Continue" button (via onLessonComplete below).
+                                            // the modal's "Continue" button (via onLessonComplete above).
                                             setEnrollment(res.enrollment ?? res);
+                                        }}
+                                        onLessonReset={async () => {
+                                            // Called when student exhausts all quiz attempts —
+                                            // re-fetch enrollment so progress reflects the server reset.
+                                            try {
+                                                const fresh = await moduleEnrollmentService.getMyEnrollmentForModule(moduleId);
+                                                setEnrollment(fresh);
+                                            } catch (err) {
+                                                console.error('Failed to refresh enrollment after lesson reset:', err);
+                                            }
                                         }}
                                     />
                                 </div>

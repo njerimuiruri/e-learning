@@ -119,6 +119,7 @@ export default function QuizResultsModal({
   onRetry,
   onReturnToLesson,
   darkMode = false,
+  confirming = false,
 }) {
   const [visible, setVisible] = useState(false);
   const userName = useMemo(() => {
@@ -290,6 +291,14 @@ export default function QuizResultsModal({
                     You've used all {maxAttempts} attempts. Please go through the lesson again before retrying the quiz.
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* Saving indicator */}
+            {confirming && (
+              <div className={`flex items-center gap-2 text-xs px-1 ${darkMode ? 'text-gray-400' : 'text-gray-400'}`}>
+                <Icons.Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                <span>Saving result…</span>
               </div>
             )}
 
