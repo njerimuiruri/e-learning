@@ -25,6 +25,7 @@ export default function LessonViewer({
 }) {
   const slides = (lesson?.slides || []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   const hasAssessment = (lesson?.assessmentQuiz || []).length > 0;
+  const isMountedRef = useRef(true);
 
   const [phase, setPhase] = useState(isAlreadyCompleted ? 'slides' : 'intro');
   const [currentSlideIndex, setCurrentSlideIndex] = useState(() => {
@@ -45,6 +46,14 @@ export default function LessonViewer({
   const [isServerConfirming, setIsServerConfirming] = useState(false);
   // Prevent double-fire of the instant-score effect
   const hasComputedRef = useRef(false);
+
+  // Track component mount/unmount
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const currentSlide = slides[currentSlideIndex] || null;
   const allSlidesCompleted = slides.length === 0 || completedSlides.size >= slides.length;
@@ -165,7 +174,7 @@ export default function LessonViewer({
   // Mark lesson complete on server before entering the quiz so the backend
   // guard (lessonProgress.isCompleted) is satisfied.
   const handleTakeQuiz = useCallback(async () => {
-    if (submitting) return;
+    if (submitting || !isMountedRef.current) return;
     if (enrollment?._id) {
       try {
         await moduleEnrollmentService.completeLesson(enrollment._id, lessonIndex);
@@ -174,7 +183,7 @@ export default function LessonViewer({
         console.warn('[LessonViewer] completeLesson before quiz failed:', err?.response?.data?.message || err?.message);
       }
     }
-    setPhase('assessment');
+    if (isMountedRef.current) setPhase('assessment');
   }, [enrollment?._id, lessonIndex, submitting]);
 
   // ── Persist result to server in background (non-blocking) ────────────────────
@@ -726,28 +735,28 @@ function QuestionCard({ question, index, selected, checked, onChange, onCheck, t
 
   return (
     <div className={`overflow-hidden transition-all rounded-2xl border-2 ${isChecked
-        ? isCorrect
-          ? 'border-green-300 bg-gradient-to-br from-green-50 to-white'
-          : 'border-red-300 bg-gradient-to-br from-red-50 to-white'
-        : darkMode
-          ? 'border-gray-700 bg-gray-800'
-          : 'border-gray-300 bg-white'
+      ? isCorrect
+        ? 'border-green-300 bg-gradient-to-br from-green-50 to-white'
+        : 'border-red-300 bg-gradient-to-br from-red-50 to-white'
+      : darkMode
+        ? 'border-gray-700 bg-gray-800'
+        : 'border-gray-300 bg-white'
       }`}>
       {/* Question header - bigger, cleaner */}
       <div className={`px-6 py-5 ${isChecked
-          ? isCorrect
-            ? 'bg-gradient-to-r from-green-100 to-green-50'
-            : 'bg-gradient-to-r from-red-100 to-red-50'
-          : darkMode
-            ? 'bg-gray-700'
-            : 'bg-gray-50'
+        ? isCorrect
+          ? 'bg-gradient-to-r from-green-100 to-green-50'
+          : 'bg-gradient-to-r from-red-100 to-red-50'
+        : darkMode
+          ? 'bg-gray-700'
+          : 'bg-gray-50'
         }`}>
         <div className="flex items-start gap-4">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 text-white ${isChecked
-              ? isCorrect
-                ? 'bg-gradient-to-br from-green-500 to-green-600'
-                : 'bg-gradient-to-br from-red-500 to-red-600'
-              : 'bg-gradient-to-br from-blue-500 to-blue-600'
+            ? isCorrect
+              ? 'bg-gradient-to-br from-green-500 to-green-600'
+              : 'bg-gradient-to-br from-red-500 to-red-600'
+            : 'bg-gradient-to-br from-blue-500 to-blue-600'
             }`}>
             {isChecked ? (isCorrect ? '✓' : '✕') : index + 1}
           </div>
@@ -756,12 +765,12 @@ function QuestionCard({ question, index, selected, checked, onChange, onCheck, t
             <div className="flex items-start justify-between gap-3">
               <div></div>
               <span className={`text-xs font-bold px-2.5 py-1 rounded-lg flex-shrink-0 ${isChecked
-                  ? isCorrect
-                    ? 'bg-green-200 text-green-800'
-                    : 'bg-red-200 text-red-800'
-                  : darkMode
-                    ? 'bg-blue-500/20 text-blue-300'
-                    : 'bg-blue-100 text-blue-700'
+                ? isCorrect
+                  ? 'bg-green-200 text-green-800'
+                  : 'bg-red-200 text-red-800'
+                : darkMode
+                  ? 'bg-blue-500/20 text-blue-300'
+                  : 'bg-blue-100 text-blue-700'
                 }`}>
                 {isChecked ? (isCorrect ? 'Correct!' : 'Incorrect') : 'Question'}
               </span>
@@ -811,16 +820,16 @@ function QuestionCard({ question, index, selected, checked, onChange, onCheck, t
 
               return (
                 <label key={oi} className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all font-medium text-base ${isChecked
-                    ? isThisCorrect
-                      ? 'border-green-400 bg-green-50 text-green-900'
-                      : isThisWrong
-                        ? 'border-red-400 bg-red-50 text-red-900'
-                        : 'border-gray-200 bg-gray-50 text-gray-500 opacity-50'
-                    : isSelected
-                      ? 'border-blue-500 bg-blue-50 text-gray-900 shadow-md'
-                      : darkMode
-                        ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-700 text-gray-200'
-                        : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-800'
+                  ? isThisCorrect
+                    ? 'border-green-400 bg-green-50 text-green-900'
+                    : isThisWrong
+                      ? 'border-red-400 bg-red-50 text-red-900'
+                      : 'border-gray-200 bg-gray-50 text-gray-500 opacity-50'
+                  : isSelected
+                    ? 'border-blue-500 bg-blue-50 text-gray-900 shadow-md'
+                    : darkMode
+                      ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-700 text-gray-200'
+                      : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50 text-gray-800'
                   }`}>
                   <input
                     type="radio"
@@ -849,8 +858,8 @@ function QuestionCard({ question, index, selected, checked, onChange, onCheck, t
               placeholder="Type your answer here…"
               rows={4}
               className={`w-full rounded-xl p-4 text-base border-2 focus:outline-none resize-none transition-colors font-medium ${darkMode
-                  ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-500'
-                  : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500'
+                ? 'border-gray-600 bg-gray-700 text-white placeholder-gray-400 focus:border-blue-500'
+                : 'border-gray-300 bg-white text-gray-900 placeholder-gray-400 focus:border-blue-500 disabled:bg-gray-50 disabled:text-gray-500'
                 }`}
             />
             {!isChecked && selected && (
@@ -868,8 +877,8 @@ function QuestionCard({ question, index, selected, checked, onChange, onCheck, t
         {/* Feedback section */}
         {isChecked && (
           <div className={`mt-6 rounded-xl p-5 border-2 ${isCorrect
-              ? 'border-green-300 bg-green-50'
-              : 'border-red-300 bg-red-50'
+            ? 'border-green-300 bg-green-50'
+            : 'border-red-300 bg-red-50'
             }`}>
             <p className={`font-bold text-base mb-2 flex items-center gap-2 ${isCorrect ? 'text-green-800' : 'text-red-800'
               }`}>

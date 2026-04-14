@@ -44,6 +44,8 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
           {/* Content */}
           <div className="px-4 py-4 sm:px-5 sm:py-5">
             <div
+              role="region"
+              aria-live="polite"
               className={`slide-rich-content prose prose-base max-w-full break-words overflow-x-hidden
                 prose-headings:font-bold prose-headings:text-left prose-headings:mt-5 prose-headings:mb-2
                 prose-p:leading-relaxed prose-p:text-left prose-p:mb-3 prose-p:break-words
