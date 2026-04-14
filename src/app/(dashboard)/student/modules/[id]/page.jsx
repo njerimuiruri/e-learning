@@ -463,7 +463,7 @@ function ModuleLearningContent() {
                                 const isCurrent = idx === currentLessonIndex && !showFinalAssessment;
                                 const locked = !accessible;
                                 const lp = enrollment?.lessonProgress?.find(lp => lp.lessonIndex === idx);
-                                const completedSlideCount = lp?.slideProgress?.filter(sp => sp.isCompleted).length || 0;
+                                const completedSlideCount = (Array.isArray(lp?.slideProgress) ? lp.slideProgress : []).filter(sp => sp.isCompleted).length || 0;
                                 const totalSlides = lesson.slides?.length || 0;
                                 // If lesson is completed, show total slides; otherwise show live position or server count
                                 const displayedSlideCount = completed

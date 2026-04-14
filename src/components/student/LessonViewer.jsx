@@ -98,8 +98,9 @@ export default function LessonViewer({
   useEffect(() => {
     if (!enrollment) return;
     const lp = enrollment.lessonProgress?.find((l) => l.lessonIndex === lessonIndex);
-    if (!lp?.slideProgress) return;
-    const done = new Set(lp.slideProgress.filter((sp) => sp.isCompleted).map((sp) => sp.slideIndex));
+    const slideProgressArr = Array.isArray(lp?.slideProgress) ? lp.slideProgress : [];
+    if (!slideProgressArr.length) return;
+    const done = new Set(slideProgressArr.filter((sp) => sp.isCompleted).map((sp) => sp.slideIndex));
     setCompletedSlides(done);
   }, [enrollment, lessonIndex]);
 
@@ -547,6 +548,7 @@ export default function LessonViewer({
         )}
         {currentSlide ? (
           <SlideRenderer
+            key={`slide-${currentSlideIndex}`}
             slide={currentSlide}
             slideNumber={currentSlideIndex + 1}
             totalSlides={slides.length}
