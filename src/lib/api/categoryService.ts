@@ -70,6 +70,71 @@ const categoryService = {
       throw error;
     }
   },
+
+  // Get all published modules for a specific category
+  getModulesByCategory: async (categoryId, filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.level) params.append('level', filters.level);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.page) params.append('page', String(filters.page));
+      if (filters.limit) params.append('limit', String(filters.limit));
+
+      const response = await api.get(
+        `/categories/${categoryId}/modules?${params.toString()}`
+      );
+      
+      // Backend returns: { success: true, data: [...], total, pages, page, limit }
+      if (response.data?.success === false || !response.data?.data) {
+        console.warn('[categoryService] Empty or failed response from API:', response.data);
+        return {
+          success: true,
+          data: [],
+          total: 0,
+          pages: 0,
+          page: filters.page || 1,
+          limit: filters.limit || 12,
+        };
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('[categoryService] Failed to fetch modules for category:', { categoryId, error: error.message });
+      return {
+        success: true,
+        data: [],
+        total: 0,
+        pages: 0,
+        page: filters.page || 1,
+        limit: filters.limit || 12,
+      };
+    }
+  },
+
+  // Get category details with all its modules in one request
+  getCategoryWithModules: async (categoryId, filters = {}) => {
+    try {
+      const params = new URLSearchParams();
+      if (filters.level) params.append('level', filters.level);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.page) params.append('page', String(filters.page));
+      if (filters.limit) params.append('limit', String(filters.limit));
+
+      const response = await api.get(
+        `/categories/${categoryId}/with-modules?${params.toString()}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch category with modules:', error);
+      return {
+        success: false,
+        category: null,
+        modules: [],
+        total: 0,
+        pages: 0,
+      };
+    }
+  },
 };
 
 export default categoryService;

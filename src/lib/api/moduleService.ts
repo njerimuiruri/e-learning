@@ -24,15 +24,35 @@ const moduleService = {
   },
 
   async getAllModules(filters: { category?: string; level?: string; search?: string; page?: number; limit?: number } = {}) {
-    const params = new URLSearchParams();
-    if (filters.category) params.append('category', filters.category);
-    if (filters.level) params.append('level', filters.level);
-    if (filters.search) params.append('search', filters.search);
-    if (filters.page) params.append('page', String(filters.page));
-    if (filters.limit) params.append('limit', String(filters.limit));
+    try {
+      const params = new URLSearchParams();
+      if (filters.category) params.append('category', filters.category);
+      if (filters.level) params.append('level', filters.level);
+      if (filters.search) params.append('search', filters.search);
+      if (filters.page) params.append('page', String(filters.page));
+      if (filters.limit) params.append('limit', String(filters.limit));
 
-    const response = await api.get(`/?${params.toString()}`);
-    return response.data;
+      const response = await api.get(`/?${params.toString()}`);
+      
+      // Ensure consistent response structure
+      if (!response.data) {
+        console.warn('[moduleService] No data in response');
+        return {
+          modules: [],
+          total: 0,
+          pages: 0,
+        };
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('[moduleService] Failed to fetch all modules:', error.message);
+      return {
+        modules: [],
+        total: 0,
+        pages: 0,
+      };
+    }
   },
 
   async getInstructorModules() {

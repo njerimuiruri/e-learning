@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
@@ -63,12 +63,11 @@ function ModuleBrowsingContent() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchInput, setSearchInput] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const [totalModules, setTotalModules] = useState(0);
     const [selectedCategoryFull, setSelectedCategoryFull] = useState(null);
 
     useEffect(() => { fetchInitialData(); }, []);
-    useEffect(() => { fetchModules(); }, [selectedCategory, selectedLevel, searchQuery, currentPage]);
+    // Reset to first page whenever filters change
+    useEffect(() => { setCurrentPage(1); }, [selectedCategory, selectedLevel, searchQuery]);
     useEffect(() => {
         if (selectedCategory) {
             categoryService.getCategoryById(selectedCategory)
@@ -81,33 +80,59 @@ function ModuleBrowsingContent() {
 
     const fetchInitialData = async () => {
         try {
-            const [cats, progs, enrollments] = await Promise.all([
+            const [cats, mods, progs, enrollments] = await Promise.all([
                 categoryService.getAllCategories(),
+                moduleService.getAllModules({ limit: 500 }),
                 progressionService.getMyProgressions().catch(() => []),
                 moduleEnrollmentService.getMyEnrollments().catch(() => []),
             ]);
             setCategories(Array.isArray(cats) ? cats : []);
+
+            // Normalize module response (handle array, { modules: [] }, or { data: [] })
+            let moduleList = [];
+            if (Array.isArray(mods)) {
+                moduleList = mods;
+            } else if (mods?.modules && Array.isArray(mods.modules)) {
+                moduleList = mods.modules;
+            } else if (mods?.data && Array.isArray(mods.data)) {
+                moduleList = mods.data;
+            }
+            setModules(moduleList);
+
             setProgressions(Array.isArray(progs) ? progs : progs?.progressions || []);
             const enrollList = Array.isArray(enrollments) ? enrollments : enrollments?.enrollments || [];
             setMyEnrollments(enrollList);
         } catch (err) { console.error(err); }
-    };
-
-    const fetchModules = async () => {
-        try {
-            setLoading(true);
-            const filters = { page: currentPage, limit: 12 };
-            if (selectedCategory) filters.category = selectedCategory;
-            if (selectedLevel) filters.level = selectedLevel;
-            if (searchQuery) filters.search = searchQuery;
-            const result = await moduleService.getAllModules(filters);
-            const moduleList = result?.modules || (Array.isArray(result) ? result : []);
-            setModules(moduleList);
-            setTotalPages(result?.pages || 1);
-            setTotalModules(result?.total || moduleList.length);
-        } catch (err) { console.error(err); }
         finally { setLoading(false); }
     };
+
+    /* ─── Client-side filtering (mirrors the homepage approach) ─── */
+    const PAGE_SIZE = 12;
+
+    const filteredModules = useMemo(() => {
+        let list = modules;
+        if (selectedCategory) {
+            list = list.filter(m => {
+                const modCatId = (m.categoryId?._id || m.categoryId)?.toString?.() || String(m.categoryId?._id || m.categoryId);
+                return modCatId === selectedCategory?.toString();
+            });
+        }
+        if (selectedLevel) {
+            list = list.filter(m => m.level === selectedLevel);
+        }
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            list = list.filter(m =>
+                m.title?.toLowerCase().includes(q) ||
+                m.description?.toLowerCase().includes(q)
+            );
+        }
+        return list;
+    }, [modules, selectedCategory, selectedLevel, searchQuery]);
+
+    const totalModules = filteredModules.length;
+    const totalPages = Math.ceil(totalModules / PAGE_SIZE) || 1;
+    const displayedModules = filteredModules.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
     const checkLevelAccess = (module) => {
         const categoryId = module.categoryId?._id || module.categoryId;
@@ -126,6 +151,7 @@ function ModuleBrowsingContent() {
     const isSequentiallyLocked = (mod) => {
         if (!mod.order || mod.order <= 1) return false;
         const catId = (mod.categoryId?._id || mod.categoryId)?.toString();
+        // Search the full module list so sequential lock works across pages
         const prevMod = modules.find(m => {
             const mCatId = (m.categoryId?._id || m.categoryId)?.toString();
             return mCatId === catId && m.order === mod.order - 1;
@@ -262,8 +288,8 @@ function ModuleBrowsingContent() {
                             <button
                                 onClick={() => { setSelectedCategory(''); setCurrentPage(1); }}
                                 className={`group text-left rounded-xl border-2 p-4 transition-all duration-200 ${!selectedCategory
-                                        ? 'border-[#021d49] bg-[#021d49] shadow-md'
-                                        : 'border-gray-200 bg-white hover:border-[#021d49]/40 hover:shadow-sm'
+                                    ? 'border-[#021d49] bg-[#021d49] shadow-md'
+                                    : 'border-gray-200 bg-white hover:border-[#021d49]/40 hover:shadow-sm'
                                     }`}
                             >
                                 <div className="flex items-start justify-between gap-2">
@@ -279,25 +305,30 @@ function ModuleBrowsingContent() {
                                     {!selectedCategory && <Icons.CheckCircle className="w-4 h-4 text-white/80 shrink-0 mt-0.5" />}
                                 </div>
                                 <p className={`text-xs mt-2 ml-10 ${!selectedCategory ? 'text-blue-200' : 'text-gray-500'}`}>
-                                    Browse all {totalModules} available modules
+                                    Browse all {modules.length} available modules
                                 </p>
                             </button>
 
                             {/* Per-category cards */}
                             {categories.map((cat) => {
-                                const isActive = false; // navigation now goes to dedicated page
+                                const catIdStr = cat._id?.toString();
+                                const isActive = selectedCategory === cat._id;
                                 const isCatPaid = cat.isPaid || cat.accessType === 'paid' || cat.accessType === 'restricted';
                                 const isCatFellows = cat.accessType === 'free' || cat.accessType === 'restricted';
                                 const isCatFree = !isCatPaid && !isCatFellows;
-                                const catIsFellowId = fellowCategoryIds.includes(cat._id?.toString());
+                                const catIsFellowId = fellowCategoryIds.includes(catIdStr);
+                                const catModCount = modules.filter(m => {
+                                    const modCatId = (m.categoryId?._id || m.categoryId)?.toString?.();
+                                    return modCatId === catIdStr;
+                                }).length;
 
                                 return (
                                     <button
                                         key={cat._id}
-                                        onClick={() => router.push(`/student/modules/category/${cat._id}`)}
+                                        onClick={() => { setSelectedCategory(cat._id); setCurrentPage(1); }}
                                         className={`group text-left rounded-xl border-2 p-4 transition-all duration-200 ${isActive
-                                                ? 'border-[#021d49] bg-[#021d49] shadow-md'
-                                                : 'border-gray-200 bg-white hover:border-[#021d49]/40 hover:shadow-sm'
+                                            ? 'border-[#021d49] bg-[#021d49] shadow-md'
+                                            : 'border-gray-200 bg-white hover:border-[#021d49]/40 hover:shadow-sm'
                                             }`}
                                     >
                                         <div className="flex items-start justify-between gap-2">
@@ -306,9 +337,14 @@ function ModuleBrowsingContent() {
                                                     }`}>
                                                     <Icons.Layers className={`w-4 h-4 ${isActive ? 'text-white' : 'text-[#021d49]'}`} />
                                                 </div>
-                                                <span className={`font-semibold text-sm leading-tight line-clamp-2 ${isActive ? 'text-white' : 'text-gray-900'}`}>
-                                                    {cat.name}
-                                                </span>
+                                                <div>
+                                                    <span className={`font-semibold text-sm leading-tight line-clamp-2 ${isActive ? 'text-white' : 'text-gray-900'}`}>
+                                                        {cat.name}
+                                                    </span>
+                                                    <p className={`text-xs mt-0.5 ${isActive ? 'text-blue-200' : 'text-gray-400'}`}>
+                                                        {catModCount} module{catModCount !== 1 ? 's' : ''}
+                                                    </p>
+                                                </div>
                                             </div>
                                             {isActive && <Icons.CheckCircle className="w-4 h-4 text-white/80 shrink-0 mt-0.5" />}
                                         </div>
@@ -564,9 +600,9 @@ function ModuleBrowsingContent() {
                     )}
 
                     {/* ── Modules Grid ── */}
-                    {!loading && modules.length > 0 && (
+                    {!loading && displayedModules.length > 0 && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {modules.map((mod) => {
+                            {displayedModules.map((mod) => {
                                 const lvl = getLvl(mod.level);
                                 const LvlIcon = Icons[lvl.icon] || Icons.BookOpen;
                                 const hasLevelAccess = checkLevelAccess(mod);
@@ -757,7 +793,7 @@ function ModuleBrowsingContent() {
                     )}
 
                     {/* ── Empty state ── */}
-                    {!loading && modules.length === 0 && (
+                    {!loading && filteredModules.length === 0 && (
                         <Card className="border-gray-100 shadow-sm">
                             <CardContent className="py-16 text-center">
                                 <Icons.SearchX className="w-14 h-14 text-gray-200 mx-auto mb-4" />
