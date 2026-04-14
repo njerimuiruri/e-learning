@@ -72,7 +72,7 @@ const categoryService = {
   },
 
   // Get all published modules for a specific category
-  getModulesByCategory: async (categoryId, filters = {}) => {
+  getModulesByCategory: async (categoryId, filters: { level?: string; search?: string; page?: number; limit?: number } = {}) => {
     try {
       const params = new URLSearchParams();
       if (filters.level) params.append('level', filters.level);
@@ -112,7 +112,7 @@ const categoryService = {
   },
 
   // Get category details with all its modules in one request
-  getCategoryWithModules: async (categoryId, filters = {}) => {
+  getCategoryWithModules: async (categoryId, filters: { level?: string; search?: string; page?: number; limit?: number } = {}) => {
     try {
       const params = new URLSearchParams();
       if (filters.level) params.append('level', filters.level);
