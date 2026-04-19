@@ -54,7 +54,11 @@ function resourceHref(res) {
     const name = typeof res === 'string' ? res : (res.name || res.originalName || '');
     const ext = (res?.fileType || name || url || '').split('.').pop()?.toLowerCase() || '';
     const isPdf = ext === 'pdf';
-    return { url, name, ext, isPdf, href: isPdf ? url : url?.replace('/upload/', '/upload/fl_attachment/') };
+    const isCloudinary = url?.includes('cloudinary.com');
+    const safeFilename = name ? encodeURIComponent(name) : '';
+    const attachmentFlag = safeFilename ? `fl_attachment:${safeFilename}` : 'fl_attachment';
+    const href = isCloudinary && !isPdf ? url?.replace('/upload/', `/upload/${attachmentFlag}/`) : url;
+    return { url, name, ext, isPdf, href };
 }
 
 function fileIconColor(ext) {

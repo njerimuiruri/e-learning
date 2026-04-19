@@ -423,21 +423,27 @@ export default function LessonViewer({
                 {resources.map((res, i) => {
                   const name = res.name || res.originalName || `Resource ${i + 1}`;
                   const url = res.url || res.fileUrl || '';
-                  const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+                  const nameExt = name.split('.').pop()?.toLowerCase() || '';
+                  const urlExt = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+                  const ext = nameExt || urlExt;
                   const isPdf = ext === 'pdf';
                   const isDoc = ['doc', 'docx'].includes(ext);
                   const isXls = ['xls', 'xlsx', 'csv'].includes(ext);
                   const isPpt = ['ppt', 'pptx'].includes(ext);
                   const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
+                  const isCloudinary = url.includes('cloudinary.com');
+                  const safeFilename = name ? encodeURIComponent(name) : '';
+                  const attachmentFlag = safeFilename ? `fl_attachment:${safeFilename}` : 'fl_attachment';
+                  const href = isCloudinary && !isPdf ? url.replace('/upload/', `/upload/${attachmentFlag}/`) : url;
                   const Icon = isVideo ? Icons.Video : isPdf ? Icons.FileText : isDoc ? Icons.FileText : isXls ? Icons.Table2 : isPpt ? Icons.Presentation : Icons.File;
                   const color = isVideo ? 'text-rose-600 bg-rose-50' : isPdf ? 'text-red-600 bg-red-50' : isDoc ? 'text-blue-600 bg-blue-50' : isXls ? 'text-green-600 bg-green-50' : isPpt ? 'text-orange-600 bg-orange-50' : 'text-gray-600 bg-gray-100';
                   return (
                     <a
                       key={i}
-                      href={url}
+                      href={href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      download={name}
+                      {...(!isPdf && !isCloudinary && { download: name })}
                       className={`flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-sm hover:-translate-y-0.5 ${darkMode ? 'border-gray-700 bg-gray-800 hover:bg-gray-750' : 'border-gray-200 bg-gray-50 hover:bg-white'}`}
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
