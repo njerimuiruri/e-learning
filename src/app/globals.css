@@ -85,3 +85,16 @@
   max-width: 100%;
   overflow-x: hidden;
 }
+
+/* ── Global: all prose / description text wraps correctly ── */
+.prose,
+.prose * {
+  overflow-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+p, h1, h2, h3, h4, h5, h6, span, li, td, th {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}

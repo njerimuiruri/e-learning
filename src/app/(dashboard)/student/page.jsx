@@ -2,7 +2,29 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import * as Icons from 'lucide-react';
+import {
+    BookOpen, Trophy, Award, CheckCircle, XCircle, FileText, MessageCircle,
+    Unlock, Bell, AlertCircle, Clock, Play, ChevronRight, ChevronLeft,
+    Star, Target, Flame, Zap, TrendingUp, BarChart2, Calendar, RefreshCw,
+    Lock, ArrowRight, Filter, Search, X, Check, Info, Loader2,
+    GraduationCap, LayoutDashboard, Settings, LogOut, User, Home,
+    BookMarked, ListChecks, Activity, Eye, EyeOff, MoreVertical,
+    PlusCircle, Download, Share2, Edit, Trash2, Send, Inbox,
+    WifiOff, Users, Plus, Megaphone, CreditCard, Compass,
+    ListOrdered, Grid2X2 as Grid, MessageSquare, FolderOpen,
+} from 'lucide-react';
+// Keep a small alias so existing `Icons.Xxx` references still work
+const Icons = {
+    BookOpen, Trophy, Award, CheckCircle, XCircle, FileText, MessageCircle,
+    Unlock, Bell, AlertCircle, Clock, Play, ChevronRight, ChevronLeft,
+    Star, Target, Flame, Zap, TrendingUp, BarChart2, Calendar, RefreshCw,
+    Lock, ArrowRight, Filter, Search, X, Check, Info, Loader2,
+    GraduationCap, LayoutDashboard, Settings, LogOut, User, Home,
+    BookMarked, ListChecks, Activity, Eye, EyeOff, MoreVertical,
+    PlusCircle, Download, Share2, Edit, Trash2, Send, Inbox,
+    WifiOff, Users, Plus, Megaphone, CreditCard, Compass,
+    ListOrdered, Grid, MessageSquare, FolderOpen,
+};
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import progressionService from '@/lib/api/progressionService';
 import moduleService from '@/lib/api/moduleService';
@@ -232,7 +254,7 @@ function AvailableModuleCard({ mod, onDetails, onEnroll }) {
                 </h3>
                 {/* Clean description — no HTML */}
                 {clean && (
-                    <p className="text-xs text-gray-500 line-clamp-3 mb-3 leading-relaxed flex-1 break-words">{clean}</p>
+                    <p className="text-xs text-gray-500 line-clamp-3 mb-3 leading-relaxed flex-1 break-words overflow-hidden">{clean}</p>
                 )}
                 {/* Stats row */}
                 <div className="flex items-center gap-3 text-xs text-gray-400 mb-3">
@@ -329,8 +351,8 @@ function ModuleDrawer({ mod, onClose, onNavigate }) {
                         </Badge>
                         {mod.categoryId?.name && <Badge variant="secondary" className="text-xs">{mod.categoryId.name}</Badge>}
                     </div>
-                    <SheetTitle className="text-xl leading-snug break-words">{mod.title}</SheetTitle>
-                    <SheetDescription className="text-sm text-gray-500 leading-relaxed mt-1 break-words">
+                    <SheetTitle className="text-xl leading-snug break-words overflow-wrap-anywhere">{mod.title}</SheetTitle>
+                    <SheetDescription className="text-sm text-gray-500 leading-relaxed mt-1 break-words whitespace-pre-wrap overflow-hidden">
                         {clean || 'No description available.'}
                     </SheetDescription>
                 </SheetHeader>
@@ -499,60 +521,90 @@ function StudentDashboardContent() {
     useEffect(() => {
         const u = authService.getCurrentUser?.() || null;
         setUser(u);
+
+        // Restore cached data instantly so UI shows immediately
+        try {
+            const cached = sessionStorage.getItem('dashboard_cache');
+            if (cached) {
+                const { enrollments: ce, progressions: cp, availableModules: cm } = JSON.parse(cached);
+                if (ce) setEnrollments(ce);
+                if (cp) setProgressions(cp);
+                if (cm) setAvailableModules(cm);
+            }
+        } catch (_) {}
+
         fetchAll();
 
-        // Re-fetch progress whenever the student returns to this tab
-        // (e.g. after completing a lesson in the module viewer).
+        // Only re-fetch critical data (enrollments) on tab focus
         const handleVisibility = () => {
-            if (!document.hidden) fetchAll();
+            if (!document.hidden) fetchCritical();
         };
         document.addEventListener('visibilitychange', handleVisibility);
         return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, []);
+
+    // Fetch only enrollments + progressions — what the dashboard primarily shows
+    const fetchCritical = useCallback(async () => {
+        try {
+            const [enrollData, progData] = await Promise.all([
+                moduleEnrollmentService.getMyEnrollments(),
+                progressionService.getMyProgressions(),
+            ]);
+            const eList = Array.isArray(enrollData) ? enrollData : enrollData?.enrollments || [];
+            const pList = Array.isArray(progData) ? progData : progData?.progressions || [];
+            setEnrollments(eList);
+            setProgressions(pList);
+        } catch (_) {}
     }, []);
 
     const fetchAll = useCallback(async () => {
         try {
             setLoading(true);
             setFetchError(false);
-            const [enrollData, progData, modsData, notifData, remindData] = await Promise.allSettled([
+
+            // Step 1 — fetch critical data first, show UI immediately
+            const [enrollData, progData] = await Promise.all([
                 moduleEnrollmentService.getMyEnrollments(),
                 progressionService.getMyProgressions(),
-                moduleService.getAllModules({ limit: 50 }),
-                notificationService.getMyNotifications(20),
-                notificationService.getMyReminders(),
             ]);
 
-            // Enrollments
-            const eList = enrollData.status === 'fulfilled'
-                ? (Array.isArray(enrollData.value) ? enrollData.value : enrollData.value?.enrollments || [])
-                : [];
-            console.log('[Dashboard] Fetched Enrollment Data on load:', eList);
+            const eList = Array.isArray(enrollData) ? enrollData : enrollData?.enrollments || [];
+            const pList = Array.isArray(progData) ? progData : progData?.progressions || [];
             setEnrollments(eList);
-
-            // Progressions
-            const pList = progData.status === 'fulfilled'
-                ? (Array.isArray(progData.value) ? progData.value : progData.value?.progressions || [])
-                : [];
             setProgressions(pList);
+            setLoading(false); // ← show dashboard now, don't wait for secondary data
 
-            // Available modules (filter out already enrolled)
-            if (modsData.status === 'fulfilled') {
-                const allMods = Array.isArray(modsData.value) ? modsData.value : modsData.value?.modules || [];
-                const enrolledIds = new Set(eList.map(e => e.moduleId?._id?.toString() || e.moduleId?.toString()));
-                setAvailableModules(allMods.filter(m => !enrolledIds.has(m._id?.toString())));
-            }
+            // Step 2 — fetch secondary data in background (non-blocking)
+            Promise.allSettled([
+                moduleService.getAllModules({ limit: 20 }),
+                notificationService.getMyNotifications(20),
+                notificationService.getMyReminders(),
+            ]).then(([modsData, notifData, remindData]) => {
+                if (modsData.status === 'fulfilled') {
+                    const allMods = Array.isArray(modsData.value) ? modsData.value : modsData.value?.modules || [];
+                    const enrolledIds = new Set(eList.map(e => e.moduleId?._id?.toString() || e.moduleId?.toString()));
+                    const available = allMods.filter(m => !enrolledIds.has(m._id?.toString()));
+                    setAvailableModules(available);
 
-            // Notifications
-            if (notifData.status === 'fulfilled') {
-                const n = notifData.value;
-                setNotifications(Array.isArray(n) ? n : n?.notifications || []);
-            }
+                    // Cache for instant next load
+                    try {
+                        sessionStorage.setItem('dashboard_cache', JSON.stringify({
+                            enrollments: eList,
+                            progressions: pList,
+                            availableModules: available,
+                        }));
+                    } catch (_) {}
+                }
+                if (notifData.status === 'fulfilled') {
+                    const n = notifData.value;
+                    setNotifications(Array.isArray(n) ? n : n?.notifications || []);
+                }
+                if (remindData.status === 'fulfilled') {
+                    const r = remindData.value;
+                    setReminders(Array.isArray(r) ? r : r?.reminders || []);
+                }
+            });
 
-            // Reminders
-            if (remindData.status === 'fulfilled') {
-                const r = remindData.value;
-                setReminders(Array.isArray(r) ? r : r?.reminders || []);
-            }
         } catch (err) {
             console.error(err);
             setFetchError(true);

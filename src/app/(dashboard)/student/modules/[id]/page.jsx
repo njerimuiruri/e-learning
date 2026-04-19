@@ -659,7 +659,16 @@ function ModuleLearningContent() {
                                     : `border-transparent ${darkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`
                                 }`}
                         >
-                            <Icons.FileText className="w-3.5 h-3.5 flex-shrink-0" /> Resources
+                            <Icons.FileText className="w-3.5 h-3.5 flex-shrink-0" />
+                            Resources
+                            {allResources.length > 0 && (
+                                <span
+                                    title={`${allResources.length} resource${allResources.length !== 1 ? 's' : ''} available`}
+                                    className="ml-1 min-w-[18px] h-[18px] px-1 rounded-full text-[10px] font-bold flex items-center justify-center bg-emerald-500 text-white leading-none"
+                                >
+                                    {allResources.length}
+                                </span>
+                            )}
                         </button>
                     </div>
 
@@ -981,8 +990,9 @@ function ModuleLearningContent() {
                                     <p className={`text-xs font-semibold uppercase tracking-widest mb-1 ${darkMode ? 'text-green-400' : 'text-green-600'}`}>Module Introduction</p>
                                     <h2 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>{moduleData.title}</h2>
                                     {moduleData.description && (
-                                        <p className={`text-sm mt-1 line-clamp-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}
-                                            dangerouslySetInnerHTML={{ __html: moduleData.description.replace(/<[^>]*>/g, ' ').trim() }} />
+                                        <p className={`text-sm mt-1 line-clamp-3 break-words overflow-hidden ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                            {moduleData.description.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()}
+                                        </p>
                                     )}
                                 </div>
                                 <div className="rounded-2xl overflow-hidden bg-black shadow-xl border border-gray-200">
@@ -1129,7 +1139,7 @@ function ModuleLearningContent() {
                                                 {currentLesson.title || `Lesson ${currentLessonIndex + 1}`}
                                             </h1>
                                             {currentLesson.description && (
-                                                <div className={`prose prose-sm max-w-none text-gray-500 mt-2 ${darkMode ? 'prose-invert' : ''}`}
+                                                <div className={`prose prose-sm max-w-none break-words overflow-hidden mt-2 ${darkMode ? 'prose-invert text-gray-400' : 'text-gray-500'}`}
                                                     dangerouslySetInnerHTML={{ __html: currentLesson.description }} />
                                             )}
                                             <div className="flex items-center gap-2 mt-4 flex-wrap">
@@ -1357,7 +1367,7 @@ function ModuleOverviewPanel({ module: mod, lessons, completedLessonIndices, pro
 
                         {/* Description */}
                         {mod?.description && (
-                            <p className={`text-sm leading-relaxed ${base.sub} break-words`}>
+                            <p className={`text-sm leading-relaxed break-words overflow-hidden whitespace-pre-wrap ${base.sub}`}>
                                 {stripHtmlLocal(mod.description)}
                             </p>
                         )}

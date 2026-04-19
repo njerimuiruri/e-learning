@@ -322,6 +322,7 @@ export default function LessonViewer({
   // ═══════════════════════════════════════════════════════════════════════════
   if (phase === 'intro') {
     const outcomes = lesson?.learningOutcomes || [];
+    const resources = lesson?.lessonResources || lesson?.resources || [];
     return (
       <div className={`flex-1 overflow-y-auto overflow-x-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
         <div className="px-4 sm:px-6 py-4 space-y-5">
@@ -355,6 +356,15 @@ export default function LessonViewer({
               {lesson?.duration && (
                 <span className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg ${darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
                   <Icons.Clock className="w-3.5 h-3.5" /> {lesson.duration}
+                </span>
+              )}
+              {resources.length > 0 && (
+                <span
+                  className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 cursor-pointer select-none`}
+                  title={`${resources.length} resource${resources.length !== 1 ? 's' : ''} available for download`}
+                >
+                  <Icons.Paperclip className="w-3.5 h-3.5" />
+                  {resources.length} resource{resources.length !== 1 ? 's' : ''}
                 </span>
               )}
             </div>
@@ -392,6 +402,53 @@ export default function LessonViewer({
                   </li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {/* Resources */}
+          {resources.length > 0 && (
+            <div className={`border-t pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Icons.Paperclip className="w-4 h-4 text-emerald-700" />
+                </div>
+                <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  Lesson Resources
+                  <span className="ml-2 text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    {resources.length}
+                  </span>
+                </p>
+              </div>
+              <div className="space-y-2">
+                {resources.map((res, i) => {
+                  const name = res.name || res.originalName || `Resource ${i + 1}`;
+                  const url = res.url || res.fileUrl || '';
+                  const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+                  const isPdf = ext === 'pdf';
+                  const isDoc = ['doc', 'docx'].includes(ext);
+                  const isXls = ['xls', 'xlsx', 'csv'].includes(ext);
+                  const isPpt = ['ppt', 'pptx'].includes(ext);
+                  const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
+                  const Icon = isVideo ? Icons.Video : isPdf ? Icons.FileText : isDoc ? Icons.FileText : isXls ? Icons.Table2 : isPpt ? Icons.Presentation : Icons.File;
+                  const color = isVideo ? 'text-rose-600 bg-rose-50' : isPdf ? 'text-red-600 bg-red-50' : isDoc ? 'text-blue-600 bg-blue-50' : isXls ? 'text-green-600 bg-green-50' : isPpt ? 'text-orange-600 bg-orange-50' : 'text-gray-600 bg-gray-100';
+                  return (
+                    <a
+                      key={i}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      download={name}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-sm hover:-translate-y-0.5 ${darkMode ? 'border-gray-700 bg-gray-800 hover:bg-gray-750' : 'border-gray-200 bg-gray-50 hover:bg-white'}`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <span className={`text-sm font-medium truncate flex-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name}</span>
+                      <Icons.Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    </a>
+                  );
+                })}
+              </div>
             </div>
           )}
 

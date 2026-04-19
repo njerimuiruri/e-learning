@@ -413,7 +413,7 @@ export default function EditModulePage() {
                 return 'short-answer';
             };
 
-            const cleanLessons = lessons.map(({ _caseStudy, resources, ...rest }) => {
+            const cleanLessons = lessons.map(({ _caseStudy, resources, lessonResources: _lr, ...rest }) => {
                 const normalizedQuiz = (rest.assessmentQuiz || []).map((q) => ({
                     ...q,
                     type: inferQType(q),
