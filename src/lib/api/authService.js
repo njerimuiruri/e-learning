@@ -386,6 +386,37 @@ class AuthService {
     }
   }
 
+  async sendForgotPasswordOtp(email) {
+    try {
+      const response = await api.post('/api/auth/forgot-password-otp', { email });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to send code');
+    }
+  }
+
+  async verifyForgotPasswordOtp(email, otp) {
+    try {
+      const response = await api.post('/api/auth/verify-otp', { email, otp });
+      return response.data; // { success, resetToken }
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Invalid or expired code');
+    }
+  }
+
+  async resetPasswordWithToken(token, newPassword, confirmPassword) {
+    try {
+      const response = await api.post('/api/auth/reset-password', {
+        token,
+        newPassword,
+        confirmPassword,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(error.response?.data?.message || 'Failed to reset password');
+    }
+  }
+
   /**
    * Change user password
    * @param {Object} data - Password change data

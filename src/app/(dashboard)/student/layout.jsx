@@ -22,6 +22,7 @@ export default function StudentLayout({ children }) {
         if (!user && typeof window !== 'undefined') {
             // Fallback to localStorage if cookie is not available yet
             const userStr = window.localStorage.getItem('user');
+            console.log('[Auth] Cookie not found, checking localStorage for user data...');
             if (userStr) {
                 try {
                     user = JSON.parse(userStr);
@@ -50,6 +51,7 @@ export default function StudentLayout({ children }) {
         }
 
         // User is authorized
+        console.log('[Auth] Student Authorized for Dashboard. User ID:', user._id || user.id);
         setIsAuthorized(true);
         setIsLoading(false);
     }, [router]);

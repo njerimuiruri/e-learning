@@ -121,6 +121,11 @@ const moduleService = {
     return response.data;
   },
 
+  async finalizeContent(moduleId) {
+    const response = await api.put(`/${moduleId}/finalize`, {});
+    return response.data;
+  },
+
   async submitForApproval(moduleId) {
     const response = await api.post(`/${moduleId}/submit`, {});
     return response.data;

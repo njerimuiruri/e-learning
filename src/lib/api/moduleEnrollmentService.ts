@@ -53,6 +53,21 @@ const moduleEnrollmentService = {
     return response.data;
   },
 
+  /**
+   * Fetches fresh, server-derived progress state.
+   * This is the single source of truth — always call this after any mutation
+   * instead of using the mutation response's stale enrollment snapshot.
+   */
+  async getProgress(enrollmentId: string) {
+    const response = await api.get(`/${enrollmentId}/progress`);
+    return response.data;
+  },
+
+  /**
+   * Idempotent lesson completion.
+   * Returns fresh progress state (same shape as getProgress).
+   * Safe to call multiple times — duplicates are silently ignored by the server.
+   */
   async completeLesson(enrollmentId, lessonIndex) {
     const response = await api.put(`/${enrollmentId}/lessons/${lessonIndex}/complete`);
     return response.data;

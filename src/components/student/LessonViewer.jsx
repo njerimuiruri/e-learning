@@ -16,11 +16,14 @@ export default function LessonViewer({
   lessonIndex,
   totalLessons,
   enrollment,
+  initialSlideIndex = 0,
   onLessonComplete,
   onAssessmentComplete,
   onLessonReset,
   onSlideChange,
   isAlreadyCompleted = false,
+  assessmentPassed = false,
+  lastAnswers = null,
   darkMode = false,
 }) {
   const slides = (lesson?.slides || []).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
@@ -28,16 +31,9 @@ export default function LessonViewer({
   const isMountedRef = useRef(true);
 
   const [phase, setPhase] = useState(isAlreadyCompleted ? 'slides' : 'intro');
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(() => {
-    // Restore last slide position from localStorage on mount
-    if (typeof window === 'undefined' || !enrollment?._id) return 0;
-    const saved = localStorage.getItem(`slide-pos-${enrollment._id}-${lessonIndex}`);
-    if (saved !== null) {
-      const idx = parseInt(saved, 10);
-      if (!isNaN(idx) && idx >= 0) return idx;
-    }
-    return 0;
-  });
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(
+    Math.max(0, initialSlideIndex),
+  );
   const [completedSlides, setCompletedSlides] = useState(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [answers, setAnswers] = useState({});
@@ -46,6 +42,7 @@ export default function LessonViewer({
   const [isServerConfirming, setIsServerConfirming] = useState(false);
   // Prevent double-fire of the instant-score effect
   const hasComputedRef = useRef(false);
+  const hasAutoCompletedRef = useRef(false);
 
   // Track component mount/unmount
   useEffect(() => {
@@ -74,26 +71,41 @@ export default function LessonViewer({
 
   // Reset state when lesson changes (lessonIndex prop changes)
   useEffect(() => {
-    // Determine initial slide index for this lesson
-    let initialSlideIndex = 0;
-    if (typeof window !== 'undefined' && enrollment?._id) {
-      const saved = localStorage.getItem(`slide-pos-${enrollment._id}-${lessonIndex}`);
-      if (saved !== null) {
-        const idx = parseInt(saved, 10);
-        if (!isNaN(idx) && idx >= 0 && idx < slides.length) {
-          initialSlideIndex = idx;
-        }
-      }
-    }
-    setCurrentSlideIndex(initialSlideIndex);
+    const safeInitialSlide = Math.max(0, Math.min(initialSlideIndex, Math.max(0, slides.length - 1)));
+    setCurrentSlideIndex(safeInitialSlide);
     setPhase(isAlreadyCompleted ? 'slides' : 'intro');
     setCompletedSlides(new Set());
-    setAnswers({});
-    setCheckedAnswers({});
     setAssessmentResult(null);
     setIsServerConfirming(false);
-    hasComputedRef.current = false;
-  }, [lessonIndex, slides.length, enrollment?._id, isAlreadyCompleted]);
+    hasAutoCompletedRef.current = false;
+
+    // If quiz already passed, restore previous answers for review mode
+    if (assessmentPassed && lastAnswers && Object.keys(lastAnswers).length > 0) {
+      const questions = lesson?.assessmentQuiz || [];
+      const restoredAnswers = {};
+      const restoredChecked = {};
+      Object.entries(lastAnswers).forEach(([key, val]) => {
+        const i = Number(key);
+        restoredAnswers[i] = val;
+        const q = questions[i];
+        if (q) restoredChecked[i] = { correct: evaluateAnswer(q, val), answer: val };
+      });
+      setAnswers(restoredAnswers);
+      setCheckedAnswers(restoredChecked);
+      hasComputedRef.current = true; // prevent auto-submit for already-passed quizzes
+      console.log(
+        `[LessonViewer] Quiz already passed — restored previous answers for review | lesson=${lessonIndex + 1} | answersRestored=${Object.keys(restoredAnswers).length}`,
+      );
+    } else {
+      setAnswers({});
+      setCheckedAnswers({});
+      hasComputedRef.current = false;
+    }
+
+    console.log(
+      `[LessonViewer] Lesson loaded from backend | lessonIndex=${lessonIndex} | slideIndex=${safeInitialSlide} | isCompleted=${isAlreadyCompleted} | assessmentPassed=${assessmentPassed} | hasLastAnswers=${!!(lastAnswers && Object.keys(lastAnswers).length)}`,
+    );
+  }, [lessonIndex, slides.length, initialSlideIndex, isAlreadyCompleted, assessmentPassed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!enrollment) return;
@@ -102,6 +114,9 @@ export default function LessonViewer({
     if (!slideProgressArr.length) return;
     const done = new Set(slideProgressArr.filter((sp) => sp.isCompleted).map((sp) => sp.slideIndex));
     setCompletedSlides(done);
+    console.log(
+      `[LessonViewer] Slide progress restored from backend | lesson=${lessonIndex + 1} | completedSlides=[${[...done].join(', ')}] | quizPassed=${lp?.assessmentPassed ?? false}`,
+    );
   }, [enrollment, lessonIndex]);
 
   // Get passing score and max attempts from lesson
@@ -127,9 +142,18 @@ export default function LessonViewer({
   );
 
   const handleSlideComplete = useCallback((slideIndex, time, scrolled) => {
-    setCompletedSlides((prev) => { const next = new Set(prev); next.add(slideIndex); return next; });
+    setCompletedSlides((prev) => {
+      const next = new Set(prev);
+      next.add(slideIndex);
+      if (typeof window !== 'undefined') {
+        console.log(
+          `[LessonViewer] Slide completed | lesson=${lessonIndex + 1} | slide=${slideIndex + 1}/${slides.length} | completedSlides=${next.size}/${slides.length}`,
+        );
+      }
+      return next;
+    });
     reportSlideProgressToServer(slideIndex, time, scrolled);
-  }, [reportSlideProgressToServer]);
+  }, [lessonIndex, reportSlideProgressToServer, slides.length]);
 
   useEffect(() => {
     // Stop the tracker when the student moves to the assessment — avoids a
@@ -176,20 +200,30 @@ export default function LessonViewer({
   // guard (lessonProgress.isCompleted) is satisfied.
   const handleTakeQuiz = useCallback(async () => {
     if (submitting || !isMountedRef.current) return;
-    if (enrollment?._id) {
-      try {
-        await moduleEnrollmentService.completeLesson(enrollment._id, lessonIndex);
-      } catch (err) {
-        // Non-fatal: log and continue. The assessment pre-call will retry.
-        console.warn('[LessonViewer] completeLesson before quiz failed:', err?.response?.data?.message || err?.message);
-      }
-    }
+    console.log(
+      `[LessonViewer] Entering quiz phase | lesson=${lessonIndex + 1} | assessmentPassed=${assessmentPassed} | hasRestoredAnswers=${assessmentPassed && !!lastAnswers}`,
+    );
     if (isMountedRef.current) setPhase('assessment');
-  }, [enrollment?._id, lessonIndex, submitting]);
+  }, [submitting, lessonIndex, assessmentPassed, lastAnswers]);
+
+  // Auto-complete slide-only lessons as soon as the last slide is completed.
+  // This keeps completion logic simple and reliable:
+  // - no quiz => finish slides => mark complete => parent advances
+  useEffect(() => {
+    if (hasAssessment || isAlreadyCompleted || phase !== 'slides' || submitting) return;
+    if (!allSlidesCompleted || hasAutoCompletedRef.current) return;
+
+    hasAutoCompletedRef.current = true;
+    handleCompleteLesson();
+  }, [allSlidesCompleted, hasAssessment, isAlreadyCompleted, phase, submitting]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Persist result to server in background (non-blocking) ────────────────────
   const persistResult = useCallback(async (currentAnswers) => {
     if (!enrollment?._id) return;
+    if (assessmentPassed) {
+      console.log('[LessonViewer] Quiz already passed — skipping server persist');
+      return;
+    }
     const questions = lesson?.assessmentQuiz || [];
     if (!questions.length) return;
 
@@ -199,7 +233,9 @@ export default function LessonViewer({
         questionIndex: Number(i),
         answer: String(currentAnswers[i] ?? ''),
       }));
+      console.log('[LessonViewer] Saving quiz answers to backend | lesson=', lessonIndex + 1, '| answers=', formattedAnswers);
       const res = await moduleEnrollmentService.submitLessonAssessment(enrollment._id, lessonIndex, formattedAnswers);
+      console.log('[LessonViewer] Backend quiz save response:', { passed: res.passed, remainingAttempts: res.remainingAttempts });
       // Merge server data (authoritative attempt counts, enrollment state) into client result
       setAssessmentResult(prev => prev ? {
         ...prev,
@@ -214,11 +250,17 @@ export default function LessonViewer({
     } finally {
       setIsServerConfirming(false);
     }
-  }, [enrollment?._id, lesson?.assessmentQuiz, lessonIndex, onAssessmentComplete]);
+  }, [enrollment?._id, lesson?.assessmentQuiz, lessonIndex, onAssessmentComplete, assessmentPassed]);
 
   // ── When all questions answered: compute score instantly, show modal ──────────
   useEffect(() => {
     if (phase !== 'assessment' || assessmentResult || hasComputedRef.current) return;
+    // Don't re-evaluate a quiz that was already passed — show answers in review mode only
+    if (assessmentPassed) {
+      hasComputedRef.current = true;
+      console.log('[LessonViewer] Skipping auto-compute: quiz already passed, showing review mode');
+      return;
+    }
     const questions = lesson?.assessmentQuiz || [];
     if (!questions.length || !enrollment?._id) return;
 
@@ -241,6 +283,10 @@ export default function LessonViewer({
     const remaining = maxAttempts > 0 ? Math.max(0, maxAttempts - nextAttempt) : undefined;
     const lessonResetRequired = !passed && maxAttempts > 0 && nextAttempt >= maxAttempts;
 
+    console.log(
+      `[LessonViewer] Quiz computed | lesson=${lessonIndex + 1} | score=${score}% | passed=${passed} | correctAnswers=${correct}/${questions.length} | attempt=${nextAttempt}/${maxAttempts}`,
+    );
+
     // Show modal immediately with client-side result
     setAssessmentResult({
       score,
@@ -252,7 +298,7 @@ export default function LessonViewer({
 
     // Persist to server in background
     persistResult(answers);
-  }, [phase, answers, assessmentResult, lesson?.assessmentQuiz, enrollment, lessonIndex, passingScore, maxAttempts, persistResult]);
+  }, [phase, answers, assessmentResult, lesson?.assessmentQuiz, enrollment, lessonIndex, passingScore, maxAttempts, persistResult, assessmentPassed]);
 
   const handleRetryAssessment = () => {
     setAssessmentResult(null);
@@ -381,6 +427,16 @@ export default function LessonViewer({
 
           {/* Header */}
           <div className="mb-8">
+            {/* Review mode banner */}
+            {assessmentPassed && (
+              <div className="mb-4 flex items-center gap-3 px-4 py-3 rounded-xl bg-green-50 border border-green-200">
+                <Icons.CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-bold text-green-800">Quiz Completed</p>
+                  <p className="text-xs text-green-700">You have already passed this quiz. Your previous answers are shown below in review mode.</p>
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-between mb-6">
               <button
                 onClick={() => setPhase('slides')}
@@ -388,8 +444,8 @@ export default function LessonViewer({
               >
                 <Icons.ChevronLeft className="w-4 h-4" /> Back to lesson
               </button>
-              <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg ${darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
-                📝 Quiz
+              <span className={`text-xs font-bold uppercase tracking-widest px-3 py-1.5 rounded-lg ${assessmentPassed ? 'bg-green-100 text-green-700' : darkMode ? 'bg-blue-500/20 text-blue-300' : 'bg-blue-100 text-blue-700'}`}>
+                {assessmentPassed ? '✅ Quiz Passed' : '📝 Quiz'}
               </span>
             </div>
 
@@ -583,7 +639,12 @@ export default function LessonViewer({
             return (
               <button
                 key={i}
-                onClick={() => canJump && setCurrentSlideIndex(i)}
+                onClick={() => {
+                  if (!canJump) return;
+                  setCurrentSlideIndex(i);
+                  onSlideChange?.(i);
+                  console.log(`[LessonViewer] Dot navigation → lesson=${lessonIndex + 1} slide=${i + 1}`);
+                }}
                 disabled={!canJump}
                 title={`Slide ${i + 1}`}
                 className={`flex-shrink-0 rounded-full transition-all duration-200 ${isActive ? 'w-6 h-2.5 bg-[#021d49]'
@@ -632,22 +693,26 @@ export default function LessonViewer({
           {isLastSlide && hasAssessment && (
             <button
               onClick={handleTakeQuiz}
-              disabled={(!nextButtonEnabled && !isSlideComplete) || submitting}
+              disabled={(!nextButtonEnabled && !isSlideComplete && !assessmentPassed) || submitting}
               className={`flex items-center gap-1 sm:gap-2 text-sm px-3 py-2 sm:px-5 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold transition-all shadow-sm hover:shadow-md
-                ${(nextButtonEnabled || isSlideComplete)
-                  ? 'bg-[#021d49] hover:bg-[#032a66] active:bg-[#043080] text-white'
+                ${(nextButtonEnabled || isSlideComplete || assessmentPassed)
+                  ? assessmentPassed
+                    ? 'bg-green-700 hover:bg-green-800 text-white'
+                    : 'bg-[#021d49] hover:bg-[#032a66] active:bg-[#043080] text-white'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
             >
-              <Icons.HelpCircle className="w-4 h-4" />
-              <span className="hidden sm:inline">Take Quiz</span>
+              {assessmentPassed
+                ? <><Icons.CheckCircle className="w-4 h-4" /><span className="hidden sm:inline">Review Quiz</span></>
+                : <><Icons.HelpCircle className="w-4 h-4" /><span className="hidden sm:inline">Take Quiz</span></>
+              }
             </button>
           )}
           {isLastSlide && !hasAssessment && (
             <button
               onClick={handleCompleteLesson}
-              disabled={!nextButtonEnabled || submitting}
+              disabled={submitting}
               className={`flex items-center gap-1 sm:gap-2 text-sm px-3 py-2 sm:px-5 sm:py-2.5 rounded-lg sm:rounded-xl font-semibold transition-all shadow-sm hover:shadow-md
-                ${nextButtonEnabled && !submitting
+                ${!submitting
                   ? 'bg-[#021d49] hover:bg-[#032a66] active:bg-[#043080] text-white'
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
             >

@@ -99,6 +99,10 @@ const adminService = {
     const { data } = await api.get('/fellows', { params: filters });
     return data;
   },
+  getFellowById: async (id: string) => {
+    const { data } = await api.get(`/fellows/${id}`);
+    return data;
+  },
   createFellow: async (payload: any) => {
     const { data } = await api.post('/fellows', payload);
     return data;
@@ -223,6 +227,10 @@ const adminService = {
   },
   deleteModule: async (id: string) => {
     const { data } = await api.delete(`/modules/${id}`);
+    return data;
+  },
+  finalizeModuleContent: async (id: string) => {
+    const { data } = await api.put(`/modules/${id}/finalize`);
     return data;
   },
   approveAssessment: async (id: string) => {

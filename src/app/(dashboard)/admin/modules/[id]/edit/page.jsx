@@ -11,6 +11,7 @@ import AdminSidebar from '@/components/Admin/AdminSidebar';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
 import VideoUploader from '@/components/ui/VideoUploader';
+import ResourceUploader from '@/components/ui/ResourceUploader';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -81,6 +82,73 @@ function BulletList({ label, hint, values, onChange, placeholder }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// RESOURCE LIST (module-level files / links)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function ResourceList({ label, hint, values = [], onChange }) {
+  const blank = () => ({ url: '', name: '', description: '', fileType: '' });
+  const add    = () => onChange([...values, blank()]);
+  const update = (i, f, v) => { const n = [...values]; n[i] = { ...n[i], [f]: v }; onChange(n); };
+  const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
+
+  const mapExt = (fileName) => {
+    const ext = (fileName || '').split('.').pop()?.toLowerCase();
+    if (ext === 'pdf') return 'pdf';
+    if (['doc','docx'].includes(ext)) return 'notebook';
+    if (['xls','xlsx','csv'].includes(ext)) return 'dataset';
+    return 'other';
+  };
+
+  const handleUpload = (uploaded) => {
+    onChange((uploaded || []).map((r) => ({
+      url: r.url || (typeof r === 'string' ? r : ''),
+      name: r.name || r.originalName || (typeof r === 'string' ? r.split('/').pop() : '') || 'Resource',
+      description: r.description || '',
+      fileType: r.fileType || mapExt(r.name || r.originalName || r.url),
+    })));
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <Label className="font-semibold">{label}</Label>
+        {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
+      </div>
+      <div className="mb-3">
+        <ResourceUploader value={values} onChange={handleUpload} label="Upload documents" />
+      </div>
+      {values.map((r, i) => (
+        <div key={i} className="border rounded-xl p-4 space-y-3 bg-gray-50/50">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
+            <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)}>
+              <Icons.Trash2 className="w-4 h-4 text-red-400" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Name</Label>
+              <Input value={r.name} onChange={(e) => update(i, 'name', e.target.value)} placeholder="Resource name" />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">URL</Label>
+              <Input value={r.url} onChange={(e) => update(i, 'url', e.target.value)} placeholder="https://…" />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Description (optional)</Label>
+            <Input value={r.description} onChange={(e) => update(i, 'description', e.target.value)} placeholder="Brief description" />
+          </div>
+        </div>
+      ))}
+      <Button type="button" variant="outline" size="sm" onClick={add} className="gap-1">
+        <Icons.Plus className="w-3 h-3" /> Add resource manually
+      </Button>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // STEPS
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -101,6 +169,8 @@ export default function AdminModuleEditPage() {
   const [step, setStep]             = useState(0);
   const [loading, setLoading]       = useState(true);
   const [saving, setSaving]         = useState(false);
+  const [finalizing, setFinalizing] = useState(false);
+  const [isContentFinalized, setIsContentFinalized] = useState(false);
   const [categories, setCategories] = useState([]);
   const [originalModule, setOriginalModule] = useState(null);
 
@@ -113,6 +183,7 @@ export default function AdminModuleEditPage() {
     targetAudience: [], prerequisites: [],
     bannerUrl: '',
     introVideoUrl: '',
+    moduleResources: [],
     lessons: [],
   });
 
@@ -142,6 +213,7 @@ export default function AdminModuleEditPage() {
     ])
       .then(([mod, cats]) => {
         setOriginalModule(mod);
+        setIsContentFinalized(mod.isContentFinalized ?? false);
         setCategories(Array.isArray(cats) ? cats : []);
 
         const catId = typeof mod.categoryId === 'object' ? mod.categoryId?._id : mod.categoryId;
@@ -181,6 +253,7 @@ export default function AdminModuleEditPage() {
           order:                mod.order != null ? mod.order : '',
           bannerUrl:            mod.bannerUrl || '',
           introVideoUrl:        mod.introVideoUrl || '',
+          moduleResources:      Array.isArray(mod.moduleResources) ? mod.moduleResources : [],
           lessons:              mappedLessons,
         });
       })
@@ -190,6 +263,23 @@ export default function AdminModuleEditPage() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  // ── Finalize Content ───────────────────────────────────────────────────────
+
+  const handleFinalizeContent = async () => {
+    if (isContentFinalized) return;
+    if (!confirm('Finalize content? This will notify all enrolled students that the Final Assessment is now available.')) return;
+    try {
+      setFinalizing(true);
+      await adminService.finalizeModuleContent(id);
+      setIsContentFinalized(true);
+      toast.success('Content finalized — students have been notified.');
+    } catch (err) {
+      toast.error('Failed to finalize content. Please try again.');
+    } finally {
+      setFinalizing(false);
+    }
+  };
 
   // ── Save ───────────────────────────────────────────────────────────────────
 
@@ -201,15 +291,51 @@ export default function AdminModuleEditPage() {
     }
     setSaving(true);
     try {
+      // Infer question type from data shape if missing (legacy questions saved without type)
+      const inferQType = (q) => {
+        if (q.type) return q.type;
+        if (Array.isArray(q.options) && q.options.some(Boolean)) return 'multiple-choice';
+        if (['True', 'False'].includes(q.answer)) return 'true-false';
+        return 'short-answer';
+      };
+
       // Build clean lessons array from LessonBuilder output (strip internal _caseStudy key)
-      const cleanLessons = (form.lessons || []).map(({ _caseStudy, resources, ...rest }) => ({
-        ...rest,
-        lessonResources: resources || [],
-      }));
+      const cleanLessons = (form.lessons || []).map(({ _caseStudy, resources, ...rest }) => {
+        const normalizedQuiz = (rest.assessmentQuiz || []).map((q) => ({
+          ...q,
+          type: inferQType(q),
+          points: q.points ?? 1,
+          answer: q.answer ?? '',
+        }));
+        return {
+          ...rest,
+          lessonResources: resources || [],
+          assessmentQuiz: normalizedQuiz,
+        };
+      });
+
+      console.group('💾 [AdminSave] Module save payload');
+      console.log('moduleId:', id);
+      cleanLessons.forEach((lesson) => {
+        if (!lesson.assessmentQuiz?.length) return;
+        console.group(`📚 Lesson: "${lesson.title}" — ${lesson.assessmentQuiz.length} quiz questions`);
+        lesson.assessmentQuiz.forEach((q, i) => {
+          console.log(
+            `Q${i + 1} | type="${q.type}" | answer="${q.answer}" | options:`,
+            q.options || '(none)',
+          );
+        });
+        console.groupEnd();
+      });
+      console.groupEnd();
 
       // Send everything in a single updateModule call — lessons are included in UpdateModuleDto
       const { lessons: _lessons, ...metaPayload } = form;
-      await adminService.updateModule(id, { ...metaPayload, lessons: cleanLessons });
+      await adminService.updateModule(id, {
+        ...metaPayload,
+        lessons: cleanLessons,
+        moduleResources: form.moduleResources || [],
+      });
 
       discardDraft();
       toast.success('Module updated successfully!');
@@ -416,6 +542,17 @@ export default function AdminModuleEditPage() {
                 height={180}
               />
             </section>
+
+            {/* Module Resources */}
+            <section className="space-y-4">
+              <SectionHeading number={8} title="Module Resources" subtitle="Files and links that apply to the whole module (bibliography, datasets, code repos, recorded lectures)." />
+              <ResourceList
+                label="Module-Level Resources"
+                hint="e.g. Bibliography, online learning links, recorded lectures, code repositories"
+                values={form.moduleResources}
+                onChange={(v) => updateForm('moduleResources', v)}
+              />
+            </section>
           </div>
         );
 
@@ -509,6 +646,38 @@ export default function AdminModuleEditPage() {
                 </AlertDescription>
               </Alert>
             )}
+
+            {/* Finalize Content */}
+            <div className={`border rounded-lg p-4 ${isContentFinalized ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-start gap-3">
+                  {isContentFinalized
+                    ? <Icons.CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    : <Icons.Lock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  }
+                  <div>
+                    <p className={`font-semibold text-sm mb-1 ${isContentFinalized ? 'text-green-800' : 'text-amber-800'}`}>
+                      {isContentFinalized ? 'Content Finalized' : 'Finalize Content'}
+                    </p>
+                    <p className={`text-xs ${isContentFinalized ? 'text-green-700' : 'text-amber-700'}`}>
+                      {isContentFinalized
+                        ? 'Students have been notified. The Final Assessment is unlocked.'
+                        : 'Mark all lessons as complete to unlock the Final Assessment for enrolled students. They will be notified by email.'}
+                    </p>
+                  </div>
+                </div>
+                {!isContentFinalized && (
+                  <Button
+                    size="sm"
+                    onClick={handleFinalizeContent}
+                    disabled={finalizing}
+                    className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-xs"
+                  >
+                    {finalizing ? <><div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white mr-1.5" /> Finalizing…</> : <><Icons.CheckSquare className="w-3.5 h-3.5 mr-1.5" />Finalize</>}
+                  </Button>
+                )}
+              </div>
+            </div>
           </div>
         );
 

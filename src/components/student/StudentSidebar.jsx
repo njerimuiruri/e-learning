@@ -70,12 +70,10 @@ export default function StudentSidebar() {
 
     const calculateProfileCompletion = () => {
         if (!currentUser) return 0;
-        const fields = [
-            currentUser.firstName, currentUser.lastName, currentUser.email,
-            currentUser.profilePhotoUrl, currentUser.bio, currentUser.phoneNumber,
-            currentUser.country, currentUser.emailVerified,
-        ];
-        return Math.round((fields.filter(Boolean).length / fields.length) * 100);
+        const hasName = !!(currentUser.fullName || currentUser.firstName || currentUser.lastName);
+        const hasRegion = !!(currentUser.region || currentUser.fellowData?.region);
+        const hasPhoto = !!currentUser.profilePhotoUrl;
+        return (hasName && hasRegion && hasPhoto) ? 100 : 0;
     };
 
     const handlePhotoUpload = async (event) => {
@@ -93,9 +91,14 @@ export default function StudentSidebar() {
         try {
             const reader = new FileReader();
             reader.onloadend = () => {
-                const updated = { ...currentUser, profilePhotoUrl: reader.result };
+                const photoUrl = reader.result;
+                const updated = { ...currentUser, profilePhotoUrl: photoUrl };
                 setCurrentUser(updated);
+                // Update both localStorage and cookie so all components see the new photo
                 localStorage.setItem('user', JSON.stringify(updated));
+                authService.updateCurrentUser({ profilePhotoUrl: photoUrl });
+                // Notify navbar and other components
+                window.dispatchEvent(new CustomEvent('userProfileUpdated', { detail: { profilePhotoUrl: photoUrl } }));
             };
             reader.readAsDataURL(file);
             setShowPhotoModal(false);
@@ -110,6 +113,8 @@ export default function StudentSidebar() {
         const updated = { ...currentUser, profilePhotoUrl: null };
         setCurrentUser(updated);
         localStorage.setItem('user', JSON.stringify(updated));
+        authService.updateCurrentUser({ profilePhotoUrl: null });
+        window.dispatchEvent(new CustomEvent('userProfileUpdated', { detail: { profilePhotoUrl: null } }));
         setShowPhotoModal(false);
     };
 
@@ -127,11 +132,30 @@ export default function StudentSidebar() {
 
     const handleContinueLearning = async () => {
         try {
+            console.log('[ContinueLearning] Sidebar button clicked — fetching enrollments...');
             const enrollments = await moduleEnrollmentService.getMyEnrollments();
             const list = Array.isArray(enrollments) ? enrollments : enrollments?.enrollments || [];
             const inProgress = list.find(e => !e.isCompleted);
-            router.push(inProgress ? `/student/modules/${inProgress.moduleId?._id || inProgress.moduleId}` : '/student/modules');
-        } catch {
+
+            if (!inProgress) {
+                console.log('[ContinueLearning] No in-progress module — redirecting to modules list');
+                router.push('/student/modules');
+                return;
+            }
+
+            const moduleId = inProgress.moduleId?._id || inProgress.moduleId;
+            const enrollmentId = inProgress._id;
+            console.log('[ContinueLearning] Sidebar | found module | moduleId=', moduleId, '| enrollmentId=', enrollmentId);
+
+            // Fetch exact resume position (lesson + slide) from backend
+            const progress = await moduleEnrollmentService.getProgress(enrollmentId);
+            const lessonIndex = progress?.currentLessonIndex ?? 0;
+            const slideIndex = progress?.currentSlideIndex ?? 0;
+
+            console.log('[ContinueLearning] Sidebar | resuming to | lessonIndex=', lessonIndex, '| slideIndex=', slideIndex);
+            router.push(`/student/modules/${moduleId}?lesson=${lessonIndex}`);
+        } catch (err) {
+            console.error('[ContinueLearning] Sidebar failed:', err);
             router.push('/student/modules');
         }
     };

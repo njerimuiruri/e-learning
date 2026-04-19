@@ -5,11 +5,17 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
+import { useEnrollmentProgress } from '@/hooks/useEnrollmentProgress';
 import moduleRatingService from '@/lib/api/moduleRatingService';
 import Navbar from '@/components/navbar/navbar';
 import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
 import LessonViewer from '@/components/student/LessonViewer';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // ── Smart video player (handles YouTube, Vimeo, and direct files) ─────────────
 function VideoPlayer({ url, className = '' }) {
@@ -96,7 +102,10 @@ function CircleProgress({ completed, progress, total, locked }) {
 function ModuleLearningContent() {
     const { id: moduleId } = useParams();
     const router = useRouter();
-    const openFinalAssessmentOnLoad = useSearchParams().get('showFinalAssessment') === 'true';
+    const searchParams = useSearchParams();
+    const openFinalAssessmentOnLoad = searchParams.get('showFinalAssessment') === 'true';
+    const lessonParamRaw = searchParams.get('lesson');
+    const lessonParam = lessonParamRaw !== null ? parseInt(lessonParamRaw, 10) : null;
 
     // Data state
     const [moduleData, setModuleData] = useState(null);
@@ -117,6 +126,8 @@ function ModuleLearningContent() {
     const [finalAnswers, setFinalAnswers] = useState({});
     const [finalAssessmentResult, setFinalAssessmentResult] = useState(null);
 
+    const [showContentComingSoon, setShowContentComingSoon] = useState(false);
+
     // UI state
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [activeTab, setActiveTab] = useState('outline');
@@ -124,6 +135,8 @@ function ModuleLearningContent() {
     const [darkMode, setDarkMode] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showIntroVideo, setShowIntroVideo] = useState(false); // shown first only if introVideoUrl exists
+    // Show module overview when entering without a ?lesson= deep-link (first visit / clicking from module card)
+    const [showModuleOverview, setShowModuleOverview] = useState(lessonParam === null && !openFinalAssessmentOnLoad);
     const containerRef = useRef(null);
 
     // Fullscreen
@@ -142,8 +155,8 @@ function ModuleLearningContent() {
         return () => document.removeEventListener('fullscreenchange', handler);
     }, []);
 
-    // Data fetch
-    useEffect(() => { if (moduleId) fetchModuleData(); }, [moduleId, openFinalAssessmentOnLoad]);
+    // ── Data fetch ─────────────────────────────────────────────────────────────
+    useEffect(() => { if (moduleId) fetchModuleData(); }, [moduleId]);
 
     const fetchModuleData = async () => {
         try {
@@ -154,14 +167,181 @@ function ModuleLearningContent() {
             ]);
             setModuleData(mod);
             setEnrollment(enrollmentData);
-            if (mod?.introVideoUrl) setShowIntroVideo(true); // only show intro screen if video exists
-            if (enrollmentData?.lastAccessedLesson != null) setCurrentLessonIndex(enrollmentData.lastAccessedLesson);
-            const allDone = enrollmentData?.completedLessons >= enrollmentData?.totalLessons && enrollmentData?.totalLessons > 0;
-            if (openFinalAssessmentOnLoad && allDone && !enrollmentData?.requiresModuleRepeat) setShowFinalAssessment(true);
+            console.log('[ModuleLearning] Module loaded | moduleId=', moduleId, '| enrollmentId=', enrollmentData?._id, '| lastAccessedLesson=', enrollmentData?.lastAccessedLesson);
         } catch (err) {
             setError('Failed to load module');
         } finally { setLoading(false); }
     };
+
+    // ── Server-driven progress (single source of truth) ────────────────────────
+    // All completion/accessibility state is derived from this hook.
+    // The hook re-fetches from the server after every mutation via refresh().
+    const {
+        progress: enrollmentProgress,
+        loading: progressLoading,
+        refresh: refreshProgress,
+        isCompleted: isLessonCompleted,
+        isAccessible: isLessonAccessibleFromServer,
+    } = useEnrollmentProgress(enrollment?._id);
+
+    // Pick which lesson to open whenever progress first loads.
+    // Runs once: when both module data and the first progress snapshot are available.
+    const progressInitialisedRef = useRef(false);
+    useEffect(() => {
+        if (!enrollmentProgress || !moduleData || progressInitialisedRef.current) return;
+        progressInitialisedRef.current = true;
+
+        const { lessonStates, nextLessonIndex, currentLessonIndex: serverLessonIndex, currentSlideIndex: serverSlideIndex, allLessonsCompleted, requiresModuleRepeat } = enrollmentProgress;
+
+        const completedLessonIds = (lessonStates || []).filter(ls => ls.isCompleted).map(ls => ls.lessonIndex);
+        console.log('[ModuleLearning] Progress retrieved from backend:', {
+            serverLessonIndex,
+            serverSlideIndex,
+            nextLessonIndex,
+            completedLessons: completedLessonIds,
+            allLessonsCompleted,
+            lessonStates: (lessonStates || []).map(ls => ({
+                index: ls.lessonIndex,
+                isCompleted: ls.isCompleted,
+                assessmentPassed: ls.assessmentPassed,
+                lastAccessedSlide: ls.lastAccessedSlide,
+                hasLastAnswers: !!(ls.lastAnswers),
+            })),
+        });
+
+        const canOpen = (idx) => {
+            const state = lessonStates?.[idx];
+            return !!(state?.isCompleted || state?.isAccessible);
+        };
+
+        // ── Best-position resolver ─────────────────────────────────────────────
+        // Priority order (most reliable first):
+        //  1. serverLessonIndex (currentLessonIndex from GET /progress) — the
+        //     backend already applies the correct priority logic: it returns
+        //     lastAccessedLesson when still accessible, else nextLessonIndex.
+        //     This is ALWAYS the authoritative resume point.
+        //  2. nextLessonIndex — fallback for fresh enrollments with no saved position.
+        //  3. Highest lesson in lessonStates with any access history.
+        //  4. Lesson 0, slide 0 — absolute fallback for brand-new enrollments.
+        const bestPosition = (() => {
+            // 1. Backend's authoritative currentLessonIndex/currentSlideIndex
+            if (Number.isInteger(serverLessonIndex) && lessonStates?.[serverLessonIndex]) {
+                const s = lessonStates[serverLessonIndex];
+                const slide = Number.isInteger(serverSlideIndex)
+                    ? serverSlideIndex
+                    : (s.lastAccessedSlide ?? 0);
+                console.log(
+                    `[ModuleLearning] bestPosition ← serverLessonIndex=${serverLessonIndex} slide=${slide}`,
+                );
+                return { lesson: serverLessonIndex, slide };
+            }
+            // 2. Next accessible incomplete lesson (fresh enrollment with no saved position)
+            if (nextLessonIndex != null) {
+                const slide = lessonStates?.[nextLessonIndex]?.lastAccessedSlide ?? 0;
+                console.log(
+                    `[ModuleLearning] bestPosition ← nextLessonIndex=${nextLessonIndex} slide=${slide}`,
+                );
+                return { lesson: nextLessonIndex, slide };
+            }
+            // 3. Highest lesson with any access history (scan from end)
+            if (Array.isArray(lessonStates)) {
+                for (let i = lessonStates.length - 1; i >= 0; i--) {
+                    const s = lessonStates[i];
+                    if (s?.isAccessible || s?.isCompleted || (s?.lastAccessedSlide ?? 0) > 0) {
+                        console.log(`[ModuleLearning] bestPosition ← history scan lesson=${i}`);
+                        return { lesson: i, slide: s?.lastAccessedSlide ?? 0 };
+                    }
+                }
+            }
+            // 4. Absolute fallback — fresh enrollment with zero progress
+            console.log('[ModuleLearning] bestPosition ← fallback lesson=0 slide=0');
+            return { lesson: 0, slide: 0 };
+        })();
+
+        console.log(
+            '[ModuleLearning] bestPosition resolved:', bestPosition,
+            '| serverLessonIndex=', serverLessonIndex,
+            '| serverSlideIndex=', serverSlideIndex,
+            '| nextLessonIndex=', nextLessonIndex,
+            '| lessonStates[serverLesson]?.lastAccessedSlide=', lessonStates?.[serverLessonIndex]?.lastAccessedSlide,
+        );
+
+        if (lessonParam !== null && !isNaN(lessonParam)) {
+            // Cross-check the ?lesson URL hint against authoritative server progress.
+            // The dashboard may generate a STALE ?lesson= link when the enrollment
+            // list data hasn't refreshed — never let a stale param send the student
+            // BACKWARD past where the server says they currently are.
+            const paramState = lessonStates?.[lessonParam];
+            const paramIsCompleted = !!paramState?.isCompleted;
+            const paramIsAccessible = !!paramState?.isAccessible;
+            const paramHasHistory = (paramState?.lastAccessedSlide ?? 0) > 0;
+
+            console.log(
+                `[ModuleLearning] ?lesson=${lessonParam} | completed=${paramIsCompleted} | accessible=${paramIsAccessible} | hasHistory=${paramHasHistory} | bestPosition.lesson=${bestPosition.lesson}`,
+            );
+
+            let resolvedLesson;
+            let resolvedSlide;
+
+            if (paramIsCompleted) {
+                // Completed lesson in URL (stale link) → advance to current position
+                resolvedLesson = bestPosition.lesson;
+                resolvedSlide = bestPosition.slide;
+                console.log(
+                    `[ModuleLearning] ?lesson=${lessonParam} already COMPLETED → using bestPosition lesson=${resolvedLesson} slide=${resolvedSlide}`,
+                );
+            } else if (paramIsAccessible || paramHasHistory) {
+                if (lessonParam < bestPosition.lesson) {
+                    // STALE backward link — the student is further ahead; use server position
+                    resolvedLesson = bestPosition.lesson;
+                    resolvedSlide = bestPosition.slide;
+                    console.warn(
+                        `[ModuleLearning] ?lesson=${lessonParam} is BEHIND serverLessonIndex=${bestPosition.lesson} → ignoring stale URL, using bestPosition lesson=${resolvedLesson} slide=${resolvedSlide}`,
+                    );
+                } else {
+                    // Accessible in-progress or equal-to-server lesson → restore slide
+                    resolvedLesson = lessonParam;
+                    resolvedSlide = paramState?.lastAccessedSlide ?? 0;
+                    console.log(
+                        `[ModuleLearning] ?lesson=${lessonParam} ${paramIsAccessible ? 'accessible' : 'locked-but-visited'} → restoring slide=${resolvedSlide}`,
+                    );
+                }
+            } else {
+                // Truly locked with no history → fall back to best known position
+                resolvedLesson = bestPosition.lesson;
+                resolvedSlide = bestPosition.slide;
+                console.log(
+                    `[ModuleLearning] ?lesson=${lessonParam} locked with no history → bestPosition lesson=${resolvedLesson} slide=${resolvedSlide}`,
+                );
+            }
+
+            console.log(`[ModuleLearning] FINAL REDIRECT → lesson=${resolvedLesson} (Lesson ${resolvedLesson + 1}) slide=${resolvedSlide} (Slide ${resolvedSlide + 1})`);
+            setCurrentLessonIndex(resolvedLesson);
+            setLiveSlideIndex(resolvedSlide);
+        } else {
+            // No URL param — restore directly from server progress.
+            const { lesson: restoredLessonIndex, slide: restoredSlideIndex } = bestPosition;
+
+            // Skip the module overview whenever the student has a saved position
+            // so they resume immediately without an extra click.
+            if (restoredLessonIndex > 0 || restoredSlideIndex > 0) {
+                setShowModuleOverview(false);
+                console.log(
+                    `[ModuleLearning] Auto-resuming — hiding overview | lessonIndex=${restoredLessonIndex} | slideIndex=${restoredSlideIndex}`,
+                );
+            }
+
+            console.log(
+                `[ModuleLearning] FINAL REDIRECT (no URL param) → lesson=${restoredLessonIndex} (Lesson ${restoredLessonIndex + 1}) slide=${restoredSlideIndex} (Slide ${restoredSlideIndex + 1}) | serverLessonIndex=${serverLessonIndex} | serverSlideIndex=${serverSlideIndex}`,
+            );
+            setCurrentLessonIndex(restoredLessonIndex);
+            setLiveSlideIndex(restoredSlideIndex);
+        }
+
+        if (openFinalAssessmentOnLoad && allLessonsCompleted && !requiresModuleRepeat) {
+            setShowFinalAssessment(true);
+        }
+    }, [enrollmentProgress, moduleData, lessonParam, openFinalAssessmentOnLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleDownload = async () => {
         if (downloading) return;
@@ -174,30 +354,90 @@ function ModuleLearningContent() {
         } finally { setDownloading(false); setDownloadProgress(0); }
     };
 
-    // Computed
+    // ── Computed ────────────────────────────────────────────────────────────────
     const lessons = moduleData?.lessons || [];
     const totalLessons = lessons.length;
     const currentLesson = lessons[currentLessonIndex];
 
-    const getLessonProgress = useCallback((index) => {
-        if (!enrollment?.lessonProgress) return null;
-        return enrollment.lessonProgress.find(lp => lp.lessonIndex === index);
-    }, [enrollment]);
+    // All completion/accessibility values come from the server via the hook.
+    // isLessonCompleted and isLessonAccessibleFromServer are already defined above.
+    const isLessonAccessible = useCallback(
+        (index) => isLessonAccessibleFromServer(index) || isLessonCompleted(index),
+        [isLessonAccessibleFromServer, isLessonCompleted],
+    );
+    const getLessonProgress = useCallback(
+        (lessonIndex) => {
+            const state = enrollmentProgress?.lessonStates?.[lessonIndex];
+            if (!state) return null;
+            return {
+                isCompleted: !!state.isCompleted,
+                assessmentAttempts: state.assessmentAttempts ?? 0,
+                assessmentPassed: !!state.assessmentPassed,
+                lastAccessedSlide: state.lastAccessedSlide ?? 0,
+                lastAnswers: state.lastAnswers ?? null,
+            };
+        },
+        [enrollmentProgress],
+    );
+    const initialSlideForCurrentLesson = Math.max(
+        0,
+        Math.min(
+            getLessonProgress(currentLessonIndex)?.lastAccessedSlide ?? liveSlideIndex ?? 0,
+            Math.max(0, (currentLesson?.slides?.length || 1) - 1),
+        ),
+    );
+    // This log fires on every render — useful to confirm what slide LessonViewer opens with
+    if (typeof window !== 'undefined' && currentLesson) {
+        console.log(
+            `[ModuleLearning] LessonViewer will open | lesson=${currentLessonIndex} (Lesson ${currentLessonIndex + 1}) | initialSlide=${initialSlideForCurrentLesson} (Slide ${initialSlideForCurrentLesson + 1}) | liveSlideIndex=${liveSlideIndex} | lastAccessedSlide(server)=${getLessonProgress(currentLessonIndex)?.lastAccessedSlide ?? 'none'} | assessmentPassed=${getLessonProgress(currentLessonIndex)?.assessmentPassed ?? false} | hasLastAnswers=${!!(getLessonProgress(currentLessonIndex)?.lastAnswers)}`,
+        );
+    }
 
-    const isLessonCompleted = useCallback((index) => getLessonProgress(index)?.isCompleted || false, [getLessonProgress]);
-    const isLessonAccessible = useCallback((index) => {
-        if (index === 0) return true;
-        const prevLesson = lessons[index - 1];
-        const prevLP = getLessonProgress(index - 1);
-        const hasQuiz = (prevLesson?.assessmentQuiz?.length ?? 0) > 0;
-        if (hasQuiz) return prevLP?.assessmentPassed === true;
-        return prevLP?.isCompleted === true;
-    }, [lessons, getLessonProgress]);
+    const moveToNextLesson = useCallback((freshProgress) => {
+        if (!lessons.length) return;
 
-    const completedCount = enrollment?.lessonProgress?.filter(lp => lp.isCompleted).length ?? 0;
-    const allLessonsCompleted = totalLessons > 0 && completedCount >= totalLessons && !enrollment?.requiresModuleRepeat;
-    // Compute progress locally so it updates in real-time as lessons are completed
-    const safeProgress = totalLessons > 0 ? Math.round((completedCount / totalLessons) * 100) : 0;
+        const contentFinalized = freshProgress?.isContentFinalized ?? false;
+
+        if (freshProgress?.allLessonsCompleted && !freshProgress?.requiresModuleRepeat) {
+            if (contentFinalized && moduleData?.finalAssessment) {
+                setShowFinalAssessment(true);
+            } else {
+                setShowContentComingSoon(true);
+            }
+            return;
+        }
+
+        const minForwardIndex = Math.min(currentLessonIndex + 1, Math.max(lessons.length - 1, 0));
+        const suggestedIndex = Number.isInteger(freshProgress?.nextLessonIndex)
+            ? freshProgress.nextLessonIndex
+            : minForwardIndex;
+        const nextForwardIndex = Math.max(minForwardIndex, suggestedIndex);
+
+        if (nextForwardIndex < lessons.length && nextForwardIndex !== currentLessonIndex) {
+            setCurrentLessonIndex(nextForwardIndex);
+            setLiveSlideIndex(0);
+            // Write lastAccessedLesson to the DB immediately so that if the student
+            // closes the browser right after advancing, they resume at the new lesson
+            // (not the completed one) on next login.
+            if (enrollment?._id) {
+                console.log(
+                    `[ModuleLearning] moveToNextLesson → saving lastAccessedLesson=${nextForwardIndex} to backend`,
+                );
+                moduleEnrollmentService
+                    .trackSlideProgress(enrollment._id, nextForwardIndex, 0, 0, false)
+                    .catch(() => { });
+            }
+        } else if (contentFinalized && moduleData?.finalAssessment) {
+            setShowFinalAssessment(true);
+        } else {
+            setShowContentComingSoon(true);
+        }
+    }, [currentLessonIndex, lessons.length, moduleData?.finalAssessment, enrollment?._id]);
+
+    // Progress numbers — always from the server snapshot, never derived locally.
+    const completedCount = enrollmentProgress?.completedLessons ?? 0;
+    const allLessonsCompleted = enrollmentProgress?.allLessonsCompleted ?? false;
+    const safeProgress = enrollmentProgress?.progress ?? 0;
 
     // All resources for resources tab
     const allResources = useMemo(() => {
@@ -230,23 +470,33 @@ function ModuleLearningContent() {
         );
     }, [moduleData, lessons, searchQuery, activeTab]);
 
-    // Lesson action handlers
+    // ── Lesson / assessment handlers ────────────────────────────────────────────
+    // Pattern for every mutation:
+    //  1. Call the API
+    //  2. Call refreshProgress() — re-fetches the authoritative state from the DB
+    //  3. Derive navigation from the fresh server response
+    // NEVER use the stale enrollment object from the mutation's response to update
+    // completion state — that document snapshot may be out of date.
+
     const handleCompleteLesson = async () => {
         if (!enrollment) return;
         try {
             setCompleting(true);
-            const result = await moduleEnrollmentService.completeLesson(enrollment._id, currentLessonIndex);
-            const updatedEnrollment = result.enrollment ?? result;
-            setEnrollment(updatedEnrollment);
+            // completeLesson now returns fresh progress (same shape as GET /progress)
+            const freshProgress = await moduleEnrollmentService.completeLesson(enrollment._id, currentLessonIndex);
+            // Sync the hook's state with the server response immediately
+            await refreshProgress();
+
             const lesson = lessons[currentLessonIndex];
-            if (lesson?.assessment?.questions?.length > 0) {
-                const lp = updatedEnrollment.lessonProgress?.find(lp => lp.lessonIndex === currentLessonIndex);
-                if (!lp?.assessmentPassed) { setShowLessonAssessment(true); return; }
+            const lessonState = freshProgress?.lessonStates?.[currentLessonIndex];
+
+            // If this lesson has a quiz and it hasn't been passed yet, show the quiz
+            if (lesson?.assessmentQuiz?.length > 0 && !lessonState?.assessmentPassed) {
+                setShowLessonAssessment(true);
+                return;
             }
-            const { navigateTo, nextLessonIndex } = result;
-            if (navigateTo === 'final_assessment') setShowFinalAssessment(true);
-            else if (navigateTo === 'next_lesson' && nextLessonIndex != null) setCurrentLessonIndex(nextLessonIndex);
-            else if (currentLessonIndex < totalLessons - 1) setCurrentLessonIndex(currentLessonIndex + 1);
+
+            moveToNextLesson(freshProgress);
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to mark lesson complete');
         } finally { setCompleting(false); }
@@ -258,11 +508,17 @@ function ModuleLearningContent() {
             setSubmittingAssessment(true);
             const answers = Object.entries(lessonAnswers).map(([idx, val]) => ({ questionIndex: parseInt(idx), answer: String(val) }));
             const result = await moduleEnrollmentService.submitLessonAssessment(enrollment._id, currentLessonIndex, answers);
-            setEnrollment(result.enrollment ?? result);
+
+            // Always re-fetch authoritative state after a quiz submission
+            await refreshProgress();
+
             if (result.passed) {
                 setShowLessonAssessment(false); setLessonAssessmentResult(null); setLessonAnswers({});
                 if (result.navigateTo === 'final_assessment') setShowFinalAssessment(true);
-                else if (result.navigateTo === 'next_lesson' && result.nextLessonIndex != null) setCurrentLessonIndex(result.nextLessonIndex);
+                else if (result.navigateTo === 'next_lesson' && result.nextLessonIndex != null) {
+                    const nextForwardIndex = Math.max(currentLessonIndex + 1, result.nextLessonIndex);
+                    if (nextForwardIndex < totalLessons) setCurrentLessonIndex(nextForwardIndex);
+                }
             } else {
                 setLessonAssessmentResult(result); setLessonAnswers({});
             }
@@ -278,21 +534,54 @@ function ModuleLearningContent() {
             const answers = Object.entries(finalAnswers).map(([idx, val]) => ({ questionIndex: parseInt(idx), answer: String(val) }));
             const result = await moduleEnrollmentService.submitFinalAssessment(enrollment._id, answers);
             setFinalAssessmentResult(result);
-            setEnrollment(result.enrollment ?? result);
+            // Re-fetch to reflect isCompleted / certificateEarned / requiresModuleRepeat changes
+            await refreshProgress();
         } catch (err) {
             alert(err.response?.data?.message || 'Failed to submit assessment');
         } finally { setSubmittingAssessment(false); }
     };
 
+    // Auto-submit lesson assessment (non-slide path) when all questions answered
+    useEffect(() => {
+        if (!showLessonAssessment || submittingAssessment || lessonAssessmentResult) return;
+        const questions = currentLesson?.assessment?.questions || [];
+        if (questions.length === 0) return;
+        const allAnswered = questions.every((_, i) => lessonAnswers[i] !== undefined && String(lessonAnswers[i]).trim() !== '');
+        if (allAnswered) handleSubmitLessonAssessment();
+    }, [lessonAnswers]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Auto-submit final assessment the moment all questions are answered (no Submit button needed)
+    useEffect(() => {
+        if (!showFinalAssessment || submittingAssessment || finalAssessmentResult) return;
+        const questions = moduleData?.finalAssessment?.questions || [];
+        if (questions.length === 0) return;
+        const allAnswered = questions.every((_, i) => finalAnswers[i] !== undefined && String(finalAnswers[i]).trim() !== '');
+        if (allAnswered) handleSubmitFinalAssessment();
+    }, [finalAnswers]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const navigateToLesson = (index) => {
         if (!isLessonAccessible(index) && !isLessonCompleted(index)) return;
+        const lp = enrollmentProgress?.lessonStates?.[index];
+        const restoredSlide = lp?.lastAccessedSlide ?? 0;
+        console.log(
+            `[ModuleLearning] Sidebar lesson click | lessonIndex=${index} | restoredSlide=${restoredSlide} | isCompleted=${!!lp?.isCompleted} | assessmentPassed=${!!lp?.assessmentPassed}`,
+        );
         setCurrentLessonIndex(index);
-        setLiveSlideIndex(0); // reset slide position for new lesson
+        setLiveSlideIndex(restoredSlide);
         setShowFinalAssessment(false);
         setShowLessonAssessment(false);
+        setShowModuleOverview(false);
+        setShowIntroVideo(false);
         setLessonAssessmentResult(null);
         setLessonAnswers({});
         if (window.innerWidth < 1024) setSidebarCollapsed(true);
+
+        // Persist lastAccessedLesson to backend by pinging slide progress at slide 0
+        // (slide 0 is always safe; actual slide is restored by LessonViewer via initialSlideIndex)
+        if (enrollment?._id) {
+            moduleEnrollmentService.trackSlideProgress(enrollment._id, index, restoredSlide, 0, false)
+                .catch(() => { }); // fire-and-forget, non-blocking
+        }
     };
 
     // Loading / error states
@@ -395,11 +684,25 @@ function ModuleLearningContent() {
                     {/* ── COURSE OUTLINE TAB ── */}
                     {activeTab === 'outline' && (
                         <div className="flex-1 overflow-y-auto">
+                            {/* Module Overview entry */}
+                            <div className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+                                <button
+                                    onClick={() => { setShowModuleOverview(true); setShowFinalAssessment(false); setShowIntroVideo(false); if (window.innerWidth < 1024) setSidebarCollapsed(true); }}
+                                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors
+                                        ${showModuleOverview
+                                            ? darkMode ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-[#021d49]'
+                                            : darkMode ? 'text-gray-300 hover:bg-gray-800' : 'text-gray-600 hover:bg-gray-50'
+                                        }`}
+                                >
+                                    <Icons.LayoutDashboard className="w-4 h-4 flex-shrink-0" />
+                                    Module Overview
+                                </button>
+                            </div>
                             {/* Intro Video entry */}
                             {moduleData?.introVideoUrl && (
                                 <div className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
                                     <button
-                                        onClick={() => { setShowIntroVideo(true); setShowFinalAssessment(false); if (window.innerWidth < 1024) setSidebarCollapsed(true); }}
+                                        onClick={() => { setShowIntroVideo(true); setShowModuleOverview(false); setShowFinalAssessment(false); if (window.innerWidth < 1024) setSidebarCollapsed(true); }}
                                         className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors
                                             ${showIntroVideo
                                                 ? darkMode ? 'bg-blue-900/20 text-green-400' : 'bg-blue-50 text-green-700'
@@ -434,7 +737,7 @@ function ModuleLearningContent() {
                                         My Knowledge Check
                                     </span>
                                     <div className="flex items-center gap-1.5">
-                                        {enrollment?.finalAssessmentPassed && <Icons.CheckCircle className="w-3.5 h-3.5 text-green-500" />}
+                                        {enrollmentProgress?.finalAssessmentPassed && <Icons.CheckCircle className="w-3.5 h-3.5 text-green-500" />}
                                         <Icons.RefreshCw className="w-3.5 h-3.5 text-gray-400" />
                                     </div>
                                 </button>
@@ -456,19 +759,29 @@ function ModuleLearningContent() {
                                 </p>
                             </div>
 
+                            {/* Empty module state */}
+                            {lessons.length === 0 && !progressLoading && (
+                                <div className={`py-10 text-center px-4 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    <Icons.BookOpen className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                                    <p className="text-sm font-medium">Content coming soon</p>
+                                    <p className="text-xs mt-1">Lessons for this module haven't been added yet.</p>
+                                </div>
+                            )}
+
                             {/* Lesson list */}
                             {filteredLessons.map(({ lesson, idx }) => {
                                 const completed = isLessonCompleted(idx);
-                                const accessible = isLessonAccessible(idx) || completed;
+                                const accessible = isLessonAccessible(idx);
                                 const isCurrent = idx === currentLessonIndex && !showFinalAssessment;
-                                const locked = !accessible;
-                                const lp = enrollment?.lessonProgress?.find(lp => lp.lessonIndex === idx);
-                                const completedSlideCount = (Array.isArray(lp?.slideProgress) ? lp.slideProgress : []).filter(sp => sp.isCompleted).length || 0;
+                                const locked = !accessible && !completed;
+                                // Slide progress: use the server-side lessonState for completed count
+                                const lessonState = enrollmentProgress?.lessonStates?.[idx];
                                 const totalSlides = lesson.slides?.length || 0;
-                                // If lesson is completed, show total slides; otherwise show live position or server count
+                                const completedSlideCount = completed ? totalSlides : 0;
+                                // If this is the active lesson, show live slide position
                                 const displayedSlideCount = completed
                                     ? totalSlides
-                                    : isCurrent ? Math.max(completedSlideCount, liveSlideIndex + 1) : completedSlideCount;
+                                    : isCurrent ? liveSlideIndex + 1 : completedSlideCount;
 
                                 return (
                                     <button
@@ -488,10 +801,10 @@ function ModuleLearningContent() {
                                             <CircleProgress completed={completed} progress={displayedSlideCount} total={totalSlides} isCurrent={isCurrent} locked={locked} />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className={`text-sm leading-snug ${isCurrent ? `font-bold ${darkMode ? 'text-[#93c5fd]' : 'text-[#021d49]'}`
-                                                    : completed ? darkMode ? 'font-medium text-gray-300' : 'font-medium text-gray-700'
-                                                        : locked ? 'text-gray-400'
-                                                            : darkMode ? 'font-medium text-gray-300' : 'font-medium text-gray-600'
+                                            <p className={`text-sm leading-snug break-words ${isCurrent ? `font-bold ${darkMode ? 'text-[#93c5fd]' : 'text-[#021d49]'}`
+                                                : completed ? darkMode ? 'font-medium text-gray-300' : 'font-medium text-gray-700'
+                                                    : locked ? 'text-gray-400'
+                                                        : darkMode ? 'font-medium text-gray-300' : 'font-medium text-gray-600'
                                                 }`}>
                                                 {lesson.title || `Lesson ${idx + 1}`}
                                             </p>
@@ -612,7 +925,7 @@ function ModuleLearningContent() {
                         </button>
                         <div className={`w-px h-5 flex-shrink-0 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
                         <p className={`flex-1 text-sm font-semibold truncate ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                            {showIntroVideo && moduleData?.introVideoUrl ? 'Module Introduction' : showFinalAssessment ? 'Final Assessment' : currentLesson?.title || `Lesson ${currentLessonIndex + 1}`}
+                            {showModuleOverview ? moduleData?.title || 'Module Overview' : showIntroVideo && moduleData?.introVideoUrl ? 'Module Introduction' : showFinalAssessment ? 'Final Assessment' : currentLesson?.title || `Lesson ${currentLessonIndex + 1}`}
                         </p>
                         <div className="flex items-center gap-0.5 flex-shrink-0">
                             <button
@@ -633,8 +946,35 @@ function ModuleLearningContent() {
                         </div>
                     </div>
 
+                    {/* ── MODULE OVERVIEW ── */}
+                    {showModuleOverview && !showFinalAssessment && (
+                        <ModuleOverviewPanel
+                            module={moduleData}
+                            lessons={lessons}
+                            completedLessonIndices={new Set(
+                                (enrollmentProgress?.lessonStates || [])
+                                    .filter(state => state?.isCompleted)
+                                    .map(state => state.lessonIndex),
+                            )}
+                            progress={safeProgress}
+                            completedCount={completedCount}
+                            totalLessons={totalLessons}
+                            darkMode={darkMode}
+                            onBeginLearning={() => {
+                                setShowModuleOverview(false);
+                                if (moduleData?.introVideoUrl) {
+                                    setShowIntroVideo(true);
+                                }
+                            }}
+                            onGoToLesson={(idx) => {
+                                setShowModuleOverview(false);
+                                navigateToLesson(idx);
+                            }}
+                        />
+                    )}
+
                     {/* ── INTRO VIDEO ── */}
-                    {showIntroVideo && moduleData?.introVideoUrl && !showFinalAssessment && (
+                    {!showModuleOverview && showIntroVideo && moduleData?.introVideoUrl && !showFinalAssessment && (
                         <div className={`flex-1 flex flex-col items-center justify-center overflow-y-auto px-4 py-8 ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
                             <div className="w-full max-w-3xl space-y-5">
                                 <div>
@@ -662,7 +1002,7 @@ function ModuleLearningContent() {
                     )}
 
                     {/* ── FINAL ASSESSMENT ── */}
-                    {!showIntroVideo && showFinalAssessment && (
+                    {!showModuleOverview && !showIntroVideo && showFinalAssessment && (
                         <div className={`flex-1 overflow-y-auto ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
                             <div className="max-w-3xl mx-auto px-4 py-8">
                                 <FinalAssessmentPanel
@@ -672,7 +1012,6 @@ function ModuleLearningContent() {
                                     setFinalAnswers={setFinalAnswers}
                                     finalAssessmentResult={finalAssessmentResult}
                                     submitting={submittingAssessment}
-                                    onSubmit={handleSubmitFinalAssessment}
                                     onGoToLessons={() => { setShowFinalAssessment(false); setCurrentLessonIndex(0); setFinalAnswers({}); setFinalAssessmentResult(null); }}
                                     router={router}
                                 />
@@ -680,8 +1019,32 @@ function ModuleLearningContent() {
                         </div>
                     )}
 
+                    {/* ── CONTENT COMING SOON ── */}
+                    {!showModuleOverview && !showIntroVideo && !showFinalAssessment && showContentComingSoon && (
+                        <div className={`flex-1 flex flex-col items-center justify-center px-6 py-16 text-center ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+                            <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${darkMode ? 'bg-gray-800' : 'bg-blue-50'}`}>
+                                <Icons.Clock className={`w-10 h-10 ${darkMode ? 'text-blue-400' : 'text-[#021d49]'}`} />
+                            </div>
+                            <h2 className={`text-2xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                You're all caught up!
+                            </h2>
+                            <p className={`text-sm mb-2 max-w-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                You've completed all available lessons in this module.
+                            </p>
+                            <p className={`text-sm font-semibold max-w-sm ${darkMode ? 'text-blue-400' : 'text-[#021d49]'}`}>
+                                Content coming soon — check back later for new lessons.
+                            </p>
+                            <button
+                                onClick={() => { setShowContentComingSoon(false); setCurrentLessonIndex(0); }}
+                                className="mt-8 px-6 py-2.5 rounded-xl bg-[#021d49] hover:bg-[#032a66] text-white text-sm font-semibold transition-all"
+                            >
+                                Review Lessons
+                            </button>
+                        </div>
+                    )}
+
                     {/* ── LESSON VIEW ── */}
-                    {!showIntroVideo && !showFinalAssessment && currentLesson && (
+                    {!showModuleOverview && !showIntroVideo && !showFinalAssessment && !showContentComingSoon && currentLesson && (
                         <>
                             {/* Slide-based lesson: scrollable LessonViewer */}
                             {hasSlides && (
@@ -692,49 +1055,54 @@ function ModuleLearningContent() {
                                         lessonIndex={currentLessonIndex}
                                         totalLessons={totalLessons}
                                         enrollment={enrollment}
+                                        initialSlideIndex={initialSlideForCurrentLesson}
                                         isAlreadyCompleted={isLessonCompleted(currentLessonIndex)}
+                                        assessmentPassed={getLessonProgress(currentLessonIndex)?.assessmentPassed ?? false}
+                                        lastAnswers={getLessonProgress(currentLessonIndex)?.lastAnswers ?? null}
                                         darkMode={darkMode}
-                                        onSlideChange={(idx) => setLiveSlideIndex(idx)}
-                                        onLessonComplete={async () => {
-                                            try {
-                                                const result = await moduleEnrollmentService.completeLesson(enrollment._id, currentLessonIndex);
-                                                const upd = result.enrollment ?? result;
-                                                setEnrollment(upd);
-                                                setLiveSlideIndex(0);
-                                                if (result.navigateTo === 'next_lesson' && result.nextLessonIndex != null) {
-                                                    setCurrentLessonIndex(result.nextLessonIndex);
-                                                } else if (result.navigateTo === 'final_assessment') {
-                                                    setShowFinalAssessment(true);
-                                                } else if (currentLessonIndex < totalLessons - 1) {
-                                                    setCurrentLessonIndex(currentLessonIndex + 1);
-                                                } else {
-                                                    setShowFinalAssessment(true);
-                                                }
-                                            } catch (err) {
-                                                console.error('Failed to complete lesson:', err);
-                                                // Fallback: navigate anyway
-                                                setLiveSlideIndex(0);
-                                                if (currentLessonIndex < totalLessons - 1) {
-                                                    setCurrentLessonIndex(currentLessonIndex + 1);
-                                                } else {
-                                                    setShowFinalAssessment(true);
-                                                }
+                                        onSlideChange={(idx) => {
+                                            setLiveSlideIndex(idx);
+                                            // Persist position immediately on every slide change.
+                                            // This guarantees the exact slide is always written even
+                                            // if the student closes the browser right after.
+                                            console.log(
+                                                `[ModuleLearning] onSlideChange FIRED → saving to backend | lessonId=${currentLessonIndex} (Lesson ${currentLessonIndex + 1}) | slideIndex=${idx} (Slide ${idx + 1}) | enrollmentId=${enrollment?._id}`,
+                                            );
+                                            if (enrollment?._id) {
+                                                moduleEnrollmentService
+                                                    .trackSlideProgress(enrollment._id, currentLessonIndex, idx, 0, false)
+                                                    .then(() => console.log(`[ModuleLearning] Slide position SAVED ✓ | lesson=${currentLessonIndex + 1} slide=${idx + 1}`))
+                                                    .catch((err) => console.error(`[ModuleLearning] Slide position SAVE FAILED ✗ | lesson=${currentLessonIndex + 1} slide=${idx + 1} | error=`, err?.message));
                                             }
                                         }}
-                                        onAssessmentComplete={(res) => {
-                                            // Only update enrollment state — navigation is triggered by
-                                            // the modal's "Continue" button (via onLessonComplete above).
-                                            setEnrollment(res.enrollment ?? res);
+                                        onLessonComplete={async () => {
+                                            console.log(
+                                                `[ModuleLearning] onLessonComplete | completing lesson=${currentLessonIndex + 1} | enrollmentId=${enrollment._id}`,
+                                            );
+                                            try {
+                                                const freshProgress = await moduleEnrollmentService.completeLesson(enrollment._id, currentLessonIndex);
+                                                console.log(
+                                                    `[ModuleLearning] Lesson ${currentLessonIndex + 1} marked complete ✓ | nextLessonIndex=${freshProgress?.nextLessonIndex} | allDone=${freshProgress?.allLessonsCompleted}`,
+                                                );
+                                                await refreshProgress();
+                                                setLiveSlideIndex(0);
+                                                moveToNextLesson(freshProgress);
+                                            } catch (err) {
+                                                console.error('[ModuleLearning] completeLesson FAILED ✗ | lesson=', currentLessonIndex + 1, '| error=', err?.response?.data?.message || err?.message);
+                                                await refreshProgress();
+                                                setLiveSlideIndex(0);
+                                                if (currentLessonIndex < totalLessons - 1) setCurrentLessonIndex(currentLessonIndex + 1);
+                                            }
+                                        }}
+                                        onAssessmentComplete={async (result) => {
+                                            console.log(
+                                                `[ModuleLearning] onAssessmentComplete | lesson=${currentLessonIndex + 1} | passed=${result?.passed} | score=${result?.score}% | refreshing progress from backend`,
+                                            );
+                                            await refreshProgress();
                                         }}
                                         onLessonReset={async () => {
-                                            // Called when student exhausts all quiz attempts —
-                                            // re-fetch enrollment so progress reflects the server reset.
-                                            try {
-                                                const fresh = await moduleEnrollmentService.getMyEnrollmentForModule(moduleId);
-                                                setEnrollment(fresh);
-                                            } catch (err) {
-                                                console.error('Failed to refresh enrollment after lesson reset:', err);
-                                            }
+                                            // Quiz attempts exhausted — re-sync progress from server
+                                            await refreshProgress();
                                         }}
                                     />
                                 </div>
@@ -792,7 +1160,6 @@ function ModuleLearningContent() {
                                                 result={lessonAssessmentResult}
                                                 lessonProgress={getLessonProgress(currentLessonIndex)}
                                                 submitting={submittingAssessment}
-                                                onSubmit={handleSubmitLessonAssessment}
                                                 onBackToLesson={() => { setShowLessonAssessment(false); setLessonAssessmentResult(null); setLessonAnswers({}); }}
                                             />
                                         )}
@@ -909,8 +1276,333 @@ function ModuleLearningContent() {
     );
 }
 
+// ── Module Overview Panel ──────────────────────────────────────────────────────
+function ModuleOverviewPanel({ module: mod, lessons, completedLessonIndices, progress, completedCount, totalLessons, darkMode, onBeginLearning, onGoToLesson }) {
+    const stripHtmlLocal = (html) => {
+        if (!html) return '';
+        return String(html)
+            .replace(/<[^>]*>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+
+    const dm = darkMode;
+    const hasAnyProgress = completedCount > 0;
+    const allDone = totalLessons > 0 && completedCount >= totalLessons;
+    const nextLessonIndex = (() => {
+        for (let i = 0; i < totalLessons; i++) {
+            if (!completedLessonIndices.has(i)) return i;
+        }
+        return 0;
+    })();
+
+    const infoSections = [
+        { key: 'learningObjectives', label: 'Learning Objectives', icon: 'Target', accent: 'text-blue-600', dot: 'bg-blue-500' },
+        { key: 'learningOutcomes', label: 'Expected Outcomes', icon: 'GraduationCap', accent: 'text-emerald-600', dot: 'bg-emerald-500' },
+        { key: 'moduleTopics', label: 'Module Content', icon: 'BookOpen', accent: 'text-violet-600', dot: 'bg-violet-500' },
+        { key: 'coreReadingMaterials', label: 'Core Reading Materials', icon: 'BookMarked', accent: 'text-amber-600', dot: 'bg-amber-500' },
+        { key: 'capstone', label: 'Capstone Project', icon: 'Sparkles', accent: 'text-rose-600', dot: 'bg-rose-500' },
+    ].filter(s => stripHtmlLocal(mod?.[s.key]));
+
+    const levelVariant = { beginner: 'secondary', intermediate: 'outline', advanced: 'destructive' }[mod?.level] || 'secondary';
+    const levelClass = {
+        beginner: 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-50',
+        intermediate: 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50',
+        advanced: 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-50',
+    }[mod?.level] || 'bg-gray-100 text-gray-600 border-gray-200';
+
+    const base = dm
+        ? { bg: 'bg-gray-950', card: 'bg-gray-900 border-gray-800', muted: 'bg-gray-800', text: 'text-gray-100', sub: 'text-gray-400', border: 'border-gray-800' }
+        : { bg: 'bg-slate-50', card: 'bg-white border-gray-200', muted: 'bg-slate-50', text: 'text-gray-900', sub: 'text-gray-500', border: 'border-gray-100' };
+
+    return (
+        <ScrollArea className={`flex-1 h-full ${base.bg}`}>
+            <div className="max-w-3xl mx-auto px-5 py-8 space-y-5">
+
+                {/* ── Hero card ── */}
+                <Card className={`border shadow-sm ${base.card}`}>
+                    <CardContent className="p-6">
+                        {/* Badges row */}
+                        <div className="flex flex-wrap items-center gap-2 mb-4">
+                            <Badge className={`capitalize text-xs font-semibold px-2.5 py-0.5 border ${levelClass}`}>
+                                {mod?.level || 'beginner'}
+                            </Badge>
+                            {mod?.duration && (
+                                <Badge variant="outline" className={`gap-1 text-xs font-medium ${dm ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-500'}`}>
+                                    <Icons.Clock className="w-3 h-3" />{mod.duration}
+                                </Badge>
+                            )}
+                            {totalLessons > 0 && (
+                                <Badge variant="outline" className={`gap-1 text-xs font-medium ${dm ? 'border-gray-700 text-gray-300' : 'border-gray-200 text-gray-500'}`}>
+                                    <Icons.BookOpen className="w-3 h-3" />{totalLessons} lesson{totalLessons !== 1 ? 's' : ''}
+                                </Badge>
+                            )}
+                            {allDone && (
+                                <Badge className="gap-1 text-xs bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                                    <Icons.CheckCircle2 className="w-3 h-3" />Completed
+                                </Badge>
+                            )}
+                        </div>
+
+                        {/* Title */}
+                        <h1 className={`text-2xl font-bold leading-tight tracking-tight mb-3 ${base.text} break-words`}>
+                            {mod?.title}
+                        </h1>
+
+                        {/* Description */}
+                        {mod?.description && (
+                            <p className={`text-sm leading-relaxed ${base.sub} break-words`}>
+                                {stripHtmlLocal(mod.description)}
+                            </p>
+                        )}
+
+                        {/* Progress bar */}
+                        {hasAnyProgress && (
+                            <>
+                                <Separator className={`my-4 ${base.border}`} />
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className={`text-xs font-semibold uppercase tracking-wide ${base.sub}`}>Your Progress</span>
+                                        <span className={`text-xs font-bold tabular-nums ${base.text}`}>{completedCount} / {totalLessons} lessons · {progress}%</span>
+                                    </div>
+                                    <Progress value={progress} className="h-2" />
+                                </div>
+                            </>
+                        )}
+
+                        {/* CTA buttons */}
+                        <div className="flex flex-col sm:flex-row gap-2 mt-5">
+                            <Button
+                                onClick={() => onGoToLesson(nextLessonIndex)}
+                                className="flex-1 gap-2 bg-[#021d49] hover:bg-[#032a66] text-white font-semibold"
+                            >
+                                <Icons.Play className="w-4 h-4" />
+                                {allDone ? 'Review Module' : hasAnyProgress ? `Continue — Lesson ${nextLessonIndex + 1}` : 'Begin Learning'}
+                            </Button>
+                            {mod?.introVideoUrl && (
+                                <Button
+                                    variant="outline"
+                                    onClick={onBeginLearning}
+                                    className={`flex-1 gap-2 ${dm ? 'border-gray-700 text-gray-300 hover:bg-gray-800' : ''}`}
+                                >
+                                    <Icons.PlayCircle className="w-4 h-4 text-emerald-600" /> Watch Intro
+                                </Button>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* ── Audience + Prerequisites ── */}
+                {(mod?.targetAudience?.length > 0 || mod?.prerequisites?.length > 0) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {mod?.targetAudience?.length > 0 && (
+                            <Card className={`border shadow-sm ${base.card}`}>
+                                <CardHeader className="pb-2 pt-4 px-5">
+                                    <div className="flex items-center gap-2">
+                                        <Icons.Users className={`w-4 h-4 text-blue-500`} />
+                                        <span className={`text-xs font-bold uppercase tracking-wider ${base.sub}`}>Who This Is For</span>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="px-5 pb-4 pt-1">
+                                    <ul className="space-y-2">
+                                        {mod.targetAudience.map((item, i) => (
+                                            <li key={i} className={`flex items-start gap-2 text-sm leading-snug ${base.text}`}>
+                                                <Icons.CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                                <span className="flex-1">{item}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </CardContent>
+                            </Card>
+                        )}
+                        {mod?.prerequisites?.length > 0 && (
+                            <Card className={`border shadow-sm ${base.card}`}>
+                                <CardHeader className="pb-2 pt-4 px-5">
+                                    <div className="flex items-center gap-2">
+                                        <Icons.ListChecks className={`w-4 h-4 text-amber-500`} />
+                                        <span className={`text-xs font-bold uppercase tracking-wider ${base.sub}`}>Prerequisites</span>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="px-5 pb-4 pt-1">
+                                    <ul className="space-y-2">
+                                        {mod.prerequisites.map((item, i) => (
+                                            <li key={i} className={`flex items-start gap-2 text-sm leading-snug ${base.text}`}>
+                                                <Icons.Dot className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0" />
+                                                <span className="flex-1">{item}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
+                )}
+
+                {/* ── Rich text info sections ── */}
+                {infoSections.length > 0 && (
+                    <Card className={`border shadow-sm ${base.card}`}>
+                        <CardContent className="p-0 divide-y ${base.border}">
+                            {infoSections.map(({ key, label, icon, accent, dot }, idx) => {
+                                const IconComp = Icons[icon];
+                                const content = mod?.[key];
+                                const isHtml = /<[a-z][\s\S]*>/i.test(content);
+                                return (
+                                    <div key={key} className="px-6 py-5">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${dot}`} />
+                                            {IconComp && <IconComp className={`w-4 h-4 flex-shrink-0 ${accent}`} />}
+                                            <span className={`text-xs font-bold uppercase tracking-wider ${base.sub}`}>{label}</span>
+                                        </div>
+                                        {isHtml ? (
+                                            <div className={`prose prose-sm max-w-none
+                                                prose-p:leading-relaxed prose-p:my-1.5
+                                                prose-headings:font-semibold prose-headings:mt-3 prose-headings:mb-1.5
+                                                prose-li:leading-relaxed prose-li:my-0.5
+                                                prose-ul:my-2 prose-ol:my-2
+                                                prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+                                                ${dm ? 'prose-invert prose-p:text-gray-300 prose-li:text-gray-300' : 'prose-slate prose-p:text-gray-700'}`}
+                                                dangerouslySetInnerHTML={{ __html: content }}
+                                            />
+                                        ) : (
+                                            <p className={`text-sm leading-relaxed ${dm ? 'text-gray-300' : 'text-gray-700'} break-words`}>{content}</p>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* ── Lesson list ── */}
+                {lessons.length > 0 && (
+                    <Card className={`border shadow-sm ${base.card}`}>
+                        <CardHeader className="pb-0 pt-5 px-5">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Icons.LayoutList className={`w-4 h-4 ${dm ? 'text-gray-400' : 'text-gray-500'}`} />
+                                    <span className={`text-xs font-bold uppercase tracking-wider ${base.sub}`}>Lessons</span>
+                                </div>
+                                <Badge variant="outline" className={`text-xs ${dm ? 'border-gray-700 text-gray-400' : 'text-gray-400 border-gray-200'}`}>
+                                    {completedCount}/{lessons.length} done
+                                </Badge>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-3 pb-2 px-3">
+                            <div className="space-y-1">
+                                {lessons.map((lesson, i) => {
+                                    const completed = completedLessonIndices.has(i);
+                                    const isNext = i === nextLessonIndex && !allDone;
+                                    return (
+                                        <button
+                                            key={i}
+                                            onClick={() => onGoToLesson(i)}
+                                            className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left transition-colors group
+                                                ${completed
+                                                    ? dm ? 'hover:bg-gray-800/70' : 'hover:bg-gray-50'
+                                                    : isNext
+                                                        ? dm
+                                                            ? 'bg-[#021d49]/25 border border-[#021d49]/30 hover:bg-[#021d49]/35'
+                                                            : 'bg-[#021d49]/5 border border-[#021d49]/15 hover:bg-[#021d49]/10'
+                                                        : dm ? 'hover:bg-gray-800/50' : 'hover:bg-slate-50'
+                                                }`}
+                                        >
+                                            {/* Number / check bubble */}
+                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold transition-colors
+                                                ${completed
+                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                    : isNext
+                                                        ? 'bg-[#021d49] text-white'
+                                                        : dm ? 'bg-gray-800 text-gray-400 border border-gray-700' : 'bg-gray-100 text-gray-500'
+                                                }`}>
+                                                {completed ? <Icons.Check className="w-3.5 h-3.5" /> : i + 1}
+                                            </div>
+
+                                            {/* Text block */}
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-sm font-semibold leading-snug truncate ${dm ? 'text-gray-100' : 'text-gray-800'}`}>
+                                                    {lesson.title || `Lesson ${i + 1}`}
+                                                </p>
+                                                {lesson.description && (
+                                                    <p className={`text-xs mt-0.5 line-clamp-1 leading-relaxed ${dm ? 'text-gray-500' : 'text-gray-400'}`}>
+                                                        {stripHtmlLocal(lesson.description)}
+                                                    </p>
+                                                )}
+                                                {/* Pills */}
+                                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                                    {lesson.slides?.length > 0 && (
+                                                        <span className={`inline-flex items-center gap-1 text-[11px] ${dm ? 'text-gray-500' : 'text-gray-400'}`}>
+                                                            <Icons.Layers className="w-3 h-3" />{lesson.slides.length} slide{lesson.slides.length !== 1 ? 's' : ''}
+                                                        </span>
+                                                    )}
+                                                    {lesson.assessmentQuiz?.length > 0 && (
+                                                        <span className={`inline-flex items-center gap-1 text-[11px] ${dm ? 'text-violet-400' : 'text-violet-600'}`}>
+                                                            <Icons.HelpCircle className="w-3 h-3" />Quiz
+                                                        </span>
+                                                    )}
+                                                    {lesson.duration && (
+                                                        <span className={`inline-flex items-center gap-1 text-[11px] ${dm ? 'text-gray-500' : 'text-gray-400'}`}>
+                                                            <Icons.Clock className="w-3 h-3" />{lesson.duration}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Right side */}
+                                            <div className="flex-shrink-0">
+                                                {completed ? (
+                                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${dm ? 'bg-emerald-900/40 text-emerald-400' : 'bg-emerald-50 text-emerald-600'}`}>Done</span>
+                                                ) : isNext ? (
+                                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${dm ? 'bg-blue-900/40 text-blue-300' : 'bg-[#021d49]/10 text-[#021d49]'}`}>Up next</span>
+                                                ) : (
+                                                    <Icons.ChevronRight className={`w-4 h-4 opacity-0 group-hover:opacity-60 transition-opacity ${dm ? 'text-gray-400' : 'text-gray-400'}`} />
+                                                )}
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                <div className="pb-6" />
+            </div>
+        </ScrollArea>
+    );
+}
+
+// ── Auto-submit status indicator (replaces Submit button) ─────────────────────
+function AutoSubmitIndicator({ answered, total, submitting }) {
+    const allDone = total > 0 && answered >= total;
+    return (
+        <div className={`rounded-xl p-3 flex items-center gap-3 ${allDone || submitting ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'}`}>
+            {submitting || allDone ? (
+                <>
+                    <Icons.Loader2 className="w-4 h-4 animate-spin text-green-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-green-700">
+                        {submitting ? 'Evaluating your answers…' : 'All answered — submitting automatically…'}
+                    </span>
+                </>
+            ) : (
+                <>
+                    <Icons.HelpCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <span className="text-sm text-gray-500">
+                        {answered} of {total} answered — submits automatically when complete
+                    </span>
+                </>
+            )}
+        </div>
+    );
+}
+
 // ── Lesson Assessment Panel ────────────────────────────────────────────────────
-function LessonAssessmentPanel({ assessment, lessonAnswers, setLessonAnswers, result, lessonProgress, submitting, onSubmit, onBackToLesson }) {
+function LessonAssessmentPanel({ assessment, lessonAnswers, setLessonAnswers, result, lessonProgress, submitting, onBackToLesson }) {
     if (!assessment) return null;
     const maxAttempts = assessment.maxAttempts || 3;
     const hasResult = result != null;
@@ -968,17 +1660,14 @@ function LessonAssessmentPanel({ assessment, lessonAnswers, setLessonAnswers, re
                             <Icons.AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
                             <div>
                                 <p className="font-semibold text-orange-800">Attempt {attemptJustMade} of {maxAttempts} — Score: {result.score?.toFixed(1)}%</p>
-                                {displayRemaining > 0 && <p className="text-sm text-orange-700 mt-0.5">{displayRemaining} attempt{displayRemaining !== 1 ? 's' : ''} remaining</p>}
+                                {displayRemaining > 0 && <p className="text-sm text-orange-700 mt-0.5">{displayRemaining} attempt{displayRemaining !== 1 ? 's' : ''} remaining — answer all questions to retry automatically</p>}
                             </div>
                         </div>
                         <div className="space-y-4">
                             {assessment.questions?.map((q, qIdx) => (
                                 <QuestionRenderer key={qIdx} question={q} index={qIdx} answer={lessonAnswers[qIdx]} onChange={(val) => setLessonAnswers(prev => ({ ...prev, [qIdx]: val }))} />
                             ))}
-                            <Button onClick={onSubmit} disabled={submitting || !allAnswered} className="w-full bg-orange-600 hover:bg-orange-700 text-white gap-2 h-12 text-base">
-                                {submitting ? <Icons.Loader2 className="w-5 h-5 animate-spin" /> : <Icons.RotateCcw className="w-5 h-5" />}
-                                Retry ({displayRemaining} left)
-                            </Button>
+                            <AutoSubmitIndicator answered={Object.keys(lessonAnswers).filter(k => String(lessonAnswers[k]).trim() !== '').length} total={assessment.questions?.length || 0} submitting={submitting} />
                         </div>
                     </>
                 )}
@@ -987,10 +1676,7 @@ function LessonAssessmentPanel({ assessment, lessonAnswers, setLessonAnswers, re
                         {assessment.questions?.map((q, qIdx) => (
                             <QuestionRenderer key={qIdx} question={q} index={qIdx} answer={lessonAnswers[qIdx]} onChange={(val) => setLessonAnswers(prev => ({ ...prev, [qIdx]: val }))} />
                         ))}
-                        <Button onClick={onSubmit} disabled={submitting || !allAnswered} className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 h-12 text-base">
-                            {submitting ? <Icons.Loader2 className="w-5 h-5 animate-spin" /> : <Icons.Send className="w-5 h-5" />}
-                            Submit Assessment
-                        </Button>
+                        <AutoSubmitIndicator answered={Object.keys(lessonAnswers).filter(k => String(lessonAnswers[k]).trim() !== '').length} total={assessment.questions?.length || 0} submitting={submitting} />
                     </div>
                 )}
             </div>
@@ -999,7 +1685,7 @@ function LessonAssessmentPanel({ assessment, lessonAnswers, setLessonAnswers, re
 }
 
 // ── Final Assessment Panel ─────────────────────────────────────────────────────
-function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswers, finalAssessmentResult, submitting, onSubmit, onGoToLessons, router }) {
+function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswers, finalAssessmentResult, submitting, onGoToLessons, router }) {
     const assessment = module.finalAssessment;
     const hasResult = finalAssessmentResult != null;
     const passed = enrollment.finalAssessmentPassed || finalAssessmentResult?.passed;
@@ -1081,17 +1767,14 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
                 )}
                 {canAttempt && (
                     <div className="space-y-4">
+                        <AutoSubmitIndicator
+                            answered={Object.keys(finalAnswers).filter(k => String(finalAnswers[k]).trim() !== '').length}
+                            total={assessment.questions?.length || 0}
+                            submitting={submitting}
+                        />
                         {assessment.questions?.map((q, qIdx) => (
                             <QuestionRenderer key={qIdx} question={q} index={qIdx} answer={finalAnswers[qIdx]} onChange={(val) => setFinalAnswers(prev => ({ ...prev, [qIdx]: val }))} />
                         ))}
-                        <Button
-                            onClick={onSubmit}
-                            disabled={submitting || Object.keys(finalAnswers).length < (assessment.questions?.length || 0)}
-                            className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 h-12 text-base"
-                        >
-                            {submitting ? <Icons.Loader2 className="w-5 h-5 animate-spin" /> : hasResult ? <Icons.RotateCcw className="w-5 h-5" /> : <Icons.Send className="w-5 h-5" />}
-                            {hasResult ? `Retry (${displayRemaining} attempt${displayRemaining !== 1 ? 's' : ''} left)` : 'Submit Final Assessment'}
-                        </Button>
                     </div>
                 )}
             </div>

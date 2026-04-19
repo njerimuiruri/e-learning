@@ -1235,28 +1235,59 @@ function ResourcesTab({ resources = [], onChange, disabled }) {
   );
 }
 
+// ─── Quiz helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Infer the question type from its data when `type` is missing (legacy data).
+ *  - Has non-empty options array → 'multiple-choice'
+ *  - Answer is 'True' or 'False' with no options → 'true-false'
+ *  - Anything else → 'short-answer'
+ */
+function inferQuestionType(q) {
+  if (q.type) return q.type;
+  const hasOptions = Array.isArray(q.options) && q.options.some(Boolean);
+  if (hasOptions) return 'multiple-choice';
+  if (['True', 'False'].includes(q.answer)) return 'true-false';
+  return 'short-answer';
+}
+
+/** Normalize a question from the DB so it always has a type and sensible defaults. */
+function normalizeQuestion(q) {
+  const type = inferQuestionType(q);
+  return {
+    ...q,
+    type,
+    options: type === 'multiple-choice' ? (q.options || ['', '', '', '']) : (q.options || []),
+    answer: q.answer ?? '',
+    points: q.points ?? 1,
+  };
+}
+
 // ─── Quiz Tab ───────────────────────────────────────────────────────────────────
 
 function QuizTab({ quiz, passingScore, maxAttempts, onQuizChange, onPassingScoreChange, onMaxAttemptsChange, disabled }) {
-  const addQ = () => onQuizChange([...quiz, emptyQuestion()]);
-  const removeQ = (i) => onQuizChange(quiz.filter((_, idx) => idx !== i));
+  // Normalize all incoming questions so legacy data (missing type) displays correctly.
+  const normalizedQuiz = quiz.map(normalizeQuestion);
+
+  const addQ = () => onQuizChange([...normalizedQuiz, emptyQuestion()]);
+  const removeQ = (i) => onQuizChange(normalizedQuiz.filter((_, idx) => idx !== i));
   const updateQ = (i, f, v) => {
-    const n = [...quiz]; n[i] = { ...n[i], [f]: v }; onQuizChange(n);
+    const n = [...normalizedQuiz]; n[i] = { ...n[i], [f]: v }; onQuizChange(n);
   };
   const updateOption = (qi, oi, v) => {
-    const n = [...quiz];
+    const n = [...normalizedQuiz];
     const opts = [...(n[qi].options || [])];
     opts[oi] = v;
     n[qi] = { ...n[qi], options: opts };
     onQuizChange(n);
   };
   const addOption = (qi) => {
-    const n = [...quiz];
+    const n = [...normalizedQuiz];
     n[qi] = { ...n[qi], options: [...(n[qi].options || []), ''] };
     onQuizChange(n);
   };
   const removeOption = (qi, oi) => {
-    const n = [...quiz];
+    const n = [...normalizedQuiz];
     n[qi] = { ...n[qi], options: n[qi].options.filter((_, i) => i !== oi) };
     onQuizChange(n);
   };
@@ -1298,7 +1329,7 @@ function QuizTab({ quiz, passingScore, maxAttempts, onQuizChange, onPassingScore
         </div>
       ) : (
         <div className="space-y-3">
-          {quiz.map((q, i) => (
+          {normalizedQuiz.map((q, i) => (
             <QuizQuestion
               key={i}
               question={q}
@@ -1329,6 +1360,7 @@ function QuizTab({ quiz, passingScore, maxAttempts, onQuizChange, onPassingScore
 // ─── Quiz Question ──────────────────────────────────────────────────────────────
 
 function QuizQuestion({ question, idx, onUpdate, onUpdateOption, onAddOption, onRemoveOption, onDelete, disabled }) {
+  // Use the already-normalized type (normalizeQuestion runs in QuizTab before render)
   const isMC = question.type === 'multiple-choice';
   const isTF = question.type === 'true-false';
   const hasCode = !!question.codeSnippet;

@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import Navbar from '@/components/navbar/navbar';
+import authService from '@/lib/api/authService';
 
 export default function StudentProfilePage() {
     const router = useRouter();
@@ -16,9 +17,10 @@ export default function StudentProfilePage() {
         email: '',
         phoneNumber: '',
         country: '',
+        region: '',
         bio: '',
         institution: '',
-        profilePicture: null
+        profilePhotoUrl: null,
     });
 
     useEffect(() => {
@@ -33,7 +35,7 @@ export default function StudentProfilePage() {
                 return;
             }
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/users/profile`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/me`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -42,15 +44,17 @@ export default function StudentProfilePage() {
             if (!response.ok) throw new Error('Failed to fetch profile');
 
             const data = await response.json();
+            const u = data.user;
             setProfileData({
-                firstName: data.user.firstName || '',
-                lastName: data.user.lastName || '',
-                email: data.user.email || '',
-                phoneNumber: data.user.phoneNumber || '',
-                country: data.user.country || '',
-                bio: data.user.bio || '',
-                institution: data.user.institution || '',
-                profilePicture: null
+                firstName: u.firstName || '',
+                lastName: u.lastName || '',
+                email: u.email || '',
+                phoneNumber: u.phoneNumber || '',
+                country: u.country || '',
+                region: u.region || '',
+                bio: u.bio || '',
+                institution: u.institution || '',
+                profilePhotoUrl: u.profilePhotoUrl || null,
             });
         } catch (err) {
             setError('Failed to load profile');
@@ -71,7 +75,7 @@ export default function StudentProfilePage() {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/users/profile`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/profile`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -82,17 +86,45 @@ export default function StudentProfilePage() {
                     lastName: profileData.lastName,
                     phoneNumber: profileData.phoneNumber,
                     country: profileData.country,
+                    region: profileData.region,
                     bio: profileData.bio,
                     institution: profileData.institution
                 })
             });
 
-            if (!response.ok) throw new Error('Failed to update profile');
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data?.message || 'Failed to update profile');
+            }
+
+            // Update local state with what the server saved
+            const u = data.user;
+            setProfileData(prev => ({
+                ...prev,
+                firstName: u.firstName || prev.firstName,
+                lastName: u.lastName || prev.lastName,
+                phoneNumber: u.phoneNumber || prev.phoneNumber,
+                country: u.country || prev.country,
+                region: u.region || prev.region,
+                bio: u.bio || prev.bio,
+                institution: u.institution || prev.institution,
+                profilePhotoUrl: u.profilePhotoUrl || prev.profilePhotoUrl,
+            }));
+            // Sync to auth cache so navbar updates immediately
+            authService.updateCurrentUser({
+                firstName: u.firstName,
+                lastName: u.lastName,
+                country: u.country,
+                region: u.region,
+                ...(u.profilePhotoUrl && { profilePhotoUrl: u.profilePhotoUrl }),
+            });
+            window.dispatchEvent(new CustomEvent('userProfileUpdated', { detail: u }));
 
             setSuccess('Profile updated successfully!');
             setTimeout(() => setSuccess(''), 3000);
         } catch (err) {
-            setError('Failed to update profile. Please try again.');
+            setError(err.message || 'Failed to update profile. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -135,9 +167,17 @@ export default function StudentProfilePage() {
                         <form onSubmit={handleSubmit} className="space-y-6">
                             {/* Profile Picture */}
                             <div className="flex items-center gap-6 pb-6 border-b">
-                                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-3xl">
-                                    {profileData.firstName?.[0]}{profileData.lastName?.[0]}
-                                </div>
+                                {profileData.profilePhotoUrl ? (
+                                    <img
+                                        src={profileData.profilePhotoUrl}
+                                        alt="Profile"
+                                        className="w-24 h-24 rounded-full object-cover border-2 border-gray-200"
+                                    />
+                                ) : (
+                                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-3xl">
+                                        {profileData.firstName?.[0]}{profileData.lastName?.[0]}
+                                    </div>
+                                )}
                                 <div>
                                     <h3 className="text-lg font-semibold text-gray-900 mb-1">Profile Picture</h3>
                                     <p className="text-sm text-gray-600 mb-3">Upload a photo to personalize your account</p>
@@ -216,6 +256,19 @@ export default function StudentProfilePage() {
                                             value={profileData.country}
                                             onChange={handleInputChange}
                                             placeholder="Kenya"
+                                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            Region / State
+                                        </label>
+                                        <input
+                                            type="text"
+                                            name="region"
+                                            value={profileData.region}
+                                            onChange={handleInputChange}
+                                            placeholder="e.g. Nairobi, Lagos"
                                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                                         />
                                     </div>

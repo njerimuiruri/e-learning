@@ -1,9 +1,9 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Menu, X, Trophy, LayoutDashboard, Award, Settings, LogOut, BookOpen, Play } from 'lucide-react';
-import courseService from '@/lib/api/courseService';
+import { Menu, X, Trophy, LayoutDashboard, Award, Settings, LogOut, Play } from 'lucide-react';
 import authService from '@/lib/api/authService';
+import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import NotificationBell from '@/components/shared/NotificationBell';
 
 const Navbar = () => {
@@ -15,7 +15,6 @@ const Navbar = () => {
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const [userRole, setUserRole] = useState('student');
     const [currentUser, setCurrentUser] = useState(null);
-    const [studentData, setStudentData] = useState([]);
 
     // Set mounted to true on client-side only
     useEffect(() => {
@@ -55,6 +54,11 @@ const Navbar = () => {
         };
 
         loadUserData();
+
+        // Re-read user whenever a profile update is dispatched (e.g. photo change from sidebar)
+        const handleProfileUpdate = () => loadUserData();
+        window.addEventListener('userProfileUpdated', handleProfileUpdate);
+        return () => window.removeEventListener('userProfileUpdated', handleProfileUpdate);
     }, [mounted]);
 
     useEffect(() => {
@@ -71,37 +75,33 @@ const Navbar = () => {
 
     const getInitials = () => {
         if (currentUser) {
-            const first = currentUser.firstName?.charAt(0) || '';
-            const last = currentUser.lastName?.charAt(0) || '';
-            return (first + last).toUpperCase();
+            const full =
+                currentUser.fullName ||
+                `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
+            const parts = full.trim().split(' ').filter(Boolean);
+            if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+            if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
         }
         return 'U';
     };
 
     const getFullName = () => {
         if (currentUser) {
-            const combined = `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim();
-            return combined || currentUser.fullName || 'User';
+            return (
+                currentUser.fullName ||
+                `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim() ||
+                'User'
+            );
         }
         return 'User';
     };
 
     const calculateProfileCompletion = () => {
         if (!currentUser) return 0;
-
-        let completed = 0;
-        const totalFields = 8;
-
-        if (currentUser.firstName) completed++;
-        if (currentUser.lastName) completed++;
-        if (currentUser.email) completed++;
-        if (currentUser.profilePhotoUrl) completed++;
-        if (currentUser.bio) completed++;
-        if (currentUser.phoneNumber) completed++;
-        if (currentUser.country) completed++;
-        if (currentUser.emailVerified) completed++;
-
-        return Math.round((completed / totalFields) * 100);
+        const hasName = !!(currentUser.fullName || currentUser.firstName || currentUser.lastName);
+        const hasRegion = !!(currentUser.region || currentUser.fellowData?.region);
+        const hasPhoto = !!currentUser.profilePhotoUrl;
+        return (hasName && hasRegion && hasPhoto) ? 100 : 0;
     };
 
     const navLinks = [
@@ -154,32 +154,70 @@ const Navbar = () => {
 
     const handleContinueLearning = async () => {
         try {
-            // Fetch dashboard data to get current enrollments
-            const dashboardData = await courseService.getStudentDashboard();
+            console.log('[ContinueLearning] Navbar button clicked — fetching enrollments...');
+            const enrollments = await moduleEnrollmentService.getMyEnrollments();
+            const list = Array.isArray(enrollments) ? enrollments : enrollments?.enrollments || [];
 
-            if (dashboardData?.enrollments && dashboardData.enrollments.length > 0) {
-                // Find a course that's in progress (not completed)
-                const inProgressEnrollment = dashboardData.enrollments.find(
-                    enrollment => !enrollment.isCompleted
-                );
-
-                if (inProgressEnrollment) {
-                    const courseId = inProgressEnrollment.courseId?._id || inProgressEnrollment.courseId;
-                    // Use smart resume destination API
-                    const resumeData = await courseService.getResumeDestination(courseId);
-                    router.push(resumeData.path);
-                } else {
-                    // All modules completed, go to modules page to find new ones
-                    router.push('/modules');
-                }
-            } else {
-                // No modules enrolled, go to modules page
-                router.push('/modules');
+            const inProgress = list.find(e => !e.isCompleted);
+            if (!inProgress) {
+                console.log('[ContinueLearning] No in-progress module found — redirecting to modules list');
+                router.push('/student/modules');
+                return;
             }
+
+            const moduleId = inProgress.moduleId?._id || inProgress.moduleId;
+            const enrollmentId = inProgress._id;
+
+            console.log('[ContinueLearning] Found in-progress module | moduleId=', moduleId, '| enrollmentId=', enrollmentId);
+
+            // Fetch exact resume position from backend (lesson + slide).
+            // currentLessonIndex can be null when the next lesson is locked or all
+            // lessons are done — in that case walk lessonStates to find the last
+            // accessible/completed lesson rather than falling back to 0 (Lesson 1).
+            const progress = await moduleEnrollmentService.getProgress(enrollmentId);
+
+            // currentLessonIndex from the backend is null when the next lesson is locked
+            // (e.g. previous lesson's quiz hasn't been passed) OR when all lessons are done.
+            // In the locked case we should still return the student to where they WERE,
+            // not silently fall back to lesson 0 / the last completed lesson.
+            // Strategy:
+            //  - Use currentLessonIndex if the backend provided one
+            //  - Otherwise scan lessonStates from the end: prefer lessons with any slide
+            //    history (lastAccessedSlide > 0) even if currently locked, then fall back
+            //    to last accessible/completed, then absolute fallback 0.
+            let lessonIndex = progress?.currentLessonIndex;
+            if (lessonIndex == null) {
+                const states = progress?.lessonStates || [];
+                // Pass 1: find last lesson the student actively visited (slide > 0)
+                for (let i = states.length - 1; i >= 0; i--) {
+                    if ((states[i]?.lastAccessedSlide ?? 0) > 0) {
+                        lessonIndex = i;
+                        break;
+                    }
+                }
+                // Pass 2: fall back to last accessible or completed lesson
+                if (lessonIndex == null) {
+                    for (let i = states.length - 1; i >= 0; i--) {
+                        if (states[i]?.isAccessible || states[i]?.isCompleted) {
+                            lessonIndex = i;
+                            break;
+                        }
+                    }
+                }
+                lessonIndex = lessonIndex ?? 0;
+            }
+
+            console.log(
+                '[ContinueLearning] Navbar | resuming to | lessonIndex=', lessonIndex,
+                '| currentLessonIndex (raw)=', progress?.currentLessonIndex,
+                '| nextLessonIndex=', progress?.nextLessonIndex,
+                '| url=', `/student/modules/${moduleId}?lesson=${lessonIndex}`,
+            );
+
+            router.push(`/student/modules/${moduleId}?lesson=${lessonIndex}`);
         } catch (error) {
-            console.error('Failed to continue learning:', error);
-            // Fallback to modules page
-            router.push('/modules');
+            console.error('[ContinueLearning] Navbar failed:', error);
+            router.push('/student/modules');
         }
     };
 

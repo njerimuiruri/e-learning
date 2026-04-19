@@ -11,6 +11,7 @@ import LessonBuilder from '@/components/instructor/LessonBuilder';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
 import VideoUploader from '@/components/ui/VideoUploader';
+import ResourceUploader from '@/components/ui/ResourceUploader';
 
 // ========== HELPER: Dynamic String List ==========
 function DynamicStringList({ label, values, onChange, placeholder }) {
@@ -38,6 +39,64 @@ function DynamicStringList({ label, values, onChange, placeholder }) {
             ))}
             <button onClick={() => onChange([...safeValues, ''])} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
                 + Add Item
+            </button>
+        </div>
+    );
+}
+
+// ========== HELPER: Module Resource List ==========
+function ModuleResourceList({ values = [], onChange }) {
+    const blank = () => ({ url: '', name: '', description: '', fileType: '' });
+    const add    = () => onChange([...values, blank()]);
+    const update = (i, f, v) => { const n = [...values]; n[i] = { ...n[i], [f]: v }; onChange(n); };
+    const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
+
+    const mapExt = (fileName) => {
+        const ext = (fileName || '').split('.').pop()?.toLowerCase();
+        if (ext === 'pdf') return 'pdf';
+        if (['doc','docx'].includes(ext)) return 'notebook';
+        if (['xls','xlsx','csv'].includes(ext)) return 'dataset';
+        return 'other';
+    };
+
+    const handleUpload = (uploaded) => {
+        onChange((uploaded || []).map((r) => ({
+            url: r.url || (typeof r === 'string' ? r : ''),
+            name: r.name || r.originalName || (typeof r === 'string' ? r.split('/').pop() : '') || 'Resource',
+            description: r.description || '',
+            fileType: r.fileType || mapExt(r.name || r.originalName || r.url),
+        })));
+    };
+
+    return (
+        <div className="space-y-3">
+            <ResourceUploader value={values} onChange={handleUpload} label="Upload module documents" />
+            {values.map((r, i) => (
+                <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
+                    <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
+                        <button type="button" onClick={() => remove(i)} className="text-red-400 hover:text-red-600">
+                            <Icons.Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
+                            <input type="text" value={r.name} onChange={(e) => update(i, 'name', e.target.value)} placeholder="Resource name" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-gray-600 mb-1">URL</label>
+                            <input type="text" value={r.url} onChange={(e) => update(i, 'url', e.target.value)} placeholder="https://…" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Description (optional)</label>
+                        <input type="text" value={r.description} onChange={(e) => update(i, 'description', e.target.value)} placeholder="Brief description" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" />
+                    </div>
+                </div>
+            ))}
+            <button type="button" onClick={add} className="flex items-center gap-1.5 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                <Icons.Plus className="w-4 h-4" /> Add resource manually
             </button>
         </div>
     );
@@ -189,6 +248,8 @@ export default function EditModulePage() {
 
     const [initialLoading, setInitialLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [finalizing, setFinalizing] = useState(false);
+    const [isContentFinalized, setIsContentFinalized] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [categories, setCategories] = useState([]);
     const [originalModule, setOriginalModule] = useState(null);
@@ -201,6 +262,9 @@ export default function EditModulePage() {
         categoryId: '', level: 'beginner', deliveryMode: '', duration: '', order: '', bannerUrl: '', prerequisites: [],
     });
 
+    // Step 1b: Module-level resources
+    const [moduleResources, setModuleResources] = useState([]);
+
     // Step 2: Lessons (LessonBuilder format with slides)
     const [lessons, setLessons] = useState([]);
 
@@ -210,7 +274,7 @@ export default function EditModulePage() {
         passingScore: 70, maxAttempts: 3, timeLimit: null,
     });
 
-    const draftData = useMemo(() => ({ moduleData, lessons, finalAssessment }), [moduleData, lessons, finalAssessment]);
+    const draftData = useMemo(() => ({ moduleData, lessons, finalAssessment, moduleResources }), [moduleData, lessons, finalAssessment, moduleResources]);
     const { status: draftStatus, hasDraft, getDraft, discardDraft, saveDraft, savedAgoLabel, dbError: draftDbError } = useDraft(
         `module_instructor_draft_${moduleId}`,
         draftData,
@@ -234,6 +298,7 @@ export default function EditModulePage() {
             ]);
             setCategories(Array.isArray(categoriesResult) ? categoriesResult : []);
             setOriginalModule(moduleResult);
+            setIsContentFinalized(moduleResult.isContentFinalized ?? false);
 
             const categoryId = typeof moduleResult.categoryId === 'object' ? moduleResult.categoryId._id : moduleResult.categoryId;
             // learningOutcomes is stored as a string in the DB; normalise to string[] for the UI
@@ -255,6 +320,9 @@ export default function EditModulePage() {
                 order: moduleResult.order != null ? moduleResult.order : '',
                 bannerUrl: moduleResult.bannerUrl || '', prerequisites: moduleResult.prerequisites || [],
             });
+
+            // Load module-level resources
+            setModuleResources(Array.isArray(moduleResult.moduleResources) ? moduleResult.moduleResources : []);
 
             // Map backend lessons → LessonBuilder format (with slides)
             const mappedLessons = (moduleResult.lessons || []).map((lesson, idx) => ({
@@ -313,6 +381,20 @@ export default function EditModulePage() {
         return null;
     };
 
+    const handleFinalizeContent = async () => {
+        if (isContentFinalized) return;
+        if (!confirm('Finalize content? This will notify all enrolled students that the Final Assessment is now available and no more lessons will be added.')) return;
+        try {
+            setFinalizing(true);
+            await moduleService.finalizeContent(moduleId);
+            setIsContentFinalized(true);
+        } catch (err) {
+            alert('Failed to finalize content. Please try again.');
+        } finally {
+            setFinalizing(false);
+        }
+    };
+
     const handleNext = () => {
         if (currentStep === 1) { const err = validateStep1(); if (err) { alert(err); return; } }
         setCurrentStep(currentStep + 1);
@@ -323,10 +405,39 @@ export default function EditModulePage() {
         try {
             setSaving(true);
             // 1. Update module metadata + lessons in one call
-            const cleanLessons = lessons.map(({ _caseStudy, resources, ...rest }) => ({
-                ...rest,
-                lessonResources: resources || [],
-            }));
+            // Infer question type from data shape if missing (legacy questions saved without type)
+            const inferQType = (q) => {
+                if (q.type) return q.type;
+                if (Array.isArray(q.options) && q.options.some(Boolean)) return 'multiple-choice';
+                if (['True', 'False'].includes(q.answer)) return 'true-false';
+                return 'short-answer';
+            };
+
+            const cleanLessons = lessons.map(({ _caseStudy, resources, ...rest }) => {
+                const normalizedQuiz = (rest.assessmentQuiz || []).map((q) => ({
+                    ...q,
+                    type: inferQType(q),
+                    points: q.points ?? 1,
+                    answer: q.answer ?? '',
+                }));
+
+                if (normalizedQuiz.length > 0) {
+                    console.group(`💾 [InstructorSave] Lesson: "${rest.title}" — ${normalizedQuiz.length} quiz questions`);
+                    normalizedQuiz.forEach((q, i) => {
+                        console.log(
+                            `Q${i + 1} | type="${q.type}" | answer="${q.answer}" | options:`,
+                            q.options || '(none)',
+                        );
+                    });
+                    console.groupEnd();
+                }
+
+                return {
+                    ...rest,
+                    lessonResources: resources || [],
+                    assessmentQuiz: normalizedQuiz,
+                };
+            });
             const modulePayload = {
                 title: moduleData.title, description: moduleData.description,
                 welcomeMessage: moduleData.welcomeMessage, moduleAim: moduleData.moduleAim,
@@ -337,6 +448,7 @@ export default function EditModulePage() {
                 learningOutcomes: moduleData.learningOutcomes.filter(o => o.trim()).join('\n'),
                 targetAudience: moduleData.targetAudience.filter(a => a.trim()),
                 prerequisites: moduleData.prerequisites,
+                moduleResources: moduleResources || [],
                 lessons: cleanLessons,
             };
             await moduleService.updateModule(moduleId, modulePayload);
@@ -579,6 +691,14 @@ export default function EditModulePage() {
                                 <DynamicStringList label="Module Objectives" values={moduleData.moduleObjectives} onChange={(vals) => setModuleData({ ...moduleData, moduleObjectives: vals })} placeholder="What specific objectives will this module achieve?" />
                                 <DynamicStringList label="Expected Learning Outcomes" values={moduleData.learningOutcomes} onChange={(vals) => setModuleData({ ...moduleData, learningOutcomes: vals })} placeholder="What will students be able to do?" />
                                 <DynamicStringList label="Target Audience" values={moduleData.targetAudience} onChange={(vals) => setModuleData({ ...moduleData, targetAudience: vals })} placeholder="Who is this module designed for?" />
+
+                                {/* Module-Level Resources */}
+                                <div>
+                                    <h3 className="text-base font-semibold text-gray-900 mb-1">Module Resources</h3>
+                                    <p className="text-xs text-gray-500 mb-3">Files and links that apply to the whole module (bibliography, datasets, code repos, recorded lectures).</p>
+                                    <ModuleResourceList values={moduleResources} onChange={setModuleResources} />
+                                </div>
+
                                 <div className="flex justify-end pt-6 border-t border-gray-200">
                                     <button onClick={handleNext} className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Next: Lessons <Icons.ChevronRight className="w-5 h-5" /></button>
                                 </div>
@@ -678,6 +798,37 @@ export default function EditModulePage() {
                                             <p className="font-semibold mb-1">Saving Changes</p>
                                             <p>{originalModule?.status === 'published' ? 'Your changes will be saved and applied to the live module immediately.' : 'Your changes will be saved. You can submit for approval from the modules list page.'}</p>
                                         </div>
+                                    </div>
+                                </div>
+
+                                {/* Finalize Content */}
+                                <div className={`border rounded-lg p-5 ${isContentFinalized ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div className="flex items-start gap-3">
+                                            {isContentFinalized
+                                                ? <Icons.CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                                                : <Icons.Lock className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                            }
+                                            <div>
+                                                <p className={`font-semibold text-sm mb-1 ${isContentFinalized ? 'text-green-800' : 'text-amber-800'}`}>
+                                                    {isContentFinalized ? 'Content Finalized' : 'Finalize Content'}
+                                                </p>
+                                                <p className={`text-xs ${isContentFinalized ? 'text-green-700' : 'text-amber-700'}`}>
+                                                    {isContentFinalized
+                                                        ? 'Students have been notified that all lessons are complete and the Final Assessment is unlocked.'
+                                                        : 'Mark all lessons as complete to unlock the Final Assessment for enrolled students. They will be notified by email.'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        {!isContentFinalized && (
+                                            <button
+                                                onClick={handleFinalizeContent}
+                                                disabled={finalizing}
+                                                className="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                                            >
+                                                {finalizing ? <><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" /> Finalizing…</> : <><Icons.CheckSquare className="w-4 h-4" /> Finalize</>}
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                                 <div className="flex justify-between pt-6 border-t border-gray-200">

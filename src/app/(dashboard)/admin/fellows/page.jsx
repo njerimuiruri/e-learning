@@ -734,40 +734,69 @@ function ReminderDialog({ fellow, onClose }) {
 // EDIT FELLOW DIALOG
 // ─────────────────────────────────────────────────────────────────
 function EditFellowDialog({ fellow, onClose, onDone }) {
-  const [form, setForm] = useState({
-    fullName:    fellow.fullName || `${fellow.firstName || ''} ${fellow.lastName || ''}`.trim(),
-    gender:      fellow.gender      || '',
-    country:     fellow.country     || '',
-    phoneNumber: fellow.phoneNumber || '',
-    region:      fellow.fellowData?.region || '',
-    track:       fellow.fellowData?.track  || '',
-    isActive:    fellow.isActive,
+  const mapFellow = (f) => ({
+    fullName:    f.fullName || `${f.firstName || ''} ${f.lastName || ''}`.trim(),
+    email:       f.email || '',
+    gender:      f.gender      || '',
+    country:     f.country     || '',
+    phoneNumber: f.phoneNumber || '',
+    // region lives on both user.region (set via profile) and fellowData.region (set at creation)
+    region:      f.region || f.fellowData?.region || '',
+    track:       f.fellowData?.track || '',
+    isActive:    f.isActive ?? true,
   });
-  const [loading, setLoading] = useState(false);
+
+  const [form, setForm] = useState(() => mapFellow(fellow));
+  const [fetching, setFetching] = useState(true);
+  const [saving, setSaving] = useState(false);
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
+  // Fetch fresh data on open so edits reflect latest profile changes
+  useEffect(() => {
+    adminService.getFellowById(fellow._id)
+      .then(fresh => setForm(mapFellow(fresh)))
+      .catch(() => { /* keep form seeded from list row */ })
+      .finally(() => setFetching(false));
+  }, [fellow._id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleSave = async () => {
-    setLoading(true);
+    setSaving(true);
     try {
-      await adminService.updateFellow(fellow._id, { ...form, fullName: form.fullName });
+      await adminService.updateFellow(fellow._id, { ...form });
       toast.success('Fellow updated');
       onDone?.();
       onClose();
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Update failed');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Icons.Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <div className="space-y-1"><Label>Full Name</Label>
-        <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} />
+      {/* Email (read-only) */}
+      <div className="space-y-1">
+        <Label>Email Address</Label>
+        <Input value={form.email} disabled className="bg-gray-50 text-gray-500" />
+        <p className="text-xs text-gray-400">Email cannot be changed</p>
+      </div>
+
+      <div className="space-y-1">
+        <Label>Full Name</Label>
+        <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} placeholder="e.g. Amara Diallo" />
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1"><Label>Phone Number</Label>
-          <Input value={form.phoneNumber} onChange={e => set('phoneNumber', e.target.value)} /></div>
+          <Input value={form.phoneNumber} onChange={e => set('phoneNumber', e.target.value)} placeholder="+254 700 000 000" /></div>
         <div className="space-y-1"><Label>Gender</Label>
           <Select value={form.gender} onValueChange={v => set('gender', v)}>
             <SelectTrigger><SelectValue placeholder="Gender" /></SelectTrigger>
@@ -777,9 +806,9 @@ function EditFellowDialog({ fellow, onClose, onDone }) {
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1"><Label>Country</Label>
-          <Input value={form.country} onChange={e => set('country', e.target.value)} /></div>
+          <Input value={form.country} onChange={e => set('country', e.target.value)} placeholder="e.g. Kenya" /></div>
         <div className="space-y-1"><Label>Region</Label>
-          <Input value={form.region} onChange={e => set('region', e.target.value)} /></div>
+          <Input value={form.region} onChange={e => set('region', e.target.value)} placeholder="e.g. Nairobi" /></div>
       </div>
       <div className="space-y-1"><Label>Track</Label>
         <Select value={form.track} onValueChange={v => set('track', v)}>
@@ -792,9 +821,9 @@ function EditFellowDialog({ fellow, onClose, onDone }) {
         <label htmlFor="active" className="text-sm font-medium cursor-pointer">Account Active</label>
       </div>
       <div className="flex justify-end gap-3 pt-2">
-        <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
-        <Button onClick={handleSave} disabled={loading} className="gap-2">
-          {loading ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Icons.Save className="w-4 h-4" /> Save Changes</>}
+        <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+        <Button onClick={handleSave} disabled={saving} className="gap-2">
+          {saving ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Icons.Save className="w-4 h-4" /> Save Changes</>}
         </Button>
       </div>
     </div>
@@ -876,6 +905,26 @@ export default function FellowsManagementPage() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selected.size === 0) return;
+    setDeleting(true);
+    const ids = Array.from(selected);
+    let failed = 0;
+    for (const id of ids) {
+      try {
+        await adminService.deleteFellow(id);
+      } catch {
+        failed++;
+      }
+    }
+    setDeleting(false);
+    setModal(null);
+    setSelected(new Set());
+    if (failed === 0) toast.success(`${ids.length} fellow${ids.length !== 1 ? 's' : ''} deleted`);
+    else toast.error(`${ids.length - failed} deleted, ${failed} failed`);
+    reload();
+  };
+
   const statusBadge = (f) => {
     const s = f.fellowData?.fellowshipStatus;
     if (s === 'active')    return <Badge className="bg-green-100 text-green-700 text-xs">Active</Badge>;
@@ -952,6 +1001,9 @@ export default function FellowsManagementPage() {
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setModal('email')} className="gap-1.5 border-blue-300 text-blue-700 hover:bg-blue-50">
                     <Icons.Send className="w-3.5 h-3.5" /> Custom Email
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setModal('bulkDelete')} className="gap-1.5 border-red-300 text-red-600 hover:bg-red-50">
+                    <Icons.Trash2 className="w-3.5 h-3.5" /> Delete Selected
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())} className="text-gray-500">
                     <Icons.X className="w-3.5 h-3.5" />
@@ -1142,6 +1194,32 @@ export default function FellowsManagementPage() {
             onDone={reload}
           />
         </Modal>
+      )}
+
+      {/* Bulk Delete Confirm */}
+      {modal === 'bulkDelete' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setModal(null)} />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Icons.Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Delete {selected.size} Fellow{selected.size !== 1 ? 's' : ''}?</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  This will permanently delete the selected {selected.size} fellow{selected.size !== 1 ? 's' : ''}. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setModal(null)} disabled={deleting}>Cancel</Button>
+              <Button onClick={handleBulkDelete} disabled={deleting} className="gap-1.5 bg-red-600 hover:bg-red-700 text-white">
+                {deleting ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Deleting...</> : <><Icons.Trash2 className="w-4 h-4" /> Delete {selected.size}</>}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete Confirm */}

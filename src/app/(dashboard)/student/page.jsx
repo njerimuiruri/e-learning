@@ -227,12 +227,12 @@ function AvailableModuleCard({ mod, onDetails, onEnroll }) {
                     )}
                 </div>
                 {/* Title */}
-                <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-[#021d49] transition-colors mb-1.5">
+                <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-[#021d49] transition-colors mb-1.5 break-words">
                     {mod.title}
                 </h3>
                 {/* Clean description — no HTML */}
                 {clean && (
-                    <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed flex-1">{clean}</p>
+                    <p className="text-xs text-gray-500 line-clamp-3 mb-3 leading-relaxed flex-1 break-words">{clean}</p>
                 )}
                 {/* Stats row */}
                 <div className="flex items-center gap-3 text-xs text-gray-400 mb-3">
@@ -329,8 +329,8 @@ function ModuleDrawer({ mod, onClose, onNavigate }) {
                         </Badge>
                         {mod.categoryId?.name && <Badge variant="secondary" className="text-xs">{mod.categoryId.name}</Badge>}
                     </div>
-                    <SheetTitle className="text-xl leading-snug">{mod.title}</SheetTitle>
-                    <SheetDescription className="text-sm text-gray-500 leading-relaxed mt-1">
+                    <SheetTitle className="text-xl leading-snug break-words">{mod.title}</SheetTitle>
+                    <SheetDescription className="text-sm text-gray-500 leading-relaxed mt-1 break-words">
                         {clean || 'No description available.'}
                     </SheetDescription>
                 </SheetHeader>
@@ -390,6 +390,95 @@ function Empty({ icon, title, sub, action, onAction }) {
 
 
 /* ══════════════════════════════════════════
+   HELPERS
+══════════════════════════════════════════ */
+
+/**
+ * From an enrollment object, return the index of the first lesson that
+ * has NOT been completed, or null if all lessons are done.
+ *
+ * Returns null (not 0) when lessonProgress is absent or empty so that
+ * callers can distinguish "no data" from "genuinely at lesson 0".
+ */
+function getNextIncompleteLesson(enrollment) {
+    const lessonProgress = enrollment.lessonProgress || [];
+
+    // If the list endpoint returned no lessonProgress entries we cannot
+    // reliably compute the next lesson — signal that to the caller.
+    if (lessonProgress.length === 0) return null;
+
+    const completed = new Set(
+        lessonProgress
+            .filter(lp => lp.isCompleted)
+            .map(lp => lp.lessonIndex)
+    );
+    const total = enrollment.totalLessons || 0;
+    for (let i = 0; i < total; i++) {
+        if (!completed.has(i)) return i;
+    }
+    return null; // all lessons done
+}
+
+/**
+ * Build the URL to resume a module.
+ *
+ * Strategy (in priority order):
+ *  1. lastAccessedLesson and lastAccessedSlide from the DB (the source of truth for position)
+ *  2. First incomplete lesson derived from lessonProgress
+ *  3. Fallback to module root
+ */
+function getContinueLearningUrl(enrollment) {
+    const moduleId = enrollment.moduleId?._id || enrollment.moduleId;
+    const lessonProgress = enrollment.lessonProgress || [];
+
+    const lastAccessedLesson = typeof enrollment.lastAccessedLesson === 'number'
+        ? enrollment.lastAccessedLesson
+        : null;
+
+    const lastAccessedSlide = typeof enrollment.lastAccessedSlide === 'number'
+        ? enrollment.lastAccessedSlide
+        : 0;
+
+    console.log(`[ContinueLearning] Processing resume for module: ${moduleId}`, {
+        lastAccessedLesson,
+        lastAccessedSlide,
+        lessonProgress: lessonProgress.map(lp => ({ idx: lp.lessonIndex, done: lp.isCompleted }))
+    });
+
+    const nextIncomplete = getNextIncompleteLesson(enrollment);
+
+    let resumeLesson = null;
+    let resumeSlide = 0;
+
+    if (lastAccessedLesson !== null) {
+        const lessonStatus = lessonProgress.find(lp => lp.lessonIndex === lastAccessedLesson);
+        if (lessonStatus?.isCompleted) {
+            // Saved lesson is done, find next
+            console.log(`[ContinueLearning] Lesson ${lastAccessedLesson} already completed. Finding next...`);
+            resumeLesson = nextIncomplete;
+            resumeSlide = 0;
+        } else {
+            // Resume exactly where they were
+            resumeLesson = lastAccessedLesson;
+            resumeSlide = lastAccessedSlide;
+        }
+    } else if (nextIncomplete !== null) {
+        resumeLesson = nextIncomplete;
+        resumeSlide = 0;
+    }
+
+    const isContentFinalized = enrollment.moduleId?.isContentFinalized ?? false;
+    const finalUrl = resumeLesson !== null
+        ? `/student/modules/${moduleId}?lesson=${resumeLesson}&slide=${resumeSlide}`
+        : (isContentFinalized && !enrollment.finalAssessmentPassed
+            ? `/student/modules/${moduleId}?showFinalAssessment=true`
+            : `/student/modules/${moduleId}`);
+
+    console.log('[ContinueLearning] Final Redirect Target:', finalUrl);
+    return finalUrl;
+}
+
+/* ══════════════════════════════════════════
    MAIN DASHBOARD
 ══════════════════════════════════════════ */
 function StudentDashboardContent() {
@@ -411,6 +500,14 @@ function StudentDashboardContent() {
         const u = authService.getCurrentUser?.() || null;
         setUser(u);
         fetchAll();
+
+        // Re-fetch progress whenever the student returns to this tab
+        // (e.g. after completing a lesson in the module viewer).
+        const handleVisibility = () => {
+            if (!document.hidden) fetchAll();
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
     }, []);
 
     const fetchAll = useCallback(async () => {
@@ -429,6 +526,7 @@ function StudentDashboardContent() {
             const eList = enrollData.status === 'fulfilled'
                 ? (Array.isArray(enrollData.value) ? enrollData.value : enrollData.value?.enrollments || [])
                 : [];
+            console.log('[Dashboard] Fetched Enrollment Data on load:', eList);
             setEnrollments(eList);
 
             // Progressions
@@ -485,7 +583,8 @@ function StudentDashboardContent() {
         const hasSubmitted = (e.finalAssessmentAttempts || 0) > 0;
         const hasPending = (e.pendingManualGradingCount || 0) > 0;
         const allDone = e.completedLessons >= e.totalLessons && e.totalLessons > 0;
-        return (allDone && !hasSubmitted) ||
+        const contentFinalized = e.moduleId?.isContentFinalized ?? false;
+        return (allDone && contentFinalized && !hasSubmitted) ||
             (hasSubmitted && !e.finalAssessmentPassed) ||
             hasPending;
     });
@@ -663,7 +762,7 @@ function StudentDashboardContent() {
                                             <ContinueLearningCard
                                                 key={e._id}
                                                 enrollment={e}
-                                                onClick={() => router.push(`/student/modules/${e.moduleId._id}`)}
+                                                onClick={() => router.push(getContinueLearningUrl(e))}
                                             />
                                         ))}
                                     </CardContent>
@@ -688,7 +787,7 @@ function StudentDashboardContent() {
                                             <AssessmentAlertCard
                                                 key={e._id}
                                                 enrollment={e}
-                                                onClick={() => router.push(`/student/modules/${e.moduleId._id}`)}
+                                                onClick={() => router.push(`/student/modules/${e.moduleId?._id || e.moduleId}?showFinalAssessment=true`)}
                                             />
                                         ))}
                                     </CardContent>
@@ -776,8 +875,10 @@ function StudentDashboardContent() {
                                                         statusBadge = <Badge className="text-[9px] bg-blue-100 text-blue-700 border-0 font-semibold shrink-0"><Icons.CheckCircle className="w-2.5 h-2.5 mr-0.5 inline" />Done</Badge>;
                                                     } else if ((e.pendingManualGradingCount || 0) > 0) {
                                                         statusBadge = <Badge className="text-[9px] bg-amber-100 text-amber-700 border-0 font-semibold shrink-0"><Icons.Clock className="w-2.5 h-2.5 mr-0.5 inline" />Review</Badge>;
-                                                    } else if (e.completedLessons >= e.totalLessons && e.totalLessons > 0) {
+                                                    } else if (e.completedLessons >= e.totalLessons && e.totalLessons > 0 && (e.moduleId?.isContentFinalized ?? false)) {
                                                         statusBadge = <Badge className="text-[9px] bg-blue-100 text-blue-700 border-0 font-semibold shrink-0"><Icons.Target className="w-2.5 h-2.5 mr-0.5 inline" />Assess</Badge>;
+                                                    } else if (e.completedLessons >= e.totalLessons && e.totalLessons > 0) {
+                                                        statusBadge = <Badge className="text-[9px] bg-teal-100 text-teal-700 border-0 font-semibold shrink-0"><Icons.Clock className="w-2.5 h-2.5 mr-0.5 inline" />Coming Soon</Badge>;
                                                     } else {
                                                         statusBadge = <Badge className="text-[9px] bg-violet-100 text-violet-700 border-0 font-semibold shrink-0"><Icons.Play className="w-2.5 h-2.5 mr-0.5 inline" />Active</Badge>;
                                                     }

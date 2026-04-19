@@ -5,25 +5,32 @@ import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import Navbar from '@/components/navbar/navbar';
 import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
+import authService from '@/lib/api/authService';
+
+// Profile is complete when admin data exists (fullName + region) AND student has uploaded a photo.
+function isProfileComplete(user) {
+    const hasName = !!(user?.fullName || (user?.firstName || user?.lastName));
+    const hasRegion = !!(user?.region || user?.fellowData?.region);
+    const hasPhoto = !!user?.profilePhotoUrl;
+    return hasName && hasRegion && hasPhoto;
+}
 
 function AccountSettingsContent() {
     const router = useRouter();
-    const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [imagePreview, setImagePreview] = useState(null);
     const [imageFile, setImageFile] = useState(null);
     const [successMessage, setSuccessMessage] = useState('');
     const [errorMessage, setErrorMessage] = useState('');
+    const [profileComplete, setProfileComplete] = useState(false);
 
     const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
+        fullName: '',
         email: '',
-        bio: '',
-        institution: '',
         phoneNumber: '',
         country: '',
+        region: '',
         profilePhotoUrl: '',
     });
 
@@ -31,47 +38,49 @@ function AccountSettingsContent() {
         fetchUserProfile();
     }, []);
 
+    const populateForm = (user) => {
+        const fullName =
+            user.fullName ||
+            `${user.firstName || ''} ${user.lastName || ''}`.trim();
+
+        const region =
+            user.region ||
+            user.fellowData?.region ||
+            '';
+
+        setFormData({
+            fullName,
+            email: user.email || '',
+            phoneNumber: user.phoneNumber || '',
+            country: user.country || '',
+            region,
+            profilePhotoUrl: user.profilePhotoUrl || '',
+        });
+
+        if (user.profilePhotoUrl) setImagePreview(user.profilePhotoUrl);
+        setProfileComplete(isProfileComplete(user));
+    };
+
     const fetchUserProfile = async () => {
         try {
             setLoading(true);
-            const userId = localStorage.getItem('userId');
-            const token = localStorage.getItem('token');
+            setErrorMessage('');
 
-            if (!userId || !token) {
-                router.push('/login');
-                return;
-            }
+            // Load instantly from cookie (same source as navbar/sidebar)
+            const cached = authService.getCurrentUser();
+            if (cached) populateForm(cached);
 
-            const response = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/users/${userId}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                }
-            );
-
-            if (!response.ok) throw new Error('Failed to fetch profile');
-
-            const data = await response.json();
-            setUser(data);
-            setFormData({
-                firstName: data.firstName || '',
-                lastName: data.lastName || '',
-                email: data.email || '',
-                bio: data.bio || '',
-                institution: data.institution || '',
-                phoneNumber: data.phoneNumber || '',
-                country: data.country || '',
-                profilePhotoUrl: data.profilePhotoUrl || '',
-            });
-
-            if (data.profilePhotoUrl) {
-                setImagePreview(data.profilePhotoUrl);
+            // Refresh from API in background for latest data
+            try {
+                const fresh = await authService.fetchUserProfile();
+                if (fresh) populateForm(fresh);
+            } catch (apiErr) {
+                console.warn('Background profile refresh failed:', apiErr);
+                // Already populated from cookie, not a hard error
             }
         } catch (err) {
-            console.error('Error fetching profile:', err);
-            setErrorMessage('Failed to load profile');
+            console.error('Error loading profile:', err);
+            setErrorMessage('Failed to load profile. Please refresh the page.');
         } finally {
             setLoading(false);
         }
@@ -79,111 +88,91 @@ function AccountSettingsContent() {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData((prev) => ({
-            ...prev,
-            [name]: value,
-        }));
+        setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
     const handleImageChange = (e) => {
         const file = e.target.files?.[0];
-        if (file) {
-            // Validate file type
-            if (!file.type.startsWith('image/')) {
-                setErrorMessage('Please select an image file');
-                return;
-            }
-
-            // Validate file size (5MB max)
-            if (file.size > 5 * 1024 * 1024) {
-                setErrorMessage('Image size must be less than 5MB');
-                return;
-            }
-
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                setImagePreview(e.target.result);
-            };
-            reader.readAsDataURL(file);
-            setErrorMessage('');
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            setErrorMessage('Please select an image file');
+            return;
         }
+        if (file.size > 5 * 1024 * 1024) {
+            setErrorMessage('Image size must be less than 5MB');
+            return;
+        }
+        setImageFile(file);
+        const reader = new FileReader();
+        reader.onload = (ev) => setImagePreview(ev.target.result);
+        reader.readAsDataURL(file);
+        setErrorMessage('');
     };
 
     const handleSaveProfile = async (e) => {
         e.preventDefault();
-
-        if (!formData.firstName.trim() || !formData.lastName.trim()) {
-            setErrorMessage('First name and last name are required');
-            return;
-        }
-
         try {
             setSaving(true);
             setErrorMessage('');
             setSuccessMessage('');
 
-            const userId = localStorage.getItem('userId');
-            const token = localStorage.getItem('token');
+            let newPhotoUrl = formData.profilePhotoUrl;
 
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-
-            // If there's a new image, upload it first
-            let profilePhotoUrl = formData.profilePhotoUrl;
+            // Upload photo first if a new image was selected
             if (imageFile) {
-                const uploadFormData = new FormData();
-                uploadFormData.append('file', imageFile);
-
-                const uploadResponse = await fetch(
-                    `${apiUrl}/api/users/${userId}/upload-profile-photo`,
-                    {
-                        method: 'POST',
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                        body: uploadFormData,
-                    }
-                );
-
-                if (!uploadResponse.ok) {
-                    throw new Error('Failed to upload image');
+                try {
+                    const uploadResult = await authService.uploadProfilePhoto(imageFile);
+                    newPhotoUrl =
+                        uploadResult?.user?.profilePhotoUrl ||
+                        uploadResult?.profilePhotoUrl ||
+                        newPhotoUrl;
+                    if (newPhotoUrl) setImagePreview(newPhotoUrl);
+                    setImageFile(null);
+                } catch (uploadErr) {
+                    console.error('Photo upload failed:', uploadErr);
+                    setErrorMessage('Photo upload failed. Please try again.');
+                    setSaving(false);
+                    return;
                 }
-
-                const uploadData = await uploadResponse.json();
-                profilePhotoUrl = uploadData.profilePhotoUrl || uploadData.url;
-                setImageFile(null);
             }
 
-            // Update profile
-            const response = await fetch(
-                `${apiUrl}/api/users/${userId}`,
-                {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Authorization: `Bearer ${token}`,
-                    },
-                    body: JSON.stringify({
-                        firstName: formData.firstName,
-                        lastName: formData.lastName,
-                        bio: formData.bio,
-                        institution: formData.institution,
-                        phoneNumber: formData.phoneNumber,
-                        country: formData.country,
-                        profilePhotoUrl,
-                    }),
-                }
-            );
+            // Save editable fields
+            const result = await authService.updateProfile({
+                phoneNumber: formData.phoneNumber,
+                country: formData.country,
+                region: formData.region,
+            });
 
-            if (!response.ok) throw new Error('Failed to update profile');
+            const updatedUser = result?.user || result;
+            const mergedPhoto = newPhotoUrl || updatedUser?.profilePhotoUrl || formData.profilePhotoUrl;
 
-            const updatedData = await response.json();
-            setUser(updatedData);
             setFormData((prev) => ({
                 ...prev,
-                profilePhotoUrl: updatedData.profilePhotoUrl || prev.profilePhotoUrl,
+                country: updatedUser?.country || prev.country,
+                region: updatedUser?.region || prev.region,
+                phoneNumber: updatedUser?.phoneNumber || prev.phoneNumber,
+                profilePhotoUrl: mergedPhoto,
             }));
-            setSuccessMessage('Profile updated successfully!');
+
+            const isNowComplete = !!mergedPhoto;
+            setProfileComplete(isNowComplete);
+
+            // Sync auth cookie so navbar / sidebar update immediately
+            authService.updateCurrentUser({
+                fullName: updatedUser?.fullName || formData.fullName,
+                country: updatedUser?.country,
+                region: updatedUser?.region,
+                phoneNumber: updatedUser?.phoneNumber,
+                ...(mergedPhoto && { profilePhotoUrl: mergedPhoto }),
+            });
+            window.dispatchEvent(new CustomEvent('userProfileUpdated', { detail: updatedUser }));
+
+            setSuccessMessage(
+                isNowComplete
+                    ? '🎉 Profile complete! All your details are set.'
+                    : 'Profile updated successfully!'
+            );
+            setTimeout(() => setSuccessMessage(''), 5000);
         } catch (err) {
             console.error('Error saving profile:', err);
             setErrorMessage(err.message || 'Failed to save profile');
@@ -192,14 +181,23 @@ function AccountSettingsContent() {
         }
     };
 
+    // Initials from full name
+    const nameParts = formData.fullName.trim().split(' ').filter(Boolean);
+    const initials = (
+        (nameParts[0]?.[0] || '') + (nameParts[nameParts.length - 1]?.[0] || nameParts[0]?.[1] || '')
+    ).toUpperCase() || '?';
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-500 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading your profile...</p>
+            <>
+                <Navbar />
+                <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-[#021d49] mx-auto mb-4" />
+                        <p className="text-gray-600 font-medium">Loading your profile…</p>
+                    </div>
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -208,62 +206,98 @@ function AccountSettingsContent() {
             <Navbar />
             <div className="min-h-screen bg-gray-50">
                 <main className="p-4 sm:p-6 lg:p-8">
-                    <div className="max-w-2xl mx-auto">
+                    <div className="max-w-xl mx-auto">
+
                         {/* Header */}
-                        <div className="mb-8">
+                        <div className="mb-6">
                             <button
                                 onClick={() => router.back()}
-                                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
+                                className="flex items-center gap-1.5 text-gray-500 hover:text-gray-800 mb-4 text-sm font-medium"
                             >
-                                <Icons.ChevronLeft className="w-5 h-5" />
+                                <Icons.ChevronLeft className="w-4 h-4" />
                                 Back
                             </button>
-                            <h1 className="text-3xl font-bold text-gray-900 mb-2">Account Settings</h1>
-                            <p className="text-gray-600">Manage your profile information and preferences</p>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-900 mb-0.5">Account Settings</h1>
+                                    <p className="text-sm text-gray-500">Complete your profile to get started</p>
+                                </div>
+                                {/* Profile completion badge */}
+                                {profileComplete ? (
+                                    <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                                        <Icons.CheckCircle className="w-3.5 h-3.5" />
+                                        Profile Complete
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                                        <Icons.AlertCircle className="w-3.5 h-3.5" />
+                                        Incomplete
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Alert Messages */}
+                        {/* What's needed banner (shown until complete) */}
+                        {!profileComplete && (
+                            <div className="mb-5 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-3">
+                                <Icons.Info className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                                <div className="text-sm text-blue-700">
+                                    <p className="font-semibold mb-0.5">One step to complete your profile</p>
+                                    <p className="text-blue-600 text-xs">Upload a profile photo to mark your profile as complete.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Alerts */}
                         {successMessage && (
-                            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                            <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
                                 <Icons.CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                                <p className="text-green-700">{successMessage}</p>
+                                <p className="text-green-700 text-sm font-medium">{successMessage}</p>
                             </div>
                         )}
-
                         {errorMessage && (
-                            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+                            <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
                                 <Icons.AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-                                <p className="text-red-700">{errorMessage}</p>
+                                <p className="text-red-700 text-sm">{errorMessage}</p>
                             </div>
                         )}
 
-                        {/* Profile Form */}
-                        <form onSubmit={handleSaveProfile} className="bg-white rounded-lg shadow">
-                            {/* Profile Photo Section */}
-                            <div className="p-6 border-b border-gray-200">
-                                <h2 className="text-xl font-bold text-gray-900 mb-6">Profile Photo</h2>
-                                <div className="flex flex-col sm:flex-row gap-6 items-start">
-                                    {/* Photo Preview */}
-                                    <div className="flex flex-col items-center">
-                                        <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-4xl font-bold flex-shrink-0 overflow-hidden">
+                        <form onSubmit={handleSaveProfile} className="space-y-4">
+
+                            {/* ── Profile Photo Card ── */}
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <h2 className="text-base font-semibold text-gray-900">Profile Photo</h2>
+                                    {!formData.profilePhotoUrl && !imageFile && (
+                                        <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase tracking-wide">Required</span>
+                                    )}
+                                    {(formData.profilePhotoUrl || imageFile) && (
+                                        <span className="text-[10px] font-bold bg-green-100 text-green-700 px-2 py-0.5 rounded-full uppercase tracking-wide flex items-center gap-1">
+                                            <Icons.Check className="w-2.5 h-2.5" /> Done
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-5">
+                                    {/* Avatar */}
+                                    <div className="relative flex-shrink-0">
+                                        <div className="w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-[#021d49] to-blue-500 flex items-center justify-center text-white text-2xl font-bold shadow-md ring-4 ring-white">
                                             {imagePreview ? (
-                                                <img
-                                                    src={imagePreview}
-                                                    alt="Profile"
-                                                    className="w-full h-full object-cover"
-                                                />
+                                                <img src={imagePreview} alt="Profile" className="w-full h-full object-cover" />
                                             ) : (
-                                                formData.firstName?.[0] + (formData.lastName?.[0] || '')
+                                                initials
                                             )}
                                         </div>
-                                        <p className="text-sm text-gray-600 mt-2 text-center">
-                                            {formData.firstName} {formData.lastName}
-                                        </p>
+                                        {profileComplete && (
+                                            <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                                                <Icons.Check className="w-3.5 h-3.5 text-white" />
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {/* Upload Controls */}
+                                    {/* Upload */}
                                     <div className="flex-1">
-                                        <label className="block">
+                                        <label className="cursor-pointer block">
                                             <input
                                                 type="file"
                                                 accept="image/*"
@@ -271,151 +305,117 @@ function AccountSettingsContent() {
                                                 className="hidden"
                                                 disabled={saving}
                                             />
-                                            <span className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium cursor-pointer transition-colors">
-                                                <Icons.Upload className="w-4 h-4" />
-                                                Choose Photo
+                                            <span className="inline-flex items-center gap-2 bg-[#021d49] hover:bg-[#032a66] text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors cursor-pointer">
+                                                <Icons.Camera className="w-4 h-4" />
+                                                {imageFile ? 'Change Photo' : (formData.profilePhotoUrl ? 'Change Photo' : 'Upload Photo')}
                                             </span>
                                         </label>
-                                        <p className="text-sm text-gray-600 mt-2">
-                                            JPG, PNG or GIF (max 5MB)
-                                        </p>
+                                        <p className="text-xs text-gray-400 mt-2">JPG, PNG or GIF · max 5 MB</p>
+                                        {imageFile && (
+                                            <p className="text-xs text-[#021d49] mt-1 font-medium flex items-center gap-1">
+                                                <Icons.Image className="w-3 h-3" />
+                                                {imageFile.name} — will upload on save
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Personal Info Section */}
-                            <div className="p-6 border-b border-gray-200">
-                                <h2 className="text-xl font-bold text-gray-900 mb-6">Personal Information</h2>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    {/* First Name */}
+                            {/* ── Personal Details Card ── */}
+                            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                                <h2 className="text-base font-semibold text-gray-900 mb-4">Personal Details</h2>
+
+                                <div className="space-y-4">
+                                    {/* Full Name — read-only, pre-filled by admin */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            First Name *
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                                            Full Name
+                                            <span className="ml-2 text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-wide">Pre-filled</span>
                                         </label>
                                         <input
                                             type="text"
-                                            name="firstName"
-                                            value={formData.firstName}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                            required
+                                            value={formData.fullName}
+                                            disabled
+                                            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 text-gray-600 cursor-not-allowed"
                                         />
                                     </div>
 
-                                    {/* Last Name */}
+                                    {/* Email — read-only */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Last Name *
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="lastName"
-                                            value={formData.lastName}
-                                            onChange={handleInputChange}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                            required
-                                        />
-                                    </div>
-
-                                    {/* Email */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                             Email Address
+                                            <span className="ml-2 text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-wide">Pre-filled</span>
                                         </label>
                                         <input
                                             type="email"
-                                            name="email"
                                             value={formData.email}
                                             disabled
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 outline-none"
+                                            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 text-gray-400 cursor-not-allowed"
                                         />
-                                        <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        {/* Country */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Country</label>
+                                            <input
+                                                type="text"
+                                                name="country"
+                                                value={formData.country}
+                                                onChange={handleInputChange}
+                                                placeholder="e.g. Kenya"
+                                                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#021d49]/25 focus:border-[#021d49] outline-none transition"
+                                            />
+                                        </div>
+
+                                        {/* Region */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1.5">Region / State</label>
+                                            <input
+                                                type="text"
+                                                name="region"
+                                                value={formData.region}
+                                                onChange={handleInputChange}
+                                                placeholder="e.g. Nairobi"
+                                                className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#021d49]/25 focus:border-[#021d49] outline-none transition"
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Phone Number */}
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Phone Number
-                                        </label>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Phone Number</label>
                                         <input
                                             type="tel"
                                             name="phoneNumber"
                                             value={formData.phoneNumber}
                                             onChange={handleInputChange}
-                                            placeholder="+1 (555) 000-0000"
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                            placeholder="+254 712 000 000"
+                                            className="w-full px-3.5 py-2.5 border border-gray-300 rounded-xl text-sm focus:ring-2 focus:ring-[#021d49]/25 focus:border-[#021d49] outline-none transition"
                                         />
-                                    </div>
-
-                                    {/* Country */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Country
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="country"
-                                            value={formData.country}
-                                            onChange={handleInputChange}
-                                            placeholder="United States"
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                        />
-                                    </div>
-
-                                    {/* Institution */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Institution / Organization
-                                        </label>
-                                        <input
-                                            type="text"
-                                            name="institution"
-                                            value={formData.institution}
-                                            onChange={handleInputChange}
-                                            placeholder="Your school or company"
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                                        />
-                                    </div>
-
-                                    {/* Bio */}
-                                    <div className="sm:col-span-2">
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                                            Bio
-                                        </label>
-                                        <textarea
-                                            name="bio"
-                                            value={formData.bio}
-                                            onChange={handleInputChange}
-                                            placeholder="Tell us about yourself..."
-                                            rows={4}
-                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none"
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            {formData.bio.length}/500 characters
-                                        </p>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
-                            <div className="p-6 bg-gray-50 rounded-b-lg flex gap-4 justify-end">
+                            {/* ── Actions ── */}
+                            <div className="flex items-center justify-between gap-3 pb-8">
                                 <button
                                     type="button"
                                     onClick={() => router.back()}
                                     disabled={saving}
-                                    className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-100 transition-colors disabled:opacity-50"
+                                    className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-100 transition disabled:opacity-50"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                                    className="flex-1 sm:flex-none px-8 py-2.5 bg-[#021d49] hover:bg-[#032a66] disabled:opacity-50 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shadow-sm"
                                 >
                                     {saving ? (
                                         <>
                                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                            Saving...
+                                            Saving…
                                         </>
                                     ) : (
                                         <>
