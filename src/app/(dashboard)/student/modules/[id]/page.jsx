@@ -16,12 +16,15 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
 
+function resolveUrl(url) { return resolveAssetUrl(url); }
+
 // Open or download a resource file
 async function openResource(url, fileName, isPdf) {
-    const fullUrl = url.startsWith('/') ? `${API_URL}${url}` : url;
+    const fullUrl = resolveUrl(url);
     if (isPdf) {
         window.open(fullUrl, '_blank', 'noopener,noreferrer');
     } else {
@@ -68,7 +71,8 @@ function VideoPlayer({ url, className = '' }) {
 
 // ── Resource helpers ───────────────────────────────────────────────────────────
 function resourceHref(res) {
-    const url = typeof res === 'string' ? res : res.url;
+    const raw = typeof res === 'string' ? res : res.url;
+    const url = resolveAssetUrl(raw);
     const name = typeof res === 'string' ? res : (res.name || res.originalName || '');
     const ext = (res?.fileType || name || url || '').split('.').pop()?.toLowerCase() || '';
     const isPdf = ext === 'pdf';

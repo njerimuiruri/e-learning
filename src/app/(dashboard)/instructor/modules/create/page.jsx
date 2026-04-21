@@ -7,6 +7,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import moduleService from '@/lib/api/moduleService';
 import categoryService from '@/lib/api/categoryService';
 import { useDraft } from '@/hooks/useDraft';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
 import VideoUploader from '@/components/ui/VideoUploader';
@@ -111,9 +112,10 @@ function ResourceList({ label, hint, values = [], onChange }) {
             <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
             <div className="flex items-center gap-1">
               {r.url && (() => {
+                const resolvedUrl = resolveAssetUrl(r.url);
                 const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
                 const isPdf = ext === 'pdf';
-                const href = isPdf ? r.url : r.url.replace('/upload/', '/upload/fl_attachment/');
+                const href = isPdf ? resolvedUrl : resolvedUrl.replace('/upload/', '/upload/fl_attachment/');
                 return (
                   <a
                     href={href}

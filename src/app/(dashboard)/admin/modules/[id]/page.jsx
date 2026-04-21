@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import adminService from '@/lib/api/adminService';
 import ModuleStudentPreview from '@/components/shared/ModuleStudentPreview';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 
 
 function stripHtml(html) {
@@ -557,7 +558,7 @@ export default function AdminModuleDetailPage() {
                                                                                     <div className="space-y-1">
                                                                                         {(lesson.lessonResources || lesson.resources || []).map((res, ri) => {
                                                                                             const name = typeof res === 'string' ? res : (res.name || res.url);
-                                                                                            const url = typeof res === 'string' ? res : res.url;
+                                                                                            const url = resolveAssetUrl(typeof res === 'string' ? res : res.url);
                                                                                             const ext = (name || url || '').split('.').pop()?.toLowerCase();
                                                                                             const isPdf = ext === 'pdf';
                                                                                             const href = isPdf ? url : url?.replace('/upload/', '/upload/fl_attachment/');
@@ -826,7 +827,7 @@ export default function AdminModuleDetailPage() {
                                                                 <div className="space-y-1.5">
                                                                     {resources.map((res, ri) => {
                                                                         const name = typeof res === 'string' ? res : (res.name || res.url);
-                                                                        const url = typeof res === 'string' ? res : res.url;
+                                                                        const url = resolveAssetUrl(typeof res === 'string' ? res : res.url);
                                                                         const desc = typeof res === 'object' ? res.description : '';
                                                                         const fileType = typeof res === 'object' ? (res.fileType || res.type) : '';
                                                                         return (
@@ -890,7 +891,7 @@ export default function AdminModuleDetailPage() {
                                                         {cs[`${section.key}Resources`]?.length > 0 && (
                                                             <div className="mt-2 space-y-1">
                                                                 {cs[`${section.key}Resources`].map((r, ri) => {
-                                                                    const url = typeof r === 'string' ? r : r.url;
+                                                                    const url = resolveAssetUrl(typeof r === 'string' ? r : r.url);
                                                                     const name = typeof r === 'string' ? r : (r.name || r.url);
                                                                     return url ? (
                                                                         <a key={ri} href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline">
@@ -918,7 +919,7 @@ export default function AdminModuleDetailPage() {
                                 </div>
                                 <div className="space-y-2">
                                     {moduleResources.map((res, ri) => {
-                                        const url = typeof res === 'string' ? res : res.url;
+                                        const url = resolveAssetUrl(typeof res === 'string' ? res : res.url);
                                         const name = typeof res === 'string'
                                             ? `Resource ${ri + 1}`
                                             : (res.name || res.originalName || res.url?.split('/').pop() || `Resource ${ri + 1}`);

@@ -6,6 +6,7 @@ import RichTextEditor from '@/components/ui/RichTextEditor';
 import InteractiveCodeEditor from '@/components/student/InteractiveCodeEditor';
 import ResourceUploader from '@/components/ui/ResourceUploader';
 import uploadService from '@/lib/api/uploadService';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1141,9 +1142,10 @@ function ResourcesTab({ resources = [], onChange, disabled }) {
                 <span className="text-xs font-semibold text-gray-600">Resource {i + 1}</span>
                 <div className="flex items-center gap-1">
                   {r.url && (() => {
+                    const resolvedUrl = resolveAssetUrl(r.url);
                     const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
                     const isPdf = ext === 'pdf';
-                    const href = isPdf ? r.url : r.url.replace('/upload/', '/upload/fl_attachment/');
+                    const href = isPdf ? resolvedUrl : resolvedUrl.replace('/upload/', '/upload/fl_attachment/');
                     return (
                       <a
                         href={href}

@@ -6,6 +6,7 @@ import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import moduleRatingService from '@/lib/api/moduleRatingService';
 import InstructorSidebar from '@/components/instructor/InstructorSidebar';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 
 export default function ModuleDetailPage() {
     const router = useRouter();
@@ -471,7 +472,7 @@ export default function ModuleDetailPage() {
                                                                 <p className="text-sm font-medium text-gray-700 mb-2">Resources:</p>
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {(lesson.lessonResources || lesson.resources || []).map((resource, rIdx) => {
-                                                                        const url = typeof resource === 'string' ? resource : resource.url;
+                                                                        const url = resolveAssetUrl(typeof resource === 'string' ? resource : resource.url);
                                                                         const name = typeof resource === 'string' ? `Resource ${rIdx + 1}` : (resource.name || resource.originalName || resource.url?.split('/').pop() || `Resource ${rIdx + 1}`);
                                                                         const ext = (name || url || '').split('.').pop()?.toLowerCase();
                                                                         const isPdf = ext === 'pdf';
@@ -522,7 +523,7 @@ export default function ModuleDetailPage() {
                                         </h3>
                                         <div className="space-y-2">
                                             {resources.map((res, idx) => {
-                                                const url = typeof res === 'string' ? res : res.url;
+                                                const url = resolveAssetUrl(typeof res === 'string' ? res : res.url);
                                                 const name = typeof res === 'string'
                                                     ? (url?.split('/').pop() || `Resource ${idx + 1}`)
                                                     : (res.name || res.originalName || url?.split('/').pop() || `Resource ${idx + 1}`);

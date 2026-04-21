@@ -32,6 +32,7 @@ import { noteService } from "@/lib/api/noteService";
 import messageService from "@/lib/api/messageService";
 import ModuleProgressionGuard from "@/components/ModuleProgressionGuard";
 import FinalAssessmentGuard from "@/components/FinalAssessmentGuard";
+import { resolveAssetUrl } from "@/lib/utils/resolveAssetUrl";
 
 const CourseLearningPage = () => {
     const router = useRouter();
@@ -633,7 +634,7 @@ const CourseLearningPage = () => {
 
                                     {activeLesson?.documentUrl && (
                                         <a
-                                            href={activeLesson.documentUrl}
+                                            href={resolveAssetUrl(activeLesson.documentUrl)}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="w-full flex items-center gap-3 p-4 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-lg hover:shadow-md transition"

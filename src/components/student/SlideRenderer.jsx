@@ -2,6 +2,18 @@
 
 import React from 'react';
 import InteractiveCodeEditor from './InteractiveCodeEditor';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
+
+// Replace any localhost src/href in stored HTML with the real API URL
+function sanitizeHtml(html) {
+  if (!html) return html;
+  return html.replace(
+    /(src|href)="http:\/\/(?:localhost|127\.0\.0\.1):\d+(\/[^"]*)"/g,
+    `$1="${API_URL}$2"`
+  );
+}
 
 /**
  * SlideRenderer — renders a single slide.
@@ -56,7 +68,7 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
                   ? 'prose-invert prose-headings:text-white prose-p:text-gray-300 prose-li:text-gray-300 prose-strong:text-white prose-a:text-blue-400'
                   : 'prose-headings:text-gray-900 prose-p:text-gray-700 prose-li:text-gray-700 prose-strong:text-gray-900 prose-a:text-[#1e40af]'
                 }`}
-              dangerouslySetInnerHTML={{ __html: slide.content || '' }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(slide.content || '') }}
             />
           </div>
         </div>
@@ -80,7 +92,7 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
             {slide.imageUrl ? (
               <>
                 <img
-                  src={slide.imageUrl}
+                  src={resolveAssetUrl(slide.imageUrl)}
                   alt={slide.imageCaption || 'Slide image'}
                   className={`max-w-full mx-auto rounded-xl shadow-md object-contain max-h-[420px] ${dm ? 'border border-gray-700' : 'border border-gray-100'}`}
                 />
@@ -166,7 +178,7 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
             {slide.imageUrl && (
               <div className="flex flex-col items-center gap-2">
                 <img
-                  src={slide.imageUrl}
+                  src={resolveAssetUrl(slide.imageUrl)}
                   alt={slide.imageCaption || 'Diagram'}
                   className={`max-w-full mx-auto rounded-xl shadow-sm object-contain max-h-[420px] ${dm ? 'border border-gray-700' : 'border border-amber-100'}`}
                 />

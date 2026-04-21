@@ -6,6 +6,7 @@ import * as Icons from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import adminService from '@/lib/api/adminService';
 import categoryService from '@/lib/api/categoryService';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 import { useDraft } from '@/hooks/useDraft';
 import AdminSidebar from '@/components/Admin/AdminSidebar';
 import RichTextEditor from '@/components/ui/RichTextEditor';
@@ -123,11 +124,12 @@ function ResourceList({ label, hint, values = [], onChange }) {
             <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
             <div className="flex items-center gap-1">
               {r.url && (() => {
+                const resolvedUrl = resolveAssetUrl(r.url);
                 const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
                 const isPdf = ext === 'pdf';
                 return (
                   <a
-                    href={r.url}
+                    href={resolvedUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors rounded"

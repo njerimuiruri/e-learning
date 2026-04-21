@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 import * as Icons from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,11 +11,11 @@ import InteractiveCodeEditor from '@/components/student/InteractiveCodeEditor';
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
 function resourceHref(r) {
-  const url = typeof r === 'string' ? r : r?.url || '';
+  const raw = typeof r === 'string' ? r : r?.url || '';
+  const url = resolveAssetUrl(raw);
   const name = typeof r === 'string' ? r : r?.name || '';
   const ext = (name || url).split('.').pop()?.toLowerCase();
   const isPdf = ext === 'pdf';
-  // Only apply Cloudinary force-download trick for Cloudinary URLs
   const isCloudinary = url.includes('cloudinary.com');
   const href = isCloudinary && !isPdf ? url.replace('/upload/', '/upload/fl_attachment/') : url;
   return { href, isPdf, name: name || url.split('/').pop() || 'Resource' };

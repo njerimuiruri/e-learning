@@ -2,11 +2,12 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as Icons from 'lucide-react';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
+function resolveUrl(url) { return resolveAssetUrl(url); }
 
 async function openResource(url, fileName, isPdf) {
-    const fullUrl = url.startsWith('/') ? `${API_URL}${url}` : url;
+    const fullUrl = resolveUrl(url);
     if (isPdf) {
         window.open(fullUrl, '_blank', 'noopener,noreferrer');
     } else {
@@ -439,7 +440,7 @@ export default function LessonViewer({
               <div className="space-y-2">
                 {resources.map((res, i) => {
                   const name = res.name || res.originalName || `Resource ${i + 1}`;
-                  const url = res.url || res.fileUrl || '';
+                  const url = resolveUrl(res.url || res.fileUrl || '');
                   const nameExt = name.split('.').pop()?.toLowerCase() || '';
                   const urlExt = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
                   const ext = nameExt || urlExt;

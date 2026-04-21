@@ -1,4 +1,6 @@
 import axios from 'axios';
+export { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
 
@@ -15,13 +17,6 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// If the backend returns a relative path (/uploads/...) we prepend the API URL
-// so the returned URL works in <img src> and <a href> on the frontend domain.
-function toAbsoluteUrl(url: string): string {
-  if (!url) return url;
-  return url.startsWith('/') ? `${API_URL}${url}` : url;
-}
-
 const uploadService = {
   uploadImage: async (file: File): Promise<string> => {
     const formData = new FormData();
@@ -30,7 +25,8 @@ const uploadService = {
     const response = await api.post('/upload/image', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    return toAbsoluteUrl(response.data.url);
+    // Images are embedded as <img src> in HTML content so must be absolute
+    return resolveAssetUrl(response.data.url);
   },
 
   uploadVideo: async (file: File): Promise<string> => {
@@ -52,7 +48,7 @@ const uploadService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return {
-      url: toAbsoluteUrl(response.data.url),
+      url: response.data.url, // relative path; resolve with resolveAssetUrl() at display time
       originalName: response.data.originalName || file.name,
     };
   },

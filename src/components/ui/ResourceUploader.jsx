@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import * as Icons from 'lucide-react';
 import uploadService from '@/lib/api/uploadService';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 
 export default function ResourceUploader({ value = [], onChange, label = 'Lesson Resources' }) {
     const [uploading, setUploading] = useState(false);
@@ -71,11 +72,11 @@ export default function ResourceUploader({ value = [], onChange, label = 'Lesson
                                 {typeof resource === 'string' ? resource : resource.name}
                             </span>
                             {(() => {
-                                const resUrl = typeof resource === 'string' ? resource : resource.url;
+                                const rawUrl = typeof resource === 'string' ? resource : resource.url;
+                                const resUrl = resolveAssetUrl(rawUrl);
                                 const resName = typeof resource === 'string' ? resource : resource.name;
                                 const ext = (resName || resUrl || '').split('.').pop()?.toLowerCase();
                                 const isPdf = ext === 'pdf';
-                                // Only apply Cloudinary force-download trick for Cloudinary URLs
                                 const isCloudinary = resUrl?.includes('cloudinary.com');
                                 const href = isCloudinary && !isPdf
                                     ? resUrl?.replace('/upload/', '/upload/fl_attachment/')

@@ -16,7 +16,7 @@ export default function StudentLayout({ children }) {
 
     useEffect(() => {
         // Check if user is authenticated and has student role
-        // First try to get from cookie (set by backend), then fallback to localStorage (set by frontend)
+        // First try to get fon production erom cookie (set by backend), then fallback to localStorage (set by frontend)
         let user = authService.getCurrentUser();
 
         if (!user && typeof window !== 'undefined') {

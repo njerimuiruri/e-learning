@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import categoryService from '@/lib/api/categoryService';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 import { useDraft } from '@/hooks/useDraft';
 import InstructorSidebar from '@/components/instructor/InstructorSidebar';
 import LessonBuilder from '@/components/instructor/LessonBuilder';
@@ -77,11 +78,12 @@ function ModuleResourceList({ values = [], onChange }) {
                         <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
                         <div className="flex items-center gap-1">
                             {r.url && (() => {
+                                const resolvedUrl = resolveAssetUrl(r.url);
                                 const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
                                 const isPdf = ext === 'pdf';
                                 return (
                                     <a
-                                        href={r.url}
+                                        href={resolvedUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="p-1 text-gray-400 hover:text-blue-500 transition-colors rounded"
