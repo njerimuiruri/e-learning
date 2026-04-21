@@ -121,9 +121,26 @@ function ResourceList({ label, hint, values = [], onChange }) {
         <div key={i} className="border rounded-xl p-4 space-y-3 bg-gray-50/50">
           <div className="flex justify-between items-center">
             <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
-            <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)}>
-              <Icons.Trash2 className="w-4 h-4 text-red-400" />
-            </Button>
+            <div className="flex items-center gap-1">
+              {r.url && (() => {
+                const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
+                const isPdf = ext === 'pdf';
+                return (
+                  <a
+                    href={r.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors rounded"
+                    title={isPdf ? 'Open in new tab' : 'Download'}
+                  >
+                    {isPdf ? <Icons.ExternalLink className="w-4 h-4" /> : <Icons.Download className="w-4 h-4" />}
+                  </a>
+                );
+              })()}
+              <Button type="button" variant="ghost" size="icon" onClick={() => remove(i)}>
+                <Icons.Trash2 className="w-4 h-4 text-red-400" />
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
@@ -300,7 +317,7 @@ export default function AdminModuleEditPage() {
       };
 
       // Build clean lessons array from LessonBuilder output (strip internal _caseStudy key)
-      const cleanLessons = (form.lessons || []).map(({ _caseStudy, resources, lessonResources: _lr, ...rest }) => {
+      const cleanLessons = (form.lessons || []).map(({ _caseStudy, resources, lessonResources, ...rest }) => {
         const normalizedQuiz = (rest.assessmentQuiz || []).map((q) => ({
           ...q,
           type: inferQType(q),
@@ -309,7 +326,7 @@ export default function AdminModuleEditPage() {
         }));
         return {
           ...rest,
-          lessonResources: resources || [],
+          lessonResources: lessonResources || resources || [],
           assessmentQuiz: normalizedQuiz,
         };
       });

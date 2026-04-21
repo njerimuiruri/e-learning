@@ -653,8 +653,8 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
             {/* ── Resources ────────────────────────────────────────────── */}
             <TabsContent value="resources" className="mt-0">
               <ResourcesTab
-                resources={lesson.resources || lesson.lessonResources || []}
-                onChange={(v) => onChange('resources', v)}
+                resources={lesson.lessonResources || lesson.resources || []}
+                onChange={(v) => onChange('lessonResources', v)}
                 disabled={disabled}
               />
             </TabsContent>

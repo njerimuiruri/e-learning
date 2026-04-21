@@ -75,9 +75,26 @@ function ModuleResourceList({ values = [], onChange }) {
                 <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
                     <div className="flex justify-between items-center">
                         <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
-                        <button type="button" onClick={() => remove(i)} className="text-red-400 hover:text-red-600">
-                            <Icons.Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                            {r.url && (() => {
+                                const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
+                                const isPdf = ext === 'pdf';
+                                return (
+                                    <a
+                                        href={r.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors rounded"
+                                        title={isPdf ? 'Open in new tab' : 'Download'}
+                                    >
+                                        {isPdf ? <Icons.ExternalLink className="w-4 h-4" /> : <Icons.Download className="w-4 h-4" />}
+                                    </a>
+                                );
+                            })()}
+                            <button type="button" onClick={() => remove(i)} className="text-red-400 hover:text-red-600 p-1">
+                                <Icons.Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
@@ -413,7 +430,7 @@ export default function EditModulePage() {
                 return 'short-answer';
             };
 
-            const cleanLessons = lessons.map(({ _caseStudy, resources, lessonResources: _lr, ...rest }) => {
+            const cleanLessons = lessons.map(({ _caseStudy, resources, lessonResources, ...rest }) => {
                 const normalizedQuiz = (rest.assessmentQuiz || []).map((q) => ({
                     ...q,
                     type: inferQType(q),
@@ -434,7 +451,7 @@ export default function EditModulePage() {
 
                 return {
                     ...rest,
-                    lessonResources: resources || [],
+                    lessonResources: lessonResources || resources || [],
                     assessmentQuiz: normalizedQuiz,
                 };
             });

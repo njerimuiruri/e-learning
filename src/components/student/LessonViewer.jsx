@@ -2,6 +2,23 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import * as Icons from 'lucide-react';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
+
+async function openResource(url, fileName, isPdf) {
+    const fullUrl = url.startsWith('/') ? `${API_URL}${url}` : url;
+    if (isPdf) {
+        window.open(fullUrl, '_blank', 'noopener,noreferrer');
+    } else {
+        const a = document.createElement('a');
+        a.href = fullUrl;
+        a.download = fileName || 'download';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+}
 import SlideRenderer from './SlideRenderer';
 import QuizResultsModal from './QuizResultsModal';
 import { useEngagementTracker } from '@/hooks/useEngagementTracker';
@@ -432,25 +449,30 @@ export default function LessonViewer({
                   const isPpt = ['ppt', 'pptx'].includes(ext);
                   const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
                   const isCloudinary = url.includes('cloudinary.com');
-                  const safeFilename = name ? encodeURIComponent(name) : '';
-                  const attachmentFlag = safeFilename ? `fl_attachment:${safeFilename}` : 'fl_attachment';
-                  const href = isCloudinary && !isPdf ? url.replace('/upload/', `/upload/${attachmentFlag}/`) : url;
                   const Icon = isVideo ? Icons.Video : isPdf ? Icons.FileText : isDoc ? Icons.FileText : isXls ? Icons.Table2 : isPpt ? Icons.Presentation : Icons.File;
                   const color = isVideo ? 'text-rose-600 bg-rose-50' : isPdf ? 'text-red-600 bg-red-50' : isDoc ? 'text-blue-600 bg-blue-50' : isXls ? 'text-green-600 bg-green-50' : isPpt ? 'text-orange-600 bg-orange-50' : 'text-gray-600 bg-gray-100';
+                  const handleClick = async (e) => {
+                    if (!isCloudinary) return;
+                    e.preventDefault();
+                    try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
+                  };
                   return (
                     <a
                       key={i}
-                      href={href}
+                      href={url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      {...(!isPdf && !isCloudinary && { download: name })}
-                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-sm hover:-translate-y-0.5 ${darkMode ? 'border-gray-700 bg-gray-800 hover:bg-gray-750' : 'border-gray-200 bg-gray-50 hover:bg-white'}`}
+                      onClick={handleClick}
+                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-sm hover:-translate-y-0.5 cursor-pointer ${darkMode ? 'border-gray-700 bg-gray-800 hover:bg-gray-750' : 'border-gray-200 bg-gray-50 hover:bg-white'}`}
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
                         <Icon className="w-4 h-4" />
                       </div>
                       <span className={`text-sm font-medium truncate flex-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name}</span>
-                      <Icons.Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      {isPdf
+                        ? <Icons.ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        : <Icons.Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      }
                     </a>
                   );
                 })}

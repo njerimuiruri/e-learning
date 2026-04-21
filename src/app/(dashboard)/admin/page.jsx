@@ -350,6 +350,17 @@ export default function AdminDashboardPage() {
                                         {paginated.map((activity) => {
                                             const colors = ACTIVITY_COLORS[activity.type] || { bg: 'bg-gray-50', border: 'border-gray-200', icon: 'bg-gray-100 text-gray-600' };
                                             const IconComp = Icons[activity.icon] || Icons.Activity;
+                                            // For login/registration events the actor is stored in targetUser;
+                                            // for admin/instructor actions it's in performedBy.
+                                            const actor = activity.performedBy || activity.targetUser;
+                                            const actorEmail = actor?.email || activity.metadata?.email || null;
+                                            const actorRole  = actor?.role  || activity.metadata?.role  || null;
+                                            const roleBadgeColor = {
+                                                admin:      'bg-purple-100 text-purple-700',
+                                                instructor: 'bg-blue-100 text-blue-700',
+                                                student:    'bg-green-100 text-green-700',
+                                                fellow:     'bg-teal-100 text-teal-700',
+                                            }[actorRole?.toLowerCase()] || 'bg-gray-100 text-gray-600';
                                             return (
                                                 <div key={activity._id}
                                                     className={`flex gap-3 p-4 rounded-lg border ${colors.bg} ${colors.border}`}>
@@ -358,11 +369,22 @@ export default function AdminDashboardPage() {
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-sm font-medium text-gray-900">{activity.message}</p>
-                                                        {activity.performedBy && (
-                                                            <p className="text-xs text-gray-500 mt-0.5">
-                                                                By <strong>{activity.performedBy.name}</strong>
-                                                            </p>
-                                                        )}
+                                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                                            {actorEmail && (
+                                                                <span className="flex items-center gap-1 text-xs text-gray-500">
+                                                                    <Icons.Mail className="w-3 h-3 flex-shrink-0" />
+                                                                    {actorEmail}
+                                                                </span>
+                                                            )}
+                                                            {actorRole && (
+                                                                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full capitalize ${roleBadgeColor}`}>
+                                                                    {actorRole}
+                                                                </span>
+                                                            )}
+                                                            {activity.performedBy?.name && (
+                                                                <span className="text-xs text-gray-400">({activity.performedBy.name})</span>
+                                                            )}
+                                                        </div>
                                                         {activity.metadata?.reason && (
                                                             <p className="text-xs text-gray-600 mt-1 bg-white/60 rounded px-2 py-1 border border-gray-200">
                                                                 <strong>Reason:</strong> {activity.metadata.reason}

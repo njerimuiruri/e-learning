@@ -17,6 +17,24 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
+
+// Open or download a resource file
+async function openResource(url, fileName, isPdf) {
+    const fullUrl = url.startsWith('/') ? `${API_URL}${url}` : url;
+    if (isPdf) {
+        window.open(fullUrl, '_blank', 'noopener,noreferrer');
+    } else {
+        const a = document.createElement('a');
+        a.href = fullUrl;
+        a.download = fileName || 'download';
+        a.target = '_blank';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+}
+
 // ── Smart video player (handles YouTube, Vimeo, and direct files) ─────────────
 function VideoPlayer({ url, className = '' }) {
     if (!url) return null;
@@ -55,10 +73,7 @@ function resourceHref(res) {
     const ext = (res?.fileType || name || url || '').split('.').pop()?.toLowerCase() || '';
     const isPdf = ext === 'pdf';
     const isCloudinary = url?.includes('cloudinary.com');
-    const safeFilename = name ? encodeURIComponent(name) : '';
-    const attachmentFlag = safeFilename ? `fl_attachment:${safeFilename}` : 'fl_attachment';
-    const href = isCloudinary && !isPdf ? url?.replace('/upload/', `/upload/${attachmentFlag}/`) : url;
-    return { url, name, ext, isPdf, href };
+    return { url, name, ext, isPdf, isCloudinary };
 }
 
 function fileIconColor(ext) {
@@ -876,13 +891,17 @@ function ModuleLearningContent() {
                                     </div>
                                     <div className="space-y-1.5">
                                         {filteredResources.map(({ res, source }, i) => {
-                                            const { url, name, ext, isPdf, href } = resourceHref(res);
+                                            const { url, name, ext, isPdf, isCloudinary } = resourceHref(res);
                                             if (!url) return null;
                                             const colors = fileIconColor(ext);
+                                            const handleClick = async (e) => {
+                                                e.preventDefault();
+                                                try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
+                                            };
                                             return (
-                                                <a key={i} href={href} target="_blank" rel="noopener noreferrer"
-                                                    {...(!isPdf && { download: name })}
-                                                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all group
+                                                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                                    onClick={handleClick}
+                                                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all group cursor-pointer
                                                         ${darkMode ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
                                                 >
                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
@@ -1228,13 +1247,18 @@ function ModuleLearningContent() {
                                                 </div>
                                                 <div className="p-4 space-y-2">
                                                     {[...lessonRes, ...moduleRes].map((res, idx) => {
-                                                        const { url, name, ext, isPdf, href } = resourceHref(res);
+                                                        const { url, name, ext, isPdf, isCloudinary } = resourceHref(res);
                                                         if (!url) return null;
                                                         const colors = fileIconColor(ext);
+                                                        const handleClick = async (e) => {
+                                                            if (!isCloudinary) return;
+                                                            e.preventDefault();
+                                                            try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
+                                                        };
                                                         return (
-                                                            <a key={idx} href={href} target="_blank" rel="noopener noreferrer"
-                                                                {...(!isPdf && { download: name })}
-                                                                className={`flex items-center gap-3 p-3 rounded-xl border transition-all group ${darkMode ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-gray-50 border-gray-200 hover:border-gray-300 hover:bg-white'}`}
+                                                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                                                                onClick={handleClick}
+                                                                className={`flex items-center gap-3 p-3 rounded-xl border transition-all group cursor-pointer ${darkMode ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-gray-50 border-gray-200 hover:border-gray-300 hover:bg-white'}`}
                                                             >
                                                                 <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
                                                                     <Icons.FileText className={`w-4 h-4 ${colors.text}`} />
