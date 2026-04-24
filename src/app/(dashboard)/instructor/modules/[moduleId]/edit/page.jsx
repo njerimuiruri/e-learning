@@ -153,7 +153,12 @@ function QuestionForm({ question, onChange }) {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1.5">Correct Answer <span className="text-red-500">*</span></label>
-                        <input type="text" value={question.correctAnswer} onChange={(e) => onChange({ ...question, correctAnswer: e.target.value })} placeholder="Enter the correct option text" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+                        <select value={question.correctAnswer} onChange={(e) => onChange({ ...question, correctAnswer: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                            <option value="">Select the correct option</option>
+                            {(question.options || []).map((opt, oi) => opt && opt.trim() ? (
+                                <option key={oi} value={opt}>{String.fromCharCode(65 + oi)}. {opt}</option>
+                            ) : null)}
+                        </select>
                     </div>
                 </>
             )}

@@ -284,7 +284,16 @@ function FinalAssessmentStep({ assessment, onChange }) {
                     </SelectContent>
                   </Select>
                 ) : (
-                  <Input value={q.correctAnswer || ''} onChange={(e) => updateQ(i, 'correctAnswer', e.target.value)} placeholder="Correct answer" />
+                  <Select value={q.correctAnswer || ''} onValueChange={(v) => updateQ(i, 'correctAnswer', v)}>
+                    <SelectTrigger><SelectValue placeholder="Select the correct option" /></SelectTrigger>
+                    <SelectContent>
+                      {(q.options || []).map((opt, oi) => opt && opt.trim() ? (
+                        <SelectItem key={oi} value={opt}>
+                          {String.fromCharCode(65 + oi)}. {opt}
+                        </SelectItem>
+                      ) : null)}
+                    </SelectContent>
+                  </Select>
                 )}
               </div>
             )}
@@ -522,6 +531,7 @@ const defaultForm = {
     maxAttempts: 3,
     timeLimit: null,
   },
+  isOptional: false,
   // Admin-only
   assignedInstructorId: '',
   pendingInstructorEmail: '',
@@ -802,6 +812,20 @@ export default function AdminCreateModulePage() {
                       onChange={(e) => updateForm('duration', e.target.value)}
                       placeholder="e.g. 6–9 months"
                     />
+                  </div>
+                </div>
+
+                {/* Optional Module Toggle */}
+                <div
+                  className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer select-none transition-colors ${form.isOptional ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}
+                  onClick={() => updateForm('isOptional', !form.isOptional)}
+                >
+                  <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form.isOptional ? 'bg-amber-500 border-amber-500' : 'border-gray-300 bg-white'}`}>
+                    {form.isOptional && <Icons.Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">Mark as Optional Module</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Optional modules are visible to students but not required for course completion. They do not block progression and are tracked separately.</p>
                   </div>
                 </div>
               </div>

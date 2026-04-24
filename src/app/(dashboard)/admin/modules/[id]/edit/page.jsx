@@ -204,6 +204,7 @@ export default function AdminModuleEditPage() {
     introVideoUrl: '',
     moduleResources: [],
     lessons: [],
+    isOptional: false,
   });
 
   const updateForm = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
@@ -274,6 +275,7 @@ export default function AdminModuleEditPage() {
           introVideoUrl:        mod.introVideoUrl || '',
           moduleResources:      Array.isArray(mod.moduleResources) ? mod.moduleResources : [],
           lessons:              mappedLessons,
+          isOptional:           mod.isOptional ?? false,
         });
       })
       .catch((err) => {
@@ -474,6 +476,20 @@ export default function AdminModuleEditPage() {
                       onChange={(e) => updateForm('duration', e.target.value)}
                       placeholder="e.g. 6–9 months"
                     />
+                  </div>
+                </div>
+
+                {/* Optional Module Toggle */}
+                <div
+                  className={`flex items-start gap-3 rounded-lg border p-4 cursor-pointer select-none transition-colors ${form.isOptional ? 'bg-amber-50 border-amber-300' : 'bg-gray-50 border-gray-200 hover:border-gray-300'}`}
+                  onClick={() => updateForm('isOptional', !form.isOptional)}
+                >
+                  <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${form.isOptional ? 'bg-amber-500 border-amber-500' : 'border-gray-300 bg-white'}`}>
+                    {form.isOptional && <Icons.Check className="w-3 h-3 text-white" />}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900">Mark as Optional Module</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Optional modules are visible to students but not required for course completion. They do not block progression and are tracked separately.</p>
                   </div>
                 </div>
               </div>

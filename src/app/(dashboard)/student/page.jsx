@@ -144,7 +144,7 @@ function QuickLink({ icon, label, sub, color, bgColor, onClick }) {
 function ContinueLearningCard({ enrollment, onClick }) {
     const mod = enrollment.moduleId || {};
     const lvl = getLvl(mod.level);
-    const progress = clamp(enrollment.progress);
+    const progress = enrollment.isCompleted ? 100 : clamp(enrollment.progress);
     return (
         <Card
             className="group cursor-pointer border-gray-100 hover:border-[#021d49]/30 hover:shadow-md transition-all duration-200"
@@ -623,10 +623,9 @@ function StudentDashboardContent() {
     /* ── Derived data ── */
     const inProgress = enrollments.filter(e => {
         if (e.isCompleted) return false;
-        const hasPending = (e.pendingManualGradingCount || 0) > 0;
-        const hasSubmitted = (e.finalAssessmentAttempts || 0) > 0;
-        if (hasSubmitted && hasPending) return false;
-        if (e.completedLessons >= e.totalLessons && e.totalLessons > 0 && !hasSubmitted) return false;
+        // Any enrollment where all lessons are done is no longer "in progress" —
+        // it's either pending assessment or completed.
+        if (e.completedLessons >= e.totalLessons && e.totalLessons > 0) return false;
         return true;
     });
 
@@ -919,7 +918,7 @@ function StudentDashboardContent() {
                                                 {enrollments.map((e) => {
                                                     const mod = e.moduleId || {};
                                                     const lvl = getLvl(mod.level);
-                                                    const prog = clamp(e.progress);
+                                                    const prog = e.isCompleted ? 100 : clamp(e.progress);
 
                                                     // Status label
                                                     let statusBadge;

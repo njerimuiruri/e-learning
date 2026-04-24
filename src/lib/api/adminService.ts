@@ -155,10 +155,14 @@ const adminService = {
   },
   updateFellowProgressAction: async (
     id: string,
-    action: 'allow_proceed' | 'deactivate' | 'mark_completed',
+    action: 'allow_proceed' | 'suspend' | 'unsuspend' | 'deactivate' | 'mark_completed',
     note?: string,
   ) => {
     const { data } = await api.put(`/fellows/${id}/progress-action`, { action, note });
+    return data;
+  },
+  getLearningAnalytics: async (filters: { categoryId?: string; days?: number } = {}) => {
+    const { data } = await api.get('/fellows/learning-analytics', { params: filters });
     return data;
   },
 

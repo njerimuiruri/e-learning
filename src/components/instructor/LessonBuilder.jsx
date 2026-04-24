@@ -729,6 +729,8 @@ function LessonOutcomes({ outcomes, onChange, disabled }) {
 
 function SlidesTab({ slides, onChange, disabled }) {
   const [expandedSlide, setExpandedSlide] = useState(null);
+  const [dragIndex, setDragIndex] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   const addSlide = (type) => {
     const slide = { ...emptySlide(type), order: slides.length };
@@ -745,6 +747,30 @@ function SlidesTab({ slides, onChange, disabled }) {
 
   const updateSlide = (idx, field, value) =>
     onChange(slides.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
+
+  // Move a slide from one position to another, keeping expanded state in sync
+  const moveSlide = (from, to) => {
+    if (from === to || to < 0 || to >= slides.length) return;
+    const updated = [...slides];
+    const [moved] = updated.splice(from, 1);
+    updated.splice(to, 0, moved);
+    onChange(updated.map((s, i) => ({ ...s, order: i })));
+    if (expandedSlide === from) {
+      setExpandedSlide(to);
+    } else if (expandedSlide !== null) {
+      if (from < to && expandedSlide > from && expandedSlide <= to) setExpandedSlide(expandedSlide - 1);
+      else if (from > to && expandedSlide >= to && expandedSlide < from) setExpandedSlide(expandedSlide + 1);
+    }
+  };
+
+  const handleDragStart = (idx) => setDragIndex(idx);
+  const handleDragOver = (e, idx) => { e.preventDefault(); setDragOverIndex(idx); };
+  const handleDrop = (idx) => {
+    if (dragIndex !== null && dragIndex !== idx) moveSlide(dragIndex, idx);
+    setDragIndex(null);
+    setDragOverIndex(null);
+  };
+  const handleDragEnd = () => { setDragIndex(null); setDragOverIndex(null); };
 
   return (
     <div className="space-y-4">
@@ -780,11 +806,20 @@ function SlidesTab({ slides, onChange, disabled }) {
               key={idx}
               slide={slide}
               idx={idx}
+              total={slides.length}
               expanded={expandedSlide === idx}
               onToggle={() => setExpandedSlide(expandedSlide === idx ? null : idx)}
               onUpdate={(field, value) => updateSlide(idx, field, value)}
               onDelete={() => removeSlide(idx)}
+              onMoveUp={() => moveSlide(idx, idx - 1)}
+              onMoveDown={() => moveSlide(idx, idx + 1)}
               disabled={disabled}
+              isDragging={dragIndex === idx}
+              isDragOver={dragOverIndex === idx && dragOverIndex !== dragIndex}
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDrop={() => handleDrop(idx)}
+              onDragEnd={handleDragEnd}
             />
           ))}
         </div>
@@ -795,17 +830,41 @@ function SlidesTab({ slides, onChange, disabled }) {
 
 // ─── Slide Editor ───────────────────────────────────────────────────────────────
 
-function SlideEditor({ slide, idx, expanded, onToggle, onUpdate, onDelete, disabled }) {
+function SlideEditor({
+  slide, idx, total, expanded, onToggle, onUpdate, onDelete,
+  onMoveUp, onMoveDown, disabled,
+  isDragging, isDragOver, onDragStart, onDragOver, onDrop, onDragEnd,
+}) {
   const typeInfo = SLIDE_TYPES.find((t) => t.value === slide.type) || SLIDE_TYPES[0];
   const { Icon } = typeInfo;
 
   return (
-    <div className={`border rounded-lg overflow-hidden transition-all ${expanded ? 'border-blue-200' : 'border-gray-200'}`}>
+    <div
+      className={`border rounded-lg overflow-hidden transition-all
+        ${isDragging ? 'opacity-40 ring-2 ring-blue-400 scale-[0.99]' : ''}
+        ${isDragOver ? 'ring-2 ring-blue-500 border-blue-400' : expanded ? 'border-blue-200' : 'border-gray-200'}
+      `}
+      onDragOver={onDragOver}
+      onDrop={(e) => { e.preventDefault(); onDrop(); }}
+      onDragEnd={onDragEnd}
+    >
       {/* Header */}
       <div
-        className="flex items-center gap-2.5 px-3 py-2 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
+        className="flex items-center gap-2 px-3 py-2 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
         onClick={onToggle}
       >
+        {/* Drag handle — only this element is draggable */}
+        {!disabled && (
+          <span
+            draggable
+            onDragStart={(e) => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; onDragStart(); }}
+            onClick={(e) => e.stopPropagation()}
+            className="cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500 flex-shrink-0 transition-colors"
+            title="Drag to reorder"
+          >
+            <Icons.GripVertical className="w-4 h-4" />
+          </span>
+        )}
         <Icon className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
         <span className="text-xs font-medium text-gray-700 flex-1">
           Slide {idx + 1} — {typeInfo.label}
@@ -820,15 +879,38 @@ function SlideEditor({ slide, idx, expanded, onToggle, onUpdate, onDelete, disab
           <Badge className="text-[9px] h-4 px-1.5 bg-blue-100 text-blue-600 border-0">scroll</Badge>
         )}
         {!disabled && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="text-gray-300 hover:text-red-500 p-0.5 rounded transition-colors"
-          >
-            <Icons.Trash2 className="w-3 h-3" />
-          </button>
+          <>
+            {/* Up / Down arrow buttons for keyboard-friendly reordering */}
+            <div className="flex gap-0 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                onClick={onMoveUp}
+                disabled={idx === 0}
+                className="p-0.5 text-gray-300 hover:text-gray-600 disabled:opacity-20 disabled:cursor-not-allowed rounded transition-colors"
+                title="Move slide up"
+              >
+                <Icons.ChevronUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={onMoveDown}
+                disabled={idx === total - 1}
+                className="p-0.5 text-gray-300 hover:text-gray-600 disabled:opacity-20 disabled:cursor-not-allowed rounded transition-colors"
+                title="Move slide down"
+              >
+                <Icons.ChevronDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="text-gray-300 hover:text-red-500 p-0.5 rounded transition-colors"
+            >
+              <Icons.Trash2 className="w-3 h-3" />
+            </button>
+          </>
         )}
-        <Icons.ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        <Icons.ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`} />
       </div>
 
       {/* Expanded content */}

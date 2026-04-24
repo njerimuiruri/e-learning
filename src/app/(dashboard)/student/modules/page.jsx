@@ -149,25 +149,33 @@ function ModuleBrowsingContent() {
         myEnrollments.find(e => (e.moduleId?._id || e.moduleId)?.toString() === moduleId?.toString());
 
     const isSequentiallyLocked = (mod) => {
+        // Optional modules are never sequentially locked — students can always choose to access them.
+        if (mod.isOptional) return false;
         if (!mod.order || mod.order <= 1) return false;
         const catId = (mod.categoryId?._id || mod.categoryId)?.toString();
-        // Search the full module list so sequential lock works across pages
-        const prevMod = modules.find(m => {
-            const mCatId = (m.categoryId?._id || m.categoryId)?.toString();
-            return mCatId === catId && m.order === mod.order - 1;
-        });
-        if (!prevMod) return false;
-        return !getEnrollmentForModule(prevMod._id)?.isCompleted;
+        // Find the nearest lower-order compulsory module in the same category.
+        // Optional modules in between are skipped — they don't gate progression.
+        const prevCompulsory = modules
+            .filter(m => {
+                const mCatId = (m.categoryId?._id || m.categoryId)?.toString();
+                return mCatId === catId && m.order < mod.order && !m.isOptional;
+            })
+            .sort((a, b) => b.order - a.order)[0];
+        if (!prevCompulsory) return false;
+        return !getEnrollmentForModule(prevCompulsory._id)?.isCompleted;
     };
 
     const getPrevModuleTitle = (mod) => {
         if (!mod.order || mod.order <= 1) return null;
         const catId = (mod.categoryId?._id || mod.categoryId)?.toString();
-        const prevMod = modules.find(m => {
-            const mCatId = (m.categoryId?._id || m.categoryId)?.toString();
-            return mCatId === catId && m.order === mod.order - 1;
-        });
-        return prevMod?.title || `Module ${mod.order - 1}`;
+        // Show the title of the nearest lower-order compulsory module.
+        const prevCompulsory = modules
+            .filter(m => {
+                const mCatId = (m.categoryId?._id || m.categoryId)?.toString();
+                return mCatId === catId && m.order < mod.order && !m.isOptional;
+            })
+            .sort((a, b) => b.order - a.order)[0];
+        return prevCompulsory?.title || `Module ${mod.order - 1}`;
     };
 
     const getCategoryPricing = (module) => {
@@ -187,7 +195,7 @@ function ModuleBrowsingContent() {
     };
 
     const handleEnroll = async (module) => {
-        if (isSequentiallyLocked(module)) {
+        if (!module.isOptional && isSequentiallyLocked(module)) {
             const prevTitle = getPrevModuleTitle(module);
             alert(`You must complete "${prevTitle}" before enrolling in this module.`);
             return;
@@ -654,6 +662,11 @@ function ModuleBrowsingContent() {
                                                 </Badge>
                                             </div>
                                             <div className="absolute top-2.5 right-2.5 flex flex-col gap-1 items-end">
+                                                {mod.isOptional && (
+                                                    <Badge className="text-[10px] bg-amber-500 text-white border-0">
+                                                        <Icons.Star className="w-2.5 h-2.5 mr-1" /> Optional
+                                                    </Badge>
+                                                )}
                                                 {isEnrolled && (
                                                     <Badge className="text-[10px] bg-[#021d49] text-white border-0">
                                                         <Icons.BookOpen className="w-2.5 h-2.5 mr-1" /> Enrolled
@@ -734,13 +747,18 @@ function ModuleBrowsingContent() {
                                             {/* Enrollment progress if enrolled */}
                                             {isEnrolled && (
                                                 <div className="mb-3">
-                                                    <div className="flex items-center justify-between mb-1">
-                                                        <span className="text-[10px] text-gray-500">Your progress</span>
-                                                        <span className="text-[10px] font-bold text-[#021d49]">
-                                                            {Math.min(100, Math.round(enrollment.progress || 0))}%
-                                                        </span>
-                                                    </div>
-                                                    <Progress value={Math.min(100, Math.round(enrollment.progress || 0))} className="h-1.5" />
+                                                    {(() => {
+                                                        const pct = enrollment.isCompleted ? 100 : Math.min(100, Math.round(enrollment.progress || 0));
+                                                        return (
+                                                            <>
+                                                                <div className="flex items-center justify-between mb-1">
+                                                                    <span className="text-[10px] text-gray-500">Your progress</span>
+                                                                    <span className="text-[10px] font-bold text-[#021d49]">{pct}%</span>
+                                                                </div>
+                                                                <Progress value={pct} className="h-1.5" />
+                                                            </>
+                                                        );
+                                                    })()}
                                                 </div>
                                             )}
 

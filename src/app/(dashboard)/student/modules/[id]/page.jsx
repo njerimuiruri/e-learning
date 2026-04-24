@@ -148,8 +148,14 @@ function ModuleLearningContent() {
     const [showLessonAssessment, setShowLessonAssessment] = useState(false);
     const [finalAnswers, setFinalAnswers] = useState({});
     const [finalAssessmentResult, setFinalAssessmentResult] = useState(null);
+    // One-shot guard: prevents Fast Refresh from re-triggering auto-submit
+    const [autoSubmitted, setAutoSubmitted] = useState(false);
+    // Randomized order of questions and their options, re-rolled per attempt
+    const [assessmentQuestionOrder, setAssessmentQuestionOrder] = useState([]);
+    const [assessmentOptionOrders, setAssessmentOptionOrders] = useState({});
 
     const [showContentComingSoon, setShowContentComingSoon] = useState(false);
+    const [showModuleCompletionScreen, setShowModuleCompletionScreen] = useState(false);
 
     // UI state
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -550,17 +556,116 @@ function ModuleLearningContent() {
         } finally { setSubmittingAssessment(false); }
     };
 
+    // Fisher-Yates shuffle — returns a new shuffled array, does not mutate
+    const shuffleArray = (arr) => {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    };
+
+    const initAssessmentOrder = (questions) => {
+        if (!questions || questions.length === 0) return;
+        const qOrder = shuffleArray(questions.map((_, i) => i));
+        const optOrders = {};
+        questions.forEach((q, i) => {
+            if ((q.type === 'multiple-choice' || q.type === 'multiple_choice') && q.options?.length > 1) {
+                optOrders[i] = shuffleArray(q.options.map((_, oi) => oi));
+            }
+        });
+        setAssessmentQuestionOrder(qOrder);
+        setAssessmentOptionOrders(optOrders);
+    };
+
+    // When the final assessment panel opens: re-roll question order AND refresh the
+    // enrollment object so the backend's allLessonsCompleted check passes.
+    useEffect(() => {
+        if (showFinalAssessment && !finalAssessmentResult) {
+            initAssessmentOrder(moduleData?.finalAssessment?.questions);
+            // Refresh enrollment — the backend's submitFinalAssessment checks
+            // enrollment.allLessonsCompleted; if this field wasn't synced yet the
+            // submission returns 400. A fresh fetch ensures we have the latest state.
+            if (moduleId) {
+                moduleEnrollmentService.getMyEnrollmentForModule(moduleId)
+                    .then(fresh => { if (fresh) setEnrollment(fresh); })
+                    .catch(() => { });
+            }
+        }
+    }, [showFinalAssessment]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const handleSubmitFinalAssessment = async () => {
         if (!enrollment) return;
         try {
             setSubmittingAssessment(true);
             const answers = Object.entries(finalAnswers).map(([idx, val]) => ({ questionIndex: parseInt(idx), answer: String(val) }));
+
+            // ── Pre-submit answer summary ──────────────────────────────────────────
+            const allQs = moduleData?.finalAssessment?.questions || [];
+            console.group('[FinalAssessment] ── Submitting Assessment ──');
+            console.log(`Attempt: ${(enrollment.finalAssessmentAttempts || 0) + 1} / ${moduleData?.finalAssessment?.maxAttempts || 3}`);
+            console.log(`Questions: ${allQs.length} total | Answers collected: ${answers.length}`);
+            console.groupCollapsed('Per-question answer preview (client-side evaluation)');
+            answers.forEach(({ questionIndex, answer }) => {
+                const q = allQs[questionIndex];
+                if (!q) { console.warn(`Q${questionIndex + 1}: question not found`); return; }
+                const correctText = resolveCorrectOptionText(q);
+                const clientGuess = String(answer).trim().toLowerCase() === correctText.trim().toLowerCase();
+                console.log(
+                    `Q${questionIndex + 1} [${clientGuess ? '✅' : '❌'}]`,
+                    '| Selected:', `"${answer}"`,
+                    '| Expected:', `"${correctText}"`,
+                    '| Raw stored correctAnswer:', q.correctAnswer,
+                );
+            });
+            console.groupEnd();
+            console.groupEnd();
+
             const result = await moduleEnrollmentService.submitFinalAssessment(enrollment._id, answers);
+
+            // ── Server result ──────────────────────────────────────────────────────
+            console.group('[FinalAssessment] ── Server Result ──');
+            console.log(`Score: ${result?.score?.toFixed(1)}% | Passed: ${result?.passed} | Passing bar: ${moduleData?.finalAssessment?.passingScore || 70}%`);
+            console.log(`Remaining attempts: ${result?.remainingAttempts ?? 'n/a'}`);
+            if (result?.results?.length) {
+                console.groupCollapsed('Per-question server comparison');
+                result.results.forEach(r => {
+                    console.log(
+                        `Q${r.questionIndex + 1} [${r.isCorrect ? '✅' : '❌'}]`,
+                        '| Student:', `"${r.studentAnswer}"`,
+                        '| Correct:', `"${r.correctAnswer}"`,
+                        '| Points:', r.pointsEarned,
+                    );
+                });
+                console.groupEnd();
+            }
+            console.groupEnd();
             setFinalAssessmentResult(result);
-            // Re-fetch to reflect isCompleted / certificateEarned / requiresModuleRepeat changes
+            // Re-fetch progress and enrollment to get updated attempts, isCompleted, etc.
             await refreshProgress();
+            moduleEnrollmentService.getMyEnrollmentForModule(moduleId)
+                .then(fresh => { if (fresh) setEnrollment(fresh); })
+                .catch(() => { });
         } catch (err) {
-            alert(err.response?.data?.message || 'Failed to submit assessment');
+            const msg = err.response?.data?.message || '';
+            const isLessonsIncomplete = /complete all lessons/i.test(msg);
+
+            await refreshProgress();
+            const freshEnrollment = await moduleEnrollmentService.getMyEnrollmentForModule(moduleId).catch(() => null);
+            if (freshEnrollment) setEnrollment(freshEnrollment);
+
+            if (isLessonsIncomplete) {
+                // Backend says lessons are incomplete. With the backend now recomputing
+                // from lessonProgress, this should only fire if lessons are genuinely not
+                // done. Answers are preserved so the student can retry via the Submit button.
+                console.warn('[FinalAssessment] "Complete all lessons" error received — answers preserved, student must retry manually.');
+            } else {
+                // Generic error — clear answers and re-randomize for a clean retry.
+                setFinalAnswers({});
+                initAssessmentOrder(moduleData?.finalAssessment?.questions);
+                alert(msg || 'Failed to submit assessment. Please try again.');
+            }
         } finally { setSubmittingAssessment(false); }
     };
 
@@ -573,13 +678,15 @@ function ModuleLearningContent() {
         if (allAnswered) handleSubmitLessonAssessment();
     }, [lessonAnswers]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Auto-submit final assessment the moment all questions are answered (no Submit button needed)
+    // Auto-submit final assessment the moment all questions are answered.
+    // autoSubmitted guards against Fast Refresh re-firing this effect while
+    // submittingAssessment is false (state is reset on hot reload).
     useEffect(() => {
-        if (!showFinalAssessment || submittingAssessment || finalAssessmentResult) return;
+        if (!showFinalAssessment || submittingAssessment || finalAssessmentResult || autoSubmitted) return;
         const questions = moduleData?.finalAssessment?.questions || [];
         if (questions.length === 0) return;
         const allAnswered = questions.every((_, i) => finalAnswers[i] !== undefined && String(finalAnswers[i]).trim() !== '');
-        if (allAnswered) handleSubmitFinalAssessment();
+        if (allAnswered) { setAutoSubmitted(true); handleSubmitFinalAssessment(); }
     }, [finalAnswers]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const navigateToLesson = (index) => {
@@ -747,7 +854,7 @@ function ModuleLearningContent() {
                                 </div>
                             )}
 
-                            {/* My Knowledge Check */}
+                            {/* Final Assessment */}
                             <div className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
                                 <button
                                     onClick={() => {
@@ -765,12 +872,16 @@ function ModuleLearningContent() {
                                         }`}
                                 >
                                     <span className="flex items-center gap-2">
-                                        <Icons.BarChart2 className="w-4 h-4 text-green-600" />
-                                        My Knowledge Check
+                                        <Icons.Trophy className="w-4 h-4 text-green-600" />
+                                        Final Assessment
                                     </span>
                                     <div className="flex items-center gap-1.5">
-                                        {enrollmentProgress?.finalAssessmentPassed && <Icons.CheckCircle className="w-3.5 h-3.5 text-green-500" />}
-                                        <Icons.RefreshCw className="w-3.5 h-3.5 text-gray-400" />
+                                        {enrollmentProgress?.finalAssessmentPassed
+                                            ? <Icons.CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                            : allLessonsCompleted
+                                                ? <Icons.ChevronRight className="w-3.5 h-3.5 text-green-500" />
+                                                : <Icons.Lock className="w-3.5 h-3.5 text-gray-400" />
+                                        }
                                     </div>
                                 </button>
                             </div>
@@ -1040,18 +1151,36 @@ function ModuleLearningContent() {
 
                     {/* ── FINAL ASSESSMENT ── */}
                     {!showModuleOverview && !showIntroVideo && showFinalAssessment && (
-                        <div className={`flex-1 overflow-y-auto ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+                        <div
+                            ref={(el) => {
+                                // Scroll to top whenever a result arrives so the student
+                                // immediately sees the pass/fail banner, not the mid-question list.
+                                if (el && finalAssessmentResult) el.scrollTop = 0;
+                            }}
+                            className={`flex-1 overflow-y-auto ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}
+                        >
                             <div className="max-w-3xl mx-auto px-4 py-8">
-                                <FinalAssessmentPanel
-                                    module={moduleData}
-                                    enrollment={enrollment}
-                                    finalAnswers={finalAnswers}
-                                    setFinalAnswers={setFinalAnswers}
-                                    finalAssessmentResult={finalAssessmentResult}
-                                    submitting={submittingAssessment}
-                                    onGoToLessons={() => { setShowFinalAssessment(false); setCurrentLessonIndex(0); setFinalAnswers({}); setFinalAssessmentResult(null); }}
-                                    router={router}
-                                />
+                                {/* Show CompletionScreen when:
+                                    (a) user clicked "Continue" after passing, OR
+                                    (b) revisiting after having already completed the module (no fresh result) */}
+                                {(showModuleCompletionScreen || (enrollment?.isCompleted && enrollment?.finalAssessmentPassed && !finalAssessmentResult)) ? (
+                                    <CompletionScreen enrollment={enrollment} moduleId={moduleData._id} module={moduleData} router={router} />
+                                ) : (
+                                    <FinalAssessmentPanel
+                                        module={moduleData}
+                                        enrollment={enrollment}
+                                        finalAnswers={finalAnswers}
+                                        setFinalAnswers={setFinalAnswers}
+                                        finalAssessmentResult={finalAssessmentResult}
+                                        submitting={submittingAssessment}
+                                        questionOrder={assessmentQuestionOrder}
+                                        optionOrders={assessmentOptionOrders}
+                                        onSubmit={handleSubmitFinalAssessment}
+                                        onGoToLessons={() => { setShowFinalAssessment(false); setCurrentLessonIndex(0); setFinalAnswers({}); setFinalAssessmentResult(null); setAutoSubmitted(false); setShowModuleCompletionScreen(false); }}
+                                        onRetry={() => { setFinalAnswers({}); setFinalAssessmentResult(null); setAutoSubmitted(false); initAssessmentOrder(moduleData?.finalAssessment?.questions); }}
+                                        onComplete={() => setShowModuleCompletionScreen(true)}
+                                    />
+                                )}
                             </div>
                         </div>
                     )}
@@ -1077,6 +1206,27 @@ function ModuleLearningContent() {
                             >
                                 Review Lessons
                             </button>
+                        </div>
+                    )}
+
+                    {/* ── FINAL ASSESSMENT CTA BANNER (shown when all lessons done, assessment not yet passed) ── */}
+                    {!showModuleOverview && !showIntroVideo && !showFinalAssessment && !showContentComingSoon && allLessonsCompleted && moduleData?.finalAssessment && !enrollment?.finalAssessmentPassed && (
+                        <div className="px-4 pt-4 flex-shrink-0">
+                            <div className="max-w-3xl mx-auto">
+                                <button
+                                    onClick={() => { setShowFinalAssessment(true); setShowLessonAssessment(false); }}
+                                    className="w-full flex items-center gap-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-2xl px-5 py-4 shadow-lg transition-all group"
+                                >
+                                    <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0">
+                                        <Icons.Trophy className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <p className="font-bold text-base">All lessons complete — Take your Final Assessment!</p>
+                                        <p className="text-green-100 text-sm mt-0.5">Click here to start. You have up to {moduleData.finalAssessment.maxAttempts || 3} attempts.</p>
+                                    </div>
+                                    <Icons.ChevronRight className="w-6 h-6 text-white/70 group-hover:translate-x-1 transition-transform flex-shrink-0" />
+                                </button>
+                            </div>
                         </div>
                     )}
 
@@ -1726,25 +1876,96 @@ function LessonAssessmentPanel({ assessment, lessonAnswers, setLessonAnswers, re
     );
 }
 
+// ── Confetti (copied from QuizResultsModal pattern) ────────────────────────────
+const CONFETTI_COLORS_FA = ['#FFD700', '#FF6B6B', '#4ECDC4', '#021d49', '#1e40af', '#FFEAA7', '#DDA0DD', '#FF9A3C', '#98D8C8'];
+function FinalAssessmentConfetti({ active }) {
+    const styleRef = React.useRef(null);
+    const particles = React.useMemo(() => Array.from({ length: 80 }, (_, i) => ({
+        left: `${((i * 13) % 100)}%`,
+        backgroundColor: CONFETTI_COLORS_FA[i % CONFETTI_COLORS_FA.length],
+        width: `${7 + (i % 5) * 2}px`,
+        height: `${7 + (i % 4) * 2}px`,
+        borderRadius: i % 3 === 0 ? '50%' : i % 3 === 1 ? '2px' : '0',
+        animationDelay: `${((i * 0.08) % 2.5).toFixed(2)}s`,
+        animationDuration: `${(2.8 + (i % 6) * 0.35).toFixed(2)}s`,
+        opacity: 0,
+    })), []);
+    React.useEffect(() => {
+        if (!active) { if (styleRef.current?.parentNode) { try { styleRef.current.parentNode.removeChild(styleRef.current); } catch (_) { } styleRef.current = null; } return; }
+        if (styleRef.current) return;
+        try {
+            const style = document.createElement('style');
+            style.textContent = `@keyframes fa-cf-fall { 0%{transform:translateY(-10px) rotate(0deg) scale(1);opacity:1;} 85%{opacity:1;} 100%{transform:translateY(105vh) rotate(720deg) scale(0.4);opacity:0;} } .fa-cf-p{animation:fa-cf-fall linear forwards;position:absolute;pointer-events:none;}`;
+            document.head.appendChild(style);
+            styleRef.current = style;
+        } catch (_) { }
+        return () => { if (styleRef.current?.parentNode) { try { styleRef.current.parentNode.removeChild(styleRef.current); } catch (_) { } } styleRef.current = null; };
+    }, [active]);
+    if (!active) return null;
+    return (
+        <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 9999 }}>
+            {particles.map((s, i) => <span key={i} className="fa-cf-p" style={s} />)}
+        </div>
+    );
+}
+
 // ── Final Assessment Panel ─────────────────────────────────────────────────────
-function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswers, finalAssessmentResult, submitting, onGoToLessons, router }) {
+function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswers, finalAssessmentResult, submitting, questionOrder, optionOrders, onSubmit, onGoToLessons, onRetry, onComplete }) {
     const assessment = module.finalAssessment;
     const hasResult = finalAssessmentResult != null;
     const passed = enrollment.finalAssessmentPassed || finalAssessmentResult?.passed;
+    const justPassed = hasResult && finalAssessmentResult?.passed;
     const maxAttempts = assessment?.maxAttempts || 3;
     const attempts = enrollment.finalAssessmentAttempts || 0;
-    const requiresModuleRepeat = enrollment.requiresModuleRepeat || false;
-    const canAttempt = !passed && !requiresModuleRepeat && attempts < maxAttempts;
+    // Cooldown: prefer the value from the just-submitted result, fall back to enrollment
+    const cooldownUntil = finalAssessmentResult?.assessmentCooldownUntil
+        ? new Date(finalAssessmentResult.assessmentCooldownUntil)
+        : enrollment.assessmentCooldownUntil
+            ? new Date(enrollment.assessmentCooldownUntil)
+            : null;
+    const isOnCooldown = cooldownUntil && cooldownUntil > new Date();
+    // Allow retry if: not passed, not on cooldown, AND (has attempts left OR cooldown just expired meaning backend will reset the counter)
+    const cooldownJustExpired = cooldownUntil !== null && !isOnCooldown;
+    const canAttempt = !passed && !isOnCooldown && (attempts < maxAttempts || cooldownJustExpired);
     const remainingFromResult = finalAssessmentResult?.remainingAttempts;
     const displayRemaining = remainingFromResult !== undefined ? remainingFromResult : Math.max(0, maxAttempts - attempts);
-    const attemptJustMade = hasResult && !passed ? (requiresModuleRepeat ? maxAttempts : (remainingFromResult !== undefined ? maxAttempts - remainingFromResult : attempts)) : null;
-    const [redirectCountdown, setRedirectCountdown] = React.useState(6);
+    const attemptJustMade = hasResult && !passed ? (remainingFromResult !== undefined ? maxAttempts - remainingFromResult : attempts) : null;
+
+    const ordinal = (n) => {
+        const s = ['th', 'st', 'nd', 'rd'];
+        const v = n % 100;
+        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    };
+    const currentAttemptNumber = hasResult
+        ? (remainingFromResult !== undefined ? maxAttempts - remainingFromResult : attempts)
+        : attempts + 1;
+
+    // Cooldown countdown display
+    const [cooldownDisplay, setCooldownDisplay] = React.useState('');
     React.useEffect(() => {
-        if (!requiresModuleRepeat || !hasResult) return;
-        setRedirectCountdown(6);
-        const interval = setInterval(() => { setRedirectCountdown(p => { if (p <= 1) { clearInterval(interval); onGoToLessons(); return 0; } return p - 1; }); }, 1000);
-        return () => clearInterval(interval);
-    }, [requiresModuleRepeat, hasResult]); // eslint-disable-line react-hooks/exhaustive-deps
+        if (!isOnCooldown) { setCooldownDisplay(''); return; }
+        const update = () => {
+            const diff = cooldownUntil.getTime() - Date.now();
+            if (diff <= 0) { setCooldownDisplay(''); return; }
+            const mins = Math.floor(diff / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            setCooldownDisplay(`${mins}:${String(secs).padStart(2, '0')}`);
+        };
+        update();
+        const id = setInterval(update, 1000);
+        return () => clearInterval(id);
+    }, [isOnCooldown, cooldownUntil?.getTime()]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Build the ordered list of questions (use questionOrder when available, else original order)
+    const allQuestions = assessment?.questions || [];
+    const orderedIndices = questionOrder && questionOrder.length === allQuestions.length
+        ? questionOrder
+        : allQuestions.map((_, i) => i);
+
+    // Result counts — derived from server response (authoritative)
+    const resultItems = finalAssessmentResult?.results || [];
+    const correctCount = resultItems.filter(r => r.isCorrect).length;
+    const incorrectCount = resultItems.length - correctCount;
 
     if (!assessment) {
         return (
@@ -1756,108 +1977,368 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
         );
     }
 
-    if (enrollment.isCompleted && enrollment.certificateEarned) {
-        return <CompletionScreen enrollment={enrollment} moduleId={module._id} router={router} />;
-    }
+    // Auto-advance to CompletionScreen 3 seconds after passing so the student
+    // never gets stuck searching for the Continue button.
+    React.useEffect(() => {
+        if (!justPassed) return;
+        const t = setTimeout(() => onComplete(), 3000);
+        return () => clearTimeout(t);
+    }, [justPassed]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
-                <div className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                        <Icons.Trophy className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                        <h3 className="text-xl font-bold">{assessment.title || 'Final Assessment'}</h3>
-                        {assessment.description && <p className="text-green-100 text-sm mt-0.5">{assessment.description}</p>}
-                    </div>
-                </div>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-green-100">
-                    <span className="flex items-center gap-1.5"><Icons.CheckCircle className="w-3.5 h-3.5" />Pass: {assessment.passingScore || 70}%</span>
-                    <span className={`flex items-center gap-1.5 font-semibold ${attempts >= maxAttempts ? 'text-red-300' : 'text-white'}`}>
-                        <Icons.RotateCcw className="w-3.5 h-3.5" />{attempts}/{maxAttempts} attempts
-                    </span>
-                    {assessment.timeLimit && <span className="flex items-center gap-1.5"><Icons.Clock className="w-3.5 h-3.5" />{assessment.timeLimit} min</span>}
-                    <span className="flex items-center gap-1.5"><Icons.HelpCircle className="w-3.5 h-3.5" />{assessment.questions?.length || 0} questions</span>
-                </div>
-            </div>
-            <div className="p-6 space-y-6">
-                {requiresModuleRepeat && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-5 space-y-4">
-                        <div className="flex items-start gap-3">
-                            <Icons.XCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
-                            <div>
-                                <p className="font-bold text-red-800">{hasResult ? `Attempt ${attemptJustMade} of ${maxAttempts} Failed` : `All ${maxAttempts} Attempts Used`}</p>
-                                {hasResult && <p className="text-sm text-red-600 mt-0.5">Score: {(finalAssessmentResult?.score || 0).toFixed(1)}%</p>}
-                                <p className="text-sm text-red-700 mt-2">Your progress has been reset. Complete all lessons again to unlock the final assessment.</p>
-                            </div>
-                        </div>
-                        {hasResult && <p className="text-sm text-red-600 flex items-center gap-1.5"><Icons.Clock className="w-4 h-4" />Redirecting in {redirectCountdown}s…</p>}
-                        <Button onClick={onGoToLessons} className="w-full bg-red-600 hover:bg-red-700 text-white gap-2">
-                            <Icons.BookOpen className="w-4 h-4" />Restart Module
+        <div>
+            <FinalAssessmentConfetti active={justPassed} />
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                {justPassed && (
+                    <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-6 text-white text-center space-y-3">
+                        <div className="text-4xl">🎉</div>
+                        <p className="text-2xl font-bold">Congratulations! You Passed!</p>
+                        <p className="text-green-100 text-sm">
+                            {ordinal(currentAttemptNumber)} attempt · Score: <strong>{(finalAssessmentResult?.score || 0).toFixed(1)}%</strong> · Certificate being prepared
+                        </p>
+                        <Button
+                            onClick={onComplete}
+                            className="bg-white text-green-700 hover:bg-green-50 font-bold px-8 py-2.5 rounded-xl gap-2 shadow-md"
+                        >
+                            <Icons.ChevronRight className="w-5 h-5" /> Continue to Completion
                         </Button>
+                        <p className="text-green-200 text-xs">Continuing automatically in a moment…</p>
                     </div>
                 )}
-                {hasResult && !passed && !requiresModuleRepeat && (
-                    <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3">
-                        <Icons.AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
+                <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6 text-white">
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                            <Icons.Trophy className="w-5 h-5 text-white" />
+                        </div>
                         <div>
-                            <p className="font-semibold text-orange-800">Attempt {attemptJustMade} of {maxAttempts} — Score: {(finalAssessmentResult?.score || 0).toFixed(1)}%</p>
-                            {displayRemaining > 0 && <p className="text-sm text-orange-700 mt-0.5">{displayRemaining} attempt{displayRemaining !== 1 ? 's' : ''} remaining</p>}
+                            <h3 className="text-xl font-bold">{assessment.title || 'Final Assessment'}</h3>
+                            {assessment.description && <p className="text-green-100 text-sm mt-0.5">{assessment.description}</p>}
                         </div>
                     </div>
-                )}
-                {canAttempt && (
-                    <div className="space-y-4">
-                        <AutoSubmitIndicator
-                            answered={Object.keys(finalAnswers).filter(k => String(finalAnswers[k]).trim() !== '').length}
-                            total={assessment.questions?.length || 0}
-                            submitting={submitting}
-                        />
-                        {assessment.questions?.map((q, qIdx) => (
-                            <QuestionRenderer key={qIdx} question={q} index={qIdx} answer={finalAnswers[qIdx]} onChange={(val) => setFinalAnswers(prev => ({ ...prev, [qIdx]: val }))} />
-                        ))}
+                    <div className="flex flex-wrap items-center gap-4 text-sm text-green-100">
+                        <span className="flex items-center gap-1.5"><Icons.CheckCircle className="w-3.5 h-3.5" />Pass: {assessment.passingScore || 70}%</span>
+                        {hasResult ? (
+                            <span className={`flex items-center gap-1.5 font-bold text-base px-3 py-1 rounded-full ${passed ? 'bg-white text-green-700' : 'bg-red-500 text-white'}`}>
+                                {passed ? '✓ PASSED' : '✗ FAILED'} — {(finalAssessmentResult?.score || 0).toFixed(1)}%
+                            </span>
+                        ) : (
+                            <span className={`flex items-center gap-1.5 font-semibold ${attempts >= maxAttempts ? 'text-red-300' : 'text-white'}`}>
+                                <Icons.RotateCcw className="w-3.5 h-3.5" />
+                                {`${maxAttempts - attempts} attempt${maxAttempts - attempts !== 1 ? 's' : ''} remaining`}
+                            </span>
+                        )}
+                        {assessment.timeLimit && <span className="flex items-center gap-1.5"><Icons.Clock className="w-3.5 h-3.5" />{assessment.timeLimit} min</span>}
+                        <span className="flex items-center gap-1.5"><Icons.HelpCircle className="w-3.5 h-3.5" />{assessment.questions?.length || 0} questions</span>
                     </div>
-                )}
+                </div>
+                <div className="p-6 space-y-6">
+                    {/* ── Question form (pre-submit) ── */}
+                    {canAttempt && !hasResult && (
+                        <div className="space-y-4">
+                            <AutoSubmitIndicator
+                                answered={Object.keys(finalAnswers).filter(k => String(finalAnswers[k]).trim() !== '').length}
+                                total={assessment.questions?.length || 0}
+                                submitting={submitting}
+                            />
+                            {/* Unanswered question locator */}
+                            {(() => {
+                                const unanswered = orderedIndices
+                                    .map((origIdx, displayPos) => ({ num: displayPos + 1, origIdx }))
+                                    .filter(({ origIdx }) => finalAnswers[origIdx] === undefined || String(finalAnswers[origIdx]).trim() === '');
+                                if (unanswered.length === 0 || submitting) return null;
+                                return (
+                                    <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
+                                        <Icons.AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm font-semibold text-amber-800">
+                                                Still need to answer: Question{unanswered.length > 1 ? 's' : ''} {unanswered.map(u => `#${u.num}`).join(', ')}
+                                            </p>
+                                            <p className="text-xs text-amber-700 mt-0.5">Scroll up to find and answer the highlighted question{unanswered.length > 1 ? 's' : ''}.</p>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                            {orderedIndices.map((origIdx, displayPos) => {
+                                const q = allQuestions[origIdx];
+                                if (!q) return null;
+                                const optOrder = optionOrders?.[origIdx];
+                                const shuffledQ = withResolvedAnswer(q,
+                                    (optOrder && q.options?.length > 1)
+                                        ? { ...q, options: optOrder.map(i => q.options[i]) }
+                                        : q
+                                );
+                                const isUnanswered = finalAnswers[origIdx] === undefined || String(finalAnswers[origIdx]).trim() === '';
+                                return (
+                                    <div key={origIdx} id={`q-${displayPos}`} className={isUnanswered ? 'ring-2 ring-amber-300 ring-offset-2 rounded-xl' : ''}>
+                                        <QuestionRenderer
+                                            question={shuffledQ}
+                                            index={displayPos}
+                                            answer={finalAnswers[origIdx]}
+                                            onChange={(val) => setFinalAnswers(prev => ({ ...prev, [origIdx]: val }))}
+                                            showCorrectAnswer={false}
+                                        />
+                                    </div>
+                                );
+                            })}
+                            {/* Manual submit fallback — visible once at least one answer is recorded */}
+                            {Object.keys(finalAnswers).some(k => String(finalAnswers[k]).trim() !== '') && (
+                                <div className="border-t border-gray-200 pt-4 space-y-2">
+                                    <Button
+                                        onClick={() => {
+                                            const answeredCount = Object.keys(finalAnswers).filter(k => String(finalAnswers[k]).trim() !== '').length;
+                                            const total = allQuestions.length;
+                                            if (answeredCount < total) {
+                                                const unanswered = orderedIndices
+                                                    .map((origIdx, dp) => ({ num: dp + 1, origIdx }))
+                                                    .filter(({ origIdx }) => finalAnswers[origIdx] === undefined || String(finalAnswers[origIdx]).trim() === '');
+                                                if (!window.confirm(`You have answered ${answeredCount} of ${total} questions.\n\nUnanswered: Question${unanswered.length > 1 ? 's' : ''} ${unanswered.map(u => '#' + u.num).join(', ')}\n\nSubmit anyway? Unanswered questions will be marked incorrect.`)) return;
+                                            }
+                                            onSubmit();
+                                        }}
+                                        disabled={submitting}
+                                        className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 py-3 font-semibold"
+                                    >
+                                        {submitting
+                                            ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Evaluating…</>
+                                            : <><Icons.Send className="w-4 h-4" /> Submit Assessment</>
+                                        }
+                                    </Button>
+                                    <p className="text-xs text-center text-gray-400">
+                                        Answer all {allQuestions.length} questions and it submits automatically, or click above to submit now.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Unified result summary (always shown after submit — pass OR fail) ── */}
+                    {hasResult && (
+                        <div className="space-y-5">
+                            {/* Score card */}
+                            <div className={`rounded-2xl border-2 p-6 ${passed ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-200'}`}>
+                                <div className="text-center">
+                                    <div className={`text-6xl font-black mb-1 tabular-nums ${passed ? 'text-green-700' : 'text-red-600'}`}>
+                                        {(finalAssessmentResult?.score || 0).toFixed(1)}%
+                                    </div>
+                                    <p className={`text-lg font-bold mt-1 ${passed ? 'text-green-700' : 'text-red-600'}`}>
+                                        {passed ? 'You Passed! 🎉' : 'Not Passed Yet'}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Attempt {currentAttemptNumber} of {maxAttempts} · Passing score: {assessment.passingScore || 70}%
+                                    </p>
+                                </div>
+                                {resultItems.length > 0 && (
+                                    <div className="flex justify-center mt-5 pt-4 border-t border-gray-200 divide-x divide-gray-200">
+                                        <div className="text-center flex-1 px-4">
+                                            <div className="text-3xl font-bold text-green-600">{correctCount}</div>
+                                            <p className="text-xs text-gray-500 mt-0.5">✓ Correct</p>
+                                        </div>
+                                        <div className="text-center flex-1 px-4">
+                                            <div className="text-3xl font-bold text-red-500">{incorrectCount}</div>
+                                            <p className="text-xs text-gray-500 mt-0.5">✗ Incorrect</p>
+                                        </div>
+                                        <div className="text-center flex-1 px-4">
+                                            <div className="text-3xl font-bold text-gray-600">{resultItems.length}</div>
+                                            <p className="text-xs text-gray-500 mt-0.5">Total</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Action buttons */}
+                            {passed ? (
+                                <Button
+                                    onClick={onComplete}
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 py-3 text-base font-bold shadow-md"
+                                >
+                                    <Icons.ChevronRight className="w-5 h-5" /> Continue Learning
+                                </Button>
+                            ) : (
+                                <div className="space-y-3">
+                                    {isOnCooldown ? (
+                                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-3">
+                                            <div className="flex items-start gap-3">
+                                                <Icons.Clock className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                                <div>
+                                                    <p className="font-bold text-amber-800">All {maxAttempts} attempts used</p>
+                                                    <p className="text-sm text-amber-700 mt-0.5">Review lessons and retry when the cooldown expires.</p>
+                                                </div>
+                                            </div>
+                                            {cooldownDisplay && (
+                                                <p className="text-base font-mono font-bold text-amber-800 flex items-center gap-2">
+                                                    <Icons.Timer className="w-4 h-4" />Retry available in {cooldownDisplay}
+                                                </p>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-3">
+                                            <Button onClick={onGoToLessons} variant="outline" className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50 gap-2">
+                                                <Icons.BookOpen className="w-4 h-4" /> Review Lessons
+                                            </Button>
+                                            {displayRemaining > 0 && (
+                                                <Button onClick={onRetry} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white gap-2">
+                                                    <Icons.RotateCcw className="w-4 h-4" /> Try Again ({displayRemaining} left)
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )}
+                                    {isOnCooldown && (
+                                        <Button onClick={onGoToLessons} variant="outline" className="w-full gap-2 border-amber-300 text-amber-800 hover:bg-amber-50">
+                                            <Icons.BookOpen className="w-4 h-4" /> Review Lessons
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Question-by-question review */}
+                            <div className="space-y-3">
+                                <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                    <Icons.ClipboardList className="w-4 h-4" />
+                                    {passed ? 'Answer review — see what you got right:' : 'Your answers this attempt:'}
+                                </p>
+                                {orderedIndices.map((origIdx, displayPos) => {
+                                    const q = allQuestions[origIdx];
+                                    if (!q) return null;
+                                    const optOrder = optionOrders?.[origIdx];
+                                    const shuffledQ = withResolvedAnswer(q,
+                                        (optOrder && q.options?.length > 1)
+                                            ? { ...q, options: optOrder.map(i => q.options[i]) }
+                                            : q
+                                    );
+                                    return (
+                                        <QuestionRenderer
+                                            key={origIdx}
+                                            question={shuffledQ}
+                                            index={displayPos}
+                                            answer={finalAnswers[origIdx]}
+                                            onChange={() => { }}
+                                            showCorrectAnswer={passed}
+                                        />
+                                    );
+                                })}
+                            </div>
+
+                            {/* Bottom CTA (pass only) */}
+                            {passed && (
+                                <div className="flex justify-center pt-2 pb-2">
+                                    <Button
+                                        onClick={onComplete}
+                                        className="bg-green-600 hover:bg-green-700 text-white gap-2 px-10 py-3 text-base font-semibold shadow-md"
+                                    >
+                                        <Icons.ChevronRight className="w-5 h-5" /> Continue to Module Completion
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
 }
 
 // ── Answer evaluation helpers ──────────────────────────────────────────────────
+// Resolves a correctAnswer value to the actual option text using the ORIGINAL
+// (unshuffled) option list. Handles all storage formats:
+//   "Option 3"  → 1-indexed label used by some editors → options[2]
+//   "2"         → 0-indexed numeric string             → options[2]
+//   "C"         → letter                               → options[2]
+//   "Reinforcement Learning" → full text match
+// When options are shuffled we pre-resolve and store _resolvedCorrectText on the
+// question object so that index-based formats still point to the right option.
+function resolveCorrectOptionText(question) {
+    // Pre-resolved text wins — set before shuffling so indices still make sense.
+    if (question._resolvedCorrectText !== undefined) return question._resolvedCorrectText;
+
+    const ca = String(question.correctAnswer ?? '').trim();
+    if (!ca) return '';
+    const options = question.options || [];
+
+    // "Option X" (1-indexed) — e.g. "Option 3" → options[2]
+    const optionLabelMatch = ca.match(/^[Oo]ption\s*(\d+)$/);
+    if (optionLabelMatch) {
+        const idx = parseInt(optionLabelMatch[1], 10) - 1;
+        if (idx >= 0 && idx < options.length) return options[idx];
+    }
+
+    // Pure numeric string (0-indexed) — e.g. "0", "1", "2"
+    const numIdx = Number(ca);
+    if (!isNaN(numIdx) && Number.isInteger(numIdx) && numIdx >= 0 && numIdx < options.length) {
+        return options[numIdx];
+    }
+
+    // Single uppercase letter — e.g. "A", "B", "C"
+    const letterIdx = ca.length === 1 && ca >= 'A' && ca <= 'Z' ? ca.charCodeAt(0) - 65 : -1;
+    if (letterIdx >= 0 && letterIdx < options.length) {
+        return options[letterIdx];
+    }
+
+    // Already the full option text
+    return ca;
+}
+
 function evaluateStudentAnswer(question, studentAnswer) {
     if (!studentAnswer) return false;
     const ca = question.correctAnswer;
     if (ca === undefined || ca === null || ca === '') return false;
-    const options = question.options || [];
-    const idx = Number(ca);
-    if (!isNaN(idx) && Number.isInteger(idx) && idx >= 0 && idx < options.length) return String(studentAnswer).trim() === String(options[idx]).trim();
-    return String(studentAnswer).trim().toLowerCase() === String(ca).trim().toLowerCase();
+    const resolved = resolveCorrectOptionText(question);
+    return String(studentAnswer).trim().toLowerCase() === resolved.trim().toLowerCase();
 }
 function getCorrectText(question) {
-    const ca = question.correctAnswer;
-    const options = question.options || [];
-    const idx = Number(ca);
-    if (!isNaN(idx) && Number.isInteger(idx) && idx >= 0 && idx < options.length) return options[idx];
-    return String(ca || '');
+    return resolveCorrectOptionText(question);
+}
+
+// Pre-resolves the correct answer text from the ORIGINAL question options and attaches it
+// to the question object so that shuffle doesn't break index-based lookups.
+function withResolvedAnswer(originalQ, maybeShuffledQ) {
+    const resolved = resolveCorrectOptionText(originalQ);
+    return { ...maybeShuffledQ, _resolvedCorrectText: resolved };
 }
 
 // ── Question Renderer ──────────────────────────────────────────────────────────
-function QuestionRenderer({ question, index, answer, onChange }) {
-    const [checked, setChecked] = React.useState(null);
-    const isMultipleChoice = question.type === 'multiple-choice' || question.type === 'multiple_choice';
-    const isTrueFalse = question.type === 'true-false';
-    const isEssay = question.type === 'essay' || question.type === 'short-answer';
+function QuestionRenderer({ question, index, answer, onChange, showCorrectAnswer = true }) {
+    const [checked, setChecked] = React.useState(() => {
+        // In review mode (showCorrectAnswer=true with an existing answer), pre-populate
+        // the checked state so correct/incorrect indicators render immediately without
+        // requiring the student to re-click each option.
+        if (showCorrectAnswer && answer !== undefined && answer !== null && String(answer).trim() !== '') {
+            return { correct: evaluateStudentAnswer(question, answer), answer };
+        }
+        return null;
+    });
+
+    // Reset checked state when the answer is cleared (e.g. on retry after a failed attempt)
+    React.useEffect(() => {
+        if (answer === undefined || answer === null || String(answer).trim() === '') {
+            setChecked(null);
+        }
+    }, [answer]);
+
+    const qType = String(question.type || '').toLowerCase().trim();
+    const isMultipleChoice = ['multiple-choice', 'multiple_choice', 'mcq'].includes(qType)
+        || (!['true-false', 'true_false', 'truefalse', 'boolean', 'true/false', 'essay', 'short-answer', 'short_answer', 'text'].includes(qType) && (question.options?.length ?? 0) > 0);
+    const isTrueFalse = ['true-false', 'true_false', 'truefalse', 'boolean', 'true/false'].includes(qType);
+    const isEssay = ['essay', 'short-answer', 'short_answer', 'text'].includes(qType);
     const isChecked = checked !== null;
     const isCorrect = checked?.correct;
 
     const handleSelect = (val) => {
         onChange(val);
-        if (isMultipleChoice || isTrueFalse) setChecked({ correct: evaluateStudentAnswer(question, val), answer: val });
+        if (isMultipleChoice || isTrueFalse) {
+            const isCorrectSelection = evaluateStudentAnswer(question, val);
+            const qText = (question.question || question.text || '').slice(0, 70);
+            console.group(`[Assessment] Q${index + 1}: ${qText}`);
+            console.log('Student selected :', `"${val}"`);
+            console.log('Correct answer   :', `"${resolveCorrectOptionText(question)}"`, '  (raw stored:', question.correctAnswer, ')');
+            console.log('Result           :', isCorrectSelection ? '✅ CORRECT' : '❌ INCORRECT');
+            if (question.options?.length) console.log('Options shown    :', question.options);
+            console.groupEnd();
+            setChecked({ correct: isCorrectSelection, answer: val });
+        }
     };
 
     const questionText = question.question || question.text || '';
-    const correctOptionText = isChecked ? getCorrectText(question) : null;
+    const correctOptionText = isChecked && showCorrectAnswer ? getCorrectText(question) : null;
 
     return (
         <div className={`rounded-xl border-2 p-5 transition-all ${isChecked ? (isCorrect ? 'border-green-300 bg-blue-50' : 'border-red-200 bg-red-50') : 'bg-white border-gray-200'}`}>
@@ -1881,8 +2362,9 @@ function QuestionRenderer({ question, index, answer, onChange }) {
             {(isMultipleChoice || isTrueFalse) && (
                 <div className={`ml-10 ${isTrueFalse ? 'flex gap-3' : 'space-y-2'}`}>
                     {(isTrueFalse ? ['True', 'False'] : question.options || []).map((option, optIdx) => {
+                        const optionLabel = isTrueFalse ? option : String.fromCharCode(65 + optIdx);
                         const isSelected = answer === option;
-                        const isThisCorrect = isChecked && String(option).trim() === String(correctOptionText).trim();
+                        const isThisCorrect = isChecked && showCorrectAnswer && correctOptionText !== null && String(option).trim() === String(correctOptionText).trim();
                         const isThisWrong = isChecked && isSelected && !isCorrect;
                         return (
                             <label key={optIdx} className={`flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all select-none
@@ -1894,6 +2376,15 @@ function QuestionRenderer({ question, index, answer, onChange }) {
                                     : isSelected ? 'border-green-600 bg-blue-50 text-green-800' : 'border-gray-200 hover:border-gray-300 bg-white'
                                 }`}>
                                 <input type="radio" name={`q-${index}`} value={option} checked={isSelected} onChange={() => !isChecked && handleSelect(option)} disabled={isChecked} className="accent-green-600 flex-shrink-0" />
+                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+                                    ${isChecked
+                                        ? isThisCorrect ? 'bg-green-600 text-white'
+                                            : isThisWrong ? 'bg-red-500 text-white'
+                                                : 'bg-gray-200 text-gray-500'
+                                        : isSelected ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600'
+                                    }`}>
+                                    {optionLabel}
+                                </span>
                                 <span className="text-sm font-medium flex-1">{option}</span>
                                 {isChecked && isThisCorrect && <Icons.Check className="w-4 h-4 text-green-600 flex-shrink-0" />}
                                 {isChecked && isThisWrong && <Icons.X className="w-4 h-4 text-red-500 flex-shrink-0" />}
@@ -1919,9 +2410,9 @@ function QuestionRenderer({ question, index, answer, onChange }) {
                 <div className={`mt-4 ml-10 rounded-xl p-3 border ${isCorrect ? 'bg-green-100 border-green-200' : 'bg-red-100 border-red-200'}`}>
                     <p className={`text-sm font-bold mb-1 ${isCorrect ? 'text-green-800' : 'text-red-800'}`}>
                         {isCorrect ? '✓ Correct!' : '✗ Incorrect'}
-                        {!isCorrect && correctOptionText && <span className="font-normal text-gray-700 ml-2">Correct answer: <span className="font-semibold text-green-700">{correctOptionText}</span></span>}
+                        {!isCorrect && showCorrectAnswer && correctOptionText && <span className="font-normal text-gray-700 ml-2">Correct answer: <span className="font-semibold text-green-700">{correctOptionText}</span></span>}
                     </p>
-                    {question.explanation && <p className="text-sm text-gray-700 leading-relaxed">{question.explanation}</p>}
+                    {showCorrectAnswer && question.explanation && <p className="text-sm text-gray-700 leading-relaxed">{question.explanation}</p>}
                 </div>
             )}
         </div>
@@ -1947,17 +2438,50 @@ function StarRatingInput({ value, onChange }) {
 }
 
 // ── Completion Screen ──────────────────────────────────────────────────────────
-function CompletionScreen({ enrollment, moduleId, router }) {
+function CompletionScreen({ enrollment, moduleId, module: completedModule, router }) {
     const [showRating, setShowRating] = React.useState(false);
     const [rating, setRating] = React.useState(0);
     const [review, setReview] = React.useState('');
     const [submitting, setSubmitting] = React.useState(false);
     const [submitted, setSubmitted] = React.useState(false);
     const [existingRating, setExistingRating] = React.useState(null);
+    const [nextModule, setNextModule] = React.useState(null);
+    const [loadingNext, setLoadingNext] = React.useState(false);
+    const [enrollingNext, setEnrollingNext] = React.useState(false);
 
     React.useEffect(() => {
         moduleRatingService.getMyRating(moduleId).then((res) => { if (res?.data) { setExistingRating(res.data); setRating(res.data.rating); setReview(res.data.review || ''); } }).catch(() => { });
     }, [moduleId]);
+
+    // Find the next sequential module in the same category
+    React.useEffect(() => {
+        if (!completedModule?.categoryId || completedModule?.order == null) return;
+        setLoadingNext(true);
+        moduleService.getAllModules({ limit: 500 })
+            .then((res) => {
+                const all = Array.isArray(res) ? res : res?.modules || res?.data || [];
+                const catId = (completedModule.categoryId?._id || completedModule.categoryId)?.toString();
+                const next = all
+                    .filter((m) => {
+                        const mCatId = (m.categoryId?._id || m.categoryId)?.toString();
+                        return mCatId === catId && (m.order || 0) > (completedModule.order || 0) && !m.isOptional;
+                    })
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))[0] || null;
+                setNextModule(next);
+            })
+            .catch(() => { })
+            .finally(() => setLoadingNext(false));
+    }, [completedModule?._id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const handleContinueToNextModule = async () => {
+        if (!nextModule) return;
+        try {
+            setEnrollingNext(true);
+            await moduleEnrollmentService.enrollInModule(nextModule._id);
+        } catch { /* already enrolled or other error — proceed anyway */ }
+        finally { setEnrollingNext(false); }
+        router.push(`/student/modules/${nextModule._id}`);
+    };
 
     const handleSubmitRating = async () => {
         if (rating === 0) return;
@@ -1984,9 +2508,45 @@ function CompletionScreen({ enrollment, moduleId, router }) {
                         <span className="text-sm font-semibold text-gray-700">Final Score: <span className="text-green-700 font-bold">{enrollment.finalAssessmentScore?.toFixed(1)}%</span></span>
                     </div>
                 )}
+
+                {/* Next module CTA — or "more content coming soon" if none exists */}
+                {loadingNext ? (
+                    <div className="flex items-center justify-center gap-2 mb-6 text-gray-400 text-sm">
+                        <Icons.Loader2 className="w-4 h-4 animate-spin" /> Checking for next module…
+                    </div>
+                ) : nextModule ? (
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl px-6 py-5 mb-6 text-left mx-auto max-w-sm shadow-sm">
+                        <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                            <Icons.ArrowRight className="w-3.5 h-3.5" /> Up Next
+                        </p>
+                        <p className="text-sm font-semibold text-gray-900 leading-snug">{nextModule.title}</p>
+                        {nextModule.level && (
+                            <p className="text-xs text-gray-500 mt-1 capitalize">{nextModule.level} · Module {nextModule.order}</p>
+                        )}
+                        <Button
+                            onClick={handleContinueToNextModule}
+                            disabled={enrollingNext}
+                            className="w-full mt-4 bg-[#021d49] hover:bg-[#032a66] text-white gap-2 font-semibold"
+                        >
+                            {enrollingNext
+                                ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Enrolling…</>
+                                : <><Icons.Play className="w-4 h-4" /> Continue to Next Module</>
+                            }
+                        </Button>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 justify-center bg-blue-50 border border-blue-100 rounded-xl px-5 py-3 mb-6 mx-auto max-w-sm">
+                        <Icons.Clock className="w-4 h-4 text-[#021d49] flex-shrink-0" />
+                        <p className="text-sm text-[#021d49] font-medium">More content coming soon — check back for new modules!</p>
+                    </div>
+                )}
+
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Button onClick={() => router.push('/student')} variant="outline" className="gap-2">
                         <Icons.Home className="w-4 h-4" /> Back to Dashboard
+                    </Button>
+                    <Button onClick={() => router.push('/student/modules')} className="bg-[#021d49] hover:bg-[#032a66] text-white gap-2">
+                        <Icons.Layers className="w-4 h-4" /> Explore More Modules
                     </Button>
                     {!existingRating && !submitted && (
                         <Button onClick={() => setShowRating(true)} className="bg-amber-500 hover:bg-amber-600 text-white gap-2">

@@ -13,6 +13,54 @@ function stripHtml(html) {
     return String(html).replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 }
 
+// Resolves correctAnswer to the matching option text.
+// Handles all storage formats: "Option 3" (1-indexed), "2" (0-indexed), "C" (letter), full text.
+function resolveCorrectOptionText(q) {
+    const ca = String(q.correctAnswer ?? '').trim();
+    if (!ca) return null;
+    const options = q.options || [];
+
+    // "Option X" (1-indexed) — e.g. "Option 3" → options[2]
+    const optionLabelMatch = ca.match(/^[Oo]ption\s*(\d+)$/);
+    if (optionLabelMatch) {
+        const idx = parseInt(optionLabelMatch[1], 10) - 1;
+        if (idx >= 0 && idx < options.length) return options[idx];
+    }
+
+    // Pure numeric string (0-indexed)
+    const numIdx = Number(ca);
+    if (!isNaN(numIdx) && Number.isInteger(numIdx) && numIdx >= 0 && numIdx < options.length) return options[numIdx];
+
+    // Single uppercase letter
+    const letterIdx = ca.length === 1 && ca >= 'A' && ca <= 'Z' ? ca.charCodeAt(0) - 65 : -1;
+    if (letterIdx >= 0 && letterIdx < options.length) return options[letterIdx];
+
+    // Full option text
+    return ca;
+}
+
+// Returns true when the option at index oi with text opt is the correct answer.
+function isCorrectOption(q, opt, oi) {
+    const ca = String(q.correctAnswer ?? '').trim();
+    if (!ca) return false;
+
+    // "Option X" (1-indexed)
+    const optionLabelMatch = ca.match(/^[Oo]ption\s*(\d+)$/);
+    if (optionLabelMatch) return parseInt(optionLabelMatch[1], 10) - 1 === oi;
+
+    // Numeric index
+    if (String(oi) === ca) return true;
+
+    // Letter index
+    const letterIdx = ca.length === 1 && ca >= 'A' && ca <= 'Z' ? ca.charCodeAt(0) - 65 : -1;
+    if (letterIdx === oi) return true;
+
+    // Full text
+    if (opt === ca) return true;
+
+    return false;
+}
+
 const STATUS_BADGE = {
     draft: 'bg-gray-100 text-gray-700',
     submitted: 'bg-yellow-100 text-yellow-700',
@@ -527,26 +575,35 @@ export default function AdminModuleDetailPage() {
                                                                                 <div>
                                                                                     <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Quiz ({lesson.assessment.questions.length} questions)</p>
                                                                                     <div className="space-y-3">
-                                                                                        {lesson.assessment.questions.map((q, qi) => (
+                                                                                        {lesson.assessment.questions.map((q, qi) => {
+                                                                                            const correctText = resolveCorrectOptionText(q);
+                                                                                            return (
                                                                                             <div key={qi} className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
                                                                                                 <p className="text-sm font-semibold text-gray-900 mb-1">Q{qi + 1}: {q.question || q.text}</p>
                                                                                                 <p className="text-xs text-indigo-600 mb-2 capitalize">Type: {q.type} · {q.points || 1} pt{q.points !== 1 ? 's' : ''}</p>
                                                                                                 {q.options?.length > 0 && (
                                                                                                     <ul className="space-y-1 mb-2">
-                                                                                                        {q.options.map((opt, oi) => (
-                                                                                                            <li key={oi} className={`text-xs px-3 py-1.5 rounded-lg ${String(q.correctAnswer) === String(oi) || q.correctAnswer === opt ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-white text-gray-600'}`}>
-                                                                                                                {String.fromCharCode(65 + oi)}. {opt}
-                                                                                                                {(String(q.correctAnswer) === String(oi) || q.correctAnswer === opt) && ' ✓'}
+                                                                                                        {q.options.map((opt, oi) => {
+                                                                                                            const correct = isCorrectOption(q, opt, oi);
+                                                                                                            return (
+                                                                                                            <li key={oi} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border ${correct ? 'bg-emerald-100 border-emerald-300 text-emerald-800 font-semibold' : 'bg-white border-transparent text-gray-600'}`}>
+                                                                                                                <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${correct ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500'}`}>{String.fromCharCode(65 + oi)}</span>
+                                                                                                                <span className="flex-1">{opt}</span>
+                                                                                                                {correct && <Icons.Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />}
                                                                                                             </li>
-                                                                                                        ))}
+                                                                                                            );
+                                                                                                        })}
                                                                                                     </ul>
                                                                                                 )}
-                                                                                                {q.type !== 'multiple_choice' && q.correctAnswer && (
-                                                                                                    <p className="text-xs text-emerald-700 font-medium">Answer: {q.correctAnswer}</p>
+                                                                                                {correctText && (
+                                                                                                    <p className="text-xs bg-emerald-600 text-white px-2.5 py-1 rounded-lg inline-flex items-center gap-1 font-semibold">
+                                                                                                        <Icons.Check className="w-3 h-3" /> Correct Answer: {correctText}
+                                                                                                    </p>
                                                                                                 )}
-                                                                                                {q.explanation && <p className="text-xs text-gray-500 italic mt-1">Explanation: {q.explanation}</p>}
+                                                                                                {q.explanation && <p className="text-xs text-gray-500 italic mt-2">Explanation: {q.explanation}</p>}
                                                                                             </div>
-                                                                                        ))}
+                                                                                            );
+                                                                                        })}
                                                                                     </div>
                                                                                 </div>
                                                                             )}
@@ -800,19 +857,30 @@ export default function AdminModuleDetailPage() {
                                                                                     <pre className="bg-[#1e1e1e] text-green-300 text-xs p-3 overflow-x-auto font-mono leading-relaxed whitespace-pre-wrap">{q.codeSnippet.code}</pre>
                                                                                 </div>
                                                                             )}
-                                                                            {q.options?.length > 0 && (
+                                                                            {q.options?.length > 0 && (() => {
+                                                                                const correctText = resolveCorrectOptionText(q);
+                                                                                return (
+                                                                                <>
                                                                                 <ul className="space-y-1 mb-2">
-                                                                                    {q.options.map((opt, oi) => (
-                                                                                        <li key={oi} className={`text-xs px-3 py-1.5 rounded-lg ${String(q.correctAnswer) === String(oi) || q.correctAnswer === opt ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-white text-gray-600'}`}>
-                                                                                            {String.fromCharCode(65 + oi)}. {opt}
-                                                                                            {(String(q.correctAnswer) === String(oi) || q.correctAnswer === opt) && ' ✓'}
+                                                                                    {q.options.map((opt, oi) => {
+                                                                                        const correct = isCorrectOption(q, opt, oi);
+                                                                                        return (
+                                                                                        <li key={oi} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border ${correct ? 'bg-emerald-100 border-emerald-300 text-emerald-800 font-semibold' : 'bg-white border-transparent text-gray-600'}`}>
+                                                                                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${correct ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500'}`}>{String.fromCharCode(65 + oi)}</span>
+                                                                                            <span className="flex-1">{opt}</span>
+                                                                                            {correct && <Icons.Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />}
                                                                                         </li>
-                                                                                    ))}
+                                                                                        );
+                                                                                    })}
                                                                                 </ul>
-                                                                            )}
-                                                                            {q.type !== 'multiple_choice' && q.correctAnswer && (
-                                                                                <p className="text-xs text-emerald-700 font-medium">Answer: {q.correctAnswer}</p>
-                                                                            )}
+                                                                                {correctText && (
+                                                                                    <p className="text-xs bg-emerald-600 text-white px-2.5 py-1 rounded-lg inline-flex items-center gap-1 font-semibold mb-1">
+                                                                                        <Icons.Check className="w-3 h-3" /> Correct Answer: {correctText}
+                                                                                    </p>
+                                                                                )}
+                                                                                </>
+                                                                                );
+                                                                            })()}
                                                                             {q.explanation && <p className="text-xs text-gray-500 italic mt-1">Explanation: {q.explanation}</p>}
                                                                         </div>
                                                                     ))}
@@ -1017,25 +1085,39 @@ export default function AdminModuleDetailPage() {
                                     )}
                                     {finalAssessment.questions?.length > 0 && (
                                         <div className="space-y-3">
-                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Questions</p>
-                                            {finalAssessment.questions.map((q, qi) => (
+                                            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Questions & Answer Key</p>
+                                            {finalAssessment.questions.map((q, qi) => {
+                                                const correctText = resolveCorrectOptionText(q);
+                                                return (
                                                 <div key={qi} className="bg-indigo-50 rounded-xl p-4 border border-indigo-100">
-                                                    <p className="text-sm font-semibold text-gray-900 mb-1">Q{qi + 1}: {q.question || q.text}</p>
-                                                    <p className="text-xs text-indigo-600 mb-2 capitalize">Type: {q.type} · {q.points || 1} pt{q.points !== 1 ? 's' : ''}</p>
+                                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                                        <p className="text-sm font-semibold text-gray-900">Q{qi + 1}: {q.question || q.text}</p>
+                                                        {correctText && (
+                                                            <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-xs px-2.5 py-1 rounded-lg font-semibold whitespace-nowrap flex-shrink-0">
+                                                                <Icons.Check className="w-3 h-3" /> {correctText}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-indigo-600 mb-2 capitalize">Type: {q.type} · {q.points || 1} pt{q.points !== 1 ? 's' : ''} · stored as: <code className="bg-indigo-100 px-1 rounded">{String(q.correctAnswer ?? '—')}</code></p>
                                                     {q.options?.length > 0 && (
                                                         <ul className="space-y-1 mb-2">
-                                                            {q.options.map((opt, oi) => (
-                                                                <li key={oi} className={`text-xs px-3 py-1.5 rounded-lg ${String(q.correctAnswer) === String(oi) || q.correctAnswer === opt ? 'bg-emerald-100 text-emerald-800 font-semibold' : 'bg-white text-gray-600'}`}>
-                                                                    {String.fromCharCode(65 + oi)}. {opt}
-                                                                    {(String(q.correctAnswer) === String(oi) || q.correctAnswer === opt) && ' ✓'}
+                                                            {q.options.map((opt, oi) => {
+                                                                const correct = isCorrectOption(q, opt, oi);
+                                                                return (
+                                                                <li key={oi} className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-lg border ${correct ? 'bg-emerald-100 border-emerald-300 text-emerald-800 font-semibold' : 'bg-white border-transparent text-gray-600'}`}>
+                                                                    <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 ${correct ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500'}`}>{String.fromCharCode(65 + oi)}</span>
+                                                                    <span className="flex-1">{opt}</span>
+                                                                    {correct && <Icons.Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />}
                                                                 </li>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </ul>
                                                     )}
                                                     {q.type === 'essay' && q.rubric && <p className="text-xs text-gray-500 italic">Rubric: {q.rubric}</p>}
                                                     {q.explanation && <p className="text-xs text-gray-500 italic mt-1">Explanation: {q.explanation}</p>}
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
