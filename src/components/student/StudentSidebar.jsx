@@ -6,6 +6,7 @@ import * as Icons from 'lucide-react';
 import authService from '@/lib/api/authService';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import { useToast } from '@/components/ui/ToastProvider';
+import { summarizeEnrollments } from '@/lib/utils/enrollmentProgress';
 
 export default function StudentSidebar() {
     const router = useRouter();
@@ -37,12 +38,8 @@ export default function StudentSidebar() {
                 const enrollments = await moduleEnrollmentService.getMyEnrollments();
                 const list = Array.isArray(enrollments) ? enrollments : enrollments?.enrollments || [];
                 setEnrolledCount(list.length);
-                if (list.length > 0) {
-                    const avg = list.reduce((sum, e) => sum + Math.min(100, Math.max(0, Math.round(e.progress || 0))), 0) / list.length;
-                    setLearningProgress(Math.round(avg));
-                } else {
-                    setLearningProgress(0);
-                }
+                const { overallProgress } = summarizeEnrollments(list);
+                setLearningProgress(overallProgress);
             } catch {
                 setLearningProgress(0);
                 setEnrolledCount(0);

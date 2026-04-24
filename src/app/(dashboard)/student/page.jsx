@@ -30,6 +30,7 @@ import progressionService from '@/lib/api/progressionService';
 import moduleService from '@/lib/api/moduleService';
 import authService from '@/lib/api/authService';
 import notificationService from '@/lib/api/notificationService';
+import { normalizeEnrollment, summarizeEnrollments } from '@/lib/utils/enrollmentProgress';
 import Navbar from '@/components/navbar/navbar';
 import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
 
@@ -144,7 +145,7 @@ function QuickLink({ icon, label, sub, color, bgColor, onClick }) {
 function ContinueLearningCard({ enrollment, onClick }) {
     const mod = enrollment.moduleId || {};
     const lvl = getLvl(mod.level);
-    const progress = enrollment.isCompleted ? 100 : clamp(enrollment.progress);
+    const progress = clamp(enrollment.progress);
     return (
         <Card
             className="group cursor-pointer border-gray-100 hover:border-[#021d49]/30 hover:shadow-md transition-all duration-200"
@@ -175,7 +176,7 @@ function ContinueLearningCard({ enrollment, onClick }) {
                         </div>
                         <div className="flex items-center justify-between">
                             <span className="text-[10px] text-gray-400">
-                                {Math.min(enrollment.completedLessons || 0, enrollment.totalLessons || 0)}/{enrollment.totalLessons || 0} lessons
+                                {enrollment.completedLessons || 0}/{enrollment.totalLessons || 0} lessons
                             </span>
                             <span className="text-[10px] font-semibold text-[#021d49] flex items-center gap-0.5 group-hover:gap-1 transition-all">
                                 Continue <Icons.ArrowRight className="w-3 h-3" />
@@ -526,9 +527,7 @@ function StudentDashboardContent() {
         try {
             const cached = sessionStorage.getItem('dashboard_cache');
             if (cached) {
-                const { enrollments: ce, progressions: cp, availableModules: cm } = JSON.parse(cached);
-                if (ce) setEnrollments(ce);
-                if (cp) setProgressions(cp);
+                const { availableModules: cm } = JSON.parse(cached);
                 if (cm) setAvailableModules(cm);
             }
         } catch (_) {}
@@ -550,7 +549,7 @@ function StudentDashboardContent() {
                 moduleEnrollmentService.getMyEnrollments(),
                 progressionService.getMyProgressions(),
             ]);
-            const eList = Array.isArray(enrollData) ? enrollData : enrollData?.enrollments || [];
+            const eList = (Array.isArray(enrollData) ? enrollData : enrollData?.enrollments || []).map(normalizeEnrollment);
             const pList = Array.isArray(progData) ? progData : progData?.progressions || [];
             setEnrollments(eList);
             setProgressions(pList);
@@ -568,7 +567,7 @@ function StudentDashboardContent() {
                 progressionService.getMyProgressions(),
             ]);
 
-            const eList = Array.isArray(enrollData) ? enrollData : enrollData?.enrollments || [];
+            const eList = (Array.isArray(enrollData) ? enrollData : enrollData?.enrollments || []).map(normalizeEnrollment);
             const pList = Array.isArray(progData) ? progData : progData?.progressions || [];
             setEnrollments(eList);
             setProgressions(pList);
@@ -589,8 +588,6 @@ function StudentDashboardContent() {
                     // Cache for instant next load
                     try {
                         sessionStorage.setItem('dashboard_cache', JSON.stringify({
-                            enrollments: eList,
-                            progressions: pList,
                             availableModules: available,
                         }));
                     } catch (_) {}
@@ -621,11 +618,12 @@ function StudentDashboardContent() {
     };
 
     /* ── Derived data ── */
+    const { totalLessons, completedLessons, overallProgress } = summarizeEnrollments(enrollments);
     const inProgress = enrollments.filter(e => {
         if (e.isCompleted) return false;
         // Any enrollment where all lessons are done is no longer "in progress" —
         // it's either pending assessment or completed.
-        if (e.completedLessons >= e.totalLessons && e.totalLessons > 0) return false;
+        if (e.allLessonsCompleted) return false;
         return true;
     });
 
@@ -633,7 +631,7 @@ function StudentDashboardContent() {
         if (e.isCompleted) return false;
         const hasSubmitted = (e.finalAssessmentAttempts || 0) > 0;
         const hasPending = (e.pendingManualGradingCount || 0) > 0;
-        const allDone = e.completedLessons >= e.totalLessons && e.totalLessons > 0;
+        const allDone = e.allLessonsCompleted;
         const contentFinalized = e.moduleId?.isContentFinalized ?? false;
         return (allDone && contentFinalized && !hasSubmitted) ||
             (hasSubmitted && !e.finalAssessmentPassed) ||
@@ -642,8 +640,6 @@ function StudentDashboardContent() {
 
     const completed = enrollments.filter(e => e.isCompleted);
     const certsEarned = completed.filter(e => e.certificateEarned).length;
-    const avgProgress = inProgress.length
-        ? clamp(inProgress.reduce((s, e) => s + clamp(e.progress), 0) / inProgress.length) : 0;
     const unreadCount = notifications.filter(n => !n.isRead).length;
     const visibleNotifs = showAllActivity ? notifications : notifications.slice(0, 5);
 
@@ -726,17 +722,17 @@ function StudentDashboardContent() {
                         </div>
 
                         {/* Progress bar */}
-                        {inProgress.length > 0 && (
+                        {enrollments.length > 0 && (
                             <div className="mt-5 bg-white/10 rounded-xl p-3 flex items-center gap-4 backdrop-blur-sm">
                                 <div className="flex-1">
                                     <div className="flex items-center justify-between mb-1.5">
                                         <span className="text-xs text-white/70">Overall learning progress</span>
-                                        <span className="text-xs font-bold text-white">{avgProgress}%</span>
+                                        <span className="text-xs font-bold text-white">{overallProgress}%</span>
                                     </div>
                                     <div className="h-2 rounded-full bg-white/20 overflow-hidden">
                                         <div
                                             className="h-full rounded-full bg-gradient-to-r from-[#00c4b3] to-blue-300 transition-all duration-700"
-                                            style={{ width: `${Math.min(100, avgProgress)}%` }}
+                                            style={{ width: `${Math.min(100, overallProgress)}%` }}
                                         />
                                     </div>
                                 </div>
@@ -918,7 +914,7 @@ function StudentDashboardContent() {
                                                 {enrollments.map((e) => {
                                                     const mod = e.moduleId || {};
                                                     const lvl = getLvl(mod.level);
-                                                    const prog = e.isCompleted ? 100 : clamp(e.progress);
+                                                    const prog = clamp(e.progress);
 
                                                     // Status label
                                                     let statusBadge;
@@ -926,9 +922,9 @@ function StudentDashboardContent() {
                                                         statusBadge = <Badge className="text-[9px] bg-blue-100 text-blue-700 border-0 font-semibold shrink-0"><Icons.CheckCircle className="w-2.5 h-2.5 mr-0.5 inline" />Done</Badge>;
                                                     } else if ((e.pendingManualGradingCount || 0) > 0) {
                                                         statusBadge = <Badge className="text-[9px] bg-amber-100 text-amber-700 border-0 font-semibold shrink-0"><Icons.Clock className="w-2.5 h-2.5 mr-0.5 inline" />Review</Badge>;
-                                                    } else if (e.completedLessons >= e.totalLessons && e.totalLessons > 0 && (e.moduleId?.isContentFinalized ?? false)) {
+                                                    } else if (e.allLessonsCompleted && (e.moduleId?.isContentFinalized ?? false)) {
                                                         statusBadge = <Badge className="text-[9px] bg-blue-100 text-blue-700 border-0 font-semibold shrink-0"><Icons.Target className="w-2.5 h-2.5 mr-0.5 inline" />Assess</Badge>;
-                                                    } else if (e.completedLessons >= e.totalLessons && e.totalLessons > 0) {
+                                                    } else if (e.allLessonsCompleted) {
                                                         statusBadge = <Badge className="text-[9px] bg-teal-100 text-teal-700 border-0 font-semibold shrink-0"><Icons.Clock className="w-2.5 h-2.5 mr-0.5 inline" />Coming Soon</Badge>;
                                                     } else {
                                                         statusBadge = <Badge className="text-[9px] bg-violet-100 text-violet-700 border-0 font-semibold shrink-0"><Icons.Play className="w-2.5 h-2.5 mr-0.5 inline" />Active</Badge>;
@@ -957,7 +953,7 @@ function StudentDashboardContent() {
                                                                 </div>
                                                                 <div className="flex items-center justify-between mt-1">
                                                                     <div className="flex items-center gap-2">
-                                                                        <span className="text-[10px] text-gray-400">{Math.min(e.completedLessons || 0, e.totalLessons || 0)}/{e.totalLessons || 0} lessons</span>
+                                                                        <span className="text-[10px] text-gray-400">{e.completedLessons || 0}/{e.totalLessons || 0} lessons</span>
                                                                         {mod.order && (
                                                                             <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-[#021d49]/10 text-[#021d49]">Module {mod.order}</span>
                                                                         )}
@@ -1060,8 +1056,8 @@ function StudentDashboardContent() {
                                     <p className="text-xs text-white/60 font-medium mb-3">Your Summary</p>
                                     <div className="space-y-3">
                                         {[
-                                            { label: 'Lessons Completed', value: (() => { const total = enrollments.reduce((s, e) => s + (e.totalLessons || 0), 0); const done = enrollments.reduce((s, e) => s + Math.min(e.completedLessons || 0, e.totalLessons || 0), 0); return `${done}/${total}`; })(), icon: 'BookOpen' },
-                                            { label: 'Avg Progress', value: `${avgProgress}%`, icon: 'BarChart2' },
+                                            { label: 'Lessons Completed', value: `${completedLessons}/${totalLessons}`, icon: 'BookOpen' },
+                                            { label: 'Overall Progress', value: `${overallProgress}%`, icon: 'BarChart2' },
                                             { label: 'Certificates', value: certsEarned, icon: 'Award' },
                                             { label: 'Completed Modules', value: completed.length, icon: 'CheckCircle' },
                                         ].map(({ label, value, icon }) => {
