@@ -127,6 +127,10 @@ const adminService = {
     const { data } = await api.post('/fellows/send-invitations', { fellowIds });
     return data;
   },
+  resetFellowPassword: async (id: string) => {
+    const { data } = await api.post(`/fellows/${id}/reset-password`);
+    return data;
+  },
   sendFellowReminder: async (id: string, message: string) => {
     const { data } = await api.post(`/fellows/${id}/send-reminder`, { message });
     return data;
