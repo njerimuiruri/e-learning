@@ -367,7 +367,8 @@ function ModuleLearningContent() {
             setLiveSlideIndex(restoredSlideIndex);
         }
 
-        if (openFinalAssessmentOnLoad && allLessonsCompleted && !requiresModuleRepeat) {
+        if (openFinalAssessmentOnLoad && allLessonsCompleted && !requiresModuleRepeat
+            && (moduleData?.finalAssessment?.questions?.length ?? 0) > 0) {
             setShowFinalAssessment(true);
         }
     }, [enrollmentProgress, moduleData, lessonParam, openFinalAssessmentOnLoad]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -428,7 +429,7 @@ function ModuleLearningContent() {
         const contentFinalized = freshProgress?.isContentFinalized ?? false;
 
         if (freshProgress?.allLessonsCompleted && !freshProgress?.requiresModuleRepeat) {
-            if (contentFinalized && moduleData?.finalAssessment) {
+            if (contentFinalized && moduleData?.finalAssessment?.questions?.length > 0) {
                 setShowFinalAssessment(true);
             } else {
                 setShowContentComingSoon(true);
@@ -456,7 +457,7 @@ function ModuleLearningContent() {
                     .trackSlideProgress(enrollment._id, nextForwardIndex, 0, 0, false)
                     .catch(() => { });
             }
-        } else if (contentFinalized && moduleData?.finalAssessment) {
+        } else if (contentFinalized && moduleData?.finalAssessment?.questions?.length > 0) {
             setShowFinalAssessment(true);
         } else {
             setShowContentComingSoon(true);
@@ -467,6 +468,9 @@ function ModuleLearningContent() {
     const completedCount = enrollmentProgress?.completedLessons ?? 0;
     const allLessonsCompleted = enrollmentProgress?.allLessonsCompleted ?? false;
     const safeProgress = enrollmentProgress?.progress ?? 0;
+
+    // Only true when the module actually has assessment questions to answer.
+    const hasFinalAssessment = (moduleData?.finalAssessment?.questions?.length ?? 0) > 0;
 
     // All resources for resources tab
     const allResources = useMemo(() => {
@@ -854,7 +858,8 @@ function ModuleLearningContent() {
                                 </div>
                             )}
 
-                            {/* Final Assessment */}
+                            {/* Final Assessment — only shown when the module has questions */}
+                            {hasFinalAssessment && (
                             <div className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
                                 <button
                                     onClick={() => {
@@ -885,6 +890,7 @@ function ModuleLearningContent() {
                                     </div>
                                 </button>
                             </div>
+                            )}
 
                             {/* Module info + progress */}
                             <div className={`px-4 py-3 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
@@ -1210,7 +1216,7 @@ function ModuleLearningContent() {
                     )}
 
                     {/* ── FINAL ASSESSMENT CTA BANNER (shown when all lessons done, assessment not yet passed) ── */}
-                    {!showModuleOverview && !showIntroVideo && !showFinalAssessment && !showContentComingSoon && allLessonsCompleted && moduleData?.finalAssessment && !enrollment?.finalAssessmentPassed && (
+                    {!showModuleOverview && !showIntroVideo && !showFinalAssessment && !showContentComingSoon && allLessonsCompleted && hasFinalAssessment && !enrollment?.finalAssessmentPassed && (
                         <div className="px-4 pt-4 flex-shrink-0">
                             <div className="max-w-3xl mx-auto">
                                 <button
