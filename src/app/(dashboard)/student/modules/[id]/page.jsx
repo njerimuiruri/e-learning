@@ -426,13 +426,12 @@ function ModuleLearningContent() {
     const moveToNextLesson = useCallback((freshProgress) => {
         if (!lessons.length) return;
 
-        const contentFinalized = freshProgress?.isContentFinalized ?? false;
-
         if (freshProgress?.allLessonsCompleted && !freshProgress?.requiresModuleRepeat) {
-            if (contentFinalized && moduleData?.finalAssessment?.questions?.length > 0) {
+            if ((moduleData?.finalAssessment?.questions?.length ?? 0) > 0) {
                 setShowFinalAssessment(true);
             } else {
-                setShowContentComingSoon(true);
+                setShowContentComingSoon(false);
+                setShowModuleCompletionScreen(true);
             }
             return;
         }
@@ -457,10 +456,11 @@ function ModuleLearningContent() {
                     .trackSlideProgress(enrollment._id, nextForwardIndex, 0, 0, false)
                     .catch(() => { });
             }
-        } else if (contentFinalized && moduleData?.finalAssessment?.questions?.length > 0) {
+        } else if ((moduleData?.finalAssessment?.questions?.length ?? 0) > 0) {
             setShowFinalAssessment(true);
         } else {
-            setShowContentComingSoon(true);
+            setShowContentComingSoon(false);
+            setShowModuleCompletionScreen(true);
         }
     }, [currentLessonIndex, lessons.length, moduleData?.finalAssessment, enrollment?._id]);
 
@@ -1192,6 +1192,20 @@ function ModuleLearningContent() {
                     )}
 
                     {/* ── CONTENT COMING SOON ── */}
+                    {/* Modules without a final assessment complete as soon as all lessons are done. */}
+                    {!showModuleOverview && !showIntroVideo && !showFinalAssessment && !showContentComingSoon && showModuleCompletionScreen && allLessonsCompleted && !hasFinalAssessment && (
+                        <div className={`flex-1 overflow-y-auto ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
+                            <div className="max-w-3xl mx-auto px-4 py-8">
+                                <CompletionScreen
+                                    enrollment={{ ...(enrollment || {}), isCompleted: true }}
+                                    moduleId={moduleData._id}
+                                    module={moduleData}
+                                    router={router}
+                                />
+                            </div>
+                        </div>
+                    )}
+
                     {!showModuleOverview && !showIntroVideo && !showFinalAssessment && showContentComingSoon && (
                         <div className={`flex-1 flex flex-col items-center justify-center px-6 py-16 text-center ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
                             <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 ${darkMode ? 'bg-gray-800' : 'bg-blue-50'}`}>
@@ -1237,7 +1251,7 @@ function ModuleLearningContent() {
                     )}
 
                     {/* ── LESSON VIEW ── */}
-                    {!showModuleOverview && !showIntroVideo && !showFinalAssessment && !showContentComingSoon && currentLesson && (
+                    {!showModuleOverview && !showIntroVideo && !showFinalAssessment && !showContentComingSoon && !showModuleCompletionScreen && currentLesson && (
                         <>
                             {/* Slide-based lesson: scrollable LessonViewer */}
                             {hasSlides && (
@@ -1454,10 +1468,15 @@ function ModuleLearningContent() {
                                                             className="bg-green-600 hover:bg-green-700 text-white gap-2">
                                                             Next Lesson <Icons.ChevronRight className="w-4 h-4" />
                                                         </Button>
-                                                    ) : allLessonsCompleted ? (
+                                                    ) : allLessonsCompleted && hasFinalAssessment ? (
                                                         <Button onClick={() => { setShowFinalAssessment(true); setShowLessonAssessment(false); }}
                                                             className="bg-green-600 hover:bg-green-700 text-white gap-2">
                                                             <Icons.Trophy className="w-4 h-4" /> Final Assessment
+                                                        </Button>
+                                                    ) : allLessonsCompleted ? (
+                                                        <Button onClick={() => setShowModuleCompletionScreen(true)}
+                                                            className="bg-green-600 hover:bg-green-700 text-white gap-2">
+                                                            <Icons.CheckCircle className="w-4 h-4" /> Module Complete
                                                         </Button>
                                                     ) : null}
                                                 </div>

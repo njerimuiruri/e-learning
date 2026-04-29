@@ -163,7 +163,7 @@ export default function StudentSidebar() {
         { icon: 'FileText',        label: 'My Notes',          path: '/notes'                      },
         { icon: 'MessageCircle',   label: 'Messages',          path: '/student/messages'           },
         { icon: 'Trophy',          label: 'Your Achievements', path: '/student/achievements'       },
-        { icon: 'Award',           label: 'Certificates',      path: '/student/certificates'       },
+        { icon: 'Award',           label: 'Certificates',      path: '/student/certificates', locked: true },
         { icon: 'Settings',        label: 'Account Settings',  path: '/student/account-settings'   },
     ];
 
@@ -251,6 +251,20 @@ export default function StudentSidebar() {
                         {menuItems.map((item) => {
                             const Icon = Icons[item.icon];
                             const active = isActive(item.path);
+                            if (item.locked) {
+                                return (
+                                    <li key={item.path}>
+                                        <div
+                                            title="Certificates will be available after completing all modules"
+                                            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-300 cursor-not-allowed select-none"
+                                        >
+                                            {Icon && <Icon className="shrink-0 text-gray-300" style={{ width: '1.1rem', height: '1.1rem' }} />}
+                                            <span>{item.label}</span>
+                                            <Icons.Lock className="ml-auto w-3 h-3 text-gray-300" />
+                                        </div>
+                                    </li>
+                                );
+                            }
                             return (
                                 <li key={item.path}>
                                     <button
@@ -334,11 +348,20 @@ export default function StudentSidebar() {
                         { icon: 'LayoutDashboard', label: 'Home',     path: '/student'                },
                         { icon: 'BookOpen',         label: 'Modules',  path: '/student/modules'        },
                         { icon: 'Trophy',           label: 'Achieve',  path: '/student/achievements'   },
-                        { icon: 'Award',            label: 'Certs',    path: '/student/certificates'   },
+                        { icon: 'Award',            label: 'Certs',    path: '/student/certificates', locked: true },
                         { icon: 'Settings',         label: 'Settings', path: '/student/account-settings' },
-                    ].map(({ icon, label, path }) => {
+                    ].map(({ icon, label, path, locked }) => {
                         const Icon = Icons[icon];
                         const active = isActive(path);
+                        if (locked) {
+                            return (
+                                <div key={path} className="flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl text-gray-300 cursor-not-allowed select-none relative">
+                                    <Icon className="w-5 h-5" />
+                                    <span className="text-[10px] font-medium">{label}</span>
+                                    <Icons.Lock className="absolute top-1 right-1 w-2.5 h-2.5" />
+                                </div>
+                            );
+                        }
                         return (
                             <button
                                 key={path}
