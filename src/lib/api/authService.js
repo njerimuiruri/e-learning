@@ -388,7 +388,11 @@ class AuthService {
 
   async sendForgotPasswordOtp(email) {
     try {
-      const response = await api.post('/api/auth/forgot-password-otp', { email });
+      const response = await api.post(
+        '/api/auth/forgot-password-otp',
+        { email },
+        { skipAuth: true, withCredentials: false }
+      );
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to send code');
@@ -397,7 +401,11 @@ class AuthService {
 
   async verifyForgotPasswordOtp(email, otp) {
     try {
-      const response = await api.post('/api/auth/verify-otp', { email, otp });
+      const response = await api.post(
+        '/api/auth/verify-otp',
+        { email, otp },
+        { skipAuth: true, withCredentials: false }
+      );
       return response.data; // { success, resetToken }
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Invalid or expired code');
@@ -406,11 +414,15 @@ class AuthService {
 
   async resetPasswordWithToken(token, newPassword, confirmPassword) {
     try {
-      const response = await api.post('/api/auth/reset-password', {
-        token,
-        newPassword,
-        confirmPassword,
-      });
+      const response = await api.post(
+        '/api/auth/reset-password',
+        {
+          token,
+          newPassword,
+          confirmPassword,
+        },
+        { skipAuth: true, withCredentials: false }
+      );
       return response.data;
     } catch (error) {
       throw new Error(error.response?.data?.message || 'Failed to reset password');

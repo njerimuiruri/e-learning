@@ -46,9 +46,15 @@ export function summarizeEnrollments(enrollments = []) {
     const normalizedEnrollments = enrollments.map(normalizeEnrollment);
     const totalLessons = normalizedEnrollments.reduce((sum, enrollment) => sum + enrollment.totalLessons, 0);
     const completedLessons = normalizedEnrollments.reduce((sum, enrollment) => sum + enrollment.completedLessons, 0);
+
+    // When lesson counts are unavailable fall back to average of individual progress values
     const overallProgress = totalLessons > 0
         ? clampPercent((completedLessons / totalLessons) * 100)
-        : 0;
+        : normalizedEnrollments.length > 0
+            ? clampPercent(
+                normalizedEnrollments.reduce((s, e) => s + (e.progress || 0), 0) / normalizedEnrollments.length
+              )
+            : 0;
 
     return {
         normalizedEnrollments,

@@ -99,6 +99,14 @@ const moduleEnrollmentService = {
     return response.data;
   },
 
+  // Instructor: get students enrolled in their modules (searchable)
+  async getInstructorStudents(params: { search?: string; limit?: number } = {}) {
+    // Uses the dedicated endpoint added to the backend
+    const response = await api.get('/instructor/students', { params });
+    const raw = response.data?.data ?? response.data;
+    return Array.isArray(raw) ? raw : (raw?.students ?? raw?.users ?? raw?.data ?? []);
+  },
+
   // Instructor: grade an essay submission (Pass/Fail + feedback)
   async gradeEssay(enrollmentId: string, body: { pass: boolean; feedback: string; score?: number }) {
     const response = await api.post(`/${enrollmentId}/grade-essay`, body);

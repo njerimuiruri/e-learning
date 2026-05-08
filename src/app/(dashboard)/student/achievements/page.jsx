@@ -1,392 +1,539 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-    Trophy, ChevronLeft, Zap, BookOpen, Award,
-    BookCheck, TrendingUp, Loader2, Star, Flame,
-    Target, GraduationCap, Medal, LayoutDashboard,
+    Trophy, ChevronLeft, BookOpen, CheckCircle,
+    BookCheck, TrendingUp, Loader2, Flame,
+    Target, Medal, LayoutDashboard, Lock, Unlock,
+    Crown, Star, Zap, ArrowRight, GraduationCap,
+    Calendar, ChevronRight, Award,
 } from 'lucide-react';
-import courseService from '@/lib/api/courseService';
+import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
+import progressionService from '@/lib/api/progressionService';
+import authService from '@/lib/api/authService';
 import Navbar from '@/components/navbar/navbar';
+import { normalizeEnrollment, summarizeEnrollments } from '@/lib/utils/enrollmentProgress';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-    Tabs, TabsContent, TabsList, TabsTrigger,
-} from '@/components/ui/tabs';
 
-/* ─── helpers ─── */
-const fmtDate = (d) =>
-    new Date(d).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-
-const typeConfig = {
-    course_completion: {
-        label: 'Course',
-        icon: Award,
-        bg: 'bg-emerald-50',
-        border: 'border-emerald-200',
-        iconBg: 'bg-emerald-100',
-        iconColor: 'text-emerald-600',
-        badge: 'bg-emerald-100 text-emerald-700 border-emerald-200',
-    },
-    module_completion: {
-        label: 'Module',
-        icon: BookCheck,
-        bg: 'bg-blue-50',
-        border: 'border-blue-200',
-        iconBg: 'bg-blue-100',
-        iconColor: 'text-blue-600',
-        badge: 'bg-blue-100 text-blue-700 border-blue-200',
-    },
-    xp_boost: {
-        label: 'XP Boost',
-        icon: Zap,
-        bg: 'bg-amber-50',
-        border: 'border-amber-200',
-        iconBg: 'bg-amber-100',
-        iconColor: 'text-amber-600',
-        badge: 'bg-amber-100 text-amber-700 border-amber-200',
-    },
+/* ── constants ── */
+const LEVEL_CFG = {
+    beginner:     { label: 'Beginner',     color: 'text-blue-700',   bg: 'bg-blue-600',   light: 'bg-blue-50',   border: 'border-blue-200',  stripe: 'bg-blue-500',  ring: 'ring-blue-300'  },
+    intermediate: { label: 'Intermediate', color: 'text-amber-700',  bg: 'bg-amber-500',  light: 'bg-amber-50',  border: 'border-amber-200', stripe: 'bg-amber-500', ring: 'ring-amber-300' },
+    advanced:     { label: 'Advanced',     color: 'text-rose-700',   bg: 'bg-rose-600',   light: 'bg-rose-50',   border: 'border-rose-200',  stripe: 'bg-rose-500',  ring: 'ring-rose-300'  },
 };
-const getCfg = (type) => typeConfig[type] || typeConfig.xp_boost;
+const getLvl = (l) => LEVEL_CFG[(l || '').toLowerCase()] || LEVEL_CFG.beginner;
 
-/* ─── Stat card ─── */
-function StatCard({ icon: Icon, label, value, iconClass, valueClass }) {
+const MILESTONES = [
+    { key: 'first',   min: 1,  icon: BookOpen,    label: 'First Step',       sub: 'Completed 1st module',    color: 'text-teal-600',   bg: 'bg-teal-50',   border: 'border-teal-200'   },
+    { key: 'three',   min: 3,  icon: BookCheck,   label: 'On a Roll',        sub: 'Completed 3 modules',     color: 'text-blue-600',   bg: 'bg-blue-50',   border: 'border-blue-200'   },
+    { key: 'five',    min: 5,  icon: Flame,       label: 'On Fire',          sub: 'Completed 5 modules',     color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200' },
+    { key: 'halfway', min: -1, icon: TrendingUp,  label: 'Halfway There',    sub: '50% overall progress',    color: 'text-violet-600', bg: 'bg-violet-50', border: 'border-violet-200' },
+    { key: 'scholar', min: -1, icon: GraduationCap,label:'Scholar',          sub: '75% overall progress',    color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-200' },
+    { key: 'crown',   min: -1, icon: Crown,       label: 'Top of the Class', sub: '100% overall progress',   color: 'text-amber-600',  bg: 'bg-amber-50',  border: 'border-amber-200'  },
+];
+
+const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+const ordinal  = (n) => n + (['th','st','nd','rd'][(n%100>10&&n%100<20)?0:Math.min(n%10,4)] || 'th');
+
+/* ── Completed module card ── */
+function CompletedCard({ enrollment, index }) {
+    const mod = enrollment.moduleId || {};
+    const lvl = getLvl(mod.level);
+    const order = mod.order || (index + 1);
     return (
-        <Card className="border border-border">
-            <CardContent className="p-5 flex items-center gap-4">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${iconClass}`}>
-                    <Icon className="w-5 h-5" />
+        <div className="flex gap-0 rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 group bg-white">
+            {/* Colored left stripe */}
+            <div className={`w-1.5 shrink-0 ${lvl.stripe}`} />
+            <div className="flex flex-1 items-start gap-4 p-4">
+                {/* Order circle */}
+                <div className={`w-11 h-11 rounded-xl ${lvl.light} ${lvl.border} border flex flex-col items-center justify-center shrink-0`}>
+                    <span className="text-[9px] font-bold text-gray-400 uppercase leading-none">MOD</span>
+                    <span className={`text-base font-black leading-none ${lvl.color}`}>{order}</span>
                 </div>
-                <div>
-                    <p className="text-xs text-muted-foreground font-medium">{label}</p>
-                    <p className={`text-2xl font-bold ${valueClass}`}>{value}</p>
-                </div>
-            </CardContent>
-        </Card>
-    );
-}
-
-/* ─── Achievement row ─── */
-function AchievementRow({ achievement, index }) {
-    const cfg = getCfg(achievement.type);
-    const Icon = cfg.icon;
-    return (
-        <div className={`flex items-start gap-4 p-4 rounded-xl border ${cfg.border} ${cfg.bg} transition-all hover:shadow-sm`}>
-            {/* Icon */}
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${cfg.iconBg}`}>
-                <Icon className={`w-5 h-5 ${cfg.iconColor}`} />
-            </div>
-
-            {/* Content */}
-            <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                    <div>
-                        <p className="font-semibold text-sm text-foreground">
-                            {achievement.title || 'Achievement Unlocked'}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                            {achievement.description || achievement.moduleTitle || 'Great work!'}
-                        </p>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div className="min-w-0">
+                            <p className="font-bold text-sm text-gray-900 leading-tight line-clamp-1 group-hover:text-[#021d49] transition-colors">
+                                {mod.title || 'Module'}
+                            </p>
+                            {mod.categoryId?.name && (
+                                <p className="text-[11px] text-gray-400 mt-0.5">{mod.categoryId.name}</p>
+                            )}
+                        </div>
+                        <Badge className={`text-[10px] shrink-0 capitalize font-semibold border ${lvl.light} ${lvl.color} ${lvl.border} shadow-none`}>
+                            {lvl.label}
+                        </Badge>
                     </div>
-                    <Badge variant="outline" className={`text-[11px] shrink-0 ${cfg.badge}`}>
-                        <Zap className="w-2.5 h-2.5 mr-1" />
-                        +{achievement.xpAwarded} XP
-                    </Badge>
+                    <div className="flex items-center gap-3 mt-2">
+                        <div className="flex items-center gap-1.5 bg-green-50 text-green-700 border border-green-200 rounded-full px-2.5 py-0.5">
+                            <CheckCircle className="w-3 h-3" />
+                            <span className="text-[11px] font-semibold">Completed</span>
+                        </div>
+                        {fmtDate(enrollment.completedAt || enrollment.updatedAt) && (
+                            <div className="flex items-center gap-1 text-[11px] text-gray-400">
+                                <Calendar className="w-3 h-3" />
+                                {fmtDate(enrollment.completedAt || enrollment.updatedAt)}
+                            </div>
+                        )}
+                    </div>
                 </div>
-                <p className="text-[11px] text-muted-foreground mt-2">{fmtDate(achievement.createdAt)}</p>
+                {/* Trophy */}
+                <div className="shrink-0 w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center">
+                    <Trophy className="w-4 h-4 text-amber-500" />
+                </div>
             </div>
         </div>
     );
 }
 
-/* ─── Empty state ─── */
-function EmptyAchievements({ onAction }) {
+/* ── In-progress module card ── */
+function InProgressCard({ enrollment, onClick }) {
+    const mod = enrollment.moduleId || {};
+    const lvl = getLvl(mod.level);
+    const prog = enrollment.progress || 0;
     return (
-        <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
-                <Trophy className="w-8 h-8 text-muted-foreground" />
+        <div
+            className="flex gap-0 rounded-2xl overflow-hidden border border-gray-100 shadow-sm hover:shadow-md cursor-pointer transition-all duration-200 group bg-white"
+            onClick={onClick}
+        >
+            <div className={`w-1.5 shrink-0 ${lvl.stripe} opacity-40`} />
+            <div className="flex flex-1 items-start gap-4 p-4">
+                <div className={`w-11 h-11 rounded-xl ${lvl.light} ${lvl.border} border flex flex-col items-center justify-center shrink-0`}>
+                    <BookOpen className={`w-4 h-4 ${lvl.color}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                        <p className="font-semibold text-sm text-gray-800 line-clamp-1 group-hover:text-[#021d49] transition-colors">
+                            {mod.title || 'Module'}
+                        </p>
+                        <Badge className={`text-[10px] shrink-0 capitalize font-semibold border ${lvl.light} ${lvl.color} ${lvl.border} shadow-none`}>
+                            {lvl.label}
+                        </Badge>
+                    </div>
+                    {mod.categoryId?.name && (
+                        <p className="text-[11px] text-gray-400 mt-0.5 mb-2">{mod.categoryId.name}</p>
+                    )}
+                    <div className="flex items-center gap-2">
+                        <Progress value={prog} className="flex-1 h-1.5" />
+                        <span className="text-[11px] font-bold text-[#021d49] shrink-0">{prog}%</span>
+                    </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-gray-300 shrink-0 mt-1 group-hover:text-[#021d49] transition-colors" />
             </div>
-            <h3 className="text-base font-semibold text-foreground mb-1">No achievements yet</h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-xs">
-                Complete modules and courses to earn XP and unlock achievements.
-            </p>
-            <Button className="bg-[#021d49] hover:bg-[#032a66]" onClick={onAction}>
-                <BookOpen className="w-4 h-4 mr-2" /> Start Learning
-            </Button>
         </div>
     );
 }
 
-/* ─── Main ─── */
+/* ── Milestone badge ── */
+function MilestoneBadge({ icon: Icon, label, sub, color, bg, border, earned }) {
+    return (
+        <div className={`relative flex flex-col items-center gap-2 p-4 rounded-2xl border text-center transition-all duration-200 ${
+            earned ? `${bg} ${border} shadow-sm` : 'bg-gray-50 border-gray-100 opacity-50'
+        }`}>
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${earned ? bg : 'bg-gray-100'}`}>
+                <Icon className={`w-6 h-6 ${earned ? color : 'text-gray-300'}`} />
+            </div>
+            <div>
+                <p className={`text-xs font-bold ${earned ? 'text-gray-900' : 'text-gray-400'}`}>{label}</p>
+                <p className={`text-[10px] mt-0.5 ${earned ? 'text-gray-500' : 'text-gray-300'}`}>{sub}</p>
+            </div>
+            {earned && (
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center shadow">
+                    <CheckCircle className="w-3 h-3 text-white" />
+                </div>
+            )}
+            {!earned && (
+                <Lock className="absolute -top-1.5 -right-1.5 w-4 h-4 text-gray-300" />
+            )}
+        </div>
+    );
+}
+
+/* ── Level journey step ── */
+function LevelStep({ level, status, catName }) {
+    const cfg = getLvl(level);
+    const isDone    = status === 'done';
+    const isActive  = status === 'active';
+    const isLocked  = status === 'locked';
+    return (
+        <div className="flex flex-col items-center gap-2 flex-1">
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border-2 transition-all ${
+                isDone   ? `${cfg.bg} border-transparent shadow-md` :
+                isActive ? `${cfg.light} ${cfg.border} ring-2 ${cfg.ring} ring-offset-1 shadow-md` :
+                           'bg-gray-50 border-gray-200'
+            }`}>
+                {isDone   ? <CheckCircle className="w-7 h-7 text-white" />
+                : isActive ? <Zap className={`w-7 h-7 ${cfg.color}`} />
+                :            <Lock className="w-5 h-5 text-gray-300" />}
+            </div>
+            <p className={`text-xs font-bold capitalize ${isDone ? cfg.color : isActive ? cfg.color : 'text-gray-400'}`}>
+                {level}
+            </p>
+            <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                isDone   ? 'bg-green-100 text-green-700' :
+                isActive ? `${cfg.light} ${cfg.color}` :
+                           'bg-gray-100 text-gray-400'
+            }`}>
+                {isDone ? 'Done' : isActive ? 'Active' : 'Locked'}
+            </span>
+        </div>
+    );
+}
+
+/* ═══════════════════════════════════════
+   MAIN PAGE
+═══════════════════════════════════════ */
 export default function AchievementsPage() {
     const router = useRouter();
-    const [achievementsData, setAchievementsData] = useState(null);
-    const [dashboardData, setDashboardData] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
+    const [enrollments, setEnrollments]   = useState([]);
+    const [progressions, setProgressions] = useState([]);
+    const [loading, setLoading]           = useState(true);
+    const [user, setUser]                 = useState(null);
 
-    useEffect(() => { fetchAchievements(); }, []);
-
-    const fetchAchievements = async () => {
-        try {
-            setLoading(true);
-            setError('');
-            const [achievements, dashboard] = await Promise.all([
-                courseService.getStudentAchievements(),
-                courseService.getStudentDashboard(),
+    useEffect(() => {
+        setUser(authService.getCurrentUser?.() || null);
+        (async () => {
+            const [e, p] = await Promise.allSettled([
+                moduleEnrollmentService.getMyEnrollments(),
+                progressionService.getMyProgressions(),
             ]);
-            setAchievementsData(achievements);
-            setDashboardData(dashboard);
-        } catch (err) {
-            setError('Failed to load achievements');
-        } finally {
+            if (e.status === 'fulfilled') {
+                const raw = Array.isArray(e.value) ? e.value : e.value?.enrollments || [];
+                setEnrollments(raw.map(normalizeEnrollment));
+            }
+            if (p.status === 'fulfilled') {
+                const raw = p.value;
+                setProgressions(Array.isArray(raw) ? raw : raw?.progressions || []);
+            }
             setLoading(false);
-        }
-    };
+        })();
+    }, []);
 
-    /* derived data */
-    const totalXP = achievementsData?.totalXp || achievementsData?.totalPoints || 0;
-    const achievements = achievementsData?.achievements || [];
-    const moduleCompletions = achievements.filter(a => a.type === 'module_completion');
-    const courseCompletions = achievements.filter(a => a.type === 'course_completion');
-    const xpBoosts = achievements.filter(a => a.type === 'xp_boost');
+    const { overallProgress } = summarizeEnrollments(enrollments);
+    const completed   = useMemo(() => enrollments.filter(e => e.isCompleted), [enrollments]);
+    const inProgress  = useMemo(() => enrollments.filter(e => !e.isCompleted), [enrollments]);
 
-    const inProgressCourses = dashboardData?.enrollments
-        ?.filter(e => !e.isCompleted)
-        .map(e => ({
-            _id: e._id,
-            title: e.courseId?.title || 'Untitled Course',
-            progress: Math.round(e.progress || 0),
-        })) || [];
+    const milestonesEarned = useMemo(() => MILESTONES.map(m => ({
+        ...m,
+        earned: m.key === 'halfway'  ? overallProgress >= 50
+              : m.key === 'scholar'  ? overallProgress >= 75
+              : m.key === 'crown'    ? overallProgress >= 100
+              : completed.length >= m.min,
+    })), [completed.length, overallProgress]);
 
-    /* ── Loading ── */
-    if (loading) {
-        return (
-            <>
-                <Navbar />
-                <div className="min-h-screen flex items-center justify-center bg-background">
-                    <div className="flex flex-col items-center gap-3">
-                        <Loader2 className="w-8 h-8 animate-spin text-[#021d49]" />
-                        <p className="text-sm text-muted-foreground">Loading achievements…</p>
-                    </div>
-                </div>
-            </>
-        );
-    }
+    const earnedCount = milestonesEarned.filter(m => m.earned).length;
+
+    const firstName = user?.firstName || user?.fullName?.split(' ')[0] || '';
+
+    if (loading) return (
+        <>
+            <Navbar />
+            <div className="min-h-screen flex items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-[#021d49]" />
+            </div>
+        </>
+    );
 
     return (
         <>
             <Navbar />
-            <div className="min-h-screen bg-background">
-                <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+            <div className="min-h-screen bg-gray-50/70">
 
-                    {/* ── Page header ── */}
-                    <div className="mb-7">
+                {/* ══ HERO BANNER ══ */}
+                <div className="bg-gradient-to-br from-[#021d49] via-[#0a2d6e] to-[#0f3a8a] px-4 sm:px-6 lg:px-8 py-10">
+                    <div className="max-w-5xl mx-auto">
                         <Button
-                            variant="ghost"
-                            size="sm"
-                            className="gap-1.5 text-muted-foreground mb-5 -ml-2"
+                            variant="ghost" size="sm"
+                            className="gap-1.5 text-blue-200/70 hover:text-white hover:bg-white/10 mb-6 -ml-2"
                             onClick={() => router.push('/student')}
                         >
-                            <ChevronLeft className="w-4 h-4" />
-                            Back to Dashboard
+                            <ChevronLeft className="w-4 h-4" /> Back to Dashboard
                         </Button>
 
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#021d49] flex items-center justify-center shrink-0">
-                                <Trophy className="w-5 h-5 text-white" />
+                        <div className="flex flex-col sm:flex-row sm:items-end gap-6 justify-between">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-2xl bg-amber-400 flex items-center justify-center shadow-lg shrink-0">
+                                    <Trophy className="w-8 h-8 text-white" />
+                                </div>
+                                <div>
+                                    <p className="text-blue-200/70 text-xs font-medium mb-0.5">Achievement Board</p>
+                                    <h1 className="text-2xl sm:text-3xl font-bold text-white">
+                                        {firstName ? `${firstName}'s Journey` : 'My Journey'}
+                                    </h1>
+                                    <p className="text-blue-200/60 text-sm mt-1">
+                                        {completed.length === 0
+                                            ? 'Start learning to earn your first achievement'
+                                            : `${completed.length} module${completed.length > 1 ? 's' : ''} completed · ${overallProgress}% overall progress`}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h1 className="text-2xl font-bold text-foreground">Achievements</h1>
-                                <p className="text-sm text-muted-foreground">Your learning milestones and XP history</p>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* ── Stats row ── */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
-                        <StatCard
-                            icon={Zap}
-                            label="Total XP"
-                            value={totalXP}
-                            iconClass="bg-amber-100 text-amber-600"
-                            valueClass="text-amber-600"
-                        />
-                        <StatCard
-                            icon={BookCheck}
-                            label="Modules Done"
-                            value={moduleCompletions.length}
-                            iconClass="bg-blue-100 text-blue-600"
-                            valueClass="text-blue-600"
-                        />
-                        <StatCard
-                            icon={GraduationCap}
-                            label="Courses Done"
-                            value={courseCompletions.length}
-                            iconClass="bg-emerald-100 text-emerald-600"
-                            valueClass="text-emerald-600"
-                        />
-                        <StatCard
-                            icon={Flame}
-                            label="XP Boosts"
-                            value={xpBoosts.length}
-                            iconClass="bg-rose-100 text-rose-600"
-                            valueClass="text-rose-600"
-                        />
-                    </div>
-
-                    {/* ── Main content ── */}
-                    <div className="grid lg:grid-cols-3 gap-5">
-
-                        {/* Left: Achievement list */}
-                        <div className="lg:col-span-2">
-                            <Card className="border border-border">
-                                <CardHeader className="px-5 pt-5 pb-4 border-b border-border">
-                                    <CardTitle className="text-base font-semibold flex items-center gap-2">
-                                        <Medal className="w-4 h-4 text-[#021d49]" />
-                                        Achievement History
-                                        {achievements.length > 0 && (
-                                            <Badge variant="secondary" className="ml-auto font-normal">
-                                                {achievements.length}
-                                            </Badge>
-                                        )}
-                                    </CardTitle>
-                                </CardHeader>
-
-                                {achievements.length === 0 ? (
-                                    <EmptyAchievements onAction={() => router.push('/courses')} />
-                                ) : (
-                                    <Tabs defaultValue="all">
-                                        <div className="px-5 pt-3">
-                                            <TabsList className="h-8 text-xs">
-                                                <TabsTrigger value="all" className="text-xs px-3">All ({achievements.length})</TabsTrigger>
-                                                <TabsTrigger value="courses" className="text-xs px-3">Courses ({courseCompletions.length})</TabsTrigger>
-                                                <TabsTrigger value="modules" className="text-xs px-3">Modules ({moduleCompletions.length})</TabsTrigger>
-                                                <TabsTrigger value="xp" className="text-xs px-3">XP ({xpBoosts.length})</TabsTrigger>
-                                            </TabsList>
-                                        </div>
-
-                                        {[
-                                            { value: 'all', data: achievements },
-                                            { value: 'courses', data: courseCompletions },
-                                            { value: 'modules', data: moduleCompletions },
-                                            { value: 'xp', data: xpBoosts },
-                                        ].map(({ value, data }) => (
-                                            <TabsContent key={value} value={value} className="mt-0">
-                                                <ScrollArea className="h-[420px]">
-                                                    <div className="p-5 space-y-3">
-                                                        {data.length === 0 ? (
-                                                            <div className="text-center py-10 text-sm text-muted-foreground">
-                                                                No achievements in this category yet.
-                                                            </div>
-                                                        ) : (
-                                                            data.map((a, i) => (
-                                                                <AchievementRow key={a._id || i} achievement={a} index={i} />
-                                                            ))
-                                                        )}
-                                                    </div>
-                                                </ScrollArea>
-                                            </TabsContent>
-                                        ))}
-                                    </Tabs>
-                                )}
-                            </Card>
-                        </div>
-
-                        {/* Right: sidebar */}
-                        <div className="space-y-4">
-
-                            {/* XP Summary */}
-                            <Card className="border border-border">
-                                <CardHeader className="px-5 pt-5 pb-3 border-b border-border">
-                                    <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                        <Zap className="w-4 h-4 text-amber-500" />
-                                        XP Summary
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-5 space-y-4">
-                                    {[
-                                        { label: 'From courses', value: courseCompletions.reduce((s, a) => s + (a.xpAwarded || 0), 0), color: 'bg-emerald-500' },
-                                        { label: 'From modules', value: moduleCompletions.reduce((s, a) => s + (a.xpAwarded || 0), 0), color: 'bg-blue-500' },
-                                        { label: 'XP boosts', value: xpBoosts.reduce((s, a) => s + (a.xpAwarded || 0), 0), color: 'bg-amber-500' },
-                                    ].map(({ label, value, color }) => (
-                                        <div key={label}>
-                                            <div className="flex items-center justify-between mb-1.5">
-                                                <span className="text-xs text-muted-foreground">{label}</span>
-                                                <span className="text-xs font-bold">{value} XP</span>
-                                            </div>
-                                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full ${color} transition-all`}
-                                                    style={{ width: totalXP ? `${Math.round((value / totalXP) * 100)}%` : '0%' }}
-                                                />
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    <Separator />
-
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-semibold text-foreground">Total XP</span>
-                                        <Badge className="bg-amber-100 text-amber-700 border-amber-200 border text-xs font-bold">
-                                            <Zap className="w-3 h-3 mr-1" /> {totalXP} XP
-                                        </Badge>
+                            {/* Mini stat chips */}
+                            <div className="flex items-center gap-2 flex-wrap">
+                                {[
+                                    { label: 'Completed', value: completed.length,  color: 'bg-green-500/20 text-green-200' },
+                                    { label: 'In Progress', value: inProgress.length, color: 'bg-blue-400/20 text-blue-200'  },
+                                    { label: 'Badges',    value: `${earnedCount}/${MILESTONES.length}`, color: 'bg-amber-400/20 text-amber-200' },
+                                ].map(s => (
+                                    <div key={s.label} className={`px-3 py-1.5 rounded-xl text-xs font-semibold backdrop-blur-sm ${s.color}`}>
+                                        <span className="font-black text-sm mr-1">{s.value}</span>{s.label}
                                     </div>
-                                </CardContent>
-                            </Card>
+                                ))}
+                            </div>
+                        </div>
 
-                            {/* Continue Learning */}
-                            {inProgressCourses.length > 0 && (
-                                <Card className="border border-border">
-                                    <CardHeader className="px-5 pt-5 pb-3 border-b border-border">
-                                        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                                            <TrendingUp className="w-4 h-4 text-[#021d49]" />
-                                            Continue Learning
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="p-4 space-y-3">
-                                        {inProgressCourses.slice(0, 4).map((course) => (
-                                            <div
-                                                key={course._id}
-                                                className="p-3 rounded-lg border border-border hover:border-[#021d49]/40 hover:bg-muted/40 cursor-pointer transition-all group"
-                                                onClick={() => router.push(`/courses/${course._id}`)}
-                                            >
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <p className="text-xs font-medium text-foreground group-hover:text-[#021d49] line-clamp-1 transition-colors flex-1 mr-2">
-                                                        {course.title}
-                                                    </p>
-                                                    <span className="text-[11px] font-bold text-[#021d49] shrink-0">
-                                                        {course.progress}%
-                                                    </span>
-                                                </div>
-                                                <Progress value={course.progress} className="h-1.5" />
-                                            </div>
-                                        ))}
-                                        {inProgressCourses.length > 4 && (
-                                            <p className="text-xs text-muted-foreground text-center pt-1">
-                                                +{inProgressCourses.length - 4} more courses
-                                            </p>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                        {/* Progress bar */}
+                        {enrollments.length > 0 && (
+                            <div className="mt-6 bg-white/10 rounded-2xl px-4 py-3 backdrop-blur-sm">
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs text-blue-200/70">Overall learning progress</span>
+                                    <span className="text-xs font-bold text-white">{overallProgress}%</span>
+                                </div>
+                                <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full bg-gradient-to-r from-teal-400 to-blue-300 transition-all duration-700"
+                                        style={{ width: `${overallProgress}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+                    {enrollments.length === 0 ? (
+                        /* Empty state */
+                        <Card className="border-gray-100 shadow-sm">
+                            <CardContent className="py-20 flex flex-col items-center text-center px-6">
+                                <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#021d49]/10 to-blue-100 flex items-center justify-center mb-5">
+                                    <Trophy className="w-10 h-10 text-[#021d49]/30" />
+                                </div>
+                                <h3 className="text-lg font-bold text-gray-800 mb-2">No achievements yet</h3>
+                                <p className="text-sm text-gray-500 mb-7 max-w-xs leading-relaxed">
+                                    Complete your first module to earn your first achievement badge and start your learning journey.
+                                </p>
+                                <Button className="bg-[#021d49] hover:bg-[#032a66] gap-2" onClick={() => router.push('/student/modules')}>
+                                    <BookOpen className="w-4 h-4" /> Browse Modules
+                                    <ArrowRight className="w-4 h-4" />
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div className="space-y-8">
+
+                            {/* ══ LEVEL JOURNEY ══ */}
+                            {progressions.length > 0 && (
+                                <div>
+                                    <h2 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                        <TrendingUp className="w-4 h-4 text-[#021d49]" />
+                                        Level Journey
+                                    </h2>
+                                    <div className="space-y-4">
+                                        {progressions.map(prog => {
+                                            const levels = ['beginner', 'intermediate', 'advanced'];
+                                            const currentIdx = levels.indexOf(prog.currentLevel || 'beginner');
+                                            const catName = prog.categoryId?.name || 'Category';
+                                            return (
+                                                <Card key={prog._id} className="border-gray-100 shadow-sm overflow-hidden">
+                                                    <div className="h-1 bg-gradient-to-r from-blue-500 via-amber-500 to-rose-500" />
+                                                    <CardContent className="px-6 py-5">
+                                                        <p className="text-sm font-bold text-gray-900 mb-1">{catName}</p>
+                                                        <p className="text-xs text-gray-400 mb-5">
+                                                            Current level: <span className="font-semibold text-gray-600 capitalize">{prog.currentLevel || 'beginner'}</span>
+                                                        </p>
+                                                        <div className="flex items-start gap-2">
+                                                            {levels.map((lvl, i) => (
+                                                                <React.Fragment key={lvl}>
+                                                                    <LevelStep
+                                                                        level={lvl}
+                                                                        status={i < currentIdx ? 'done' : i === currentIdx ? 'active' : 'locked'}
+                                                                        catName={catName}
+                                                                    />
+                                                                    {i < 2 && (
+                                                                        <div className={`flex-shrink-0 h-0.5 flex-1 mt-7 mx-1 rounded-full ${
+                                                                            i < currentIdx ? 'bg-green-400' : 'bg-gray-200'
+                                                                        }`} />
+                                                                    )}
+                                                                </React.Fragment>
+                                                            ))}
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
                             )}
 
-                            {/* Quick nav */}
-                            <Button
-                                variant="outline"
-                                className="w-full gap-2 border-border text-sm"
-                                onClick={() => router.push('/student')}
-                            >
-                                <LayoutDashboard className="w-4 h-4" /> Go to Dashboard
-                            </Button>
+                            <div className="grid lg:grid-cols-3 gap-6">
+
+                                {/* ══ LEFT: MODULES ══ */}
+                                <div className="lg:col-span-2 space-y-6">
+
+                                    {/* Completed modules */}
+                                    <div>
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                                                <CheckCircle className="w-4 h-4 text-green-600" />
+                                                Completed Modules
+                                                {completed.length > 0 && (
+                                                    <span className="ml-1 px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded-full">{completed.length}</span>
+                                                )}
+                                            </h2>
+                                        </div>
+
+                                        {completed.length === 0 ? (
+                                            <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 py-10 text-center">
+                                                <BookCheck className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                                                <p className="text-sm font-semibold text-gray-500">No completed modules yet</p>
+                                                <p className="text-xs text-gray-400 mt-1">Keep learning — you're on your way!</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3">
+                                                {completed.map((e, i) => (
+                                                    <CompletedCard key={e._id} enrollment={e} index={i} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* In-progress modules */}
+                                    {inProgress.length > 0 && (
+                                        <div>
+                                            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2 mb-4">
+                                                <BookOpen className="w-4 h-4 text-[#021d49]" />
+                                                In Progress
+                                                <span className="ml-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-bold rounded-full">{inProgress.length}</span>
+                                            </h2>
+                                            <div className="space-y-3">
+                                                {inProgress.map(e => (
+                                                    <InProgressCard
+                                                        key={e._id}
+                                                        enrollment={e}
+                                                        onClick={() => router.push(`/student/modules/${e.moduleId?._id || e.moduleId}`)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* ══ RIGHT SIDEBAR ══ */}
+                                <div className="space-y-5">
+
+                                    {/* Achievement milestones */}
+                                    <Card className="border-gray-100 shadow-sm">
+                                        <CardHeader className="px-5 pt-5 pb-3 border-b border-gray-100">
+                                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                                <Medal className="w-4 h-4 text-amber-500" />
+                                                Milestone Badges
+                                                <span className="ml-auto text-xs font-normal text-gray-400">
+                                                    {earnedCount}/{MILESTONES.length} earned
+                                                </span>
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-4">
+                                            <div className="grid grid-cols-3 gap-2">
+                                                {milestonesEarned.map(m => (
+                                                    <MilestoneBadge key={m.key} {...m} />
+                                                ))}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Summary stats */}
+                                    <Card className="border-gray-100 shadow-sm">
+                                        <CardHeader className="px-5 pt-5 pb-3 border-b border-gray-100">
+                                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                                <Zap className="w-4 h-4 text-[#021d49]" />
+                                                My Stats
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="p-5 space-y-3">
+                                            {[
+                                                { label: 'Modules Completed', value: completed.length,    color: 'text-green-600', bg: 'bg-green-50' },
+                                                { label: 'Modules Enrolled',  value: enrollments.length,  color: 'text-blue-600',  bg: 'bg-blue-50'  },
+                                                { label: 'Overall Progress',  value: `${overallProgress}%`, color: 'text-violet-600', bg: 'bg-violet-50' },
+                                            ].map(({ label, value, color, bg }) => (
+                                                <div key={label} className={`flex items-center justify-between px-3 py-2.5 rounded-xl ${bg}`}>
+                                                    <span className="text-xs font-medium text-gray-600">{label}</span>
+                                                    <span className={`text-sm font-black ${color}`}>{value}</span>
+                                                </div>
+                                            ))}
+
+                                            <Separator />
+
+                                            <div>
+                                                <div className="flex items-center justify-between mb-1.5">
+                                                    <span className="text-xs text-gray-500">Overall progress</span>
+                                                    <span className="text-xs font-bold text-[#021d49]">{overallProgress}%</span>
+                                                </div>
+                                                <Progress value={overallProgress} className="h-2" />
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Next goal */}
+                                    {overallProgress < 100 && (
+                                        <div className="rounded-2xl bg-gradient-to-br from-[#021d49] to-[#1e40af] p-5 text-white">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Target className="w-4 h-4 text-blue-300" />
+                                                <span className="text-xs font-bold text-blue-200">Next Goal</span>
+                                            </div>
+                                            {(() => {
+                                                const nextModule = inProgress[0];
+                                                const nextMilestone = milestonesEarned.find(m => !m.earned);
+                                                return (
+                                                    <div className="space-y-3">
+                                                        {nextModule && (
+                                                            <button
+                                                                onClick={() => router.push(`/student/modules/${nextModule.moduleId?._id || nextModule.moduleId}`)}
+                                                                className="w-full text-left bg-white/10 hover:bg-white/20 rounded-xl px-3 py-2.5 transition-colors"
+                                                            >
+                                                                <p className="text-[11px] text-blue-300 mb-0.5">Continue learning</p>
+                                                                <p className="text-xs font-semibold line-clamp-1">
+                                                                    {nextModule.moduleId?.title || 'Current module'}
+                                                                </p>
+                                                                <div className="flex items-center gap-2 mt-1.5">
+                                                                    <div className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+                                                                        <div className="h-full bg-teal-400 rounded-full" style={{ width: `${nextModule.progress || 0}%` }} />
+                                                                    </div>
+                                                                    <span className="text-[10px] font-bold">{nextModule.progress || 0}%</span>
+                                                                </div>
+                                                            </button>
+                                                        )}
+                                                        {nextMilestone && (
+                                                            <div className="bg-white/10 rounded-xl px-3 py-2.5">
+                                                                <p className="text-[11px] text-blue-300 mb-0.5">Next badge to earn</p>
+                                                                <p className="text-xs font-semibold">{nextMilestone.label}</p>
+                                                                <p className="text-[10px] text-blue-300 mt-0.5">{nextMilestone.sub}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
+
+                                    <Button
+                                        variant="outline"
+                                        className="w-full gap-2 border-gray-200 text-sm"
+                                        onClick={() => router.push('/student')}
+                                    >
+                                        <LayoutDashboard className="w-4 h-4" /> Back to Dashboard
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </>

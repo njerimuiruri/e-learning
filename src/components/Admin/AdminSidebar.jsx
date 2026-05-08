@@ -122,6 +122,11 @@ export default function AdminSidebar() {
             path: '/admin/bulk-email',
         },
         {
+            icon: 'FolderOpen',
+            label: 'Student Projects',
+            path: '/admin/projects',
+        },
+        {
             icon: 'Award',
             label: 'Certificates',
             path: '/admin/certificates',

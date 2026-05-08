@@ -14,6 +14,10 @@ const api = axios.create({
 // Request interceptor - attach Bearer token when available
 api.interceptors.request.use(
   (config) => {
+    if (config.skipAuth) {
+      return config;
+    }
+
     // Grab token from localStorage on the client; skip on the server
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("token");
@@ -46,7 +50,9 @@ api.interceptors.response.use(
           if (
             typeof window !== "undefined" &&
             !window.location.pathname.includes("/login") &&
-            !window.location.pathname.includes("/register")
+            !window.location.pathname.includes("/register") &&
+            !window.location.pathname.includes("/forgot-password") &&
+            !window.location.pathname.includes("/reset-password")
           ) {
             // Clear user cookie on client side
             document.cookie =

@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import authService from '@/lib/api/authService';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
+import messageService from '@/lib/api/messageService';
 import { useToast } from '@/components/ui/ToastProvider';
 import { summarizeEnrollments } from '@/lib/utils/enrollmentProgress';
 
@@ -18,10 +19,23 @@ export default function StudentSidebar() {
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [learningProgress, setLearningProgress] = useState(0);
     const [enrolledCount, setEnrolledCount] = useState(0);
+    const [unreadMessages, setUnreadMessages] = useState(0);
 
     useEffect(() => {
         fetchUserData();
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, 20000);
+        return () => clearInterval(interval);
     }, []);
+
+    const fetchUnreadCount = async () => {
+        try {
+            const result = await messageService.getUnreadCount();
+            setUnreadMessages(result?.count ?? 0);
+        } catch {
+            // silently fail — don't break the sidebar
+        }
+    };
 
     const fetchUserData = async () => {
         try {
@@ -161,7 +175,8 @@ export default function StudentSidebar() {
         { icon: 'LayoutDashboard', label: 'Dashboard',         path: '/student'                   },
         { icon: 'BookOpen',        label: 'Browse Modules',    path: '/student/modules'            },
         { icon: 'FileText',        label: 'My Notes',          path: '/notes'                      },
-        { icon: 'MessageCircle',   label: 'Messages',          path: '/student/messages'           },
+        { icon: 'Inbox',           label: 'Inbox',             path: '/student/messages',  badge: unreadMessages },
+        { icon: 'Library',         label: 'Resource Hub',      path: '/student/projects'           },
         { icon: 'Trophy',          label: 'Your Achievements', path: '/student/achievements'       },
         { icon: 'Award',           label: 'Certificates',      path: '/student/certificates', locked: true },
         { icon: 'Settings',        label: 'Account Settings',  path: '/student/account-settings'   },
@@ -276,14 +291,18 @@ export default function StudentSidebar() {
                                         }`}
                                     >
                                         {Icon && (
-                                            <Icon className={`w-4.5 h-4.5 shrink-0 transition-colors ${
+                                            <Icon className={`shrink-0 transition-colors ${
                                                 active ? 'text-[#021d49]' : 'text-gray-400 group-hover:text-[#021d49]'
                                             }`} style={{ width: '1.1rem', height: '1.1rem' }} />
                                         )}
                                         <span>{item.label}</span>
-                                        {active && (
+                                        {item.badge > 0 ? (
+                                            <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                                                {item.badge > 99 ? '99+' : item.badge}
+                                            </span>
+                                        ) : active ? (
                                             <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#021d49]" />
-                                        )}
+                                        ) : null}
                                     </button>
                                 </li>
                             );
@@ -345,12 +364,12 @@ export default function StudentSidebar() {
             <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 z-50 safe-area-inset-bottom">
                 <div className="grid grid-cols-5 px-1 py-1">
                     {[
-                        { icon: 'LayoutDashboard', label: 'Home',     path: '/student'                },
-                        { icon: 'BookOpen',         label: 'Modules',  path: '/student/modules'        },
-                        { icon: 'Trophy',           label: 'Achieve',  path: '/student/achievements'   },
-                        { icon: 'Award',            label: 'Certs',    path: '/student/certificates', locked: true },
-                        { icon: 'Settings',         label: 'Settings', path: '/student/account-settings' },
-                    ].map(({ icon, label, path, locked }) => {
+                        { icon: 'LayoutDashboard', label: 'Home',      path: '/student'                },
+                        { icon: 'BookOpen',         label: 'Modules',   path: '/student/modules'        },
+                        { icon: 'Inbox',             label: 'Inbox',     path: '/student/messages', badge: unreadMessages },
+                        { icon: 'Trophy',           label: 'Achieve',   path: '/student/achievements'   },
+                        { icon: 'Settings',         label: 'Settings',  path: '/student/account-settings' },
+                    ].map(({ icon, label, path, locked, badge }) => {
                         const Icon = Icons[icon];
                         const active = isActive(path);
                         if (locked) {
@@ -366,11 +385,18 @@ export default function StudentSidebar() {
                             <button
                                 key={path}
                                 onClick={() => router.push(path)}
-                                className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl transition-colors ${
+                                className={`relative flex flex-col items-center gap-0.5 py-2 px-1 rounded-xl transition-colors ${
                                     active ? 'text-[#021d49]' : 'text-gray-400 hover:text-[#021d49]'
                                 }`}
                             >
-                                <Icon className="w-5 h-5" />
+                                <div className="relative">
+                                    <Icon className="w-5 h-5" />
+                                    {badge > 0 && (
+                                        <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center leading-none">
+                                            {badge > 9 ? '9+' : badge}
+                                        </span>
+                                    )}
+                                </div>
                                 <span className={`text-[10px] font-medium ${active ? 'text-[#021d49]' : ''}`}>{label}</span>
                                 {active && <span className="w-1 h-1 rounded-full bg-[#021d49]" />}
                             </button>

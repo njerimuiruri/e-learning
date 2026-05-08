@@ -143,6 +143,7 @@ const adminService = {
   },
   getFellowsProgress: async (filters: {
     status?: string;
+    module?: string;
     categoryId?: string;
     cohort?: string;
     risk?: string;

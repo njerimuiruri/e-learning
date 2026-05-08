@@ -12,6 +12,7 @@ import {
     PlusCircle, Download, Share2, Edit, Trash2, Send, Inbox,
     WifiOff, Users, Plus, Megaphone, CreditCard, Compass,
     ListOrdered, Grid2X2 as Grid, MessageSquare, FolderOpen,
+    Library, Sparkles,
 } from 'lucide-react';
 // Keep a small alias so existing `Icons.Xxx` references still work
 const Icons = {
@@ -23,13 +24,14 @@ const Icons = {
     BookMarked, ListChecks, Activity, Eye, EyeOff, MoreVertical,
     PlusCircle, Download, Share2, Edit, Trash2, Send, Inbox,
     WifiOff, Users, Plus, Megaphone, CreditCard, Compass,
-    ListOrdered, Grid, MessageSquare, FolderOpen,
+    ListOrdered, Grid, MessageSquare, FolderOpen, Library, Sparkles,
 };
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import progressionService from '@/lib/api/progressionService';
 import moduleService from '@/lib/api/moduleService';
 import authService from '@/lib/api/authService';
 import notificationService from '@/lib/api/notificationService';
+import messageService from '@/lib/api/messageService';
 import { normalizeEnrollment, summarizeEnrollments } from '@/lib/utils/enrollmentProgress';
 import Navbar from '@/components/navbar/navbar';
 import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
@@ -518,6 +520,7 @@ function StudentDashboardContent() {
     const [drawerMod, setDrawerMod] = useState(null);
     const [modulesTab, setModulesTab] = useState('available'); // 'available' | 'progress'
     const [showAllActivity, setShowAllActivity] = useState(false);
+    const [unreadMessages, setUnreadMessages] = useState(0);
 
     useEffect(() => {
         const u = authService.getCurrentUser?.() || null;
@@ -533,6 +536,7 @@ function StudentDashboardContent() {
         } catch (_) {}
 
         fetchAll();
+        messageService.getUnreadCount().then((r) => setUnreadMessages(r?.count ?? 0)).catch(() => {});
 
         // Only re-fetch critical data (enrollments) on tab focus
         const handleVisibility = () => {
@@ -768,13 +772,14 @@ function StudentDashboardContent() {
                                     <p className="text-xs text-gray-400 mt-0.5">Frequently accessed resources</p>
                                 </CardHeader>
                                 <CardContent className="px-5 pb-5">
-                                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                                         {[
-                                            { icon: 'BookOpen', label: 'Browse', sub: 'All modules', color: 'text-blue-600', bgColor: 'bg-blue-50', href: '/student/modules' },
-                                            { icon: 'MessageSquare', label: 'Discussions', sub: 'Forums', color: 'text-teal-600', bgColor: 'bg-teal-50', href: '/student/modules' },
-                                            { icon: 'Award', label: 'Certificates', sub: 'My awards', color: 'text-violet-600', bgColor: 'bg-violet-50', href: '/student/certificates' },
-                                            { icon: 'Trophy', label: 'Achievements', sub: 'Progress', color: 'text-amber-600', bgColor: 'bg-amber-50', href: '/student/achievements' },
-                                            { icon: 'User', label: 'Profile', sub: 'My account', color: 'text-gray-600', bgColor: 'bg-gray-100', href: '/student/profile' },
+                                            { icon: 'BookOpen',     label: 'Browse',       sub: 'All modules',  color: 'text-blue-600',   bgColor: 'bg-blue-50',   href: '/student/modules' },
+                                            { icon: 'MessageSquare',label: 'Discussions',   sub: 'Forums',       color: 'text-teal-600',   bgColor: 'bg-teal-50',   href: '/student/modules' },
+                                            { icon: 'Library',      label: 'Resource Hub', sub: 'Docs & files', color: 'text-violet-600', bgColor: 'bg-violet-50', href: '/student/projects' },
+                                            { icon: 'Award',        label: 'Certificates', sub: 'My awards',    color: 'text-indigo-600', bgColor: 'bg-indigo-50', href: '/student/certificates' },
+                                            { icon: 'Trophy',       label: 'Achievements', sub: 'Progress',     color: 'text-amber-600',  bgColor: 'bg-amber-50',  href: '/student/achievements' },
+                                            { icon: 'User',         label: 'Profile',      sub: 'My account',   color: 'text-gray-600',   bgColor: 'bg-gray-100',  href: '/student/profile' },
                                         ].map((ql) => (
                                             <QuickLink key={ql.label} {...ql} onClick={() => router.push(ql.href)} />
                                         ))}
@@ -983,47 +988,145 @@ function StudentDashboardContent() {
                                             <Icons.TrendingUp className="w-4 h-4 text-[#021d49]" />
                                             Level Progression
                                         </CardTitle>
-                                        <p className="text-xs text-gray-400 mt-0.5">Your journey through each category</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">Your journey through each category — complete a level to unlock the next</p>
                                     </CardHeader>
-                                    <CardContent className="px-5 pb-5 space-y-3">
+                                    <CardContent className="px-5 pb-5 space-y-4">
                                         {progressions.map((prog) => {
                                             const catName = prog.categoryId?.name || prog.categoryName || 'Category';
+                                            const catId   = prog.categoryId?._id || prog.categoryId;
                                             const levels = ['beginner', 'intermediate', 'advanced'];
                                             const currentIdx = levels.indexOf(prog.currentLevel || 'beginner');
-                                            const levelColors = {
-                                                beginner: { active: 'bg-blue-700 text-white', done: 'bg-blue-100 text-blue-700', locked: 'bg-gray-100 text-gray-400' },
-                                                intermediate: { active: 'bg-amber-500 text-white', done: 'bg-amber-100 text-amber-700', locked: 'bg-gray-100 text-gray-400' },
-                                                advanced: { active: 'bg-rose-600 text-white', done: 'bg-rose-100 text-rose-700', locked: 'bg-gray-100 text-gray-400' },
+
+                                            // Derive per-level counts from enrollment data when the progression
+                                            // record has 0 totalModules (backend may not populate levels map).
+                                            const levelStats = (level) => {
+                                                const backend = prog.levels?.[level] || {};
+                                                if (backend.totalModules > 0) return backend;
+                                                const matching = enrollments.filter(e => {
+                                                    const modLevel = (e.moduleId?.level || '').toLowerCase();
+                                                    const modCat   = e.moduleId?.categoryId?._id?.toString()
+                                                                  || e.moduleId?.categoryId?.toString();
+                                                    return modLevel === level && (!catId || modCat === catId?.toString());
+                                                });
+                                                return {
+                                                    totalModules: matching.length,
+                                                    completedModules: matching.filter(e => e.isCompleted).length,
+                                                };
                                             };
+                                            const levelCfg = {
+                                                beginner: {
+                                                    active: 'bg-blue-700 text-white border-blue-800 shadow-md shadow-blue-200',
+                                                    done: 'bg-blue-50 text-blue-700 border-blue-200',
+                                                    locked: 'bg-gray-50 text-gray-400 border-gray-200',
+                                                    bar: 'bg-blue-300',
+                                                    dot: 'bg-blue-700',
+                                                    connectorDone: 'bg-blue-700',
+                                                },
+                                                intermediate: {
+                                                    active: 'bg-amber-500 text-white border-amber-600 shadow-md shadow-amber-200',
+                                                    done: 'bg-amber-50 text-amber-700 border-amber-200',
+                                                    locked: 'bg-gray-50 text-gray-400 border-gray-200',
+                                                    bar: 'bg-amber-300',
+                                                    dot: 'bg-amber-500',
+                                                    connectorDone: 'bg-amber-500',
+                                                },
+                                                advanced: {
+                                                    active: 'bg-rose-600 text-white border-rose-700 shadow-md shadow-rose-200',
+                                                    done: 'bg-rose-50 text-rose-700 border-rose-200',
+                                                    locked: 'bg-gray-50 text-gray-400 border-gray-200',
+                                                    bar: 'bg-rose-300',
+                                                    dot: 'bg-rose-600',
+                                                    connectorDone: 'bg-rose-600',
+                                                },
+                                            };
+                                            const isAtIntermediate = prog.currentLevel === 'intermediate';
                                             return (
-                                                <div key={prog._id} className="bg-gray-50 rounded-xl p-4">
-                                                    <div className="flex items-center justify-between mb-3">
-                                                        <p className="text-sm font-semibold text-gray-900">{catName}</p>
+                                                <div key={prog._id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                                                    {/* Category header with connector dots */}
+                                                    <div className="flex items-center justify-between mb-4">
+                                                        <div>
+                                                            <p className="text-sm font-semibold text-gray-900">{catName}</p>
+                                                            <p className="text-[10px] text-gray-400 mt-0.5 capitalize">
+                                                                Current level: <span className="font-bold text-gray-600">{prog.currentLevel || 'beginner'}</span>
+                                                            </p>
+                                                        </div>
+                                                        {/* Step connector dots */}
                                                         <div className="flex items-center gap-1">
-                                                            {levels.map((_, i) => (
-                                                                <div key={i} className={`w-2 h-2 rounded-full ${i <= currentIdx ? 'bg-[#021d49]' : 'bg-gray-300'}`} />
+                                                            {levels.map((l, i) => (
+                                                                <React.Fragment key={l}>
+                                                                    <div className={`w-2.5 h-2.5 rounded-full border-2 transition-colors ${i < currentIdx ? `${levelCfg[l].dot} border-transparent` : i === currentIdx ? `${levelCfg[l].dot} border-white ring-2 ring-offset-1 ring-current` : 'bg-white border-gray-300'}`} />
+                                                                    {i < 2 && <div className={`w-5 h-0.5 rounded-full transition-colors ${i < currentIdx ? levelCfg[l].connectorDone : 'bg-gray-200'}`} />}
+                                                                </React.Fragment>
                                                             ))}
                                                         </div>
                                                     </div>
-                                                    <div className="grid grid-cols-3 gap-2">
+
+                                                    {/* Level tiles */}
+                                                    <div className="grid grid-cols-3 gap-3 items-end">
                                                         {levels.map((level, li) => {
-                                                            const isUnlocked = li <= currentIdx;
+                                                            const isPast    = li < currentIdx;
                                                             const isCurrent = li === currentIdx;
-                                                            const ld = prog.levels?.[level] || {};
-                                                            const c = levelColors[level];
+                                                            const isLocked  = li > currentIdx;
+                                                            const ld  = levelStats(level);
+                                                            const cfg = levelCfg[level];
+                                                            const pct = ld.totalModules > 0 ? Math.round(((ld.completedModules || 0) / ld.totalModules) * 100) : 0;
+                                                            const tileClass = isCurrent ? cfg.active : isPast ? cfg.done : cfg.locked;
                                                             return (
-                                                                <div key={level} className={`rounded-lg p-3 text-center ${isCurrent ? `${c.active} ring-2 ring-offset-1 shadow-sm` : isUnlocked ? c.done : c.locked}`}>
-                                                                    <div className="flex justify-center mb-1">
-                                                                        {isCurrent ? <Icons.Zap className="w-3.5 h-3.5" /> :
-                                                                            isUnlocked ? <Icons.CheckCircle className="w-3.5 h-3.5" /> :
-                                                                                <Icons.Lock className="w-3.5 h-3.5" />}
+                                                                <div key={level} className="flex flex-col items-center gap-1">
+                                                                    {/* "Active" badge above current level */}
+                                                                    {isCurrent && (
+                                                                        <span className="px-2 py-0.5 bg-[#021d49] text-white text-[9px] font-bold rounded-full tracking-wide uppercase animate-pulse">
+                                                                            Active
+                                                                        </span>
+                                                                    )}
+                                                                    {isPast && (
+                                                                        <span className="px-2 py-0.5 bg-green-100 text-green-700 text-[9px] font-bold rounded-full tracking-wide uppercase">
+                                                                            Done
+                                                                        </span>
+                                                                    )}
+                                                                    {isLocked && (
+                                                                        <span className="px-2 py-0.5 bg-gray-100 text-gray-400 text-[9px] font-bold rounded-full tracking-wide uppercase">
+                                                                            Locked
+                                                                        </span>
+                                                                    )}
+                                                                    <div className={`w-full rounded-2xl border-2 p-4 transition-all duration-300 ${tileClass} ${isCurrent ? 'scale-105 shadow-xl' : 'scale-100'}`}>
+                                                                        <div className="flex justify-center mb-2">
+                                                                            {isCurrent
+                                                                                ? <Icons.Zap className="w-6 h-6" />
+                                                                                : isPast
+                                                                                    ? <Icons.CheckCircle className="w-5 h-5" />
+                                                                                    : <Icons.Lock className="w-5 h-5 opacity-40" />}
+                                                                        </div>
+                                                                        <p className="text-[11px] font-bold capitalize text-center leading-tight tracking-wide">{level}</p>
+                                                                        <p className={`text-sm font-bold text-center mt-1 ${isCurrent ? 'text-white' : ''}`}>
+                                                                            {ld.completedModules || 0}<span className="text-[10px] font-normal opacity-70">/{ld.totalModules || 0}</span>
+                                                                        </p>
+                                                                        {(isCurrent || isPast) && ld.totalModules > 0 && (
+                                                                            <div className="mt-2 h-1.5 rounded-full bg-white/30 overflow-hidden">
+                                                                                <div className={`h-full rounded-full transition-all duration-700 ${isCurrent ? 'bg-white/80' : cfg.bar}`} style={{ width: `${pct}%` }} />
+                                                                            </div>
+                                                                        )}
+                                                                        {isLocked && (
+                                                                            <p className="text-[8px] text-center mt-1.5 opacity-40 leading-tight">Complete {levels[li - 1]}</p>
+                                                                        )}
                                                                     </div>
-                                                                    <p className="text-[10px] font-bold capitalize">{level}</p>
-                                                                    <p className="text-[10px] opacity-75">{ld.completedModules || 0}/{ld.totalModules || 0}</p>
                                                                 </div>
                                                             );
                                                         })}
                                                     </div>
+
+                                                    {/* Capstone optional note — shown when student is at intermediate */}
+                                                    {isAtIntermediate && (
+                                                        <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
+                                                            <Icons.Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                                                            <div>
+                                                                <p className="text-[11px] font-semibold text-amber-800">Capstone Project (Module 7) is optional</p>
+                                                                <p className="text-[10px] text-amber-700 mt-0.5 leading-relaxed">
+                                                                    You can proceed to the next module without completing the Capstone Project. It is available for extra credit and deeper learning.
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -1086,6 +1189,52 @@ function StudentDashboardContent() {
                                             <Icons.Trophy className="w-3.5 h-3.5 mr-1.5" /> Achievements
                                         </Button>
                                     </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Unread Messages Banner */}
+                            {unreadMessages > 0 && (
+                                <Card
+                                    className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 shadow-sm cursor-pointer hover:shadow-md transition-all group"
+                                    onClick={() => router.push('/student/messages')}
+                                >
+                                    <CardContent className="p-4 flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center relative shrink-0 group-hover:bg-blue-200 transition-colors">
+                                            <Icons.Inbox className="w-5 h-5 text-blue-600" />
+                                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
+                                                {unreadMessages > 9 ? '9+' : unreadMessages}
+                                            </span>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-blue-900">
+                                                {unreadMessages === 1 ? '1 new message' : `${unreadMessages} new messages`}
+                                            </p>
+                                            <p className="text-xs text-blue-500">Open your inbox to read</p>
+                                        </div>
+                                        <Icons.ChevronRight className="w-4 h-4 text-blue-400 group-hover:text-blue-600 transition-colors shrink-0" />
+                                    </CardContent>
+                                </Card>
+                            )}
+
+                            {/* Resource Hub CTA */}
+                            <Card
+                                className="border-gray-100 shadow-sm cursor-pointer hover:shadow-md transition-all group"
+                                onClick={() => router.push('/student/projects')}
+                            >
+                                <CardContent className="p-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <div className="w-10 h-10 bg-violet-100 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-violet-200 transition-colors">
+                                            <Icons.Library className="w-5 h-5 text-violet-600" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold text-gray-900 group-hover:text-violet-700 transition-colors">Resource Hub</p>
+                                            <p className="text-xs text-gray-500">Share &amp; explore documents</p>
+                                        </div>
+                                        <Icons.ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-violet-600 transition-colors shrink-0" />
+                                    </div>
+                                    <p className="text-[10px] text-gray-400 leading-relaxed pl-[52px]">
+                                        Upload research, reports &amp; data files. Approved submissions are visible to all students.
+                                    </p>
                                 </CardContent>
                             </Card>
 

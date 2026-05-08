@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
-import axios from 'axios';
+import authService from '@/lib/api/authService';
 
 export default function ResetPasswordPage() {
     return (
@@ -69,13 +69,10 @@ function ResetPasswordContent() {
 
         try {
             setLoading(true);
-            const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/auth/reset-password`,
-                {
-                    token,
-                    newPassword: formData.newPassword,
-                    confirmPassword: formData.confirmPassword,
-                }
+            await authService.resetPasswordWithToken(
+                token,
+                formData.newPassword,
+                formData.confirmPassword
             );
 
             setMessage('Password reset successfully! Redirecting to login...');
