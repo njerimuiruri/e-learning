@@ -57,6 +57,7 @@ function ModuleBrowsingContent() {
     const [loading, setLoading] = useState(true);
     const [enrollingId, setEnrollingId] = useState(null);
     const [fellowCategoryIds] = useState(() => getFellowCategoryIds());
+    const [congratsModule, setCongratsModule] = useState(null);
 
     const [selectedCategory, setSelectedCategory] = useState('');
     const [selectedLevel, setSelectedLevel] = useState('');
@@ -149,8 +150,10 @@ function ModuleBrowsingContent() {
         myEnrollments.find(e => (e.moduleId?._id || e.moduleId)?.toString() === moduleId?.toString());
 
     const isSequentiallyLocked = (mod) => {
-        // Optional modules are never sequentially locked — students can always choose to access them.
+        // Optional modules are never sequentially locked.
         if (mod.isOptional) return false;
+        // Intermediate-level modules are self-paced — no sequential gating.
+        if (mod.level === 'intermediate') return false;
         if (!mod.order || mod.order <= 1) return false;
         const catId = (mod.categoryId?._id || mod.categoryId)?.toString();
         // Find the nearest lower-order compulsory module in the same category.
@@ -195,11 +198,31 @@ function ModuleBrowsingContent() {
     };
 
     const handleEnroll = async (module) => {
-        if (!module.isOptional && isSequentiallyLocked(module)) {
+        // Intermediate modules are self-paced — skip sequential lock check entirely.
+        const isIntermediate = module.level === 'intermediate';
+        if (!module.isOptional && !isIntermediate && isSequentiallyLocked(module)) {
             const prevTitle = getPrevModuleTitle(module);
             alert(`You must complete "${prevTitle}" before enrolling in this module.`);
             return;
         }
+
+        // Show congratulations modal on the very first intermediate enrollment.
+        if (isIntermediate) {
+            const hasIntermediateEnrollment = myEnrollments.some(e => {
+                const mid = (e.moduleId?._id || e.moduleId)?.toString();
+                const mod = modules.find(m => m._id?.toString() === mid);
+                return mod?.level === 'intermediate';
+            });
+            if (!hasIntermediateEnrollment) {
+                setCongratsModule(module);
+                return;
+            }
+        }
+
+        await doEnroll(module);
+    };
+
+    const doEnroll = async (module) => {
         try {
             setEnrollingId(module._id);
             const result = await moduleEnrollmentService.enrollInModule(module._id);
@@ -692,6 +715,11 @@ function ModuleBrowsingContent() {
                                                         <Icons.Unlock className="w-2.5 h-2.5 mr-1" /> Free
                                                     </Badge>
                                                 )}
+                                                {!isEnrolled && !seqLocked && mod.level === 'intermediate' && hasAccess && (
+                                                    <Badge className="text-[10px] bg-amber-600 text-white border-0">
+                                                        <Icons.Zap className="w-2.5 h-2.5 mr-1" /> Open Access
+                                                    </Badge>
+                                                )}
                                             </div>
                                         </div>
 
@@ -864,6 +892,73 @@ function ModuleBrowsingContent() {
                     )}
                 </div>
             </div>
+
+            {/* ── Congratulations modal (first intermediate enroll) ── */}
+            {congratsModule && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+
+                        {/* Top banner */}
+                        <div className="bg-gradient-to-br from-[#021d49] to-blue-600 px-6 pt-8 pb-6 text-center">
+                            <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Icons.Trophy className="w-8 h-8 text-yellow-300" />
+                            </div>
+                            <h2 className="text-2xl font-extrabold text-white mb-1">Congratulations!</h2>
+                            <p className="text-blue-200 text-sm">You've completed the Beginner Level</p>
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-6 py-5 space-y-4">
+                            <p className="text-sm text-gray-600 text-center leading-relaxed">
+                                You've successfully finished all your beginner modules and unlocked the
+                                <span className="font-semibold text-amber-600"> Intermediate Level</span>.
+                                You're ready to take on more advanced challenges!
+                            </p>
+
+                            {/* Divider */}
+                            <div className="flex items-center gap-3">
+                                <div className="flex-1 h-px bg-gray-100" />
+                                <span className="text-xs text-gray-400 font-medium">You're about to start</span>
+                                <div className="flex-1 h-px bg-gray-100" />
+                            </div>
+
+                            {/* Module pill */}
+                            <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
+                                    <Icons.Flame className="w-4 h-4 text-amber-600" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Intermediate</p>
+                                    <p className="text-sm font-semibold text-gray-900 truncate">{congratsModule.title}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="px-6 pb-6 flex gap-3">
+                            <Button
+                                variant="outline"
+                                className="flex-1 border-gray-200 text-gray-600 hover:bg-gray-50"
+                                onClick={() => setCongratsModule(null)}>
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1 bg-[#021d49] hover:bg-[#032a66] text-white gap-2"
+                                disabled={enrollingId === congratsModule._id}
+                                onClick={() => {
+                                    const mod = congratsModule;
+                                    setCongratsModule(null);
+                                    doEnroll(mod);
+                                }}>
+                                {enrollingId === congratsModule._id
+                                    ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Enrolling…</>
+                                    : <><Icons.ArrowRight className="w-4 h-4" /> Proceed to Enroll</>
+                                }
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

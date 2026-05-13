@@ -32,7 +32,11 @@ function ModuleDot({ module }) {
 }
 
 function ProgressCell({ row }) {
-  const { completedModules, totalModules, overallProgress, modules } = row.original;
+  const { completedModules, programmeTotal, totalModules, overallProgress, modules } = row.original;
+  // Always show progress out of the full programme total (e.g. 6)
+  const displayTotal = programmeTotal || totalModules;
+  const remaining = Math.max(0, displayTotal - completedModules);
+
   const bar =
     overallProgress === 100
       ? "bg-green-500"
@@ -52,13 +56,17 @@ function ProgressCell({ row }) {
       ? "bg-yellow-100 text-yellow-700"
       : "bg-red-100 text-red-600";
 
+  // Dots: enrolled modules (coloured) + unenrolled slots (gray placeholders)
+  const enrolledCount = modules.length;
+  const placeholderCount = Math.max(0, displayTotal - enrolledCount);
+
   return (
     <div className="min-w-[190px] space-y-1.5">
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold text-gray-900">
           {completedModules}{" "}
           <span className="text-gray-400 font-normal text-xs">of</span>{" "}
-          {totalModules}{" "}
+          {displayTotal}{" "}
           <span className="text-gray-500 font-normal text-xs">modules</span>
         </span>
         <span className={`text-xs font-bold px-1.5 py-0.5 rounded-md ${pct}`}>
@@ -71,18 +79,23 @@ function ProgressCell({ row }) {
           style={{ width: `${overallProgress}%` }}
         />
       </div>
-      {modules.length > 0 && (
-        <div className="flex items-center gap-1 flex-wrap pt-0.5">
-          {modules.map((m, i) => (
-            <ModuleDot key={i} module={m} />
-          ))}
-          <span className="text-[10px] text-gray-400 ml-0.5">
-            {completedModules === totalModules && totalModules > 0
-              ? "All done"
-              : `${totalModules - completedModules} remaining`}
-          </span>
-        </div>
-      )}
+      <div className="flex items-center gap-1 flex-wrap pt-0.5">
+        {modules.map((m, i) => (
+          <ModuleDot key={i} module={m} />
+        ))}
+        {Array.from({ length: placeholderCount }).map((_, i) => (
+          <div
+            key={`ph-${i}`}
+            title="Not yet enrolled"
+            className="w-2.5 h-2.5 rounded-full bg-gray-200 border border-dashed border-gray-300 flex-shrink-0"
+          />
+        ))}
+        <span className="text-[10px] text-gray-400 ml-0.5">
+          {remaining === 0 && displayTotal > 0
+            ? "All done"
+            : `${remaining} remaining`}
+        </span>
+      </div>
     </div>
   );
 }
@@ -234,12 +247,45 @@ export const fellowProgressColumns = [
     enableSorting: false,
   },
   {
+    accessorKey: "currentLevel",
+    header: ({ column }) => (
+      <DataTableColumnHeader column={column} title="Level" />
+    ),
+    cell: ({ row }) => {
+      const level = row.getValue("currentLevel");
+      const map = {
+        beginner:     "bg-blue-50 text-blue-700 border-blue-200",
+        intermediate: "bg-amber-50 text-amber-700 border-amber-200",
+        advanced:     "bg-rose-50 text-rose-700 border-rose-200",
+      };
+      const label = {
+        beginner:     "Beginner",
+        intermediate: "Intermediate",
+        advanced:     "Advanced",
+      };
+      return (
+        <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${map[level] ?? map.beginner}`}>
+          {label[level] ?? "Beginner"}
+        </span>
+      );
+    },
+    filterFn: (row, id, value) => value.includes(row.getValue(id)),
+  },
+  {
     accessorKey: "status",
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Status" />
     ),
     cell: ({ row }) => <StatusBadge status={row.getValue("status")} />,
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
+  },
+  {
+    accessorKey: "completedBeginner",
+    header: "Completed Beginner",
+    cell: () => null,
+    enableSorting: false,
+    enableHiding: true,
+    filterFn: (row, id, value) => value.includes(String(row.getValue(id))),
   },
   {
     id: "actions",

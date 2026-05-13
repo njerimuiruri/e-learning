@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Upload, Star, Download, Search, Clock,
   CheckCircle, XCircle, FileText, Plus, X, Tag,
   Trash2, Loader2, FolderOpen,
   BookOpen, Users, AlertCircle, Eye, Edit2,
   Library, Shield, Globe, BookMarked, Mail,
-  ChevronRight, ExternalLink,
+  ChevronRight, ExternalLink, Layers, Sparkles,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
@@ -150,219 +151,68 @@ function FileDropzone({ file, onFile, onClear, error }) {
   );
 }
 
-// ── PDF / document viewer dialog ──────────────────────────────────────────────
+// ── Unified resource card (community + admin) ─────────────────────────────────
 
-function DocViewerDialog({ project, currentUserId, onClose, onRated, isAdminResource = false }) {
-  if (!project) return null;
-  const ext = extOf(project.fileName);
-  const isPdf = ext === "PDF";
-  const isOwn = !isAdminResource && (
-    project.studentId === currentUserId || project.student?._id === currentUserId
-  );
+function ResourceCard({ project, currentUserId, isAdmin = false, onView }) {
+  const isOwn = !isAdmin && (project.studentId === currentUserId || project.student?._id === currentUserId);
   const existingRating = project.ratings?.find((r) => r.userId === currentUserId)?.value ?? 0;
   const [rating, setRating] = useState(existingRating);
   const [saving, setSaving] = useState(false);
-  const [showPreview, setShowPreview] = useState(isPdf);
+  const ext = extOf(project.fileName);
   const meta = EXT_META[ext] ?? { bg: "bg-gray-100 text-gray-700", stripe: "from-gray-400 to-gray-600" };
-
-  const avgRating = project.ratings?.length
-    ? (project.ratings.reduce((s, r) => s + r.value, 0) / project.ratings.length).toFixed(1)
-    : null;
-
-  const authorName = isAdminResource
-    ? (project.authorName || project.studentName || "Admin")
+  const author = isAdmin
+    ? (project.authorName || project.studentName || "Admin Team")
     : (project.studentName || project.student?.fullName || "Anonymous");
-
-  const handleRate = async (val) => {
-    if (saving || isOwn) return;
-    const prev = rating; setRating(val); setSaving(true);
-    try { await projectService.rateProject(project._id, val); onRated?.(); }
-    catch { setRating(prev); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <Dialog open={!!project} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto p-0">
-        {/* Coloured top stripe */}
-        <div className={`h-1.5 w-full bg-gradient-to-r ${meta.stripe} rounded-t-xl`} />
-
-        <div className="p-6">
-          <DialogHeader className="mb-4">
-            <div className="flex items-center gap-2 flex-wrap mb-2">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${meta.bg}`}>{ext}</span>
-              {project.status && !isAdminResource && <StatusBadge status={project.status} />}
-              {isAdminResource && (
-                <span className="inline-flex items-center gap-1 bg-violet-100 text-violet-700 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                  <Shield className="w-2.5 h-2.5" /> Admin Resource
-                </span>
-              )}
-            </div>
-            <DialogTitle className="text-lg leading-snug pr-8">{project.title}</DialogTitle>
-            <DialogDescription asChild>
-              <div className="flex items-center gap-2 mt-1">
-                <div className={`w-6 h-6 rounded-full ${avatarColor(authorName)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>
-                  {initials(authorName).toUpperCase()}
-                </div>
-                <span className="text-sm text-gray-600 font-medium">{authorName}</span>
-                {isAdminResource && project.authorEmail && (
-                  <span className="text-xs text-gray-400 flex items-center gap-1">
-                    <Mail className="w-3 h-3" />{project.authorEmail}
-                  </span>
-                )}
-                <span className="text-gray-300">·</span>
-                <span className="text-xs text-gray-400">
-                  {new Date(project.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
-                </span>
-              </div>
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            {project.description && (
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">About this document</p>
-                <p className="text-sm text-gray-700 leading-relaxed">{project.description}</p>
-              </div>
-            )}
-
-            {project.tags?.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {project.tags.map((t) => (
-                  <span key={t} className="px-2.5 py-0.5 bg-blue-50 text-blue-700 border border-blue-100 rounded-full text-xs font-medium">#{t}</span>
-                ))}
-              </div>
-            )}
-
-            {/* PDF inline preview */}
-            {project.fileUrl && (
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Document Preview</p>
-                  {isPdf && (
-                    <button onClick={() => setShowPreview((v) => !v)}
-                      className="text-xs text-[#021d49] font-medium hover:underline">
-                      {showPreview ? "Hide preview" : "Show preview"}
-                    </button>
-                  )}
-                </div>
-                {isPdf && showPreview ? (
-                  <div className="rounded-xl border border-gray-200 overflow-hidden bg-gray-50">
-                    <iframe
-                      src={`${project.fileUrl}#toolbar=0`}
-                      className="w-full"
-                      style={{ height: "420px" }}
-                      title={project.title}
-                    />
-                  </div>
-                ) : (
-                  <div className={`flex items-center gap-3 p-3.5 rounded-xl border ${meta.bg.replace("text-", "border-").replace(/\d+$/, "200")} bg-opacity-30`}>
-                    <div className={`w-10 h-10 rounded-lg ${meta.bg} flex items-center justify-center shrink-0`}>
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{project.fileName}</p>
-                      <p className="text-xs text-gray-500">{ext} document · click below to open</p>
-                    </div>
-                    <a href={project.fileUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLink className="w-4 h-4 text-gray-400 hover:text-[#021d49]" />
-                    </a>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Rating */}
-            {!isOwn && !isAdminResource && (
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-xs font-semibold text-gray-500 mb-2">Rate this document</p>
-                <div className="flex items-center gap-3">
-                  <StarRating value={rating} onChange={handleRate} readOnly={!currentUserId} size="lg" />
-                  {avgRating && (
-                    <span className="text-sm text-gray-500 font-medium">{avgRating} avg · {project.ratings?.length} rating{project.ratings?.length !== 1 ? "s" : ""}</span>
-                  )}
-                </div>
-              </div>
-            )}
-            {isOwn && avgRating && (
-              <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-center gap-3">
-                <StarRating value={Math.round(parseFloat(avgRating))} readOnly size="lg" />
-                <span className="text-sm font-semibold text-amber-700">{avgRating} avg · {project.ratings?.length} rating{project.ratings?.length !== 1 ? "s" : ""}</span>
-              </div>
-            )}
-
-            {/* Admin feedback */}
-            {project.adminFeedback && (
-              <div className={`p-3.5 rounded-xl text-sm leading-relaxed ${project.status === "rejected"
-                ? "bg-red-50 text-red-700 border border-red-100"
-                : "bg-green-50 text-green-700 border border-green-100"}`}>
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Shield className="w-3.5 h-3.5" />
-                  <span className="font-semibold text-xs uppercase tracking-wide">Admin Feedback</span>
-                </div>
-                {project.adminFeedback}
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="gap-2 mt-6">
-            {project.fileUrl && (
-              <a href={project.fileUrl} target="_blank" rel="noopener noreferrer" download>
-                <Button variant="outline" className="gap-2">
-                  <Download className="w-4 h-4" /> Download
-                </Button>
-              </a>
-            )}
-            <Button variant="outline" onClick={onClose}>Close</Button>
-          </DialogFooter>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// ── Community card ─────────────────────────────────────────────────────────────
-
-function CommunityCard({ project, currentUserId, onRated, onView }) {
-  const isOwn = project.studentId === currentUserId || project.student?._id === currentUserId;
-  const existingRating = project.ratings?.find((r) => r.userId === currentUserId)?.value ?? 0;
-  const [rating, setRating] = useState(existingRating);
-  const [saving, setSaving] = useState(false);
-  const ext = extOf(project.fileName);
-  const meta = EXT_META[ext] ?? { bg: "bg-gray-100 text-gray-700", stripe: "from-gray-400 to-gray-600" };
-  const author = project.studentName || project.student?.fullName || "Anonymous";
   const avgRating = project.ratings?.length
     ? (project.ratings.reduce((s, r) => s + r.value, 0) / project.ratings.length).toFixed(1)
     : null;
 
   const handleRate = async (val) => {
-    if (saving || isOwn) return;
+    if (saving || isOwn || isAdmin) return;
     const prev = rating; setRating(val); setSaving(true);
-    try { await projectService.rateProject(project._id, val); onRated?.(); }
+    try { await projectService.rateProject(project._id, val); }
     catch { setRating(prev); }
     finally { setSaving(false); }
   };
 
   return (
-    <Card className="group border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col cursor-pointer"
-      onClick={() => onView(project)}>
-      {/* Top colour stripe */}
-      <div className={`h-1 bg-gradient-to-r ${meta.stripe}`} />
+    <Card
+      className={`group border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col cursor-pointer rounded-2xl
+        ${isAdmin ? "ring-1 ring-violet-100 hover:ring-violet-300" : "ring-1 ring-gray-100 hover:ring-blue-200"}`}
+      onClick={() => onView(project, isAdmin)}>
 
-      {/* File type banner */}
-      <div className="px-4 pt-4 pb-0 flex items-center justify-between">
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${meta.bg}`}>{ext}</span>
-        <div className="flex items-center gap-1.5">
-          {isOwn && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#021d49]/10 text-[#021d49]">Yours</span>}
-          <span className="text-[10px] text-gray-400">
-            {new Date(project.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
-          </span>
+      {/* File-type preview banner */}
+      <div className={`relative h-28 bg-gradient-to-br ${meta.stripe} flex items-center justify-center overflow-hidden shrink-0`}>
+        <div className="absolute -top-6 -right-6 w-20 h-20 bg-white/10 rounded-full" />
+        <div className="absolute -bottom-4 -left-4 w-14 h-14 bg-white/10 rounded-full" />
+        <div className="relative flex flex-col items-center gap-1.5">
+          <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+            <FileText className="w-6 h-6 text-white" />
+          </div>
+          <span className="text-white font-bold text-xs tracking-widest uppercase">{ext}</span>
+        </div>
+
+        {/* Top-left: date */}
+        <span className="absolute top-2.5 left-3 text-[9px] text-white/60 bg-black/20 px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+          {new Date(project.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+        </span>
+
+        {/* Top-right: badges */}
+        <div className="absolute top-2.5 right-3 flex flex-col items-end gap-1">
+          {isAdmin && (
+            <span className="inline-flex items-center gap-1 bg-white text-violet-700 text-[9px] font-bold px-2 py-0.5 rounded-full shadow-sm">
+              <Shield className="w-2.5 h-2.5" /> Admin
+            </span>
+          )}
+          {isOwn && (
+            <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-white text-[#021d49] shadow-sm">Yours</span>
+          )}
         </div>
       </div>
 
       <CardContent className="p-4 flex flex-col flex-1">
-        {/* Title */}
-        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-1.5 group-hover:text-[#021d49] transition-colors">
+        <h3 className={`font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-1.5 transition-colors
+          ${isAdmin ? "group-hover:text-violet-700" : "group-hover:text-[#021d49]"}`}>
           {project.title}
         </h3>
 
@@ -373,13 +223,16 @@ function CommunityCard({ project, currentUserId, onRated, onView }) {
         {project.tags?.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-3">
             {project.tags.slice(0, 3).map((t) => (
-              <span key={t} className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-medium border border-blue-100">#{t}</span>
+              <span key={t} className={`px-1.5 py-0.5 rounded-md text-[10px] font-medium
+                ${isAdmin ? "bg-violet-50 text-violet-600" : "bg-blue-50 text-blue-600"}`}>
+                #{t}
+              </span>
             ))}
             {project.tags.length > 3 && <span className="text-[10px] text-gray-400">+{project.tags.length - 3}</span>}
           </div>
         )}
 
-        <Separator className="mb-3" />
+        <div className="h-px bg-gray-100 mb-3" />
 
         {/* Author + rating row */}
         <div className="flex items-center justify-between gap-2">
@@ -389,69 +242,20 @@ function CommunityCard({ project, currentUserId, onRated, onView }) {
             </div>
             <div className="min-w-0">
               <p className="text-xs font-semibold text-gray-700 truncate">{author}</p>
-              <div className="flex items-center gap-1">
-                <StarRating value={rating} onChange={handleRate} readOnly={isOwn || !currentUserId} />
-                {avgRating && <span className="text-[10px] text-gray-400">{avgRating}</span>}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-[#021d49] shrink-0 group-hover:gap-2 transition-all text-xs font-semibold">
-            View <ChevronRight className="w-3.5 h-3.5" />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ── Admin resource card ────────────────────────────────────────────────────────
-
-function AdminResourceCard({ project, onView }) {
-  const ext = extOf(project.fileName);
-  const meta = EXT_META[ext] ?? { bg: "bg-gray-100 text-gray-700", stripe: "from-gray-400 to-gray-600" };
-  const author = project.authorName || project.studentName || "Admin";
-
-  return (
-    <Card className="group border-violet-100 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden flex flex-col cursor-pointer"
-      onClick={() => onView(project)}>
-      <div className={`h-1 bg-gradient-to-r ${meta.stripe}`} />
-
-      <div className="px-4 pt-4 pb-0 flex items-center justify-between">
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${meta.bg}`}>{ext}</span>
-        <span className="inline-flex items-center gap-1 bg-violet-100 text-violet-700 text-[9px] font-bold px-2 py-0.5 rounded-full">
-          <Shield className="w-2.5 h-2.5" /> Admin
-        </span>
-      </div>
-
-      <CardContent className="p-4 flex flex-col flex-1">
-        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-1.5 group-hover:text-violet-700 transition-colors">
-          {project.title}
-        </h3>
-        {project.description && (
-          <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed flex-1">{project.description}</p>
-        )}
-        {project.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1 mb-3">
-            {project.tags.slice(0, 3).map((t) => (
-              <span key={t} className="px-1.5 py-0.5 bg-violet-50 text-violet-600 rounded text-[10px] font-medium border border-violet-100">#{t}</span>
-            ))}
-          </div>
-        )}
-        <Separator className="mb-3" />
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className={`w-7 h-7 rounded-full ${avatarColor(author)} flex items-center justify-center text-white text-[9px] font-bold shrink-0`}>
-              {initials(author).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-gray-700 truncate">{author}</p>
-              {project.authorEmail && (
+              {!isAdmin && (
+                <div className="flex items-center gap-1">
+                  <StarRating value={rating} onChange={handleRate} readOnly={isOwn || !currentUserId} />
+                  {avgRating && <span className="text-[10px] text-gray-400">{avgRating}</span>}
+                </div>
+              )}
+              {isAdmin && project.authorEmail && (
                 <p className="text-[10px] text-gray-400 truncate">{project.authorEmail}</p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-1 text-violet-600 shrink-0 text-xs font-semibold">
-            View <ChevronRight className="w-3.5 h-3.5" />
+          <div className={`flex items-center gap-1 shrink-0 group-hover:gap-1.5 transition-all text-[11px] font-bold px-2.5 py-1 rounded-lg
+            ${isAdmin ? "bg-violet-50 text-violet-600 group-hover:bg-violet-100" : "bg-[#021d49]/8 text-[#021d49] group-hover:bg-[#021d49]/12"}`}>
+            View <ChevronRight className="w-3 h-3" />
           </div>
         </div>
       </CardContent>
@@ -465,7 +269,7 @@ function MySubmissionCard({ project, onView, onEdit, onDelete }) {
   const ext = extOf(project.fileName);
   const meta = EXT_META[ext] ?? { bg: "bg-gray-100 text-gray-700", stripe: "from-gray-400 to-gray-600" };
   return (
-    <Card className="border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+    <Card className="border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden rounded-2xl">
       <div className={`h-0.5 bg-gradient-to-r ${meta.stripe}`} />
       <CardContent className="p-4">
         <div className="flex items-start gap-4">
@@ -568,15 +372,17 @@ function DocumentForm({ form, setForm, file, setFile, fileError, setFileError, i
 // ── main page ──────────────────────────────────────────────────────────────────
 
 export default function ResourceHubPage() {
+  const router = useRouter();
   const { showToast } = useToast();
   const [currentUser, setCurrentUser] = useState(null);
-  const [activeTab, setActiveTab] = useState("community");
+  const [activeTab, setActiveTab] = useState("resources");
 
   const [community, setCommunity] = useState([]);
   const [communityLoading, setCommunityLoading] = useState(true);
   const [communityError, setCommunityError] = useState(null);
   const [search, setSearch] = useState("");
   const [tagFilter, setTagFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("all"); // "all" | "community" | "admin"
 
   const [mine, setMine] = useState([]);
   const [mineLoading, setMineLoading] = useState(true);
@@ -584,8 +390,6 @@ export default function ResourceHubPage() {
   const [adminResources, setAdminResources] = useState([]);
   const [adminResLoading, setAdminResLoading] = useState(true);
 
-  const [viewProject, setViewProject] = useState(null);
-  const [viewIsAdmin, setViewIsAdmin] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [submitSheetOpen, setSubmitSheetOpen] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
@@ -599,9 +403,10 @@ export default function ResourceHubPage() {
   const [editForm, setEditForm] = useState(EMPTY_FORM);
   const [editSubmitting, setEditSubmitting] = useState(false);
 
-  const openView = (project, isAdmin = false) => {
-    setViewProject(project);
-    setViewIsAdmin(isAdmin);
+  const handleView = (project, isAdmin = false) => {
+    const type = isAdmin ? "admin" : "community";
+    try { sessionStorage.setItem(`resource_detail_${project._id}`, JSON.stringify(project)); } catch {}
+    router.push(`/student/projects/${project._id}?type=${type}`);
   };
 
   useEffect(() => {
@@ -712,21 +517,31 @@ export default function ResourceHubPage() {
     setEditSheet(project);
   };
 
-  const allTags = [...new Set(community.flatMap((p) => p.tags ?? []))];
-  const filteredCommunity = community.filter((p) => {
+  // Merged + filtered resources list
+  const taggedAdmin = adminResources.map((r) => ({ ...r, _source: "admin" }));
+  const taggedCommunity = community.map((r) => ({ ...r, _source: "community" }));
+  const allResources = [...taggedAdmin, ...taggedCommunity].sort(
+    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+  );
+
+  const allTags = [...new Set(allResources.flatMap((p) => p.tags ?? []))];
+
+  const filteredResources = allResources.filter((p) => {
     const q = search.toLowerCase();
     const matchSearch = !q || p.title?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q)
-      || (p.studentName || "").toLowerCase().includes(q);
+      || (p.studentName || p.authorName || "").toLowerCase().includes(q);
     const matchTag = !tagFilter || p.tags?.some((t) => t.toLowerCase() === tagFilter.toLowerCase());
-    return matchSearch && matchTag;
+    const matchSource = sourceFilter === "all" || p._source === sourceFilter;
+    return matchSearch && matchTag && matchSource;
   });
 
+  const isResourcesLoading = communityLoading || adminResLoading;
   const slotsLeft = Math.max(0, MAX_DOCS - mine.length);
   const counts = {
+    all: allResources.length,
     community: community.length,
+    admin: adminResources.length,
     mine: mine.length,
-    adminRes: adminResources.length,
-    approved: mine.filter((p) => p.status === "approved").length,
     pending: mine.filter((p) => p.status === "pending").length,
   };
 
@@ -737,95 +552,140 @@ export default function ResourceHubPage() {
       <Navbar />
       <div className="min-h-screen bg-gray-50/80">
 
-        {/* Hero */}
-        <div className="bg-gradient-to-br from-[#021d49] via-[#0a2d6e] to-[#0f3a8a] px-4 sm:px-6 lg:px-8 py-10">
-          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
-            <div>
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center">
-                  <Library className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-white leading-none">Resource Hub</h1>
-                  <p className="text-blue-200/70 text-xs mt-0.5">Community knowledge sharing platform</p>
-                </div>
-              </div>
-              <p className="text-blue-100/60 text-sm mt-1">
-                Share research, reports &amp; data files · {slotsLeft} of {MAX_DOCS} slots available
-              </p>
-            </div>
-            <Button onClick={openSubmitSheet}
-              className="bg-white text-[#021d49] hover:bg-blue-50 font-semibold gap-2 shadow-lg shrink-0 px-5">
-              <Plus className="w-4 h-4" /> Share Document
-              {slotsLeft < MAX_DOCS && (
-                <span className="ml-1 bg-[#021d49]/10 text-[#021d49] text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                  {slotsLeft} left
-                </span>
-              )}
-            </Button>
-          </div>
-        </div>
+        {/* ── Hero with stats inline ── */}
+        <div className="relative bg-gradient-to-br from-[#021d49] via-[#0a2d6e] to-[#0f3a8a] px-4 sm:px-6 lg:px-8 pt-10 pb-0 overflow-hidden">
+          {/* Decorative blobs */}
+          <div className="absolute -top-24 -right-24 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 left-1/2 w-56 h-56 bg-blue-400/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Stats bar */}
-        <div className="border-b border-gray-100 bg-white shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-gray-100">
-              {[
-                { label: "Community Docs",    value: counts.community, Icon: Globe,       color: "text-blue-600"   },
-                { label: "Admin Resources",   value: counts.adminRes,  Icon: BookMarked,  color: "text-violet-600" },
-                { label: "My Submissions",    value: counts.mine,      Icon: FolderOpen,  color: "text-indigo-600" },
-                { label: "Pending Review",    value: counts.pending,   Icon: Clock,       color: "text-amber-600"  },
-              ].map(({ label, value, Icon, color }) => (
-                <div key={label} className="flex items-center gap-3 px-4 py-3 sm:py-4">
-                  <Icon className={`w-5 h-5 shrink-0 ${color}`} />
-                  <div>
-                    <p className="text-xl font-bold text-gray-900 leading-none">{value}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+          <div className="max-w-7xl mx-auto relative">
+            {/* Title + CTA row */}
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5 mb-8">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center border border-white/20 shadow-lg">
+                    <Library className="w-6 h-6 text-white" />
                   </div>
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-white leading-tight">Resource Hub</h1>
+                    <p className="text-blue-200/60 text-xs mt-0.5">Community knowledge sharing platform</p>
+                  </div>
+                </div>
+                <p className="text-blue-100/50 text-sm mt-2 ml-[60px]">
+                  Discover research, guides &amp; data files from peers and the admin team
+                </p>
+              </div>
+              <Button onClick={openSubmitSheet}
+                className="bg-white text-[#021d49] hover:bg-blue-50 font-semibold gap-2 shadow-xl shrink-0 px-6 h-11 rounded-xl border-0">
+                <Plus className="w-4 h-4" /> Share Document
+                {slotsLeft < MAX_DOCS && (
+                  <span className="ml-1 bg-[#021d49]/10 text-[#021d49] text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                    {slotsLeft} left
+                  </span>
+                )}
+              </Button>
+            </div>
+
+            {/* Stat tiles — flush to bottom of hero */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-0">
+              {[
+                { label: "Total Resources", value: counts.all,     Icon: Layers,     bg: "bg-white/10",          border: "border-white/15" },
+                { label: "Admin Resources", value: counts.admin,   Icon: Shield,     bg: "bg-violet-500/20",     border: "border-violet-300/20" },
+                { label: "My Submissions",  value: counts.mine,    Icon: FolderOpen, bg: "bg-blue-400/15",       border: "border-blue-300/20" },
+                { label: "Pending Review",  value: counts.pending, Icon: Clock,      bg: "bg-amber-400/15",      border: "border-amber-300/20" },
+              ].map(({ label, value, Icon, bg, border }) => (
+                <div key={label} className={`rounded-t-xl px-4 py-3.5 ${bg} border-t border-l border-r ${border} backdrop-blur-sm`}>
+                  <Icon className="w-4 h-4 text-white/50 mb-2" />
+                  <p className="text-2xl font-bold text-white leading-none">{value}</p>
+                  <p className="text-[11px] text-white/50 mt-0.5">{label}</p>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* ── Tabs + content ── */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-white border border-gray-100 shadow-sm p-1 rounded-xl mb-6 flex gap-1 w-full sm:w-auto">
-              <TabsTrigger value="community" className="rounded-lg gap-2 data-[state=active]:bg-[#021d49] data-[state=active]:text-white flex-1 sm:flex-none">
-                <Globe className="w-3.5 h-3.5" /> Community
-                {counts.community > 0 && <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-blue-100 text-blue-700 border-0">{counts.community}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="admin" className="rounded-lg gap-2 data-[state=active]:bg-violet-700 data-[state=active]:text-white flex-1 sm:flex-none">
-                <BookMarked className="w-3.5 h-3.5" /> From Admin
-                {counts.adminRes > 0 && <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-violet-100 text-violet-700 border-0">{counts.adminRes}</Badge>}
-              </TabsTrigger>
-              <TabsTrigger value="my" className="rounded-lg gap-2 data-[state=active]:bg-[#021d49] data-[state=active]:text-white flex-1 sm:flex-none">
-                <FolderOpen className="w-3.5 h-3.5" /> My Docs
-                {counts.mine > 0 && <Badge className="ml-1 h-4 px-1.5 text-[10px] bg-indigo-100 text-indigo-700 border-0">{counts.mine}</Badge>}
-              </TabsTrigger>
-            </TabsList>
+            {/* Tab nav */}
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+              <TabsList className="bg-white border border-gray-100 shadow-sm p-1 rounded-xl flex gap-1">
+                <TabsTrigger value="resources"
+                  className="rounded-lg gap-2 text-sm data-[state=active]:bg-[#021d49] data-[state=active]:text-white data-[state=active]:shadow-sm px-4">
+                  <Globe className="w-3.5 h-3.5" /> All Resources
+                  {counts.all > 0 && (
+                    <span className="ml-1 bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full data-[state=active]:bg-white/20 data-[state=active]:text-white">
+                      {counts.all}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="my"
+                  className="rounded-lg gap-2 text-sm data-[state=active]:bg-[#021d49] data-[state=active]:text-white data-[state=active]:shadow-sm px-4">
+                  <FolderOpen className="w-3.5 h-3.5" /> My Docs
+                  {counts.mine > 0 && (
+                    <span className="ml-1 bg-gray-100 text-gray-600 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      {counts.mine}
+                    </span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-            {/* ── Community Tab ── */}
-            <TabsContent value="community">
-              <div className="flex flex-col sm:flex-row gap-3 mb-5">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input className="pl-9 bg-white" placeholder="Search documents…"
-                    value={search} onChange={(e) => setSearch(e.target.value)} />
+            {/* ── All Resources Tab ── */}
+            <TabsContent value="resources">
+
+              {/* Search + filter bar */}
+              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5 space-y-3">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                    <Input
+                      className="pl-9 bg-gray-50 border-gray-200 focus:border-[#021d49] focus:ring-[#021d49]/10 h-10"
+                      placeholder="Search by title, description or author…"
+                      value={search} onChange={(e) => setSearch(e.target.value)} />
+                  </div>
+
+                  {/* Source chips */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[
+                      { key: "all",       label: "All",       count: counts.all       },
+                      { key: "community", label: "Community", count: counts.community  },
+                      { key: "admin",     label: "Admin",     count: counts.admin      },
+                    ].map(({ key, label, count }) => (
+                      <button key={key} onClick={() => setSourceFilter(key)}
+                        className={`h-10 px-4 rounded-xl text-sm font-semibold transition-all border ${
+                          sourceFilter === key
+                            ? key === "admin"
+                              ? "bg-violet-600 text-white border-violet-600 shadow-sm"
+                              : "bg-[#021d49] text-white border-[#021d49] shadow-sm"
+                            : "bg-gray-50 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-100"}`}>
+                        {label}
+                        {count > 0 && (
+                          <span className={`ml-1.5 text-[11px] ${sourceFilter === key ? "opacity-70" : "text-gray-400"}`}>
+                            {count}
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
+                {/* Tag pills */}
                 {allTags.length > 0 && (
                   <div className="flex items-center gap-2 flex-wrap">
                     <Tag className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                    {allTags.slice(0, 7).map((tag) => (
+                    {allTags.slice(0, 8).map((tag) => (
                       <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? "" : tag)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
-                          tagFilter === tag ? "bg-[#021d49] text-white shadow-sm" : "bg-white border border-gray-200 text-gray-600 hover:border-[#021d49]/40 hover:text-[#021d49]"}`}>
+                        className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+                          tagFilter === tag
+                            ? "bg-[#021d49] text-white shadow-sm"
+                            : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
                         #{tag}
                       </button>
                     ))}
                     {tagFilter && (
-                      <button onClick={() => setTagFilter("")} className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700">
+                      <button onClick={() => setTagFilter("")}
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-red-500 transition-colors">
                         <X className="w-3 h-3" /> Clear
                       </button>
                     )}
@@ -833,24 +693,41 @@ export default function ResourceHubPage() {
                 )}
               </div>
 
-              {communityLoading ? (
-                <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-[#021d49]" /></div>
-              ) : communityError ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <AlertCircle className="w-12 h-12 text-gray-200 mb-3" />
-                  <p className="text-gray-500 text-sm">{communityError}</p>
-                  <Button variant="outline" size="sm" onClick={fetchCommunity} className="mt-4">Retry</Button>
+              {/* Admin callout banner */}
+              {counts.admin > 0 && sourceFilter !== "community" && (
+                <div className="mb-5 flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-100">
+                  <div className="w-9 h-9 bg-violet-100 rounded-xl flex items-center justify-center shrink-0">
+                    <Shield className="w-4.5 h-4.5 text-violet-600" />
+                  </div>
+                  <p className="text-sm text-gray-700 flex-1">
+                    <span className="font-semibold text-violet-700">{counts.admin} resource{counts.admin !== 1 ? "s" : ""}</span>
+                    {" "}curated by the admin team are included in this list — look for the{" "}
+                    <span className="inline-flex items-center gap-0.5 bg-violet-100 text-violet-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                      <Shield className="w-2.5 h-2.5" /> Admin
+                    </span>
+                    {" "}badge.
+                  </p>
                 </div>
-              ) : filteredCommunity.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mb-4 shadow-inner">
+              )}
+
+              {/* Grid */}
+              {isResourcesLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {[...Array(8)].map((_, i) => (
+                    <div key={i} className="h-64 bg-white rounded-2xl border border-gray-100 animate-pulse" />
+                  ))}
+                </div>
+              ) : filteredResources.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-2xl border border-gray-100">
+                  <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mb-4">
                     <Globe className="w-9 h-9 text-blue-300" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-700 mb-1">
-                    {search || tagFilter ? "No matching documents" : "No community documents yet"}
+                    {search || tagFilter ? "No matching resources" : "No resources yet"}
                   </h3>
-                  <p className="text-sm text-gray-400 max-w-sm mb-4">
-                    {search || tagFilter ? "Try different search terms or remove the tag filter."
+                  <p className="text-sm text-gray-400 max-w-sm mb-5">
+                    {search || tagFilter
+                      ? "Try different search terms or remove the filter."
                       : "Be the first to share your research with the community!"}
                   </p>
                   {!search && !tagFilter && (
@@ -861,75 +738,57 @@ export default function ResourceHubPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {filteredCommunity.map((p) => (
-                    <CommunityCard key={p._id} project={p} currentUserId={currentUser?._id}
-                      onRated={fetchCommunity} onView={(proj) => openView(proj, false)} />
+                  {filteredResources.map((p) => (
+                    <ResourceCard
+                      key={`${p._source}-${p._id}`}
+                      project={p}
+                      currentUserId={currentUser?._id}
+                      isAdmin={p._source === "admin"}
+                      onView={handleView}
+                    />
                   ))}
                 </div>
               )}
             </TabsContent>
 
-            {/* ── Admin Resources Tab ── */}
-            <TabsContent value="admin">
-              {adminResLoading ? (
-                <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-violet-600" /></div>
-              ) : adminResources.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-20 h-20 bg-violet-50 rounded-3xl flex items-center justify-center mb-4 shadow-inner">
-                    <BookMarked className="w-9 h-9 text-violet-300" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-700 mb-1">No resources yet</h3>
-                  <p className="text-sm text-gray-400 max-w-sm">
-                    Resources shared by the admin team will appear here — documents, guides, and curated reading materials.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="flex items-center gap-2 mb-5 px-1">
-                    <div className="w-7 h-7 bg-violet-100 rounded-lg flex items-center justify-center">
-                      <Shield className="w-3.5 h-3.5 text-violet-600" />
-                    </div>
-                    <p className="text-sm text-gray-600">
-                      <span className="font-semibold text-gray-900">{adminResources.length} resource{adminResources.length !== 1 ? "s" : ""}</span> shared by the admin team
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {adminResources.map((p) => (
-                      <AdminResourceCard key={p._id} project={p} onView={(proj) => openView(proj, true)} />
-                    ))}
-                  </div>
-                </>
-              )}
-            </TabsContent>
-
             {/* ── My Documents Tab ── */}
             <TabsContent value="my">
-              <div className={`mb-5 flex items-center gap-3 p-3.5 rounded-xl border ${
-                slotsLeft === 0 ? "bg-red-50 border-red-200 text-red-700"
-                  : slotsLeft <= 2 ? "bg-amber-50 border-amber-200 text-amber-700"
-                  : "bg-blue-50 border-blue-200 text-blue-700"}`}>
-                <FolderOpen className="w-4 h-4 shrink-0" />
+              {/* Slot usage banner */}
+              <div className={`mb-5 flex items-center gap-3 p-4 rounded-2xl border ${
+                slotsLeft === 0
+                  ? "bg-red-50 border-red-200 text-red-700"
+                  : slotsLeft <= 2
+                    ? "bg-amber-50 border-amber-200 text-amber-700"
+                    : "bg-blue-50 border-blue-100 text-blue-700"}`}>
+                {/* Slot progress dots */}
+                <div className="flex items-center gap-1 shrink-0">
+                  {Array.from({ length: MAX_DOCS }).map((_, i) => (
+                    <div key={i} className={`w-2.5 h-2.5 rounded-full ${i < mine.length ? "bg-current opacity-80" : "bg-current opacity-20"}`} />
+                  ))}
+                </div>
                 <p className="text-xs font-medium flex-1">
                   {slotsLeft === 0
-                    ? `Document limit reached (${MAX_DOCS}/${MAX_DOCS}). Delete a pending submission to free a slot.`
-                    : `${mine.length} of ${MAX_DOCS} documents used — ${slotsLeft} slot${slotsLeft !== 1 ? "s" : ""} remaining`}
+                    ? `Limit reached (${MAX_DOCS}/${MAX_DOCS}). Delete a pending submission to free a slot.`
+                    : `${mine.length} of ${MAX_DOCS} slots used — ${slotsLeft} remaining`}
                 </p>
                 {slotsLeft > 0 && (
-                  <Button size="sm" onClick={openSubmitSheet} className="bg-[#021d49] text-white h-7 text-xs gap-1.5 shrink-0">
-                    <Plus className="w-3 h-3" /> Add
+                  <Button size="sm" onClick={openSubmitSheet} className="bg-[#021d49] text-white h-8 text-xs gap-1.5 shrink-0 rounded-lg">
+                    <Plus className="w-3 h-3" /> Add Document
                   </Button>
                 )}
               </div>
 
               {mineLoading ? (
-                <div className="flex items-center justify-center py-24"><Loader2 className="w-8 h-8 animate-spin text-[#021d49]" /></div>
+                <div className="flex items-center justify-center py-24">
+                  <Loader2 className="w-8 h-8 animate-spin text-[#021d49]" />
+                </div>
               ) : mine.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-24 text-center">
-                  <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mb-4 shadow-inner">
+                <div className="flex flex-col items-center justify-center py-24 text-center bg-white rounded-2xl border border-gray-100">
+                  <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mb-4">
                     <FolderOpen className="w-9 h-9 text-indigo-300" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-700 mb-1">No submissions yet</h3>
-                  <p className="text-sm text-gray-400 max-w-sm mb-4">
+                  <p className="text-sm text-gray-400 max-w-sm mb-5">
                     Share your research, reports, or data files. Approved documents appear in the community showcase.
                   </p>
                   <Button onClick={openSubmitSheet} className="bg-[#021d49] text-white gap-2">
@@ -940,7 +799,9 @@ export default function ResourceHubPage() {
                 <div className="space-y-3">
                   {mine.map((project) => (
                     <MySubmissionCard key={project._id} project={project}
-                      onView={(proj) => openView(proj, false)} onEdit={openEdit} onDelete={setDeleteConfirm} />
+                      onView={(proj) => handleView(proj, false)}
+                      onEdit={openEdit}
+                      onDelete={setDeleteConfirm} />
                   ))}
                 </div>
               )}
@@ -949,16 +810,7 @@ export default function ResourceHubPage() {
         </div>
       </div>
 
-      {/* ── Dialogs & Sheets ─────────────────────────────────────────────────── */}
-
-      {/* PDF / Document viewer */}
-      <DocViewerDialog
-        project={viewProject}
-        currentUserId={currentUser?._id}
-        onClose={() => setViewProject(null)}
-        onRated={fetchCommunity}
-        isAdminResource={viewIsAdmin}
-      />
+      {/* ── Sheets & Dialogs ─────────────────────────────────────────────────── */}
 
       {/* Submit sheet */}
       <Sheet open={submitSheetOpen} onOpenChange={(o) => { if (!submitting) { setSubmitSheetOpen(o); if (!o) { setForm(EMPTY_FORM); setFile(null); setFileError(null); } } }}>

@@ -37,22 +37,60 @@ function asArray(payload) {
 }
 
 function normalizeModule(module) {
-  const progress = Math.max(0, Math.min(100, Number(module?.progress || 0)));
+  let raw = Number(module?.progress ?? 0);
+  // Some API paths return progress as a 0–1 decimal; normalise to 0–100
+  if (raw > 0 && raw <= 1 && !Number.isInteger(raw * 100 % 1 === 0 ? raw * 100 : 0)) raw *= 100;
+  const progress = Math.max(0, Math.min(100, raw));
+  const isCompleted = Boolean(
+    module?.isCompleted ||
+    module?.status === 'completed' ||
+    module?.completed === true ||
+    progress === 100,
+  );
   return {
     moduleId: module?.moduleId || module?._id || module?.id || '',
     title: module?.title || module?.moduleTitle || 'Untitled module',
     order: Number(module?.order ?? module?.moduleOrder ?? 0),
+    level: module?.level || 'beginner',
     progress,
-    isCompleted: Boolean(module?.isCompleted || progress === 100),
+    isCompleted,
     completedLessons: Number(module?.completedLessons || 0),
     totalLessons: Number(module?.totalLessons || 0),
     finalAssessmentPassed: Boolean(module?.finalAssessmentPassed),
   };
 }
 
-function statusForProgress(progress, totalModules = 1) {
-  if (!totalModules || progress === 0) return 'notstarted';
-  if (progress === 100) return 'completed';
+// Derive the level the student is currently at.
+// Rules (highest wins):
+//   advanced    — enrolled in at least one advanced module
+//   intermediate — enrolled in at least one intermediate module
+//                  OR has completed ALL enrolled beginner modules (beginner level done)
+//   beginner    — still working through beginner modules
+function deriveCurrentLevel(modules) {
+  if (modules.some((m) => m.level === 'advanced')) return 'advanced';
+  if (modules.some((m) => m.level === 'intermediate')) return 'intermediate';
+
+  // No intermediate/advanced enrollments yet, but if every enrolled beginner
+  // module is completed the student has finished the Beginner level.
+  const beginnerModules = modules.filter(
+    (m) => m.level === 'beginner' || !m.level,
+  );
+  if (
+    beginnerModules.length > 0 &&
+    beginnerModules.every((m) => m.isCompleted)
+  ) {
+    return 'intermediate';
+  }
+
+  return 'beginner';
+}
+
+function statusForProgress(completedModules, totalModules, overallProgress) {
+  if (!totalModules) return 'notstarted';
+  // Primary: completed when every enrolled module is done — avoids floating-point edge cases
+  if (completedModules === totalModules && totalModules > 0) return 'completed';
+  if (overallProgress === 100) return 'completed';
+  if (overallProgress === 0 && completedModules === 0) return 'notstarted';
   return 'inprogress';
 }
 
@@ -83,10 +121,13 @@ function normalizeFellow(fellow, index) {
   const mongoId = pickMongoId(fellow);
   const modules = (fellow?.modules || []).map(normalizeModule).sort((a, b) => a.order - b.order);
   const totalModules = modules.length;
-  const completedModules = modules.filter((m) => m.progress === 100 || m.isCompleted).length;
-  const overallProgress = totalModules
-    ? Math.round((completedModules / totalModules) * 100)
-    : 0;
+  const completedModules = modules.filter((m) => m.isCompleted || m.progress === 100).length;
+  // Force 100% when every enrolled module is marked done — avoids rounding surprises
+  const overallProgress = totalModules === 0
+    ? 0
+    : completedModules === totalModules
+      ? 100
+      : Math.round((completedModules / totalModules) * 100);
 
   return {
     // _id used for routing; mongoId used for API calls that need a real ObjectId
@@ -102,7 +143,9 @@ function normalizeFellow(fellow, index) {
     totalModules,
     completedModules,
     overallProgress,
-    status: statusForProgress(overallProgress, totalModules),
+    status: statusForProgress(completedModules, totalModules, overallProgress),
+    currentLevel: deriveCurrentLevel(modules),
+    completedBeginner: deriveCurrentLevel(modules) !== 'beginner',
   };
 }
 
@@ -139,17 +182,41 @@ export default function FellowProgressPage() {
         adminService.getFellowsProgress({ limit: 500 }),
         adminService.getAllModules({ status: 'published', limit: 500 }),
       ]);
+
       const fellowData = progressRes.status === 'fulfilled' ? asArray(progressRes.value) : [];
-      setFellows(fellowData.map(normalizeFellow));
+
+      // Resolve total programme modules FIRST so progress uses the correct denominator
+      let progTotal = 0;
       if (modulesRes.status === 'fulfilled') {
         const raw = modulesRes.value;
         const moduleList = Array.isArray(raw) ? raw : (raw?.modules ?? raw?.data ?? []);
-        setTotalProgrammeModules(moduleList.length);
-      } else {
-        // Fallback: use the max enrolled modules count as a proxy
-        const maxModules = Math.max(0, ...fellowData.map((f) => (f.modules || []).length));
-        setTotalProgrammeModules(maxModules);
+        progTotal = moduleList.length;
       }
+      if (!progTotal) {
+        // Fallback: use the highest enrolled module count as a proxy
+        progTotal = Math.max(0, ...fellowData.map((f) => (f.modules || []).length));
+      }
+      setTotalProgrammeModules(progTotal);
+
+      // Normalize each fellow, then recalculate progress against programme total
+      const normalized = fellowData.map((f, i) => {
+        const fellow = normalizeFellow(f, i);
+        const programmeTotal = progTotal || fellow.totalModules;
+        const overallProgress =
+          programmeTotal === 0
+            ? 0
+            : fellow.completedModules >= programmeTotal
+            ? 100
+            : Math.round((fellow.completedModules / programmeTotal) * 100);
+        return {
+          ...fellow,
+          programmeTotal,
+          overallProgress,
+          status: statusForProgress(fellow.completedModules, programmeTotal, overallProgress),
+        };
+      });
+
+      setFellows(normalized);
     } catch {
       toast.error('Failed to load fellows progress');
       setFellows([]);

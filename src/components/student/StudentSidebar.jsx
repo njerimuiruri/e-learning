@@ -177,6 +177,7 @@ export default function StudentSidebar() {
         { icon: 'FileText',        label: 'My Notes',          path: '/notes'                      },
         { icon: 'Inbox',           label: 'Inbox',             path: '/student/messages',  badge: unreadMessages },
         { icon: 'Library',         label: 'Resource Hub',      path: '/student/projects'           },
+        { icon: 'GraduationCap',   label: 'Capstone Project',  path: '/student/capstone'           },
         { icon: 'Trophy',          label: 'Your Achievements', path: '/student/achievements'       },
         { icon: 'Award',           label: 'Certificates',      path: '/student/certificates', locked: true },
         { icon: 'Settings',        label: 'Account Settings',  path: '/student/account-settings'   },
@@ -366,8 +367,8 @@ export default function StudentSidebar() {
                     {[
                         { icon: 'LayoutDashboard', label: 'Home',      path: '/student'                },
                         { icon: 'BookOpen',         label: 'Modules',   path: '/student/modules'        },
+                        { icon: 'GraduationCap',    label: 'Capstone',  path: '/student/capstone'       },
                         { icon: 'Inbox',             label: 'Inbox',     path: '/student/messages', badge: unreadMessages },
-                        { icon: 'Trophy',           label: 'Achieve',   path: '/student/achievements'   },
                         { icon: 'Settings',         label: 'Settings',  path: '/student/account-settings' },
                     ].map(({ icon, label, path, locked, badge }) => {
                         const Icon = Icons[icon];

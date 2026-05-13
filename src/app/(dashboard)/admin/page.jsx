@@ -391,9 +391,14 @@ export default function AdminDashboardPage() {
                                                             </p>
                                                         )}
                                                     </div>
-                                                    <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
-                                                        {new Date(activity.timestamp).toLocaleDateString()}
-                                                    </span>
+                                                    <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                                                        <span className="text-xs text-gray-500 font-medium whitespace-nowrap">
+                                                            {new Date(activity.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                                        </span>
+                                                        <span className="text-[11px] text-gray-400 whitespace-nowrap">
+                                                            {new Date(activity.timestamp).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             );
                                         })}

@@ -163,6 +163,11 @@ export default function InstructorSidebar() {
             path: '/instructor/submissions',
         },
         {
+            icon: 'GraduationCap',
+            label: 'Capstone Reviews',
+            path: '/instructor/capstone',
+        },
+        {
             icon: 'Users',
             label: 'Student Responses',
             path: '/instructor/students',

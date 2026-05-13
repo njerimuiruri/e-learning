@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableViewOptions } from "./data-table-view-options";
@@ -12,8 +12,23 @@ const STATUS_OPTIONS = [
   { label: "Not Started", value: "notstarted" },
 ];
 
+const LEVEL_OPTIONS = [
+  { label: "Beginner", value: "beginner" },
+  { label: "Intermediate", value: "intermediate" },
+  { label: "Advanced", value: "advanced" },
+];
+
 export function FellowsDataTableToolbar({ table }) {
   const isFiltered = table.getState().columnFilters.length > 0;
+
+  const completedBeginnerActive =
+    table.getColumn("completedBeginner")?.getFilterValue()?.includes("true") ?? false;
+
+  const toggleCompletedBeginner = () => {
+    const col = table.getColumn("completedBeginner");
+    if (!col) return;
+    col.setFilterValue(completedBeginnerActive ? undefined : ["true"]);
+  };
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -25,6 +40,26 @@ export function FellowsDataTableToolbar({ table }) {
           className="h-8 w-[200px] lg:w-[280px]"
         />
       </div>
+
+      {/* Completed Beginner toggle */}
+      <Button
+        variant={completedBeginnerActive ? "default" : "outline"}
+        size="sm"
+        className={`h-8 gap-1.5 ${completedBeginnerActive ? "bg-green-700 hover:bg-green-800 text-white border-green-700" : "text-gray-600 border-gray-200"}`}
+        onClick={toggleCompletedBeginner}
+      >
+        <CheckCircle2 className="h-3.5 w-3.5" />
+        Completed Beginner
+        {completedBeginnerActive && <X className="h-3 w-3 ml-0.5" />}
+      </Button>
+
+      {table.getColumn("currentLevel") && (
+        <DataTableFacetedFilter
+          column={table.getColumn("currentLevel")}
+          title="Level"
+          options={LEVEL_OPTIONS}
+        />
+      )}
 
       {table.getColumn("status") && (
         <DataTableFacetedFilter

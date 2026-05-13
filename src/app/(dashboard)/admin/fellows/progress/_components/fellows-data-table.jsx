@@ -26,7 +26,7 @@ import { DataTablePagination } from "./data-table-pagination";
 
 export function FellowsDataTable({ columns, data, title = "Fellows Progress" }) {
   const [rowSelection, setRowSelection] = React.useState({});
-  const [columnVisibility, setColumnVisibility] = React.useState({});
+  const [columnVisibility, setColumnVisibility] = React.useState({ completedBeginner: false });
   const [columnFilters, setColumnFilters] = React.useState([]);
   const [sorting, setSorting] = React.useState([]);
 

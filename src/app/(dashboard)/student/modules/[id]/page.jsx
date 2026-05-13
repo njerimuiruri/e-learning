@@ -1668,7 +1668,7 @@ function ModuleOverviewPanel({ module: mod, lessons, completedLessonIndices, pro
                             {infoSections.map(({ key, label, icon, accent, dot }, idx) => {
                                 const IconComp = Icons[icon];
                                 const content = mod?.[key];
-                                const isHtml = /<[a-z][\s\S]*>/i.test(content);
+                                const isHtml = /<[a-z][\s\S]*>/i.test(content) || /&[a-z]+;/i.test(content);
                                 return (
                                     <div key={key} className="px-6 py-5">
                                         <div className="flex items-center gap-2 mb-3">

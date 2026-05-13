@@ -34,6 +34,18 @@ const projectService = {
     return data;
   },
 
+  // Student: get a single community project by ID
+  getProjectById: async (id) => {
+    const { data } = await api.get(`/api/projects/${id}`);
+    return data;
+  },
+
+  // Student: get a single admin resource by ID
+  getAdminResourceById: async (id) => {
+    const { data } = await api.get(`/api/projects/admin-resources/${id}`);
+    return data;
+  },
+
   // Student: rate a project
   rateProject: async (id, rating) => {
     const { data } = await api.post(`/api/projects/${id}/rate`, { rating });
