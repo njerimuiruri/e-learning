@@ -332,4 +332,23 @@ export const bulkEmailService = {
   },
 };
 
+export const certificateService = {
+  getAll: async () => {
+    const { data } = await api.get('/certificates');
+    return data;
+  },
+  issue: async (enrollmentId: string) => {
+    const { data } = await api.post(`/certificates/${enrollmentId}/issue`);
+    return data;
+  },
+  issueAll: async (level: string) => {
+    const { data } = await api.post('/certificates/issue-all', { level });
+    return data;
+  },
+  reset: async (studentId: string, level: string) => {
+    const { data } = await api.post('/certificates/reset', { studentId, level });
+    return data;
+  },
+};
+
 export default adminService;

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar,
   PieChart, Pie, Cell, LineChart, Line,
@@ -9,18 +8,17 @@ import {
 } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import analyticsService from '@/lib/api/analyticsService';
 import {
-  Users, BookOpen, Award, BarChart3, GraduationCap, TrendingUp,
+  Users, BookOpen, BarChart3,
   RefreshCw, AlertTriangle, Globe, Clock, Activity, Target,
-  CheckCircle, XCircle, UserCheck, Zap, Flame, MapPin,
-  Star, ChevronRight, ArrowUp, ArrowDown, Minus, Trash2,
-  TrendingDown, Brain, Layers, Eye, Medal,
+  CheckCircle, Flame, MapPin, TrendingUp,
+  Star, ArrowUp, ArrowDown, Minus,
+  Medal, Zap, Brain, Calendar, UserX,
 } from 'lucide-react';
 import Navbar from '@/components/navbar/navbar';
 
@@ -29,11 +27,12 @@ const COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#14b8a6', '#f97316'
 const PIE_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#14b8a6', '#f97316'];
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
-const fmt = (n, decimals = 1) => Number(n ?? 0).toFixed(decimals);
+const fmt = (n, d = 1) => Number(n ?? 0).toFixed(d);
 const pct = (n) => `${fmt(n)}%`;
 const num = (n) => Number(n ?? 0).toLocaleString();
+const trunc = (s, max = 28) => s?.length > max ? s.slice(0, max - 1) + '…' : (s ?? '—');
 
-const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function buildMonthlyBase() {
   const now = new Date();
@@ -47,16 +46,21 @@ function buildMonthlyBase() {
 
 function KPICard({ icon: Icon, label, value, sub, color = 'indigo', trend }) {
   const bg = {
-    indigo: 'bg-indigo-50 text-indigo-600', green: 'bg-green-50 text-green-600',
-    amber: 'bg-amber-50 text-amber-600', rose: 'bg-rose-50 text-rose-600',
-    teal: 'bg-teal-50 text-teal-600', violet: 'bg-violet-50 text-violet-600',
-    sky: 'bg-sky-50 text-sky-600', orange: 'bg-orange-50 text-orange-600',
+    indigo: 'bg-indigo-50 text-indigo-600',
+    green: 'bg-green-50 text-green-600',
+    amber: 'bg-amber-50 text-amber-600',
+    rose: 'bg-rose-50 text-rose-600',
+    teal: 'bg-teal-50 text-teal-600',
+    violet: 'bg-violet-50 text-violet-600',
+    sky: 'bg-sky-50 text-sky-600',
+    orange: 'bg-orange-50 text-orange-600',
+    red: 'bg-red-50 text-red-600',
   };
   return (
     <Card className="border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-4">
         <div className="flex items-start justify-between">
-          <div className={`p-2 rounded-lg ${bg[color]}`}>
+          <div className={`p-2 rounded-lg ${bg[color] ?? bg.indigo}`}>
             <Icon className="w-4 h-4" />
           </div>
           {trend !== undefined && (
@@ -76,16 +80,33 @@ function KPICard({ icon: Icon, label, value, sub, color = 'indigo', trend }) {
   );
 }
 
-function SectionHeader({ icon: Icon, title, description }) {
+function InsightChip({ type = 'info', children }) {
+  const style = {
+    info: 'bg-blue-50 text-blue-700 border-blue-100',
+    success: 'bg-green-50 text-green-700 border-green-100',
+    warning: 'bg-amber-50 text-amber-700 border-amber-100',
+    danger: 'bg-red-50 text-red-700 border-red-100',
+  };
   return (
-    <div className="flex items-start gap-3 mb-4">
-      <div className="p-2 bg-indigo-50 rounded-lg mt-0.5">
-        <Icon className="w-4 h-4 text-indigo-600" />
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${style[type]}`}>
+      {children}
+    </span>
+  );
+}
+
+function SectionHeader({ icon: Icon, title, description, action }) {
+  return (
+    <div className="flex items-start justify-between gap-3 mb-5">
+      <div className="flex items-start gap-3">
+        <div className="p-2 bg-indigo-50 rounded-lg mt-0.5">
+          <Icon className="w-4 h-4 text-indigo-600" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">{title}</h3>
+          {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
+        </div>
       </div>
-      <div>
-        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
-        {description && <p className="text-xs text-gray-500 mt-0.5">{description}</p>}
-      </div>
+      {action}
     </div>
   );
 }
@@ -99,54 +120,103 @@ const CustomTooltip = ({ active, payload, label }) => {
         <div key={i} className="flex items-center gap-2 mb-0.5">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color }} />
           <span className="text-gray-600">{p.name}:</span>
-          <span className="font-semibold text-gray-900">{p.value}</span>
+          <span className="font-semibold text-gray-900">{typeof p.value === 'number' ? p.value.toLocaleString() : p.value}</span>
         </div>
       ))}
     </div>
   );
 };
 
+function EmptyState({ message = 'No data available yet' }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="p-3 bg-gray-100 rounded-full mb-3">
+        <BarChart3 className="w-6 h-6 text-gray-400" />
+      </div>
+      <p className="text-sm text-gray-500 font-medium">{message}</p>
+      <p className="text-xs text-gray-400 mt-1">Data will appear here as students engage with the platform</p>
+    </div>
+  );
+}
+
+function RiskBadge({ daysInactive }) {
+  if (daysInactive >= 30) return <InsightChip type="danger">Dormant</InsightChip>;
+  if (daysInactive >= 14) return <InsightChip type="warning">At Risk</InsightChip>;
+  if (daysInactive >= 7) return <InsightChip type="warning">Inactive</InsightChip>;
+  return <InsightChip type="success">Active</InsightChip>;
+}
+
+// ─── Heatmap for peak hours ───────────────────────────────────────────────────
+function HourHeatmap({ data }) {
+  if (!data?.length) return <EmptyState message="No activity data" />;
+  const max = Math.max(...data.map((d) => d.completions), 1);
+  const getColor = (val) => {
+    const ratio = val / max;
+    if (ratio > 0.8) return 'bg-indigo-600 text-white';
+    if (ratio > 0.6) return 'bg-indigo-400 text-white';
+    if (ratio > 0.4) return 'bg-indigo-200 text-indigo-900';
+    if (ratio > 0.2) return 'bg-indigo-100 text-indigo-700';
+    return 'bg-gray-100 text-gray-500';
+  };
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-12 gap-1">
+        {data.map((d) => (
+          <div
+            key={d.hour}
+            title={`${d.label}: ${d.completions} completions, ${d.students} students`}
+            className={`rounded-md p-1.5 text-center cursor-default transition-all hover:ring-2 hover:ring-indigo-400 ${getColor(d.completions)}`}
+          >
+            <div className="text-[9px] font-bold leading-none">{d.label}</div>
+            <div className="text-[10px] font-semibold mt-0.5 leading-none">{d.completions}</div>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 mt-2">
+        <span className="text-xs text-gray-400">Less</span>
+        {['bg-gray-100', 'bg-indigo-100', 'bg-indigo-200', 'bg-indigo-400', 'bg-indigo-600'].map((c, i) => (
+          <div key={i} className={`w-4 h-4 rounded ${c}`} />
+        ))}
+        <span className="text-xs text-gray-400">More</span>
+      </div>
+    </div>
+  );
+}
+
 // ─── main component ──────────────────────────────────────────────────────────
 export default function AnalyticsDashboard() {
-  const router = useRouter();
-
-  // ── state ──────────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
-  const [overview, setOverview]               = useState(null);
+  const [overview, setOverview] = useState(null);
   const [studentProgress, setStudentProgress] = useState(null);
   const [courseCompletion, setCourseCompletion] = useState(null);
-  const [instructorData, setInstructorData]   = useState(null);
-  const [assessmentData, setAssessmentData]   = useState(null);
-  const [behaviorData, setBehaviorData]       = useState(null);
-  const [engagementData, setEngagementData]   = useState(null);
-  const [demoData, setDemoData]               = useState(null);
-  const [behaviorPeriod, setBehaviorPeriod]   = useState('weekly');
-  const [deleteDialog, setDeleteDialog]       = useState({ open: false, instructor: null });
-  const [deleting, setDeleting]               = useState(false);
-  const [activeTab, setActiveTab]             = useState('overview');
+  const [assessmentData, setAssessmentData] = useState(null);
+  const [behaviorData, setBehaviorData] = useState(null);
+  const [engagementData, setEngagementData] = useState(null);
+  const [demoData, setDemoData] = useState(null);
+  const [behaviorPeriod, setBehaviorPeriod] = useState('weekly');
+  const [activeTab, setActiveTab] = useState('overview');
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  // ── data loading ───────────────────────────────────────────────────────────
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [ov, sp, cc, ia, ai, bh, eg, dm] = await Promise.allSettled([
+      const [ov, sp, cc, ai, bh, eg, dm] = await Promise.allSettled([
         analyticsService.getOverview(),
         analyticsService.getStudentProgress(100),
         analyticsService.getCourseCompletion(),
-        analyticsService.getInstructorActivity(),
         analyticsService.getAssessmentInsights(),
         analyticsService.getLearningBehavior(behaviorPeriod),
         analyticsService.getEngagement(),
         analyticsService.getDemographics(),
       ]);
-      if (ov.status === 'fulfilled')         setOverview(ov.value);
-      if (sp.status === 'fulfilled')         setStudentProgress(sp.value);
-      if (cc.status === 'fulfilled')         setCourseCompletion(cc.value);
-      if (ia.status === 'fulfilled')         setInstructorData(ia.value);
-      if (ai.status === 'fulfilled')         setAssessmentData(ai.value);
-      if (bh.status === 'fulfilled')         setBehaviorData(bh.value);
-      if (eg.status === 'fulfilled')         setEngagementData(eg.value);
-      if (dm.status === 'fulfilled')         setDemoData(dm.value);
+      if (ov.status === 'fulfilled') setOverview(ov.value);
+      if (sp.status === 'fulfilled') setStudentProgress(sp.value);
+      if (cc.status === 'fulfilled') setCourseCompletion(cc.value);
+      if (ai.status === 'fulfilled') setAssessmentData(ai.value);
+      if (bh.status === 'fulfilled') setBehaviorData(bh.value);
+      if (eg.status === 'fulfilled') setEngagementData(eg.value);
+      if (dm.status === 'fulfilled') setDemoData(dm.value);
+      setLastUpdated(new Date());
     } catch (e) {
       console.error('Analytics load error:', e);
     } finally {
@@ -164,7 +234,7 @@ export default function AnalyticsDashboard() {
     } catch (e) { console.error(e); }
   }, []);
 
-  // ── derived data ───────────────────────────────────────────────────────────
+  // ── derived: enrollment trend ──────────────────────────────────────────────
   const enrollmentTrend = (() => {
     const base = buildMonthlyBase();
     if (overview?.monthlyEnrollments) {
@@ -189,11 +259,22 @@ export default function AnalyticsDashboard() {
     return base;
   })();
 
-  const topCourses = courseCompletion?.courses
-    ? [...courseCompletion.courses]
-        .sort((a, b) => b.totalEnrollments - a.totalEnrollments)
-        .slice(0, 8)
-    : [];
+  // ── derived: module analytics ──────────────────────────────────────────────
+  const allModules = courseCompletion?.courses ?? [];
+  const mostAccessedModules = [...allModules]
+    .sort((a, b) => b.totalEnrollments - a.totalEnrollments)
+    .slice(0, 8);
+  const leastAccessedModules = [...allModules]
+    .filter((m) => m.totalEnrollments > 0)
+    .sort((a, b) => a.totalEnrollments - b.totalEnrollments)
+    .slice(0, 5);
+  const highestCompletionModules = [...allModules]
+    .sort((a, b) => b.completionRate - a.completionRate)
+    .slice(0, 5);
+  const dropOffModules = [...allModules]
+    .filter((m) => m.totalEnrollments >= 3)
+    .sort((a, b) => a.completionRate - b.completionRate)
+    .slice(0, 8);
 
   const progressBuckets = (() => {
     if (!studentProgress?.students) return [];
@@ -211,62 +292,79 @@ export default function AnalyticsDashboard() {
     return buckets;
   })();
 
-  // ── delete instructor ──────────────────────────────────────────────────────
-  const handleDeleteInstructor = async () => {
-    if (!deleteDialog.instructor) return;
-    setDeleting(true);
-    try {
-      await analyticsService.deleteInstructor(deleteDialog.instructor.instructorId);
-      setDeleteDialog({ open: false, instructor: null });
-      loadAll();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setDeleting(false);
-    }
-  };
+  // ── derived: assessment ────────────────────────────────────────────────────
+  const finalAss = assessmentData?.finalAssessment ?? {};
+  const moduleAss = assessmentData?.moduleAssessment ?? {};
+  const scoreDist = assessmentData?.scoreDistribution ?? [];
+  const coursePerf = assessmentData?.coursePerformance ?? [];
 
-  // ── skeleton ──────────────────────────────────────────────────────────────
+  // ── derived: engagement ────────────────────────────────────────────────────
+  const engSummary = engagementData?.summary ?? {};
+  const topStudents = engagementData?.topStudents ?? [];
+  const atRiskStudents = engagementData?.atRiskList ?? [];
+
+  // ── derived: behavior ──────────────────────────────────────────────────────
+  const peakHours = behaviorData?.peakHours ?? [];
+  const weekdays = behaviorData?.weekdays ?? [];
+
+  // ── derived: demographics ──────────────────────────────────────────────────
+  const genderDist = (demoData?.genderDistribution ?? []).map((g) => ({
+    ...g,
+    label: g.gender === 'M' ? 'Male' : g.gender === 'F' ? 'Female' : (g.gender ?? 'Unspecified'),
+  }));
+  const countryDist = demoData?.countryDistribution ?? [];
+  const cohortDist = demoData?.cohortDistribution ?? [];
+  const regTrend = demoData?.registrationTrend ?? [];
+
+  const ov = overview;
+
+  // ── loading skeleton ──────────────────────────────────────────────────────
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-gray-200 rounded-lg w-64" />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="h-28 bg-gray-200 rounded-xl" />
-              ))}
-            </div>
-            <div className="h-96 bg-gray-200 rounded-xl" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-pulse">
+          <div className="h-8 bg-gray-200 rounded-lg w-72" />
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-28 bg-gray-200 rounded-xl" />
+            ))}
+          </div>
+          <div className="h-12 bg-gray-200 rounded-xl w-full" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            <div className="lg:col-span-2 h-64 bg-gray-200 rounded-xl" />
+            <div className="h-64 bg-gray-200 rounded-xl" />
           </div>
         </div>
       </div>
     );
   }
 
-  const ov = overview;
-  const eng = engagementData?.summary ?? {};
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* ── Page header ─────────────────────────────────────────────────────── */}
+      {/* ── Page header ──────────────────────────────────────────────────────── */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <BarChart3 className="w-5 h-5 text-indigo-600" />
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-widest">Admin</span>
               </div>
-              <h1 className="text-2xl font-extrabold text-gray-900">Analytics & Intelligence</h1>
-              <p className="text-sm text-gray-500 mt-0.5">Real-time platform insights — updated live</p>
+              <h1 className="text-2xl font-extrabold text-gray-900">Analytics & Reporting</h1>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Deep insights into student behaviour, module engagement, and platform performance
+                {lastUpdated && (
+                  <span className="ml-2 text-gray-400">
+                    · Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                )}
+              </p>
             </div>
-            <Button variant="outline" size="sm" className="gap-2 hidden sm:flex" onClick={loadAll}>
-              <RefreshCw className="w-4 h-4" /> Refresh
+            <Button variant="outline" size="sm" className="gap-2" onClick={loadAll}>
+              <RefreshCw className="w-4 h-4" /> Refresh Data
             </Button>
           </div>
         </div>
@@ -274,64 +372,61 @@ export default function AnalyticsDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-        {/* ── Top KPI strip ───────────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
-          <KPICard icon={Users}         label="Total Students"     value={num(ov?.users?.students)}       color="indigo" />
-          <KPICard icon={Activity}      label="Active (30d)"       value={num(ov?.enrollments?.active)}   color="green"  />
-          <KPICard icon={Award}         label="Completed"          value={num(ov?.enrollments?.completed)} color="amber" />
-          <KPICard icon={Target}        label="Completion Rate"    value={ov?.enrollments?.completionRate ?? '—'} color="teal" />
-          <KPICard icon={BookOpen}      label="Total Courses"      value={num(ov?.courses?.total)}         color="violet" />
-          <KPICard icon={CheckCircle}   label="Published"          value={num(ov?.courses?.published)}     color="sky"   />
-          <KPICard icon={UserCheck}     label="Instructors"        value={num(ov?.users?.instructors)}     color="orange" />
-          <KPICard icon={GraduationCap} label="Enrollments"        value={num(ov?.enrollments?.total)}     color="rose"  />
+        {/* ── KPI Strip ─────────────────────────────────────────────────────── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <KPICard icon={Users}       label="Total Students"  value={num(ov?.users?.students)}              color="indigo" />
+          <KPICard icon={Activity}    label="Active (7d)"     value={num(engSummary.activeStudents)}        color="green"  />
+          <KPICard icon={AlertTriangle} label="At Risk"       value={num(engSummary.atRiskStudents)}        color="amber"  />
+          <KPICard icon={UserX}       label="Dormant"         value={num(engSummary.dormantStudents)}       color="red"    />
+          <KPICard icon={Award}       label="Completion Rate" value={ov?.enrollments?.completionRate ?? '—'} color="teal" />
+          <KPICard icon={BookOpen}    label="Total Modules"   value={num(ov?.courses?.total)}               color="violet" />
         </div>
 
-        {/* ── Main tabs ───────────────────────────────────────────────────── */}
+        {/* ── Main tabs ─────────────────────────────────────────────────────── */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <div className="bg-white border border-gray-100 rounded-xl shadow-sm overflow-hidden">
-            <div className="border-b border-gray-100 px-4">
-              <TabsList className="h-12 bg-transparent gap-0 rounded-none p-0 overflow-x-auto w-full justify-start">
+            <div className="border-b border-gray-100 px-4 overflow-x-auto">
+              <TabsList className="h-12 bg-transparent gap-0 rounded-none p-0 flex w-max min-w-full">
                 {[
-                  { value: 'overview',     icon: BarChart3,    label: 'Overview'      },
-                  { value: 'performance',  icon: Target,       label: 'Performance'   },
-                  { value: 'behavior',     icon: Clock,        label: 'Learning'      },
-                  { value: 'engagement',   icon: Flame,        label: 'Engagement'    },
-                  { value: 'demographics', icon: Globe,        label: 'Demographics'  },
-                  { value: 'courses',      icon: BookOpen,     label: 'Courses'       },
-                  { value: 'instructors',  icon: UserCheck,    label: 'Instructors'   },
+                  { value: 'overview',     icon: BarChart3,      label: 'Overview'     },
+                  { value: 'modules',      icon: BookOpen,       label: 'Modules'      },
+                  { value: 'activity',     icon: Clock,          label: 'Activity'     },
+                  { value: 'assessments',  icon: Target,         label: 'Assessments'  },
+                  { value: 'engagement',   icon: Flame,          label: 'Engagement'   },
+                  { value: 'demographics', icon: Globe,          label: 'Demographics' },
                 ].map(({ value, icon: Icon, label }) => (
                   <TabsTrigger
                     key={value}
                     value={value}
-                    className="flex items-center gap-1.5 px-4 h-12 text-xs font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 transition-colors"
+                    className="flex items-center gap-1.5 px-4 h-12 text-xs font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 transition-colors whitespace-nowrap"
                   >
                     <Icon className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">{label}</span>
+                    {label}
                   </TabsTrigger>
                 ))}
               </TabsList>
             </div>
 
-            {/* ══════════════════════ OVERVIEW ══════════════════════════════ */}
+            {/* ══════════════════════ OVERVIEW ════════════════════════════════ */}
             <TabsContent value="overview" className="p-5 space-y-6">
-              {/* Enrollment trend */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* Enrollment trend */}
                 <Card className="lg:col-span-2 border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Enrollment Trend (Last 6 Months)</CardTitle>
-                    <CardDescription className="text-xs">Enrollments, completions, and active learners</CardDescription>
+                    <CardTitle className="text-sm font-bold text-gray-900">Enrollment Trend — Last 6 Months</CardTitle>
+                    <CardDescription className="text-xs">Enrollments, completions and active learners over time</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
                     <ResponsiveContainer width="100%" height={220}>
                       <AreaChart data={enrollmentTrend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                         <defs>
-                          <linearGradient id="gradEnroll" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}   />
+                          <linearGradient id="gEnroll" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}    />
                           </linearGradient>
-                          <linearGradient id="gradComplete" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.2} />
-                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0}   />
+                          <linearGradient id="gComplete" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor="#22c55e" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0}    />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -339,24 +434,24 @@ export default function AnalyticsDashboard() {
                         <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                         <Tooltip content={<CustomTooltip />} />
                         <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                        <Area type="monotone" dataKey="enrollments" name="Enrollments" stroke="#6366f1" fill="url(#gradEnroll)" strokeWidth={2} dot={false} />
-                        <Area type="monotone" dataKey="completions" name="Completions"  stroke="#22c55e" fill="url(#gradComplete)" strokeWidth={2} dot={false} />
-                        <Area type="monotone" dataKey="active"      name="Active"       stroke="#f59e0b" fill="none" strokeWidth={2} strokeDasharray="5 3" dot={false} />
+                        <Area type="monotone" dataKey="enrollments" name="Enrollments" stroke="#6366f1" fill="url(#gEnroll)"   strokeWidth={2} dot={false} />
+                        <Area type="monotone" dataKey="completions" name="Completions"  stroke="#22c55e" fill="url(#gComplete)" strokeWidth={2} dot={false} />
+                        <Area type="monotone" dataKey="active"      name="Active"       stroke="#f59e0b" fill="none"            strokeWidth={2} strokeDasharray="5 3" dot={false} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </CardContent>
                 </Card>
 
-                {/* Completion overview card */}
+                {/* Platform health */}
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <CardTitle className="text-sm font-bold text-gray-900">Platform Health</CardTitle>
                   </CardHeader>
                   <CardContent className="px-4 pb-4 space-y-4">
                     {[
-                      { label: 'Completion Rate', value: parseFloat(ov?.enrollments?.completionRate ?? 0), color: '#22c55e' },
-                      { label: 'Active Rate', value: ov?.enrollments?.total ? (ov.enrollments.active / ov.enrollments.total) * 100 : 0, color: '#6366f1' },
-                      { label: 'Published Rate', value: ov?.courses?.total ? (ov.courses.published / ov.courses.total) * 100 : 0, color: '#f59e0b' },
+                      { label: 'Completion Rate',  value: parseFloat(ov?.enrollments?.completionRate ?? 0), color: '#22c55e' },
+                      { label: 'Active Rate',       value: engSummary.activeRate ?? 0,                       color: '#6366f1' },
+                      { label: 'Modules Published', value: ov?.courses?.total ? (ov.courses.published / ov.courses.total) * 100 : 0, color: '#f59e0b' },
                     ].map(({ label, value, color }) => (
                       <div key={label}>
                         <div className="flex justify-between text-xs mb-1.5">
@@ -368,12 +463,12 @@ export default function AnalyticsDashboard() {
                         </div>
                       </div>
                     ))}
-
                     <div className="pt-3 border-t border-gray-200 space-y-2">
                       {[
                         { label: 'Total Enrollments', val: num(ov?.enrollments?.total) },
                         { label: 'Completed',          val: num(ov?.enrollments?.completed) },
                         { label: 'In Progress',        val: num((ov?.enrollments?.total ?? 0) - (ov?.enrollments?.completed ?? 0)) },
+                        { label: 'Instructors',        val: num(ov?.users?.instructors) },
                       ].map(({ label, val }) => (
                         <div key={label} className="flex justify-between text-xs">
                           <span className="text-gray-500">{label}</span>
@@ -385,24 +480,47 @@ export default function AnalyticsDashboard() {
                 </Card>
               </div>
 
-              {/* Country & Category */}
+              {/* Progress distribution + top countries */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm font-bold text-gray-900">Student Progress Distribution</CardTitle>
+                    <CardDescription className="text-xs">How far along are students in their modules?</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-2 pb-4">
+                    {progressBuckets.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart data={progressBuckets} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                          <XAxis dataKey="range" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Bar dataKey="count" name="Students" radius={[4, 4, 0, 0]}>
+                            {progressBuckets.map((b, i) => <Cell key={i} fill={b.fill} />)}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : <EmptyState message="No student progress data" />}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-none bg-gray-50">
+                  <CardHeader className="pb-2 pt-4 px-4">
                     <CardTitle className="text-sm font-bold text-gray-900">Students by Country</CardTitle>
+                    <CardDescription className="text-xs">Geographic distribution of learners</CardDescription>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
-                    {demoData?.countryDistribution?.length > 0 ? (
+                    {countryDist.length > 0 ? (
                       <div className="space-y-2">
-                        {demoData.countryDistribution.slice(0, 8).map((c, i) => {
-                          const total = demoData.countryDistribution.reduce((s, x) => s + x.count, 0);
+                        {countryDist.slice(0, 7).map((c, i) => {
+                          const total = countryDist.reduce((s, x) => s + x.count, 0);
                           return (
-                            <div key={c.country} className="flex items-center gap-3">
-                              <span className="text-xs text-gray-500 w-4">{i + 1}</span>
+                            <div key={c.country ?? i} className="flex items-center gap-3">
+                              <span className="text-xs text-gray-400 w-4 font-medium">{i + 1}</span>
                               <div className="flex-1">
                                 <div className="flex justify-between text-xs mb-1">
                                   <span className="font-medium text-gray-700">{c.country || 'Unknown'}</span>
-                                  <span className="text-gray-500">{c.count} ({pct((c.count / total) * 100)})</span>
+                                  <span className="text-gray-500">{c.count} <span className="text-gray-400">({pct((c.count / total) * 100)})</span></span>
                                 </div>
                                 <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                                   <div className="h-full rounded-full" style={{ width: `${(c.count / total) * 100}%`, background: COLORS[i % COLORS.length] }} />
@@ -412,50 +530,330 @@ export default function AnalyticsDashboard() {
                           );
                         })}
                       </div>
-                    ) : (
-                      <p className="text-xs text-gray-400 text-center py-6">No country data yet</p>
-                    )}
+                    ) : <EmptyState message="No country data yet" />}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Engagement summary row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <KPICard icon={Users}         label="Total Students"   value={num(engSummary.totalStudents)}  color="indigo" />
+                <KPICard icon={CheckCircle}   label="Active (7 days)"  value={num(engSummary.activeStudents)} color="green"  />
+                <KPICard icon={AlertTriangle} label="At Risk (7-14d)"  value={num(engSummary.atRiskStudents)} color="amber"  />
+                <KPICard icon={UserX}         label="Dormant (30d+)"   value={num(engSummary.dormantStudents)} color="red"   />
+              </div>
+            </TabsContent>
+
+            {/* ══════════════════════ MODULES ═════════════════════════════════ */}
+            <TabsContent value="modules" className="p-5 space-y-6">
+              <SectionHeader
+                icon={BookOpen}
+                title="Module Performance Analytics"
+                description="Identify popular modules, difficult modules, and where students stop progressing"
+              />
+
+              {/* Most vs least accessed */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card className="border-0 shadow-none bg-gray-50">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-bold text-gray-900">Most Accessed Modules</CardTitle>
+                      <InsightChip type="success"><TrendingUp className="w-3 h-3" /> Popular</InsightChip>
+                    </div>
+                    <CardDescription className="text-xs">Sorted by total student enrollments</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-2 pb-4">
+                    {mostAccessedModules.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={280}>
+                        <BarChart layout="vertical" data={mostAccessedModules} margin={{ top: 0, right: 50, left: 8, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
+                          <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <YAxis type="category" dataKey="courseName" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={130} tickFormatter={(v) => trunc(v, 22)} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Bar dataKey="totalEnrollments" name="Enrollments" fill="#6366f1" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10, fill: '#6b7280' }} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : <EmptyState message="No module data yet" />}
                   </CardContent>
                 </Card>
 
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Top Courses by Enrollment</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-bold text-gray-900">Highest Completion Rates</CardTitle>
+                      <InsightChip type="success"><Medal className="w-3 h-3" /> Top Performers</InsightChip>
+                    </div>
+                    <CardDescription className="text-xs">Modules where students successfully complete</CardDescription>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
-                    {topCourses.length > 0 ? (
-                      <div className="space-y-2.5">
-                        {topCourses.slice(0, 6).map((c, i) => (
-                          <div key={c.courseId} className="flex items-center gap-3">
-                            <span className="text-xs font-bold text-gray-400 w-4">{i + 1}</span>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex justify-between text-xs mb-1">
-                                <span className="font-medium text-gray-700 truncate">{c.courseName?.length > 28 ? c.courseName.slice(0, 26) + '…' : c.courseName}</span>
-                                <span className="text-gray-500 ml-2 flex-shrink-0">{c.totalEnrollments}</span>
+                    {highestCompletionModules.length > 0 ? (
+                      <div className="space-y-3">
+                        {highestCompletionModules.map((m, i) => (
+                          <div key={m.courseId ?? i} className="space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-gray-400 w-4">{i + 1}</span>
+                                <span className="text-xs font-medium text-gray-700">{trunc(m.courseName, 30)}</span>
                               </div>
-                              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full bg-indigo-500" style={{ width: `${(c.completionRate ?? 0)}%` }} />
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-gray-500">{m.totalEnrollments} enrolled</span>
+                                <span className="text-xs font-bold text-green-600">{pct(m.completionRate)}</span>
                               </div>
+                            </div>
+                            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-green-500 transition-all"
+                                style={{ width: `${Math.min(m.completionRate, 100)}%` }}
+                              />
                             </div>
                           </div>
                         ))}
                       </div>
-                    ) : (
-                      <p className="text-xs text-gray-400 text-center py-6">No course data yet</p>
-                    )}
+                    ) : <EmptyState message="No completion data" />}
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Drop-off analysis */}
+              <Card className="border-0 shadow-none bg-gray-50">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-bold text-gray-900">Drop-Off Risk Modules</CardTitle>
+                      <CardDescription className="text-xs">Modules with significant enrollments but low completion — students may be struggling</CardDescription>
+                    </div>
+                    <InsightChip type="danger"><AlertTriangle className="w-3 h-3" /> Needs Attention</InsightChip>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  {dropOffModules.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-100">
+                          <TableHead className="text-xs font-semibold text-gray-500 w-8">#</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500">Module Name</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Enrolled</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Completed</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Completion Rate</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Avg Progress</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Risk Level</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dropOffModules.map((m, i) => {
+                          const risk = m.completionRate < 20 ? 'high' : m.completionRate < 40 ? 'medium' : 'low';
+                          return (
+                            <TableRow key={m.courseId ?? i} className="border-gray-50">
+                              <TableCell className="text-xs text-gray-400 font-medium">{i + 1}</TableCell>
+                              <TableCell className="text-xs font-medium text-gray-800">{trunc(m.courseName, 40)}</TableCell>
+                              <TableCell className="text-xs text-center text-gray-600">{num(m.totalEnrollments)}</TableCell>
+                              <TableCell className="text-xs text-center text-gray-600">{num(m.completedCount)}</TableCell>
+                              <TableCell className="text-xs text-center">
+                                <div className="flex items-center gap-2 justify-center">
+                                  <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full bg-red-400" style={{ width: `${Math.min(m.completionRate, 100)}%` }} />
+                                  </div>
+                                  <span className="font-semibold text-red-600">{pct(m.completionRate)}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-center text-gray-600">{pct(m.avgProgress)}</TableCell>
+                              <TableCell className="text-center">
+                                {risk === 'high'   && <InsightChip type="danger">High Risk</InsightChip>}
+                                {risk === 'medium' && <InsightChip type="warning">Medium</InsightChip>}
+                                {risk === 'low'    && <InsightChip type="info">Low</InsightChip>}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  ) : <EmptyState message="No drop-off data available" />}
+                </CardContent>
+              </Card>
+
+              {/* Completion vs enrollment scatter */}
+              <Card className="border-0 shadow-none bg-gray-50">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <CardTitle className="text-sm font-bold text-gray-900">Module Completion Rates Overview</CardTitle>
+                  <CardDescription className="text-xs">All modules ranked by completion percentage</CardDescription>
+                </CardHeader>
+                <CardContent className="px-2 pb-4">
+                  {allModules.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart
+                        data={[...allModules].sort((a, b) => b.completionRate - a.completionRate).slice(0, 12)}
+                        margin={{ top: 5, right: 10, left: -20, bottom: 60 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        <XAxis
+                          dataKey="courseName"
+                          tick={{ fontSize: 9 }}
+                          axisLine={false}
+                          tickLine={false}
+                          angle={-35}
+                          textAnchor="end"
+                          tickFormatter={(v) => trunc(v, 18)}
+                        />
+                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar dataKey="completionRate" name="Completion %" radius={[4, 4, 0, 0]}>
+                          {allModules.map((m, i) => (
+                            <Cell key={i} fill={m.completionRate >= 60 ? '#22c55e' : m.completionRate >= 30 ? '#f59e0b' : '#ef4444'} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : <EmptyState />}
+                </CardContent>
+              </Card>
             </TabsContent>
 
-            {/* ══════════════════════ PERFORMANCE ═══════════════════════════ */}
-            <TabsContent value="performance" className="p-5 space-y-6">
-              {/* KPI row */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard icon={Star}        label="Avg Final Score"      value={`${assessmentData?.finalAssessment?.avgScore ?? '—'}%`} color="amber"  />
-                <KPICard icon={CheckCircle} label="Final Pass Rate"      value={pct(assessmentData?.finalAssessment?.passRate)}         color="green"  />
-                <KPICard icon={RefreshCw}   label="Avg Attempts"         value={assessmentData?.finalAssessment?.avgAttempts ?? '—'}    color="indigo" />
-                <KPICard icon={TrendingDown} label="Retake Rate"         value={pct(assessmentData?.finalAssessment?.retakeRate)}       color="rose"   />
+            {/* ══════════════════════ ACTIVITY ════════════════════════════════ */}
+            <TabsContent value="activity" className="p-5 space-y-6">
+              <div className="flex items-start justify-between flex-wrap gap-3">
+                <SectionHeader
+                  icon={Clock}
+                  title="Learning Activity Analytics"
+                  description="Understand when students are most active — peak hours, active days, and learning trends"
+                />
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {['daily', 'weekly', 'monthly', 'quarterly', 'yearly'].map((p) => (
+                    <Button
+                      key={p}
+                      size="sm"
+                      variant={behaviorPeriod === p ? 'default' : 'outline'}
+                      className={`h-7 px-3 text-xs capitalize ${behaviorPeriod === p ? 'bg-indigo-600 text-white hover:bg-indigo-700' : ''}`}
+                      onClick={() => refreshBehavior(p)}
+                    >
+                      {p}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Summary insight cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <KPICard icon={Zap}      label="Peak Hour"        value={behaviorData?.peakHour ?? '—'}   color="amber"  />
+                <KPICard icon={Calendar} label="Peak Day"         value={behaviorData?.peakDay ?? '—'}    color="indigo" />
+                <KPICard icon={Activity} label="Total Completions" value={num(behaviorData?.totalCompletions)} color="green" />
+                <KPICard icon={Users}    label="Active Students"   value={num(engSummary.activeStudents)}  color="sky"    />
+              </div>
+
+              {/* Peak hours heatmap */}
+              <Card className="border-0 shadow-none bg-gray-50">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <CardTitle className="text-sm font-bold text-gray-900">Activity Heatmap — Peak Hours (24h)</CardTitle>
+                  <CardDescription className="text-xs">Darker = more completions. Shows what time of day students are most active.</CardDescription>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  <HourHeatmap data={peakHours} />
+                </CardContent>
+              </Card>
+
+              {/* Peak hours bar chart */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card className="border-0 shadow-none bg-gray-50">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm font-bold text-gray-900">Completions by Hour</CardTitle>
+                    <CardDescription className="text-xs">Which hours see the most learning activity</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-2 pb-4">
+                    {peakHours.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={peakHours} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                          <XAxis dataKey="label" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Bar dataKey="completions" name="Completions" fill="#6366f1" radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="students"    name="Students"    fill="#e0e7ff"  radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : <EmptyState message="No hourly data available" />}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-none bg-gray-50">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm font-bold text-gray-900">Activity by Day of Week</CardTitle>
+                    <CardDescription className="text-xs">Which days are students most active</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-2 pb-4">
+                    {weekdays.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={weekdays} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                          <XAxis dataKey="day" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                          <Tooltip content={<CustomTooltip />} />
+                          <Bar dataKey="completions" name="Completions" radius={[4, 4, 0, 0]}>
+                            {weekdays.map((d, i) => (
+                              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                            ))}
+                          </Bar>
+                          <Bar dataKey="students" name="Students" fill="#e0e7ff" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : <EmptyState message="No daily data available" />}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Insight notes */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  {
+                    icon: Zap,
+                    title: 'Peak Learning Time',
+                    body: behaviorData?.peakHour
+                      ? `Students are most active at ${behaviorData.peakHour}. Schedule notifications and live sessions around this time.`
+                      : 'Complete data will appear once students engage with the platform.',
+                    color: 'amber',
+                  },
+                  {
+                    icon: Calendar,
+                    title: 'Most Active Day',
+                    body: behaviorData?.peakDay
+                      ? `${behaviorData.peakDay} sees the highest engagement. Plan announcements and content releases for this day.`
+                      : 'Engage students consistently throughout the week.',
+                    color: 'indigo',
+                  },
+                  {
+                    icon: Brain,
+                    title: 'Learning Behaviour',
+                    body: behaviorData?.totalCompletions
+                      ? `${num(behaviorData.totalCompletions)} completions recorded this ${behaviorPeriod}. Monitor trends to detect drops in engagement.`
+                      : 'Learning behaviour insights will appear as more students complete activities.',
+                    color: 'green',
+                  },
+                ].map(({ icon: Icon, title, body, color }) => (
+                  <Card key={title} className="border-0 shadow-none bg-gray-50">
+                    <CardContent className="p-4">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center mb-3 ${color === 'amber' ? 'bg-amber-50' : color === 'indigo' ? 'bg-indigo-50' : 'bg-green-50'}`}>
+                        <Icon className={`w-4 h-4 ${color === 'amber' ? 'text-amber-600' : color === 'indigo' ? 'text-indigo-600' : 'text-green-600'}`} />
+                      </div>
+                      <h4 className="text-xs font-bold text-gray-900 mb-1">{title}</h4>
+                      <p className="text-xs text-gray-500 leading-relaxed">{body}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            {/* ══════════════════════ ASSESSMENTS ═════════════════════════════ */}
+            <TabsContent value="assessments" className="p-5 space-y-6">
+              <SectionHeader
+                icon={Target}
+                title="Assessment Analytics"
+                description="Track quiz performance, pass rates, retakes, and identify difficult assessments"
+              />
+
+              {/* Assessment KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <KPICard icon={Star}         label="Final Avg Score"      value={`${pct(finalAss.avgScore)}`}     color="indigo" />
+                <KPICard icon={CheckCircle}  label="Final Pass Rate"      value={`${pct(finalAss.passRate)}`}    color="green"  />
+                <KPICard icon={RefreshCw}    label="Retake Rate"          value={`${pct(finalAss.retakeRate)}`}  color="amber"  />
+                <KPICard icon={Activity}     label="Module Avg Score"     value={`${pct(moduleAss.avgScore)}`}   color="violet" />
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
@@ -463,73 +861,142 @@ export default function AnalyticsDashboard() {
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <CardTitle className="text-sm font-bold text-gray-900">Score Distribution</CardTitle>
-                    <CardDescription className="text-xs">Final assessment scores across all students</CardDescription>
+                    <CardDescription className="text-xs">How students are scoring across all assessments</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
-                    {assessmentData?.scoreDistribution?.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={assessmentData.scoreDistribution} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                    {scoreDist.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={scoreDist} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                           <XAxis dataKey="range" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                           <Tooltip content={<CustomTooltip />} />
-                          <Bar dataKey="count" name="Students" radius={[6, 6, 0, 0]}>
-                            {assessmentData.scoreDistribution.map((_, i) => (
-                              <Cell key={i} fill={['#ef4444','#f97316','#f59e0b','#22c55e','#16a34a'][i]} />
+                          <Bar dataKey="count" name="Students" radius={[4, 4, 0, 0]}>
+                            {scoreDist.map((_, i) => (
+                              <Cell key={i} fill={COLORS[i % COLORS.length]} />
                             ))}
                           </Bar>
                         </BarChart>
                       </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-40">
-                        <p className="text-xs text-gray-400">No assessment data yet</p>
-                      </div>
-                    )}
+                    ) : <EmptyState message="No score distribution data" />}
                   </CardContent>
                 </Card>
 
-                {/* Module vs Final comparison */}
+                {/* Pass vs fail pie */}
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Module vs Final Assessment</CardTitle>
-                    <CardDescription className="text-xs">Comparison of performance at different levels</CardDescription>
+                    <CardTitle className="text-sm font-bold text-gray-900">Final Assessment: Pass / Fail</CardTitle>
+                    <CardDescription className="text-xs">Overall pass vs fail breakdown for final assessments</CardDescription>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4">
-                    <div className="space-y-5">
-                      {[
-                        {
-                          label: 'Module Assessments',
-                          data: assessmentData?.moduleAssessment ?? {},
-                          color: '#6366f1',
-                        },
-                        {
-                          label: 'Final Assessments',
-                          data: assessmentData?.finalAssessment ?? {},
-                          color: '#22c55e',
-                        },
-                      ].map(({ label, data, color }) => (
-                        <div key={label}>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs font-bold text-gray-700">{label}</span>
-                            <Badge className="text-xs" style={{ background: color + '20', color }}>
-                              {data.totalAttempted ?? 0} attempts
-                            </Badge>
-                          </div>
+                  <CardContent className="px-2 pb-4">
+                    {(finalAss.passedCount || finalAss.totalAttempted) ? (
+                      <div className="flex items-center gap-4">
+                        <ResponsiveContainer width={180} height={180}>
+                          <PieChart>
+                            <Pie
+                              data={[
+                                { name: 'Passed', value: finalAss.passedCount ?? 0 },
+                                { name: 'Failed', value: (finalAss.totalAttempted ?? 0) - (finalAss.passedCount ?? 0) },
+                              ]}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={50}
+                              outerRadius={80}
+                              dataKey="value"
+                              paddingAngle={3}
+                            >
+                              <Cell fill="#22c55e" />
+                              <Cell fill="#ef4444" />
+                            </Pie>
+                            <Tooltip content={<CustomTooltip />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="space-y-3 flex-1">
                           {[
-                            { metric: 'Avg Score', val: `${data.avgScore ?? 0}%`, pctVal: data.avgScore ?? 0 },
-                            { metric: 'Pass Rate', val: pct(data.passRate), pctVal: data.passRate ?? 0 },
-                            { metric: 'Retake Rate', val: pct(data.retakeRate), pctVal: data.retakeRate ?? 0 },
-                          ].map(({ metric, val, pctVal }) => (
-                            <div key={metric} className="mb-2">
+                            { label: 'Passed', value: finalAss.passedCount ?? 0, color: '#22c55e' },
+                            { label: 'Failed',  value: (finalAss.totalAttempted ?? 0) - (finalAss.passedCount ?? 0), color: '#ef4444' },
+                          ].map((item) => (
+                            <div key={item.label}>
                               <div className="flex justify-between text-xs mb-1">
-                                <span className="text-gray-500">{metric}</span>
-                                <span className="font-semibold" style={{ color }}>{val}</span>
-                              </div>
-                              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full" style={{ width: `${Math.min(pctVal, 100)}%`, background: color }} />
+                                <span className="flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full" style={{ background: item.color }} />
+                                  <span className="font-medium text-gray-700">{item.label}</span>
+                                </span>
+                                <span className="font-bold text-gray-900">{num(item.value)}</span>
                               </div>
                             </div>
                           ))}
+                          <div className="pt-2 border-t border-gray-200 space-y-1 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Total Attempted</span>
+                              <span className="font-bold text-gray-900">{num(finalAss.totalAttempted)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-500">Avg Attempts</span>
+                              <span className="font-bold text-gray-900">{fmt(finalAss.avgAttempts)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : <EmptyState message="No assessment data yet" />}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Module vs Final comparison */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <Card className="border-0 shadow-none bg-gray-50">
+                  <CardContent className="p-5">
+                    <h4 className="text-xs font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-indigo-500" />
+                      Final Assessment Breakdown
+                    </h4>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'Average Score',         value: pct(finalAss.avgScore),      raw: finalAss.avgScore,     color: '#6366f1' },
+                        { label: 'Pass Rate',             value: pct(finalAss.passRate),       raw: finalAss.passRate,     color: '#22c55e' },
+                        { label: 'Retake Rate',           value: pct(finalAss.retakeRate),     raw: finalAss.retakeRate,   color: '#f59e0b' },
+                        { label: 'Avg Attempts per Student', value: fmt(finalAss.avgAttempts), raw: null, color: '#6366f1' },
+                      ].map(({ label, value, raw, color }) => (
+                        <div key={label}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600 font-medium">{label}</span>
+                            <span className="font-bold" style={{ color }}>{value}</span>
+                          </div>
+                          {raw !== null && (
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${Math.min(raw, 100)}%`, background: color }} />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-0 shadow-none bg-gray-50">
+                  <CardContent className="p-5">
+                    <h4 className="text-xs font-bold text-gray-900 mb-4 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-violet-500" />
+                      Module Assessment Breakdown
+                    </h4>
+                    <div className="space-y-3">
+                      {[
+                        { label: 'Average Score',   value: pct(moduleAss.avgScore),    raw: moduleAss.avgScore,   color: '#8b5cf6' },
+                        { label: 'Pass Rate',        value: pct(moduleAss.passRate),     raw: moduleAss.passRate,   color: '#22c55e' },
+                        { label: 'Retake Rate',      value: pct(moduleAss.retakeRate),   raw: moduleAss.retakeRate, color: '#f59e0b' },
+                        { label: 'Total Attempted',  value: num(moduleAss.totalAttempted), raw: null, color: '#8b5cf6' },
+                      ].map(({ label, value, raw, color }) => (
+                        <div key={label}>
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-gray-600 font-medium">{label}</span>
+                            <span className="font-bold" style={{ color }}>{value}</span>
+                          </div>
+                          {raw !== null && (
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${Math.min(raw, 100)}%`, background: color }} />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -540,829 +1007,400 @@ export default function AnalyticsDashboard() {
               {/* Course performance table */}
               <Card className="border-0 shadow-none bg-gray-50">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Course Assessment Performance</CardTitle>
-                  <CardDescription className="text-xs">Sorted by average score (lowest first — identify struggling areas)</CardDescription>
+                  <CardTitle className="text-sm font-bold text-gray-900">Assessment Performance by Module</CardTitle>
+                  <CardDescription className="text-xs">Which modules have the strongest and weakest assessment results</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0 pb-2">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-gray-100 hover:bg-transparent">
-                        <TableHead className="text-xs pl-4">Course</TableHead>
-                        <TableHead className="text-xs text-right">Avg Score</TableHead>
-                        <TableHead className="text-xs text-right">Pass Rate</TableHead>
-                        <TableHead className="text-xs text-right">Avg Attempts</TableHead>
-                        <TableHead className="text-xs text-right pr-4">Students Attempted</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {assessmentData?.coursePerformance?.length > 0 ? (
-                        assessmentData.coursePerformance.map((c) => (
-                          <TableRow key={c.courseId?.toString()} className="border-gray-100 hover:bg-white">
-                            <TableCell className="text-xs font-medium pl-4 max-w-xs truncate">{c.courseName}</TableCell>
-                            <TableCell className="text-right">
-                              <span className={`text-xs font-bold ${c.avgScore >= 70 ? 'text-green-600' : c.avgScore >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
-                                {c.avgScore}%
+                <CardContent className="px-4 pb-4">
+                  {coursePerf.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-100">
+                          <TableHead className="text-xs font-semibold text-gray-500">#</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500">Module</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Avg Score</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Pass Rate</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Avg Attempts</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Attempted</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[...coursePerf].sort((a, b) => b.avgScore - a.avgScore).map((c, i) => (
+                          <TableRow key={c.courseId ?? i} className="border-gray-50">
+                            <TableCell className="text-xs text-gray-400 font-medium">{i + 1}</TableCell>
+                            <TableCell className="text-xs font-medium text-gray-800">{trunc(c.courseName, 35)}</TableCell>
+                            <TableCell className="text-xs text-center">
+                              <span className={`font-bold ${c.avgScore >= 70 ? 'text-green-600' : c.avgScore >= 50 ? 'text-amber-600' : 'text-red-600'}`}>
+                                {pct(c.avgScore)}
                               </span>
                             </TableCell>
-                            <TableCell className="text-right">
-                              <span className={`text-xs font-semibold ${c.passRate >= 70 ? 'text-green-600' : c.passRate >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
+                            <TableCell className="text-xs text-center">
+                              <span className={`font-semibold ${c.passRate >= 70 ? 'text-green-600' : c.passRate >= 50 ? 'text-amber-600' : 'text-red-500'}`}>
                                 {pct(c.passRate)}
                               </span>
                             </TableCell>
-                            <TableCell className="text-right text-xs text-gray-600">{c.avgAttempts}x</TableCell>
-                            <TableCell className="text-right text-xs text-gray-600 pr-4">{c.totalAttempted}</TableCell>
+                            <TableCell className="text-xs text-center text-gray-600">{fmt(c.avgAttempts)}</TableCell>
+                            <TableCell className="text-xs text-center text-gray-600">{num(c.totalAttempted)}</TableCell>
+                            <TableCell className="text-center">
+                              {c.passRate >= 70
+                                ? <InsightChip type="success">Strong</InsightChip>
+                                : c.passRate >= 50
+                                ? <InsightChip type="warning">Average</InsightChip>
+                                : <InsightChip type="danger">Struggling</InsightChip>}
+                            </TableCell>
                           </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-xs text-gray-400 py-8">
-                            No assessment data available
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-
-              {/* Student progress distribution */}
-              <Card className="border-0 shadow-none bg-gray-50">
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Student Progress Distribution</CardTitle>
-                  <CardDescription className="text-xs">How far along students are across all courses</CardDescription>
-                </CardHeader>
-                <CardContent className="px-2 pb-4">
-                  <ResponsiveContainer width="100%" height={180}>
-                    <BarChart data={progressBuckets} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                      <XAxis dataKey="range" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                      <Tooltip content={<CustomTooltip />} />
-                      <Bar dataKey="count" name="Students" radius={[6, 6, 0, 0]}>
-                        {progressBuckets.map((b, i) => <Cell key={i} fill={b.fill} />)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : <EmptyState message="No assessment data available" />}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* ══════════════════════ LEARNING BEHAVIOR ═════════════════════ */}
-            <TabsContent value="behavior" className="p-5 space-y-6">
-              {/* Period selector */}
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900">Peak Learning Hours & Patterns</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Based on real lesson completion timestamps</p>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {['daily','weekly','monthly','quarterly','yearly'].map((p) => (
-                    <button
-                      key={p}
-                      onClick={() => refreshBehavior(p)}
-                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                        behaviorPeriod === p
-                          ? 'bg-indigo-600 text-white shadow-sm'
-                          : 'bg-white border border-gray-200 text-gray-600 hover:border-indigo-300 hover:text-indigo-600'
-                      }`}
-                    >
-                      {p.charAt(0).toUpperCase() + p.slice(1)}
-                    </button>
-                  ))}
-                </div>
+            {/* ══════════════════════ ENGAGEMENT ══════════════════════════════ */}
+            <TabsContent value="engagement" className="p-5 space-y-6">
+              <SectionHeader
+                icon={Flame}
+                title="Student Engagement Analytics"
+                description="Track active students, identify at-risk learners, and measure overall engagement health"
+              />
+
+              {/* Engagement KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <KPICard icon={Users}         label="Total Students"   value={num(engSummary.totalStudents)}    color="indigo" />
+                <KPICard icon={CheckCircle}   label="Active (7 days)"  value={num(engSummary.activeStudents)}  color="green"  />
+                <KPICard icon={AlertTriangle} label="At Risk (7-14d)"  value={num(engSummary.atRiskStudents)}  color="amber"  />
+                <KPICard icon={UserX}         label="Dormant (30d+)"   value={num(engSummary.dormantStudents)} color="red"    />
               </div>
 
-              {/* Insight banners */}
-              {behaviorData && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
-                    <p className="text-xs text-indigo-500 font-medium">Peak Hour</p>
-                    <p className="text-xl font-extrabold text-indigo-700 mt-0.5">{behaviorData.peakHour}</p>
-                    <p className="text-xs text-indigo-400 mt-0.5">Most active time</p>
-                  </div>
-                  <div className="bg-green-50 rounded-xl p-3 border border-green-100">
-                    <p className="text-xs text-green-500 font-medium">Peak Day</p>
-                    <p className="text-xl font-extrabold text-green-700 mt-0.5">{behaviorData.peakDay}</p>
-                    <p className="text-xs text-green-400 mt-0.5">Most active day</p>
-                  </div>
-                  <div className="bg-amber-50 rounded-xl p-3 border border-amber-100">
-                    <p className="text-xs text-amber-500 font-medium">Completions</p>
-                    <p className="text-xl font-extrabold text-amber-700 mt-0.5">{num(behaviorData.totalCompletions)}</p>
-                    <p className="text-xs text-amber-400 mt-0.5">In this period</p>
-                  </div>
-                  <div className="bg-violet-50 rounded-xl p-3 border border-violet-100">
-                    <p className="text-xs text-violet-500 font-medium">Period</p>
-                    <p className="text-xl font-extrabold text-violet-700 mt-0.5 capitalize">{behaviorPeriod}</p>
-                    <p className="text-xs text-violet-400 mt-0.5">Selected range</p>
-                  </div>
-                </div>
-              )}
-
-              {/* 24-hour bar chart */}
-              <Card className="border-0 shadow-none bg-gray-50">
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Activity by Hour of Day</CardTitle>
-                  <CardDescription className="text-xs">Lesson completions per hour — {behaviorPeriod} view</CardDescription>
-                </CardHeader>
-                <CardContent className="px-2 pb-4">
-                  {behaviorData?.peakHours?.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={220}>
-                      <BarChart data={behaviorData.peakHours} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                        <XAxis
-                          dataKey="label"
-                          tick={{ fontSize: 9 }}
-                          axisLine={false}
-                          tickLine={false}
-                          interval={2}
-                        />
-                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                        <Tooltip content={<CustomTooltip />} />
-                        <Bar dataKey="completions" name="Completions" radius={[4, 4, 0, 0]}>
-                          {behaviorData.peakHours.map((h, i) => {
-                            const max = Math.max(...behaviorData.peakHours.map((x) => x.completions), 1);
-                            const intensity = h.completions / max;
-                            const r = Math.round(99 + (67 - 99) * intensity);
-                            const g = Math.round(102 + (56 - 102) * intensity);
-                            const b = Math.round(241 + (241 - 241) * intensity);
-                            const alpha = 0.2 + intensity * 0.8;
-                            return <Cell key={i} fill={`rgba(${r},${g},${b},${alpha})`} />;
-                          })}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="flex items-center justify-center h-40">
-                      <div className="text-center">
-                        <Clock className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                        <p className="text-xs text-gray-400">No activity data for this period</p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Day-of-week chart */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* Engagement distribution pie */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Activity by Day of Week</CardTitle>
-                    <CardDescription className="text-xs">Lesson completions per weekday</CardDescription>
+                    <CardTitle className="text-sm font-bold text-gray-900">Engagement Distribution</CardTitle>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
-                    {behaviorData?.weekdays?.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={behaviorData.weekdays} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                          <XAxis dataKey="day" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Bar dataKey="completions" name="Completions" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                          <Bar dataKey="students" name="Unique Students" fill="#22c55e" radius={[6, 6, 0, 0]} />
-                          <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-40">
-                        <p className="text-xs text-gray-400">No day data available</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Insight summary panel */}
-                <Card className="border-0 shadow-none bg-gray-50">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Learning Insights</CardTitle>
-                    <CardDescription className="text-xs">What the data tells us</CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4 space-y-3">
-                    {(() => {
-                      const ph = behaviorData?.peakHours ?? [];
-                      const wd = behaviorData?.weekdays ?? [];
-                      const maxHour = ph.reduce((mx, h) => h.completions > mx.completions ? h : mx, ph[0] ?? { label: '—', completions: 0 });
-                      const minHour = ph.reduce((mn, h) => h.completions < mn.completions ? h : mn, ph[0] ?? { label: '—', completions: 0 });
-                      const maxDay = wd.reduce((mx, d) => d.completions > mx.completions ? d : mx, wd[0] ?? { day: '—', completions: 0 });
-                      const minDay = wd.reduce((mn, d) => d.completions < mn.completions ? d : mn, wd[0] ?? { day: '—', completions: 0 });
-                      return [
-                        { icon: '🕐', title: 'Peak Learning Time', desc: `Most lessons completed at ${maxHour.label}` },
-                        { icon: '😴', title: 'Quietest Hour', desc: `Lowest activity at ${minHour.label}` },
-                        { icon: '📅', title: 'Best Day', desc: `${maxDay.day} sees the most learning activity` },
-                        { icon: '📉', title: 'Slowest Day', desc: `${minDay.day} has the fewest completions` },
-                      ].map(({ icon, title, desc }) => (
-                        <div key={title} className="flex items-start gap-3 p-3 bg-white rounded-xl border border-gray-100">
-                          <span className="text-lg leading-none mt-0.5">{icon}</span>
-                          <div>
-                            <p className="text-xs font-bold text-gray-800">{title}</p>
-                            <p className="text-xs text-gray-500 mt-0.5">{desc}</p>
-                          </div>
-                        </div>
-                      ));
-                    })()}
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-
-            {/* ══════════════════════ ENGAGEMENT ════════════════════════════ */}
-            <TabsContent value="engagement" className="p-5 space-y-6">
-              {/* Engagement KPIs */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard icon={Users}        label="Total Students"   value={num(eng.totalStudents)}   color="indigo" />
-                <KPICard icon={Zap}          label="Active (7d)"      value={num(eng.activeStudents)}  color="green"  />
-                <KPICard icon={AlertTriangle} label="At Risk (7–14d)" value={num(eng.atRiskStudents)}  color="amber"  />
-                <KPICard icon={XCircle}      label="Dormant (30d+)"   value={num(eng.dormantStudents)} color="rose"   />
-              </div>
-
-              {/* Engagement donut + breakdown */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card className="border-0 shadow-none bg-gray-50">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Student Activity Status</CardTitle>
-                    <CardDescription className="text-xs">Based on last login activity</CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4">
-                    {eng.totalStudents > 0 ? (
+                    {engSummary.totalStudents > 0 ? (
                       <>
-                        <ResponsiveContainer width="100%" height={180}>
+                        <ResponsiveContainer width="100%" height={200}>
                           <PieChart>
                             <Pie
                               data={[
-                                { name: 'Active', value: eng.activeStudents ?? 0, fill: '#22c55e' },
-                                { name: 'At Risk', value: eng.atRiskStudents ?? 0, fill: '#f59e0b' },
-                                { name: 'Dormant', value: eng.dormantStudents ?? 0, fill: '#ef4444' },
+                                { name: 'Active',   value: engSummary.activeStudents  ?? 0 },
+                                { name: 'At Risk',  value: engSummary.atRiskStudents  ?? 0 },
+                                { name: 'Dormant',  value: engSummary.dormantStudents ?? 0 },
                               ]}
-                              cx="50%" cy="50%" innerRadius={50} outerRadius={80}
-                              paddingAngle={3} dataKey="value"
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={55}
+                              outerRadius={85}
+                              dataKey="value"
+                              paddingAngle={2}
                             >
-                              {[0,1,2].map((i) => <Cell key={i} />)}
+                              <Cell fill="#22c55e" />
+                              <Cell fill="#f59e0b" />
+                              <Cell fill="#ef4444" />
                             </Pie>
-                            <Tooltip formatter={(v, n) => [`${v} students`, n]} />
+                            <Tooltip content={<CustomTooltip />} />
                           </PieChart>
                         </ResponsiveContainer>
-                        <div className="flex justify-center gap-5 mt-2">
+                        <div className="space-y-1.5 mt-2">
                           {[
-                            { label: 'Active', color: '#22c55e', val: eng.activeStudents },
-                            { label: 'At Risk', color: '#f59e0b', val: eng.atRiskStudents },
-                            { label: 'Dormant', color: '#ef4444', val: eng.dormantStudents },
-                          ].map(({ label, color, val }) => (
-                            <div key={label} className="text-center">
-                              <div className="flex items-center gap-1 justify-center">
-                                <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-                                <span className="text-xs text-gray-600">{label}</span>
-                              </div>
-                              <p className="text-sm font-bold text-gray-900 mt-0.5">{num(val)}</p>
+                            { label: 'Active',   val: engSummary.activeStudents,  color: '#22c55e' },
+                            { label: 'At Risk',  val: engSummary.atRiskStudents,  color: '#f59e0b' },
+                            { label: 'Dormant',  val: engSummary.dormantStudents, color: '#ef4444' },
+                          ].map((item) => (
+                            <div key={item.label} className="flex justify-between text-xs">
+                              <span className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full" style={{ background: item.color }} />
+                                <span className="text-gray-600">{item.label}</span>
+                              </span>
+                              <span className="font-bold text-gray-900">{num(item.val)}</span>
                             </div>
                           ))}
+                          <div className="pt-2 border-t border-gray-100 flex justify-between text-xs">
+                            <span className="text-gray-500 font-medium">Engagement Rate</span>
+                            <span className="font-bold text-indigo-600">{pct(engSummary.activeRate)}</span>
+                          </div>
                         </div>
                       </>
-                    ) : (
-                      <p className="text-xs text-gray-400 text-center py-8">No student activity data</p>
-                    )}
+                    ) : <EmptyState message="No engagement data" />}
                   </CardContent>
                 </Card>
 
-                {/* Active rate */}
-                <Card className="border-0 shadow-none bg-gray-50">
+                {/* Top active students */}
+                <Card className="lg:col-span-2 border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Engagement Breakdown</CardTitle>
-                    <CardDescription className="text-xs">Proportions of engagement tiers</CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-4 pb-4 space-y-4">
-                    {[
-                      { label: 'Active Rate (last 7d)',  value: eng.activeRate ?? 0,     color: '#22c55e' },
-                      { label: 'At Risk Rate',           value: eng.totalStudents > 0 ? ((eng.atRiskStudents / eng.totalStudents) * 100) : 0, color: '#f59e0b' },
-                      { label: 'Dormant Rate',           value: eng.totalStudents > 0 ? ((eng.dormantStudents / eng.totalStudents) * 100) : 0, color: '#ef4444' },
-                    ].map(({ label, value, color }) => (
-                      <div key={label}>
-                        <div className="flex justify-between text-xs mb-1.5">
-                          <span className="font-medium text-gray-700">{label}</span>
-                          <span className="font-bold" style={{ color }}>{pct(value)}</span>
-                        </div>
-                        <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-                          <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(value, 100)}%`, background: color }} />
-                        </div>
-                      </div>
-                    ))}
-                    <div className="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-100">
-                      <div className="flex gap-2">
-                        <AlertTriangle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-xs font-bold text-amber-700">Intervention Alert</p>
-                          <p className="text-xs text-amber-600 mt-0.5">
-                            {eng.atRiskStudents ?? 0} students haven't logged in for 7–14 days. Consider sending a re-engagement email.
-                          </p>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-sm font-bold text-gray-900">Most Active Students</CardTitle>
+                      <InsightChip type="success"><Star className="w-3 h-3" /> Top Performers</InsightChip>
                     </div>
+                    <CardDescription className="text-xs">Students with the highest engagement scores</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    {topStudents.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="border-gray-100">
+                            <TableHead className="text-xs font-semibold text-gray-500">#</TableHead>
+                            <TableHead className="text-xs font-semibold text-gray-500">Student</TableHead>
+                            <TableHead className="text-xs font-semibold text-gray-500 text-center">Progress</TableHead>
+                            <TableHead className="text-xs font-semibold text-gray-500 text-center">Completed</TableHead>
+                            <TableHead className="text-xs font-semibold text-gray-500 text-center">Score</TableHead>
+                            <TableHead className="text-xs font-semibold text-gray-500">Last Active</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {topStudents.slice(0, 8).map((s, i) => (
+                            <TableRow key={s.email ?? i} className="border-gray-50">
+                              <TableCell className="text-xs text-gray-400 font-medium">{i + 1}</TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="text-xs font-medium text-gray-800">{s.name || '—'}</p>
+                                  <p className="text-xs text-gray-400">{s.email}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-center">
+                                <div className="flex items-center gap-1.5 justify-center">
+                                  <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                    <div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.min(s.avgProgress, 100)}%` }} />
+                                  </div>
+                                  <span className="font-semibold text-indigo-600">{pct(s.avgProgress)}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs text-center text-gray-600">{s.completedCourses}/{s.totalEnrollments}</TableCell>
+                              <TableCell className="text-xs text-center">
+                                <span className="font-bold text-indigo-600">{fmt(s.engagementScore)}</span>
+                              </TableCell>
+                              <TableCell className="text-xs text-gray-500">
+                                {s.lastActive ? new Date(s.lastActive).toLocaleDateString() : '—'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : <EmptyState message="No active students data" />}
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Top students */}
-              <Card className="border-0 shadow-none bg-gray-50">
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <div className="flex items-center gap-2">
-                    <Medal className="w-4 h-4 text-amber-500" />
-                    <CardTitle className="text-sm font-bold text-gray-900">Top Engaged Students</CardTitle>
-                  </div>
-                  <CardDescription className="text-xs">Ranked by engagement score (progress + enrollments)</CardDescription>
-                </CardHeader>
-                <CardContent className="px-0 pb-2">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-gray-100 hover:bg-transparent">
-                        <TableHead className="text-xs pl-4">#</TableHead>
-                        <TableHead className="text-xs">Student</TableHead>
-                        <TableHead className="text-xs text-right">Courses</TableHead>
-                        <TableHead className="text-xs text-right">Avg Progress</TableHead>
-                        <TableHead className="text-xs text-right">Completed</TableHead>
-                        <TableHead className="text-xs text-right pr-4">Score</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {engagementData?.topStudents?.length > 0 ? (
-                        engagementData.topStudents.map((s, i) => (
-                          <TableRow key={s.email} className="border-gray-100 hover:bg-white">
-                            <TableCell className="pl-4 text-xs font-bold text-gray-400">{i + 1}</TableCell>
-                            <TableCell>
-                              <div>
-                                <p className="text-xs font-semibold text-gray-900">{s.name}</p>
-                                <p className="text-xs text-gray-400">{s.email}</p>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right text-xs text-gray-600">{s.totalEnrollments}</TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${s.avgProgress}%` }} />
-                                </div>
-                                <span className="text-xs font-semibold text-gray-700">{s.avgProgress}%</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right text-xs font-semibold text-green-600">{s.completedCourses}</TableCell>
-                            <TableCell className="text-right pr-4">
-                              <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs">{s.engagementScore}</Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center text-xs text-gray-400 py-8">No data available</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
 
               {/* At-risk students */}
               <Card className="border-0 shadow-none bg-gray-50">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-amber-500" />
-                    <CardTitle className="text-sm font-bold text-gray-900">Students at Risk of Dropping Out</CardTitle>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-bold text-gray-900">Students Needing Intervention</CardTitle>
+                      <CardDescription className="text-xs">Students who are inactive or at risk — consider reaching out to re-engage them</CardDescription>
+                    </div>
+                    <InsightChip type="danger"><AlertTriangle className="w-3 h-3" /> Action Required</InsightChip>
                   </div>
-                  <CardDescription className="text-xs">Enrolled, low progress, and inactive for 7+ days</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0 pb-2">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-gray-100 hover:bg-transparent">
-                        <TableHead className="text-xs pl-4">Student</TableHead>
-                        <TableHead className="text-xs text-right">Progress</TableHead>
-                        <TableHead className="text-xs text-right">Courses at Risk</TableHead>
-                        <TableHead className="text-xs text-right">Days Inactive</TableHead>
-                        <TableHead className="text-xs text-right pr-4">Risk Level</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {engagementData?.atRiskList?.length > 0 ? (
-                        engagementData.atRiskList.map((s) => {
-                          const risk = s.daysInactive >= 21 ? 'High' : s.daysInactive >= 14 ? 'Medium' : 'Low';
-                          const riskColor = { High: 'bg-red-50 text-red-700', Medium: 'bg-amber-50 text-amber-700', Low: 'bg-yellow-50 text-yellow-700' }[risk];
-                          return (
-                            <TableRow key={s.email} className="border-gray-100 hover:bg-white">
-                              <TableCell className="pl-4">
-                                <p className="text-xs font-semibold text-gray-900">{s.name}</p>
-                                <p className="text-xs text-gray-400">{s.email}</p>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <div className="w-14 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                    <div className="h-full bg-red-400 rounded-full" style={{ width: `${s.avgProgress}%` }} />
-                                  </div>
-                                  <span className="text-xs font-semibold text-red-600">{s.avgProgress}%</span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right text-xs text-gray-600">{s.coursesAtRisk}</TableCell>
-                              <TableCell className="text-right text-xs font-semibold text-gray-700">{s.daysInactive}d</TableCell>
-                              <TableCell className="text-right pr-4">
-                                <Badge className={`text-xs border-0 ${riskColor}`}>{risk}</Badge>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8">
-                            <div className="text-center">
-                              <CheckCircle className="w-8 h-8 text-green-300 mx-auto mb-2" />
-                              <p className="text-xs text-gray-400">No at-risk students — great engagement!</p>
-                            </div>
-                          </TableCell>
+                <CardContent className="px-4 pb-4">
+                  {atRiskStudents.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-100">
+                          <TableHead className="text-xs font-semibold text-gray-500">#</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500">Student</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500">Country</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Progress</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Modules at Risk</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Days Inactive</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Status</TableHead>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {atRiskStudents.map((s, i) => (
+                          <TableRow key={s.email ?? i} className="border-gray-50">
+                            <TableCell className="text-xs text-gray-400 font-medium">{i + 1}</TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="text-xs font-medium text-gray-800">{s.name || '—'}</p>
+                                <p className="text-xs text-gray-400">{s.email}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-gray-600">
+                              <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-gray-400" />{s.country || '—'}</span>
+                            </TableCell>
+                            <TableCell className="text-xs text-center">
+                              <span className="font-semibold text-amber-600">{pct(s.avgProgress)}</span>
+                            </TableCell>
+                            <TableCell className="text-xs text-center text-gray-600">{s.coursesAtRisk}</TableCell>
+                            <TableCell className="text-xs text-center">
+                              <span className={`font-bold ${s.daysInactive >= 30 ? 'text-red-600' : s.daysInactive >= 14 ? 'text-amber-600' : 'text-orange-500'}`}>
+                                {s.daysInactive}d
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <RiskBadge daysInactive={s.daysInactive} />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <CheckCircle className="w-8 h-8 text-green-500 mb-2" />
+                      <p className="text-sm font-medium text-gray-700">All students are actively engaged!</p>
+                      <p className="text-xs text-gray-400 mt-1">No students are currently at risk</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            {/* ══════════════════════ DEMOGRAPHICS ══════════════════════════ */}
+            {/* ══════════════════════ DEMOGRAPHICS ════════════════════════════ */}
             <TabsContent value="demographics" className="p-5 space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <SectionHeader
+                icon={Globe}
+                title="Demographic Analytics"
+                description="Understand the diversity and distribution of your student population"
+              />
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 {/* Gender distribution */}
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <CardTitle className="text-sm font-bold text-gray-900">Gender Distribution</CardTitle>
+                    <CardDescription className="text-xs">Breakdown of students by gender</CardDescription>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4">
-                    {demoData?.genderDistribution?.length > 0 ? (
-                      <>
-                        <ResponsiveContainer width="100%" height={160}>
+                  <CardContent className="px-2 pb-4">
+                    {genderDist.length > 0 ? (
+                      <div className="flex items-center gap-6">
+                        <ResponsiveContainer width={180} height={180}>
                           <PieChart>
                             <Pie
-                              data={demoData.genderDistribution.map((g) => ({
-                                name: g.gender,
-                                value: g.count,
-                              }))}
-                              cx="50%" cy="50%" innerRadius={40} outerRadius={70}
-                              paddingAngle={4} dataKey="value"
+                              data={genderDist}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={50}
+                              outerRadius={80}
+                              dataKey="count"
+                              nameKey="label"
+                              paddingAngle={3}
                             >
-                              {demoData.genderDistribution.map((_, i) => (
+                              {genderDist.map((_, i) => (
                                 <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                               ))}
                             </Pie>
-                            <Tooltip formatter={(v, n) => [`${v} students`, n]} />
+                            <Tooltip content={<CustomTooltip />} />
                           </PieChart>
                         </ResponsiveContainer>
-                        <div className="space-y-2 mt-2">
-                          {demoData.genderDistribution.map((g, i) => {
-                            const total = demoData.genderDistribution.reduce((s, x) => s + x.count, 0);
+                        <div className="space-y-3 flex-1">
+                          {genderDist.map((g, i) => {
+                            const total = genderDist.reduce((s, x) => s + x.count, 0);
                             return (
-                              <div key={g.gender} className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
-                                  <span className="text-xs text-gray-600 capitalize">{g.gender}</span>
+                              <div key={g.gender ?? i}>
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="flex items-center gap-1.5">
+                                    <span className="w-2 h-2 rounded-full" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
+                                    <span className="font-medium text-gray-700">{g.label}</span>
+                                  </span>
+                                  <span className="font-bold text-gray-900">{num(g.count)} <span className="font-normal text-gray-400">({pct((g.count / total) * 100)})</span></span>
                                 </div>
-                                <div className="text-right">
-                                  <span className="text-xs font-bold text-gray-900">{g.count}</span>
-                                  <span className="text-xs text-gray-400 ml-1">({pct((g.count / total) * 100)})</span>
+                                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${(g.count / total) * 100}%`, background: PIE_COLORS[i % PIE_COLORS.length] }} />
                                 </div>
                               </div>
                             );
                           })}
                         </div>
-                      </>
-                    ) : (
-                      <p className="text-xs text-gray-400 text-center py-8">No gender data available</p>
-                    )}
+                      </div>
+                    ) : <EmptyState message="No gender data yet" />}
                   </CardContent>
                 </Card>
 
-                {/* Cohort distribution */}
+                {/* Country distribution */}
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Cohort Distribution</CardTitle>
+                    <CardTitle className="text-sm font-bold text-gray-900">Top Countries by Enrollment</CardTitle>
+                    <CardDescription className="text-xs">Where are your students coming from?</CardDescription>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
-                    {demoData?.cohortDistribution?.length > 0 ? (
-                      <div className="space-y-2.5 mt-2">
-                        {demoData.cohortDistribution.map((c, i) => {
-                          const total = demoData.cohortDistribution.reduce((s, x) => s + x.count, 0);
+                    {countryDist.length > 0 ? (
+                      <div className="space-y-2">
+                        {countryDist.slice(0, 10).map((c, i) => {
+                          const total = countryDist.reduce((s, x) => s + x.count, 0);
                           return (
-                            <div key={c.cohort}>
-                              <div className="flex justify-between text-xs mb-1">
-                                <span className="font-medium text-gray-700">{c.cohort}</span>
-                                <span className="text-gray-500">{c.count} ({pct((c.count / total) * 100)})</span>
-                              </div>
-                              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                                <div className="h-full rounded-full" style={{ width: `${(c.count / total) * 100}%`, background: COLORS[i % COLORS.length] }} />
+                            <div key={c.country ?? i} className="flex items-center gap-3">
+                              <span className="text-xs text-gray-400 w-5 font-medium">{i + 1}</span>
+                              <div className="flex-1">
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="font-medium text-gray-700 flex items-center gap-1">
+                                    <MapPin className="w-3 h-3 text-gray-400" />
+                                    {c.country || 'Unknown'}
+                                  </span>
+                                  <span className="text-gray-500">{num(c.count)} <span className="text-gray-400">({pct((c.count / total) * 100)})</span></span>
+                                </div>
+                                <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full" style={{ width: `${(c.count / total) * 100}%`, background: COLORS[i % COLORS.length] }} />
+                                </div>
                               </div>
                             </div>
                           );
                         })}
                       </div>
-                    ) : (
-                      <p className="text-xs text-gray-400 text-center py-8">No cohort data available</p>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Registration trend */}
-                <Card className="border-0 shadow-none bg-gray-50">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">New Registrations</CardTitle>
-                    <CardDescription className="text-xs">Last 12 months</CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-2 pb-4">
-                    {demoData?.registrationTrend?.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={180}>
-                        <AreaChart data={demoData.registrationTrend} margin={{ top: 5, right: 5, left: -30, bottom: 0 }}>
-                          <defs>
-                            <linearGradient id="regGrad" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                              <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                          <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                          <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                          <Tooltip content={<CustomTooltip />} />
-                          <Area type="monotone" dataKey="count" name="New Students" stroke="#6366f1" fill="url(#regGrad)" strokeWidth={2} dot={{ r: 3, fill: '#6366f1' }} />
-                        </AreaChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <p className="text-xs text-gray-400 text-center py-8">No registration trend data</p>
-                    )}
+                    ) : <EmptyState message="No country data yet" />}
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Country detail table */}
+              {/* Registration trend */}
               <Card className="border-0 shadow-none bg-gray-50">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Students by Country</CardTitle>
-                  <CardDescription className="text-xs">Geographic distribution of the student base</CardDescription>
-                </CardHeader>
-                <CardContent className="px-0 pb-2">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-gray-100 hover:bg-transparent">
-                        <TableHead className="text-xs pl-4">#</TableHead>
-                        <TableHead className="text-xs">Country</TableHead>
-                        <TableHead className="text-xs text-right">Students</TableHead>
-                        <TableHead className="text-xs text-right pr-4">Share</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {demoData?.countryDistribution?.length > 0 ? (() => {
-                        const total = demoData.countryDistribution.reduce((s, c) => s + c.count, 0);
-                        return demoData.countryDistribution.map((c, i) => (
-                          <TableRow key={c.country} className="border-gray-100 hover:bg-white">
-                            <TableCell className="pl-4 text-xs text-gray-400">{i + 1}</TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <MapPin className="w-3 h-3 text-gray-400" />
-                                <span className="text-xs font-medium text-gray-900">{c.country || 'Unknown'}</span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right text-xs font-bold text-gray-900">{num(c.count)}</TableCell>
-                            <TableCell className="text-right pr-4">
-                              <div className="flex items-center justify-end gap-2">
-                                <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                  <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${(c.count / total) * 100}%` }} />
-                                </div>
-                                <span className="text-xs text-gray-600">{pct((c.count / total) * 100)}</span>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ));
-                      })() : (
-                        <TableRow>
-                          <TableCell colSpan={4} className="text-center text-xs text-gray-400 py-8">No country data available</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ══════════════════════ COURSES ═══════════════════════════════ */}
-            <TabsContent value="courses" className="p-5 space-y-6">
-              {/* Summary KPIs */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard icon={BookOpen}    label="Total Courses"    value={num(courseCompletion?.overall?.totalEnrollments)}   color="indigo" />
-                <KPICard icon={CheckCircle} label="Completions"      value={num(courseCompletion?.overall?.completedEnrollments)} color="green" />
-                <KPICard icon={Target}      label="Overall Rate"     value={courseCompletion?.overall?.completionRate ?? '—'}    color="teal"  />
-                <KPICard icon={TrendingUp}  label="Avg Progress"     value={`${courseCompletion?.overall?.averageProgress ?? 0}%`} color="amber" />
-              </div>
-
-              {/* Completion rate bar chart */}
-              <Card className="border-0 shadow-none bg-gray-50">
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Course Completion Rates</CardTitle>
-                  <CardDescription className="text-xs">Top 10 courses by completion rate</CardDescription>
+                  <CardTitle className="text-sm font-bold text-gray-900">Student Registration Trend — Last 12 Months</CardTitle>
+                  <CardDescription className="text-xs">How student sign-ups have grown over time</CardDescription>
                 </CardHeader>
                 <CardContent className="px-2 pb-4">
-                  {topCourses.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart
-                        data={topCourses.slice(0, 10).map((c) => ({
-                          name: c.courseName?.length > 18 ? c.courseName.slice(0, 16) + '…' : c.courseName,
-                          'Completion Rate': Number(c.completionRate?.toFixed(1) ?? 0),
-                          'Avg Progress': Number(c.avgProgress?.toFixed(1) ?? 0),
-                        }))}
-                        layout="vertical"
-                        margin={{ top: 5, right: 30, left: 120, bottom: 0 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
-                        <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                        <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={110} />
-                        <Tooltip content={<CustomTooltip />} formatter={(v) => `${v}%`} />
-                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                        <Bar dataKey="Completion Rate" fill="#22c55e" radius={[0, 6, 6, 0]} />
-                        <Bar dataKey="Avg Progress"    fill="#6366f1" radius={[0, 6, 6, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <p className="text-xs text-gray-400 text-center py-8">No course data available</p>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Full course table */}
-              <Card className="border-0 shadow-none bg-gray-50">
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">All Course Performance</CardTitle>
-                </CardHeader>
-                <CardContent className="px-0 pb-2">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-gray-100 hover:bg-transparent">
-                        <TableHead className="text-xs pl-4">Course</TableHead>
-                        <TableHead className="text-xs text-right">Enrollments</TableHead>
-                        <TableHead className="text-xs text-right">Completed</TableHead>
-                        <TableHead className="text-xs text-right">Completion Rate</TableHead>
-                        <TableHead className="text-xs text-right pr-4">Avg Progress</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {courseCompletion?.courses?.length > 0 ? (
-                        [...courseCompletion.courses]
-                          .sort((a, b) => b.totalEnrollments - a.totalEnrollments)
-                          .map((c) => (
-                            <TableRow key={c.courseId?.toString()} className="border-gray-100 hover:bg-white">
-                              <TableCell className="pl-4 text-xs font-medium text-gray-900 max-w-xs truncate">{c.courseName}</TableCell>
-                              <TableCell className="text-right text-xs text-gray-600">{num(c.totalEnrollments)}</TableCell>
-                              <TableCell className="text-right text-xs text-gray-600">{num(c.completedCount)}</TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                                    <div className="h-full bg-green-500 rounded-full" style={{ width: `${c.completionRate ?? 0}%` }} />
-                                  </div>
-                                  <span className={`text-xs font-semibold ${c.completionRate >= 70 ? 'text-green-600' : c.completionRate >= 40 ? 'text-amber-600' : 'text-red-500'}`}>
-                                    {pct(c.completionRate)}
-                                  </span>
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-right text-xs font-semibold text-indigo-600 pr-4">{c.avgProgress?.toFixed(1)}%</TableCell>
-                            </TableRow>
-                          ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center text-xs text-gray-400 py-8">No data available</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* ══════════════════════ INSTRUCTORS ═══════════════════════════ */}
-            <TabsContent value="instructors" className="p-5 space-y-6">
-              {/* Summary */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <KPICard icon={Users}     label="Total Instructors" value={num(instructorData?.summary?.total)}    color="indigo" />
-                <KPICard icon={CheckCircle} label="Approved"        value={num(instructorData?.summary?.approved)} color="green"  />
-                <KPICard icon={AlertTriangle} label="Pending"       value={num(instructorData?.summary?.pending)}  color="amber"  />
-                <KPICard icon={BookOpen}  label="Total Courses"     value={num(instructorData?.instructors?.reduce((s, i) => s + (i.coursesCreated ?? 0), 0))} color="violet" />
-              </div>
-
-              {/* Instructors by student reach */}
-              <Card className="border-0 shadow-none bg-gray-50">
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Instructors by Student Reach</CardTitle>
-                  <CardDescription className="text-xs">Total enrolled students per instructor</CardDescription>
-                </CardHeader>
-                <CardContent className="px-2 pb-4">
-                  {instructorData?.instructors?.length > 0 ? (
+                  {regTrend.length > 0 ? (
                     <ResponsiveContainer width="100%" height={220}>
-                      <BarChart
-                        data={[...instructorData.instructors]
-                          .sort((a, b) => b.totalStudents - a.totalStudents)
-                          .slice(0, 10)
-                          .map((ins) => ({
-                            name: ins.name?.split(' ')[0] ?? 'Instructor',
-                            Students: ins.totalStudents,
-                            Courses: ins.coursesCreated,
-                          }))}
-                        margin={{ top: 5, right: 10, left: -20, bottom: 0 }}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                        <XAxis dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                      <LineChart data={regTrend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="gReg" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0}    />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                        <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                         <Tooltip content={<CustomTooltip />} />
-                        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
-                        <Bar dataKey="Students" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                        <Bar dataKey="Courses"  fill="#22c55e" radius={[6, 6, 0, 0]} />
-                      </BarChart>
+                        <Line type="monotone" dataKey="count" name="New Students" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 3 }} activeDot={{ r: 5 }} />
+                      </LineChart>
                     </ResponsiveContainer>
-                  ) : (
-                    <p className="text-xs text-gray-400 text-center py-8">No instructor data</p>
-                  )}
+                  ) : <EmptyState message="No registration trend data" />}
                 </CardContent>
               </Card>
 
-              {/* Instructor table */}
+              {/* Cohort distribution */}
               <Card className="border-0 shadow-none bg-gray-50">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Instructor Directory</CardTitle>
+                  <CardTitle className="text-sm font-bold text-gray-900">Students by Cohort</CardTitle>
+                  <CardDescription className="text-xs">Distribution of fellows across different cohorts</CardDescription>
                 </CardHeader>
-                <CardContent className="px-0 pb-2">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="border-gray-100 hover:bg-transparent">
-                        <TableHead className="text-xs pl-4">Instructor</TableHead>
-                        <TableHead className="text-xs text-center">Status</TableHead>
-                        <TableHead className="text-xs text-right">Courses</TableHead>
-                        <TableHead className="text-xs text-right">Published</TableHead>
-                        <TableHead className="text-xs text-right">Students</TableHead>
-                        <TableHead className="text-xs text-right">Last Login</TableHead>
-                        <TableHead className="text-xs text-right pr-4">Action</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {instructorData?.instructors?.length > 0 ? (
-                        instructorData.instructors.map((ins) => (
-                          <TableRow key={ins.instructorId?.toString()} className="border-gray-100 hover:bg-white">
-                            <TableCell className="pl-4">
-                              <p className="text-xs font-semibold text-gray-900">{ins.name}</p>
-                              <p className="text-xs text-gray-400">{ins.email}</p>
-                            </TableCell>
-                            <TableCell className="text-center">
-                              <Badge className={`text-xs border-0 ${ins.status === 'approved' ? 'bg-green-50 text-green-700' : ins.status === 'pending' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`}>
-                                {ins.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right text-xs text-gray-600">{ins.coursesCreated}</TableCell>
-                            <TableCell className="text-right text-xs text-gray-600">{ins.publishedCourses}</TableCell>
-                            <TableCell className="text-right text-xs font-semibold text-gray-900">{num(ins.totalStudents)}</TableCell>
-                            <TableCell className="text-right text-xs text-gray-500">
-                              {ins.lastLogin
-                                ? new Date(ins.lastLogin).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                                : 'Never'}
-                            </TableCell>
-                            <TableCell className="text-right pr-4">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
-                                onClick={() => setDeleteDialog({ open: true, instructor: ins })}
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center text-xs text-gray-400 py-8">No instructors found</TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                <CardContent className="px-2 pb-4">
+                  {cohortDist.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={cohortDist} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                        <XAxis dataKey="cohort" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar dataKey="count" name="Students" radius={[4, 4, 0, 0]}>
+                          {cohortDist.map((_, i) => (
+                            <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : <EmptyState message="No cohort data available" />}
                 </CardContent>
               </Card>
             </TabsContent>
+
           </div>
         </Tabs>
       </div>
-
-      {/* ── Delete instructor dialog ─────────────────────────────────────────── */}
-      <Dialog open={deleteDialog.open} onOpenChange={(o) => !o && setDeleteDialog({ open: false, instructor: null })}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertTriangle className="w-5 h-5" /> Delete Instructor
-            </DialogTitle>
-            <DialogDescription className="text-sm">
-              Permanently delete <strong>{deleteDialog.instructor?.name}</strong> and all their courses? This cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" size="sm" onClick={() => setDeleteDialog({ open: false, instructor: null })}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="destructive" disabled={deleting} onClick={handleDeleteInstructor}>
-              {deleting ? 'Deleting…' : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

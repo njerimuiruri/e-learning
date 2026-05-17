@@ -28,6 +28,7 @@ const Icons = {
 };
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import progressionService from '@/lib/api/progressionService';
+import api from '@/lib/api/config';
 import moduleService from '@/lib/api/moduleService';
 import authService from '@/lib/api/authService';
 import notificationService from '@/lib/api/notificationService';
@@ -521,6 +522,8 @@ function StudentDashboardContent() {
     const [modulesTab, setModulesTab] = useState('available'); // 'available' | 'progress'
     const [showAllActivity, setShowAllActivity] = useState(false);
     const [unreadMessages, setUnreadMessages] = useState(0);
+    const [issuedCerts, setIssuedCerts] = useState([]);
+    const [certBannerDismissed, setCertBannerDismissed] = useState(false);
 
     useEffect(() => {
         const u = authService.getCurrentUser?.() || null;
@@ -577,12 +580,18 @@ function StudentDashboardContent() {
             setProgressions(pList);
             setLoading(false); // ← show dashboard now, don't wait for secondary data
 
+            // Check sessionStorage for dismissed cert banner
+            try {
+                if (sessionStorage.getItem('cert_banner_dismissed')) setCertBannerDismissed(true);
+            } catch (_) {}
+
             // Step 2 — fetch secondary data in background (non-blocking)
             Promise.allSettled([
                 moduleService.getAllModules({ limit: 20 }),
                 notificationService.getMyNotifications(20),
                 notificationService.getMyReminders(),
-            ]).then(([modsData, notifData, remindData]) => {
+                api.get('/api/certificates/module/student/my-certificates'),
+            ]).then(([modsData, notifData, remindData, certsData]) => {
                 if (modsData.status === 'fulfilled') {
                     const allMods = Array.isArray(modsData.value) ? modsData.value : modsData.value?.modules || [];
                     const enrolledIds = new Set(eList.map(e => e.moduleId?._id?.toString() || e.moduleId?.toString()));
@@ -603,6 +612,10 @@ function StudentDashboardContent() {
                 if (remindData.status === 'fulfilled') {
                     const r = remindData.value;
                     setReminders(Array.isArray(r) ? r : r?.reminders || []);
+                }
+                if (certsData.status === 'fulfilled') {
+                    const c = certsData.value?.data;
+                    setIssuedCerts(Array.isArray(c) ? c : []);
                 }
             });
 
@@ -752,6 +765,52 @@ function StudentDashboardContent() {
                         )}
                     </div>
                 </div>
+
+                {/* ════════════════════════════════
+                    CERTIFICATE READY BANNER
+                ════════════════════════════════ */}
+                {issuedCerts.length > 0 && !certBannerDismissed && (
+                    <div className="relative overflow-hidden">
+                        <div className="bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 px-4 sm:px-6 lg:px-8 py-4 shadow-md">
+                            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3 min-w-0">
+                                    <div className="w-10 h-10 rounded-xl bg-white/30 flex items-center justify-center shrink-0 shadow-sm">
+                                        <Award className="w-5 h-5 text-amber-900" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-amber-900 text-sm leading-tight">
+                                            🎓 Your {issuedCerts[0]?.moduleLevel
+                                                ? issuedCerts[0].moduleLevel.charAt(0).toUpperCase() + issuedCerts[0].moduleLevel.slice(1)
+                                                : 'Level'} Certificate is ready!
+                                        </p>
+                                        <p className="text-amber-800/80 text-xs mt-0.5 leading-tight">
+                                            {issuedCerts.length === 1
+                                                ? 'Download your certificate and transcript now.'
+                                                : `You have ${issuedCerts.length} certificates available to download.`}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                    <button
+                                        onClick={() => router.push('/student/certificates')}
+                                        className="bg-amber-900 hover:bg-amber-950 text-white text-xs font-bold px-4 py-2 rounded-lg transition-colors shadow-sm whitespace-nowrap"
+                                    >
+                                        View Certificates →
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setCertBannerDismissed(true);
+                                            try { sessionStorage.setItem('cert_banner_dismissed', '1'); } catch (_) {}
+                                        }}
+                                        className="w-7 h-7 rounded-full bg-amber-900/20 hover:bg-amber-900/30 flex items-center justify-center text-amber-900 transition-colors"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* ════════════════════════════════
                     MAIN CONTENT

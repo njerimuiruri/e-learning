@@ -6,6 +6,7 @@ import * as Icons from 'lucide-react';
 import authService from '@/lib/api/authService';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import messageService from '@/lib/api/messageService';
+import api from '@/lib/api/config';
 import { useToast } from '@/components/ui/ToastProvider';
 import { summarizeEnrollments } from '@/lib/utils/enrollmentProgress';
 
@@ -20,10 +21,14 @@ export default function StudentSidebar() {
     const [learningProgress, setLearningProgress] = useState(0);
     const [enrolledCount, setEnrolledCount] = useState(0);
     const [unreadMessages, setUnreadMessages] = useState(0);
+    const [certCount, setCertCount] = useState(0);
 
     useEffect(() => {
         fetchUserData();
         fetchUnreadCount();
+        api.get('/api/certificates/module/student/my-certificates')
+            .then(res => setCertCount((Array.isArray(res.data) ? res.data : []).length))
+            .catch(() => {});
         const interval = setInterval(fetchUnreadCount, 20000);
         return () => clearInterval(interval);
     }, []);
@@ -179,7 +184,7 @@ export default function StudentSidebar() {
         { icon: 'Library',         label: 'Resource Hub',      path: '/student/projects'           },
         { icon: 'GraduationCap',   label: 'Capstone Project',  path: '/student/capstone'           },
         { icon: 'Trophy',          label: 'Your Achievements', path: '/student/achievements'       },
-        { icon: 'Award',           label: 'Certificates',      path: '/student/certificates', locked: true },
+        { icon: 'Award',           label: 'Certificates',      path: '/student/certificates', locked: certCount === 0, badge: certCount, badgeColor: 'bg-amber-500' },
         { icon: 'Settings',        label: 'Account Settings',  path: '/student/account-settings'   },
     ];
 
@@ -298,7 +303,7 @@ export default function StudentSidebar() {
                                         )}
                                         <span>{item.label}</span>
                                         {item.badge > 0 ? (
-                                            <span className="ml-auto min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none">
+                                            <span className={`ml-auto min-w-[20px] h-5 px-1.5 ${item.badgeColor || 'bg-red-500'} text-white text-[10px] font-bold rounded-full flex items-center justify-center leading-none`}>
                                                 {item.badge > 99 ? '99+' : item.badge}
                                             </span>
                                         ) : active ? (

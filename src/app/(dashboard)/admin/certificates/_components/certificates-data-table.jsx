@@ -11,7 +11,6 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-
 import {
   Table,
   TableBody,
@@ -21,14 +20,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FellowsDataTableToolbar } from "./data-table-toolbar";
-import { DataTablePagination } from "./data-table-pagination";
+import { CertificatesDataTableToolbar } from "./data-table-toolbar";
+import { DataTablePagination } from "../../fellows/progress/_components/data-table-pagination";
 
-export function FellowsDataTable({ columns, data, title = "Fellows Progress" }) {
+const LEVEL_BORDER = {
+  beginner:     "border-l-4 border-l-blue-400",
+  intermediate: "border-l-4 border-l-amber-400",
+  advanced:     "border-l-4 border-l-rose-400",
+};
+
+const LEVEL_HEADER = {
+  beginner:     "border-t-4 border-t-blue-500",
+  intermediate: "border-t-4 border-t-amber-500",
+  advanced:     "border-t-4 border-t-rose-500",
+};
+
+export function CertificatesDataTable({ columns, data, title, level = "beginner" }) {
   const [rowSelection, setRowSelection] = React.useState({});
-  const [columnVisibility, setColumnVisibility] = React.useState({ completedBeginner: false });
+  const [columnVisibility, setColumnVisibility] = React.useState({});
   const [columnFilters, setColumnFilters] = React.useState([]);
-  const [sorting, setSorting] = React.useState([]);
+  const [sorting, setSorting] = React.useState([{ id: "completedDate", desc: true }]);
 
   const table = useReactTable({
     data,
@@ -48,19 +59,22 @@ export function FellowsDataTable({ columns, data, title = "Fellows Progress" }) 
     initialState: { pagination: { pageSize: 10 } },
   });
 
+  const rowBorder = LEVEL_BORDER[level] || LEVEL_BORDER.beginner;
+  const headerBorder = LEVEL_HEADER[level] || LEVEL_HEADER.beginner;
+
   return (
-    <Card className="border-gray-200 shadow-sm">
+    <Card className={`border-gray-200 shadow-sm overflow-hidden ${headerBorder}`}>
       <CardHeader className="pb-4">
         <CardTitle className="text-base font-semibold">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <FellowsDataTableToolbar table={table} />
+        <CertificatesDataTableToolbar table={table} />
         <div className="rounded-md border">
           <Table>
             <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
+              {table.getHeaderGroups().map((hg) => (
+                <TableRow key={hg.id}>
+                  {hg.headers.map((header) => (
                     <TableHead key={header.id} colSpan={header.colSpan}>
                       {header.isPlaceholder
                         ? null
@@ -72,26 +86,23 @@ export function FellowsDataTable({ columns, data, title = "Fellows Progress" }) 
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => {
-                  const lvl = row.original?.currentLevel;
-                  const levelBorder =
-                    lvl === "advanced"     ? "border-l-4 border-l-rose-400" :
-                    lvl === "intermediate" ? "border-l-4 border-l-amber-400" :
-                                            "border-l-4 border-l-blue-300";
-                  return (
-                    <TableRow key={row.id} data-state={row.getIsSelected() && "selected"} className={levelBorder}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id}>
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  );
-                })
+                table.getRowModel().rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    className={rowBorder}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
               ) : (
                 <TableRow>
                   <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                    No fellows found.
+                    No students found.
                   </TableCell>
                 </TableRow>
               )}

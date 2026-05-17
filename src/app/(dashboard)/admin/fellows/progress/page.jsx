@@ -168,6 +168,7 @@ export default function FellowProgressPage() {
   const [fellows, setFellows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [totalProgrammeModules, setTotalProgrammeModules] = useState(0);
+  const [totalBeginnerModules, setTotalBeginnerModules] = useState(0);
 
   // Bulk reminder state
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -187,16 +188,25 @@ export default function FellowProgressPage() {
 
       // Resolve total programme modules FIRST so progress uses the correct denominator
       let progTotal = 0;
+      let beginnerTotal = 0;
       if (modulesRes.status === 'fulfilled') {
         const raw = modulesRes.value;
         const moduleList = Array.isArray(raw) ? raw : (raw?.modules ?? raw?.data ?? []);
         progTotal = moduleList.length;
+        beginnerTotal = moduleList.filter((m) => m.level === 'beginner').length;
       }
       if (!progTotal) {
         // Fallback: use the highest enrolled module count as a proxy
         progTotal = Math.max(0, ...fellowData.map((f) => (f.modules || []).length));
       }
+      if (!beginnerTotal) {
+        // Fallback: use the highest beginner module count across all fellows
+        beginnerTotal = Math.max(0, ...fellowData.map((f) =>
+          (f.modules || []).filter((m) => m.level === 'beginner' || !m.level).length
+        ));
+      }
       setTotalProgrammeModules(progTotal);
+      setTotalBeginnerModules(beginnerTotal);
 
       // Normalize each fellow, then recalculate progress against programme total
       const normalized = fellowData.map((f, i) => {
@@ -229,14 +239,21 @@ export default function FellowProgressPage() {
     fetchProgress();
   }, [fetchProgress]);
 
+  const isBeginnerCertReady = useCallback((f) => {
+    const bMods = f.modules.filter((m) => m.level === 'beginner' || !m.level);
+    const completedBeginner = bMods.filter((m) => m.isCompleted).length;
+    const required = totalBeginnerModules || bMods.length;
+    return required > 0 && completedBeginner >= required;
+  }, [totalBeginnerModules]);
+
   const summary = useMemo(() => {
     const total = fellows.length;
-    const certReady = fellows.filter((f) => totalProgrammeModules > 0 && f.completedModules >= totalProgrammeModules).length;
+    const certReady = fellows.filter(isBeginnerCertReady).length;
     const completed = fellows.filter((f) => f.status === 'completed').length;
     const notStarted = fellows.filter((f) => f.status === 'notstarted').length;
     const inProgress = fellows.filter((f) => f.status === 'inprogress').length;
     return { total, completed, inProgress, notStarted, certReady };
-  }, [fellows, totalProgrammeModules]);
+  }, [fellows, isBeginnerCertReady]);
 
   const inProgressFellows = useMemo(
     () => fellows.filter((f) => f.status === 'inprogress'),
@@ -244,8 +261,8 @@ export default function FellowProgressPage() {
   );
 
   const certReadyFellows = useMemo(
-    () => fellows.filter((f) => totalProgrammeModules > 0 && f.completedModules >= totalProgrammeModules),
-    [fellows, totalProgrammeModules],
+    () => fellows.filter(isBeginnerCertReady),
+    [fellows, isBeginnerCertReady],
   );
 
   const handleBulkReminder = async () => {
@@ -374,7 +391,7 @@ export default function FellowProgressPage() {
         <StatCard
           label="Certificate Ready"
           value={summary.certReady}
-          helper={totalProgrammeModules > 0 ? `Completed all ${totalProgrammeModules} programme modules` : 'Loading module count…'}
+          helper="Completed all beginner modules — eligible for certificate"
           icon={Award}
           tone="bg-emerald-50 text-emerald-700"
         />
@@ -414,7 +431,7 @@ export default function FellowProgressPage() {
                   Certificate Ready — {certReadyFellows.length} Fellow{certReadyFellows.length !== 1 ? 's' : ''}
                 </h2>
                 <p className="text-xs text-green-700">
-                  These fellows have completed all {totalProgrammeModules} programme modules and are ready to receive their certificates.
+                  These fellows have completed all {totalBeginnerModules} beginner modules and are ready to receive their certificates.
                 </p>
               </div>
             </div>
@@ -426,7 +443,8 @@ export default function FellowProgressPage() {
                   <p className="text-sm font-semibold text-gray-900 truncate">{f.fullName}</p>
                   <p className="text-xs text-gray-500 truncate">{f.email}</p>
                   <p className="text-xs text-green-600 font-medium mt-0.5">
-                    {f.completedModules}/{totalProgrammeModules} modules ✓
+                    {f.modules.filter((m) => (m.level === 'beginner' || !m.level) && m.isCompleted).length}/
+                    {totalBeginnerModules} beginner modules ✓
                   </p>
                 </div>
                 <Button
