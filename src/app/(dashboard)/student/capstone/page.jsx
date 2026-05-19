@@ -5,8 +5,8 @@ import dynamic from "next/dynamic";
 import {
   FileText, CheckCircle2, Clock, Send,
   X, Loader2, RotateCcw, GraduationCap, Trophy,
-  Star, Lock, Rocket, Eye, Download, RefreshCw,
-  Info, Plus, Pencil,
+  Star, Rocket, Eye, Download, RefreshCw,
+  Info, Plus, Pencil, Trash2,
   Image as ImageIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -378,11 +378,13 @@ function StatusCallout({ status, instructorComment, grade, gradeFeedback, revisi
 function ProposalPanel({ capstone, onSubmitted }) {
   const { showToast } = useToast();
   const quillRef   = useRef(null);
-  const [title,       setTitle]       = useState(capstone?.title || "");
-  const [description, setDescription] = useState(capstone?.description || "");
-  const [files,       setFiles]       = useState([]);
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [submitting,  setSubmitting]  = useState(false);
+  const [title,           setTitle]           = useState(capstone?.title || "");
+  const [description,     setDescription]     = useState(capstone?.description || "");
+  const [files,           setFiles]           = useState([]);
+  const [previewOpen,     setPreviewOpen]     = useState(false);
+  const [submitting,      setSubmitting]      = useState(false);
+  const [withdrawConfirm, setWithdrawConfirm] = useState(false);
+  const [withdrawing,     setWithdrawing]     = useState(false);
 
   const isRevision       = capstone?.status === "revision_requested";
   const alreadySubmitted = ["submitted", "under_review"].includes(capstone?.status);
@@ -459,8 +461,46 @@ function ProposalPanel({ capstone, onSubmitted }) {
     } finally { setSubmitting(false); }
   };
 
+  const handleWithdraw = async () => {
+    setWithdrawing(true);
+    try {
+      await capstoneService.withdrawCapstone(capstone._id);
+      showToast("Submission withdrawn. You can now start a new proposal.", { type: "success" });
+      setWithdrawConfirm(false);
+      onSubmitted?.();
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Could not withdraw submission.", { type: "error" });
+    } finally { setWithdrawing(false); }
+  };
+
+  const WithdrawDialog = () => (
+    <Dialog open={withdrawConfirm} onOpenChange={(o) => { if (!withdrawing) setWithdrawConfirm(o); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Withdraw Submission?</DialogTitle>
+          <DialogDescription>
+            Your proposal will be deleted and you can start a fresh one. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 mt-2">
+          <Button variant="outline" onClick={() => setWithdrawConfirm(false)} disabled={withdrawing}>Cancel</Button>
+          <Button
+            onClick={handleWithdraw}
+            disabled={withdrawing}
+            className="bg-red-600 hover:bg-red-700 text-white gap-2"
+          >
+            {withdrawing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            {withdrawing ? "Withdrawing…" : "Yes, Withdraw"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (alreadySubmitted) {
     return (
+      <>
+      <WithdrawDialog />
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
         <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
           <Clock className="w-5 h-5 text-blue-500 shrink-0" />
@@ -500,7 +540,21 @@ function ProposalPanel({ capstone, onSubmitted }) {
             </div>
           );
         })}
+
+        {/* Withdraw option */}
+        <div className="pt-2 border-t border-gray-100">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-red-500 hover:text-red-700 hover:bg-red-50 gap-1.5 text-xs"
+            onClick={() => setWithdrawConfirm(true)}
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Withdraw & Delete Submission
+          </Button>
+          <p className="text-xs text-gray-400 mt-1">You can start a new proposal after withdrawing.</p>
+        </div>
       </div>
+      </>
     );
   }
 
@@ -648,8 +702,25 @@ function ProposalPanel({ capstone, onSubmitted }) {
               </Button>
             </div>
           )}
+
+          {/* Withdraw option — available for submitted & revision_requested */}
+          {capstone?._id && (
+            <div className="pt-3 border-t border-gray-100 flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-500 hover:text-red-700 hover:bg-red-50 gap-1.5 text-xs"
+                onClick={() => setWithdrawConfirm(true)}
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Withdraw & Delete Submission
+              </Button>
+              <p className="text-xs text-gray-400">You can start a new proposal after withdrawing.</p>
+            </div>
+          )}
         </div>
       </div>
+
+      <WithdrawDialog />
 
       <PreviewSheet
         open={previewOpen}
@@ -952,9 +1023,7 @@ export default function StudentCapstonePage() {
 
   useEffect(() => { load(); }, [load]);
 
-  const showImplementation = ["approved", "implementation", "implementation_submitted", "grading", "graded", "completed"].includes(status);
-  const showGrading        = ["implementation_submitted", "grading", "graded", "completed"].includes(status);
-  const isSubmitted        = ["submitted", "under_review"].includes(status);
+  const isSubmitted = ["submitted", "under_review"].includes(status);
 
   return (
     <>
@@ -1010,9 +1079,8 @@ export default function StudentCapstonePage() {
           </div>
         </div>
 
-        {/* ── Main content ── */}
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-7 space-y-7">
-
+        {/* ── Main content — only the active stage is shown ── */}
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-7 space-y-6">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
               <Loader2 className="w-10 h-10 animate-spin text-[#021d49]" />
@@ -1020,7 +1088,7 @@ export default function StudentCapstonePage() {
             </div>
           ) : (
             <>
-              {/* Status callout */}
+              {/* Status callout — shown on every stage except draft */}
               {capstone && status !== "draft" && (
                 <StatusCallout
                   status={status}
@@ -1031,42 +1099,41 @@ export default function StudentCapstonePage() {
                 />
               )}
 
-              {/* ── Stage 1: Proposal ── */}
-              <section>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                    currentStage > 0 ? "bg-emerald-500 text-white" : "bg-[#021d49] text-white"
-                  }`}>
-                    {currentStage > 0 ? <CheckCircle2 className="w-4 h-4" /> : "1"}
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-gray-900 text-lg">
-                      {status === "revision_requested" ? "Revise & Resubmit" : "Submit Your Proposal"}
-                    </h2>
-                    <p className="text-xs text-gray-500">
-                      {status === "revision_requested"
-                        ? "Update your proposal based on the instructor's feedback."
-                        : "Describe your project and attach supporting documents."}
-                    </p>
-                  </div>
-                  {isSubmitted && (
-                    <Badge className="ml-auto bg-blue-100 text-blue-700 border-blue-200 border">
-                      <Clock className="w-3 h-3 mr-1" /> Under Review
-                    </Badge>
-                  )}
-                </div>
-                <ProposalPanel capstone={capstone} onSubmitted={() => load(true)} />
-              </section>
-
-              {/* ── Stage 3: Implementation ── */}
-              {showImplementation && (
+              {/* ── Stage 0 & 1: Proposal (draft / submitted / under_review / revision_requested) ── */}
+              {currentStage <= 1 && (
                 <section>
-                  <Separator className="mb-8" />
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                      currentStage > 2 ? "bg-emerald-500 text-white" : "bg-[#021d49] text-white"
+                      currentStage > 0 ? "bg-emerald-500 text-white" : "bg-[#021d49] text-white"
                     }`}>
-                      {currentStage > 2 ? <CheckCircle2 className="w-4 h-4" /> : "2"}
+                      {currentStage > 0 ? <CheckCircle2 className="w-4 h-4" /> : "1"}
+                    </div>
+                    <div>
+                      <h2 className="font-bold text-gray-900 text-lg">
+                        {status === "revision_requested" ? "Revise & Resubmit" : "Submit Your Proposal"}
+                      </h2>
+                      <p className="text-xs text-gray-500">
+                        {status === "revision_requested"
+                          ? "Update your proposal based on the instructor's feedback."
+                          : "Describe your project and attach supporting documents."}
+                      </p>
+                    </div>
+                    {isSubmitted && (
+                      <Badge className="ml-auto bg-blue-100 text-blue-700 border-blue-200 border">
+                        <Clock className="w-3 h-3 mr-1" /> Under Review
+                      </Badge>
+                    )}
+                  </div>
+                  <ProposalPanel capstone={capstone} onSubmitted={() => load(true)} />
+                </section>
+              )}
+
+              {/* ── Stage 2: Implementation (approved / implementation) ── */}
+              {currentStage === 2 && (
+                <section>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 bg-[#021d49] text-white">
+                      2
                     </div>
                     <div>
                       <h2 className="font-bold text-gray-900 text-lg">Project Implementation</h2>
@@ -1080,28 +1147,9 @@ export default function StudentCapstonePage() {
                 </section>
               )}
 
-              {/* Locked impl hint */}
-              {!showImplementation && isSubmitted && (
-                <>
-                  <Separator />
-                  <div className="flex items-center gap-4 p-5 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
-                      <Lock className="w-5 h-5 text-gray-400" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-600 text-sm">Project Implementation — Locked</p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        This stage unlocks once your instructor approves your proposal.
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* ── Stage 4: Grading ── */}
-              {showGrading && (
+              {/* ── Stage 3: Grading (implementation_submitted / grading / graded / completed) ── */}
+              {currentStage === 3 && (
                 <section>
-                  <Separator className="mb-8" />
                   <div className="flex items-center gap-3 mb-4">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
                       ["graded", "completed"].includes(status) ? "bg-emerald-500 text-white" : "bg-[#021d49] text-white"
@@ -1116,7 +1164,6 @@ export default function StudentCapstonePage() {
                   <GradingPanel capstone={capstone} />
                 </section>
               )}
-
             </>
           )}
         </div>

@@ -12,6 +12,7 @@ export default function InstructorSidebar() {
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [instructorUser, setInstructorUser] = useState(null);
     const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+    const [pendingCapstoneCount, setPendingCapstoneCount] = useState(0);
     const [moduleStats, setModuleStats] = useState({ totalModules: 0, totalStudents: 0 });
 
     useEffect(() => {
@@ -86,6 +87,43 @@ export default function InstructorSidebar() {
         // Poll every 30 seconds
         const interval = setInterval(fetchUnreadCount, 30000);
 
+        return () => clearInterval(interval);
+    }, []);
+
+    useEffect(() => {
+        const fetchPendingCapstone = async () => {
+            try {
+                const token = authService.getCookie('token');
+                if (!token) return;
+
+                const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
+                // Fetch pending proposals and final submissions awaiting grading in parallel
+                const [proposalRes, implRes] = await Promise.all([
+                    fetch(`${API_URL}/api/capstone/admin?status=submitted&limit=1`, {
+                        headers: { 'Authorization': `Bearer ${token}` },
+                    }),
+                    fetch(`${API_URL}/api/capstone/admin?status=implementation_submitted&limit=1`, {
+                        headers: { 'Authorization': `Bearer ${token}` },
+                    }),
+                ]);
+
+                let total = 0;
+                if (proposalRes.ok) {
+                    const d = await proposalRes.json();
+                    total += d?.total ?? 0;
+                }
+                if (implRes.ok) {
+                    const d = await implRes.json();
+                    total += d?.total ?? 0;
+                }
+                setPendingCapstoneCount(total);
+            } catch {
+                // silently fail
+            }
+        };
+
+        fetchPendingCapstone();
+        const interval = setInterval(fetchPendingCapstone, 60000);
         return () => clearInterval(interval);
     }, []);
 
@@ -166,6 +204,8 @@ export default function InstructorSidebar() {
             icon: 'GraduationCap',
             label: 'Capstone Reviews',
             path: '/instructor/capstone',
+            badge: pendingCapstoneCount || 0,
+            badgeColor: 'amber',
         },
         {
             icon: 'Users',
@@ -413,13 +453,16 @@ export default function InstructorSidebar() {
                                             <IconComponent className={`w-5 h-5 ${isActive ? 'text-white' : 'text-emerald-600'}`} />
                                         )}
                                         <span className="font-medium flex-1 text-left">{item.label}</span>
-                                        {item.badge && (
-                                            <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${typeof item.badge === 'string' && item.badge === 'NEW'
-                                                ? 'bg-emerald-500 text-white'
-                                                : isActive
-                                                    ? 'bg-white text-emerald-600'
-                                                    : 'bg-emerald-100 text-emerald-700'
-                                                }`}>
+                                        {item.badge > 0 && (
+                                            <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${
+                                                item.badgeColor === 'amber'
+                                                    ? isActive ? 'bg-white text-amber-600' : 'bg-amber-100 text-amber-700'
+                                                    : typeof item.badge === 'string' && item.badge === 'NEW'
+                                                        ? 'bg-emerald-500 text-white'
+                                                        : isActive
+                                                            ? 'bg-white text-emerald-600'
+                                                            : 'bg-emerald-100 text-emerald-700'
+                                            }`}>
                                                 {item.badge}
                                             </span>
                                         )}

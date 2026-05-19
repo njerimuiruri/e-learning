@@ -83,6 +83,18 @@ const capstoneService = {
     const { data } = await api.put(`/api/capstone/${id}/grade`, payload);
     return data;
   },
+
+  /** Student withdraws (deletes) their own submission — only allowed when pending/revision */
+  withdrawCapstone: async (id) => {
+    const { data } = await api.delete(`/api/capstone/${id}`);
+    return data;
+  },
+
+  /** Instructor/admin force-deletes any capstone submission */
+  forceDeleteCapstone: async (id) => {
+    const { data } = await api.delete(`/api/capstone/${id}/force`);
+    return data;
+  },
 };
 
 export default capstoneService;

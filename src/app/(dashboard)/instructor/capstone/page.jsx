@@ -5,7 +5,7 @@ import {
   CheckCircle2, Clock, RotateCcw, XCircle, MessageSquare, Send,
   Loader2, RefreshCw, Eye, ChevronDown, ChevronUp, FileText,
   Download, Trophy, Star, User, Search, Filter, AlertCircle,
-  Sparkles, ThumbsUp, ThumbsDown, Pencil, CheckCheck,
+  Sparkles, ThumbsUp, ThumbsDown, Pencil, CheckCheck, Info, Trash2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,7 @@ const STATUS_META = {
   grading:                  { label: "Grading",           cls: "bg-purple-50 text-purple-700 border-purple-200" },
   graded:                   { label: "Graded",            cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
   completed:                { label: "Completed",         cls: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  rejected:                 { label: "Rejected",          cls: "bg-red-50 text-red-700 border-red-200" },
 };
 
 const STAGE_LABEL = {
@@ -158,12 +159,13 @@ function ReviewSheet({ item, open, onClose, onAction }) {
   const [comment,    setComment]    = useState("");
   const [grade,      setGrade]      = useState("");
   const [gradeFeedback, setGradeFeedback] = useState("");
-  const [saving,     setSaving]     = useState("");
-  const [gradePassed, setGradePassed] = useState(true);
+  const [saving,        setSaving]        = useState("");
+  const [gradePassed,   setGradePassed]   = useState(true);
   const [confirmAction, setConfirmAction] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   useEffect(() => {
-    if (open) { setComment(""); setGrade(""); setGradeFeedback(""); setSaving(""); setConfirmAction(null); }
+    if (open) { setComment(""); setGrade(""); setGradeFeedback(""); setSaving(""); setConfirmAction(null); setDeleteConfirm(false); }
   }, [open, item?._id]);
 
   if (!item) return null;
@@ -209,6 +211,18 @@ function ReviewSheet({ item, open, onClose, onAction }) {
     } finally { setSaving(""); setConfirmAction(null); }
   };
 
+  const handleDelete = async () => {
+    setSaving("delete");
+    try {
+      await capstoneService.forceDeleteCapstone(item._id);
+      showToast("Submission deleted.", { type: "success" });
+      onAction?.();
+      onClose?.();
+    } catch (err) {
+      showToast(err?.response?.data?.message || "Could not delete submission.", { type: "error" });
+    } finally { setSaving(""); setDeleteConfirm(false); }
+  };
+
   return (
     <>
       <Sheet open={open} onOpenChange={(o) => { if (!saving && !o) onClose?.(); }}>
@@ -234,12 +248,13 @@ function ReviewSheet({ item, open, onClose, onAction }) {
 
           <div className="space-y-5">
             {/* Description */}
-            {item.description && (
+            {item.description && item.description !== "<p><br></p>" && (
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Project Description</p>
-                <p className="text-sm text-gray-700 leading-relaxed bg-gray-50 rounded-xl p-4 border border-gray-100">
-                  {item.description}
-                </p>
+                <div
+                  className="prose prose-sm max-w-none text-gray-700 bg-gray-50 rounded-xl p-4 border border-gray-100"
+                  dangerouslySetInnerHTML={{ __html: item.description }}
+                />
               </div>
             )}
 
@@ -260,10 +275,13 @@ function ReviewSheet({ item, open, onClose, onAction }) {
                 <div className="space-y-2">
                   {item.implementationFiles.map((f, i) => <AttachedFileCard key={i} file={f} />)}
                 </div>
-                {item.implementationNotes && (
+                {item.implementationNotes && item.implementationNotes !== "<p><br></p>" && (
                   <div className="mt-3 p-3.5 bg-blue-50 border border-blue-100 rounded-xl">
                     <p className="text-xs font-semibold text-blue-700 mb-1">Student Notes</p>
-                    <p className="text-sm text-blue-800 leading-relaxed">{item.implementationNotes}</p>
+                    <div
+                      className="prose prose-sm max-w-none text-blue-800"
+                      dangerouslySetInnerHTML={{ __html: item.implementationNotes }}
+                    />
                   </div>
                 )}
               </div>
@@ -278,8 +296,8 @@ function ReviewSheet({ item, open, onClose, onAction }) {
                     <div key={i} className="flex gap-2.5 p-3 bg-gray-50 rounded-xl border border-gray-100">
                       <MessageSquare className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <p className="text-xs text-gray-500 mb-0.5">{c.author || "Instructor"} · {fmtDate(c.createdAt)}</p>
-                        <p className="text-sm text-gray-700">{c.text || c.comment || c}</p>
+                        <p className="text-xs text-gray-500 mb-0.5">{c.from || "Instructor"} · {fmtDate(c.createdAt)}</p>
+                        <p className="text-sm text-gray-700">{c.message}</p>
                       </div>
                     </div>
                   ))}
@@ -292,6 +310,15 @@ function ReviewSheet({ item, open, onClose, onAction }) {
             {/* ── Proposal actions ── */}
             {isProposalStage && (
               <div className="space-y-4">
+                {/* No mark required at this stage */}
+                <div className="flex items-start gap-2.5 p-3 bg-blue-50 border border-blue-100 rounded-xl">
+                  <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                  <p className="text-xs text-blue-700 leading-relaxed">
+                    <span className="font-semibold">Proposal review — no mark required.</span>{" "}
+                    Approve to let the student proceed to implementation, request changes, or reject the submission.
+                  </p>
+                </div>
+
                 <div className="space-y-1.5">
                   <Label htmlFor="rev-comment">Comment / Feedback</Label>
                   <Textarea
@@ -313,7 +340,7 @@ function ReviewSheet({ item, open, onClose, onAction }) {
                     onClick={() => setConfirmAction("approve")}
                   >
                     {saving === "approve" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
-                    Approve
+                    Approve & Proceed
                   </Button>
                   <Button
                     variant="outline"
@@ -433,15 +460,51 @@ function ReviewSheet({ item, open, onClose, onAction }) {
               </div>
             )}
           </div>
+
+          {/* Delete submission */}
+          <div className="pt-4 border-t border-gray-100">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 gap-1.5 text-xs"
+              disabled={!!saving}
+              onClick={() => setDeleteConfirm(true)}
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete This Submission
+            </Button>
+          </div>
         </SheetContent>
       </Sheet>
 
-      {/* Confirm dialog */}
+      {/* Delete confirm dialog */}
+      <Dialog open={deleteConfirm} onOpenChange={(o) => { if (!saving && !o) setDeleteConfirm(false); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete Submission?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete {studentName}'s capstone submission. The student will be able to start a new one.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 mt-2">
+            <Button variant="outline" onClick={() => setDeleteConfirm(false)} disabled={!!saving}>Cancel</Button>
+            <Button
+              onClick={handleDelete}
+              disabled={!!saving}
+              className="bg-red-600 hover:bg-red-700 text-white gap-2"
+            >
+              {saving === "delete" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              {saving === "delete" ? "Deleting…" : "Yes, Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Action confirm dialog */}
       <Dialog open={!!confirmAction} onOpenChange={(o) => { if (!saving && !o) setConfirmAction(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>
-              {confirmAction === "approve"  && "Approve Proposal?"}
+              {confirmAction === "approve"  && "Approve & Let Student Proceed?"}
               {confirmAction === "revision" && "Request Revision?"}
               {confirmAction === "reject"   && "Reject Submission?"}
               {confirmAction === "grade"    && "Submit Final Grade?"}
@@ -470,7 +533,7 @@ function ReviewSheet({ item, open, onClose, onAction }) {
               }`}
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {confirmAction === "approve"  && (saving ? "Approving…" : "Yes, Approve")}
+              {confirmAction === "approve"  && (saving ? "Approving…" : "Yes, Proceed")}
               {confirmAction === "revision" && (saving ? "Sending…"   : "Request Revision")}
               {confirmAction === "reject"   && (saving ? "Rejecting…" : "Yes, Reject")}
               {confirmAction === "grade"    && (saving ? "Submitting…": "Submit Grade")}

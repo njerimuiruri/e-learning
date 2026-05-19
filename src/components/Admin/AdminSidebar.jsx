@@ -16,6 +16,7 @@ export default function AdminSidebar() {
     const [showUserDropdown, setShowUserDropdown] = useState(false);
     const [adminUser, setAdminUser] = useState(null);
     const [pendingInstructorsCount, setPendingInstructorsCount] = useState(0);
+    const [pendingCapstoneCount, setPendingCapstoneCount] = useState(0);
 
     useEffect(() => {
         const user = localStorage.getItem('user');
@@ -29,7 +30,30 @@ export default function AdminSidebar() {
 
         // Fetch pending instructors count
         fetchPendingInstructorsCount();
+        fetchPendingCapstoneCount();
     }, []);
+
+    const fetchPendingCapstoneCount = async () => {
+        try {
+            const token = authService.getCookie('token');
+            if (!token) return;
+            const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
+            const [proposalRes, implRes] = await Promise.all([
+                fetch(`${API_URL}/api/capstone/admin?status=submitted&limit=1`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                }),
+                fetch(`${API_URL}/api/capstone/admin?status=implementation_submitted&limit=1`, {
+                    headers: { 'Authorization': `Bearer ${token}` },
+                }),
+            ]);
+            let total = 0;
+            if (proposalRes.ok) { const d = await proposalRes.json(); total += d?.total ?? 0; }
+            if (implRes.ok)     { const d = await implRes.json();     total += d?.total ?? 0; }
+            setPendingCapstoneCount(total);
+        } catch {
+            // silently fail
+        }
+    };
 
     const fetchPendingInstructorsCount = async () => {
         try {
@@ -125,6 +149,13 @@ export default function AdminSidebar() {
             icon: 'FolderOpen',
             label: 'Student Projects',
             path: '/admin/projects',
+        },
+        {
+            icon: 'GraduationCap',
+            label: 'Capstone Reviews',
+            path: '/admin/capstone',
+            badge: pendingCapstoneCount || 0,
+            badgeColor: 'amber',
         },
         {
             icon: 'Award',
@@ -371,8 +402,12 @@ export default function AdminSidebar() {
                                                 />
                                             )}
                                             <span className="flex-1 text-left">{item.label}</span>
-                                            {item.badge && (
-                                                <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                            {item.badge > 0 && (
+                                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                                    item.badgeColor === 'amber'
+                                                        ? 'bg-amber-100 text-amber-700'
+                                                        : 'bg-red-500 text-white'
+                                                }`}>
                                                     {item.badge}
                                                 </span>
                                             )}
