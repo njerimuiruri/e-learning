@@ -17,11 +17,14 @@ const LEVEL_LABEL = {
   advanced: "Advanced",
 };
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, level }) {
   if (status === "issued") {
+    const levelLabel = level
+      ? `${level.charAt(0).toUpperCase() + level.slice(1)} Certificate Issued`
+      : "Certificate Issued";
     return (
-      <span className="inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700">
-        <CheckCircle2 className="h-3 w-3" /> Issued
+      <span className="inline-flex items-center gap-1 rounded-full border border-green-300 bg-green-100 px-2.5 py-1 text-xs font-bold text-green-800">
+        <CheckCircle2 className="h-3 w-3" /> {levelLabel}
       </span>
     );
   }
@@ -125,7 +128,7 @@ export function buildCertificateColumns({ onIssue, level = "beginner" }) {
     {
       accessorKey: "status",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
-      cell: ({ row }) => <StatusBadge status={row.getValue("status")} />,
+      cell: ({ row }) => <StatusBadge status={row.getValue("status")} level={level} />,
       filterFn: (row, id, value) => value.includes(row.getValue(id)),
     },
     {
@@ -144,7 +147,7 @@ export function buildCertificateColumns({ onIssue, level = "beginner" }) {
               onClick={() => onIssue(student)}
             >
               <Award className="mr-1.5 h-3.5 w-3.5" />
-              {student.status === "pending" ? "Issue Certificate" : "View"}
+              {student.status === "pending" ? "Issue Certificate" : "View Certificate"}
             </Button>
           </div>
         );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Circle, Clock, Eye } from "lucide-react";
+import { Award, CheckCircle2, Circle, Clock, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { DataTableColumnHeader } from "./data-table-column-header";
@@ -276,7 +276,17 @@ export const fellowProgressColumns = [
     header: ({ column }) => (
       <DataTableColumnHeader column={column} title="Status" />
     ),
-    cell: ({ row }) => <StatusBadge status={row.getValue("status")} />,
+    cell: ({ row }) => {
+      if (row.original.certIssued) {
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+            <Award className="h-3 w-3 shrink-0" />
+            Beginner Certificate Issued
+          </span>
+        );
+      }
+      return <StatusBadge status={row.getValue("status")} />;
+    },
     filterFn: (row, id, value) => value.includes(row.getValue(id)),
   },
   {

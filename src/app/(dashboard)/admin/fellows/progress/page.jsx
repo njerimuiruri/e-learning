@@ -27,7 +27,7 @@ import toast from 'react-hot-toast';
 import { FellowsDataTable } from './_components/fellows-data-table';
 import { fellowProgressColumns } from './_components/columns';
 import { buildReminderEmail } from './_components/reminder-email-template';
-import { bulkEmailService } from '@/lib/api/adminService';
+import { bulkEmailService, certificateService } from '@/lib/api/adminService';
 
 function asArray(payload) {
   if (Array.isArray(payload)) return payload;
@@ -179,12 +179,22 @@ export default function FellowProgressPage() {
   const fetchProgress = useCallback(async () => {
     setLoading(true);
     try {
-      const [progressRes, modulesRes] = await Promise.allSettled([
+      const [progressRes, modulesRes, certsRes] = await Promise.allSettled([
         adminService.getFellowsProgress({ limit: 500 }),
         adminService.getAllModules({ status: 'published', limit: 500 }),
+        certificateService.getAll(),
       ]);
 
       const fellowData = progressRes.status === 'fulfilled' ? asArray(progressRes.value) : [];
+
+      // Build a set of emails that already have a beginner certificate issued
+      const issuedBeginnerEmails = new Set();
+      if (certsRes.status === 'fulfilled') {
+        const certsData = certsRes.value?.data || [];
+        certsData
+          .filter((c) => c.level === 'beginner' && c.status === 'issued')
+          .forEach((c) => { if (c.email) issuedBeginnerEmails.add(c.email.toLowerCase()); });
+      }
 
       // Resolve total programme modules FIRST so progress uses the correct denominator
       let progTotal = 0;
@@ -218,11 +228,17 @@ export default function FellowProgressPage() {
             : fellow.completedModules >= programmeTotal
             ? 100
             : Math.round((fellow.completedModules / programmeTotal) * 100);
+        // Primary: backend now includes certificateEarned directly in progress data
+        // Fallback: cross-reference by email against the certificates endpoint
+        const certIssued =
+          Boolean(f?.certificateEarned) ||
+          issuedBeginnerEmails.has((fellow.email || '').toLowerCase());
         return {
           ...fellow,
           programmeTotal,
           overallProgress,
           status: statusForProgress(fellow.completedModules, programmeTotal, overallProgress),
+          certIssued,
         };
       });
 
@@ -248,7 +264,7 @@ export default function FellowProgressPage() {
 
   const summary = useMemo(() => {
     const total = fellows.length;
-    const certReady = fellows.filter(isBeginnerCertReady).length;
+    const certReady = fellows.filter((f) => isBeginnerCertReady(f) && !f.certIssued).length;
     const completed = fellows.filter((f) => f.status === 'completed').length;
     const notStarted = fellows.filter((f) => f.status === 'notstarted').length;
     const inProgress = fellows.filter((f) => f.status === 'inprogress').length;
@@ -256,12 +272,13 @@ export default function FellowProgressPage() {
   }, [fellows, isBeginnerCertReady]);
 
   const inProgressFellows = useMemo(
-    () => fellows.filter((f) => f.status === 'inprogress'),
+    () => fellows.filter((f) => f.status === 'inprogress' && !f.certIssued),
     [fellows],
   );
 
+  // Only fellows who are ready but haven't been issued a certificate yet
   const certReadyFellows = useMemo(
-    () => fellows.filter(isBeginnerCertReady),
+    () => fellows.filter((f) => isBeginnerCertReady(f) && !f.certIssued),
     [fellows, isBeginnerCertReady],
   );
 
