@@ -163,6 +163,11 @@ export default function AdminSidebar() {
             path: '/admin/certificates',
         },
         {
+            icon: 'Banknote',
+            label: 'Mini-Grants',
+            path: '/admin/microgrants',
+        },
+        {
             icon: 'Tags',
             label: 'Categories',
             path: '/admin/categories',
