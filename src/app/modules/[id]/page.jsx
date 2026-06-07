@@ -171,6 +171,13 @@ export default function ModuleDetailPage() {
         if (effectivelyPaid) {
             try {
                 setEnrolling(true);
+                // Tiered pricing category → go to dedicated checkout page
+                if (category?.hasTieredPricing) {
+                    router.push(
+                        `/checkout/module?moduleId=${moduleId}&categoryId=${catId}&categoryName=${encodeURIComponent(category?.name || '')}`
+                    );
+                    return;
+                }
                 const payData = await paymentService.initializeModulePayment(moduleId);
                 paymentService.redirectToPaystack(payData.authorizationUrl);
             } catch (payErr) {
@@ -183,6 +190,12 @@ export default function ModuleDetailPage() {
             setEnrolling(true);
             const enrollResult = await moduleEnrollmentService.enrollInModule(moduleId);
             if (enrollResult?.requiresPayment) {
+                if (category?.hasTieredPricing) {
+                    router.push(
+                        `/checkout/module?moduleId=${moduleId}&categoryId=${catId}&categoryName=${encodeURIComponent(category?.name || '')}`
+                    );
+                    return;
+                }
                 const payData = await paymentService.initializeModulePayment(moduleId);
                 paymentService.redirectToPaystack(payData.authorizationUrl);
                 return;

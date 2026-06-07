@@ -227,6 +227,13 @@ function ModuleBrowsingContent() {
             setEnrollingId(module._id);
             const result = await moduleEnrollmentService.enrollInModule(module._id);
             if (result.requiresPayment) {
+                const cat = getCategoryPricing(module);
+                if (cat?.hasTieredPricing) {
+                    router.push(
+                        `/checkout/module?moduleId=${module._id}&categoryId=${result.categoryId}&categoryName=${encodeURIComponent(cat?.name || '')}`
+                    );
+                    return;
+                }
                 router.push(`/student/modules/${module._id}?payment=required&category=${result.categoryId}&price=${result.price}`);
                 return;
             }

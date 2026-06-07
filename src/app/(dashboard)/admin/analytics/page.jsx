@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   LineChart, Line, RadialBarChart, RadialBar,
@@ -11,15 +12,23 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { DataTable } from '@/components/ui/data-table';
 import analyticsService from '@/lib/api/analyticsService';
+import capstoneService from '@/lib/api/capstoneService';
+import projectService from '@/lib/api/projectService';
 import {
   Users, BookOpen, BarChart3, RefreshCw, AlertTriangle, Globe, Clock,
   Activity, Target, CheckCircle, Flame, MapPin, TrendingUp, Star,
   ArrowUp, ArrowDown, Minus, Medal, Zap, Brain, Calendar, UserX,
   Award, GraduationCap, Trophy, ClipboardList, Sparkles,
-  ThumbsUp, ThumbsDown, ScrollText,
+  ThumbsUp, ThumbsDown, ScrollText, FileText, FolderOpen, ExternalLink,
 } from 'lucide-react';
 import Navbar from '@/components/navbar/navbar';
+
+const DemographicsMap = dynamic(() => import('@/components/shared/DemographicsMap'), {
+  ssr: false,
+  loading: () => <div className="w-full h-[380px] rounded-xl bg-gray-100 animate-pulse" />,
+});
 
 // ─── palette ──────────────────────────────────────────────────────────────────
 const C = ['#6366f1','#22c55e','#f59e0b','#ef4444','#14b8a6','#f97316','#8b5cf6','#06b6d4'];
@@ -188,6 +197,228 @@ function ProgressBar({ value, color = '#6366f1', className = '' }) {
   );
 }
 
+// ─── Capstone status badge ────────────────────────────────────────────────────
+const CAPSTONE_STATUS = {
+  submitted:                 { label: 'Submitted',        cls: 'bg-blue-100 text-blue-700'    },
+  under_review:              { label: 'Under Review',     cls: 'bg-indigo-100 text-indigo-700' },
+  revision_requested:        { label: 'Revision Req.',    cls: 'bg-amber-100 text-amber-700'   },
+  approved:                  { label: 'Approved',         cls: 'bg-green-100 text-green-700'   },
+  implementation:            { label: 'Implementation',   cls: 'bg-teal-100 text-teal-700'     },
+  implementation_submitted:  { label: 'Impl. Submitted',  cls: 'bg-cyan-100 text-cyan-700'     },
+  grading:                   { label: 'Grading',          cls: 'bg-violet-100 text-violet-700' },
+  graded:                    { label: 'Graded',           cls: 'bg-purple-100 text-purple-700' },
+  completed:                 { label: 'Completed',        cls: 'bg-emerald-100 text-emerald-700'},
+  rejected:                  { label: 'Rejected',         cls: 'bg-red-100 text-red-700'       },
+};
+
+function CapstoneStatusBadge({ status }) {
+  const s = CAPSTONE_STATUS[status] ?? { label: status, cls: 'bg-gray-100 text-gray-600' };
+  return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${s.cls}`}>{s.label}</span>;
+}
+
+function CapstoneDataTable({ capstones }) {
+  const data = useMemo(() => capstones.map(c => ({
+    id:        c._id,
+    name:      c.studentName || '—',
+    email:     c.studentEmail || '—',
+    title:     c.title || '—',
+    status:    c.status,
+    grade:     c.grade ?? null,
+    passed:    c.passed,
+    revisions: c.revisionCount ?? 0,
+    files:     (c.files ?? []).length + (c.implementationFiles ?? []).length,
+    submitted: c.submittedAt ? new Date(c.submittedAt).toLocaleDateString() : '—',
+  })), [capstones]);
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'name',
+      header: 'Student',
+      cell: ({ getValue, row }) => (
+        <div>
+          <p className="font-semibold text-gray-800 text-xs">{getValue()}</p>
+          <p className="text-[10px] text-gray-400">{row.original.email}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'title',
+      header: 'Project Title',
+      cell: ({ getValue }) => <span className="font-medium text-gray-700 text-xs leading-snug">{getValue()}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      size: 130,
+      cell: ({ getValue }) => <CapstoneStatusBadge status={getValue()} />,
+    },
+    {
+      accessorKey: 'grade',
+      header: 'Grade',
+      size: 80,
+      cell: ({ getValue, row }) => {
+        const g = getValue();
+        if (g === null || g === undefined) return <span className="text-gray-400 text-xs">—</span>;
+        return (
+          <span className={`font-bold text-xs ${g >= 50 ? 'text-green-600' : 'text-red-500'}`}>
+            {g}% {row.original.passed ? '✓' : '✗'}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: 'revisions',
+      header: 'Revisions',
+      size: 75,
+      cell: ({ getValue }) => {
+        const v = getValue();
+        return <span className={`text-xs font-semibold ${v > 0 ? 'text-amber-600' : 'text-gray-400'}`}>{v}</span>;
+      },
+    },
+    {
+      accessorKey: 'files',
+      header: 'Files',
+      size: 55,
+      cell: ({ getValue }) => <span className="text-xs text-gray-600">{getValue()}</span>,
+    },
+    {
+      accessorKey: 'submitted',
+      header: 'Submitted',
+      size: 95,
+      cell: ({ getValue }) => <span className="text-xs text-gray-500">{getValue()}</span>,
+    },
+  ], []);
+
+  return <DataTable columns={columns} data={data} searchPlaceholder="Search by name, title, email…" pageSize={15} />;
+}
+
+function CaseStudyDataTable({ projects }) {
+  const data = useMemo(() => projects.map(p => ({
+    id:       p._id,
+    name:     p.studentName || p.authorName || '—',
+    email:    p.studentEmail || p.authorEmail || '—',
+    title:    p.title || '—',
+    status:   p.status,
+    tags:     (p.tags ?? []).slice(0, 3).join(', ') || '—',
+    file:     p.fileName || '—',
+    fileUrl:  p.fileUrl || null,
+    feedback: p.adminFeedback || p.feedback || '—',
+    created:  p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
+  })), [projects]);
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'name',
+      header: 'Submitted By',
+      cell: ({ getValue, row }) => (
+        <div>
+          <p className="font-semibold text-gray-800 text-xs">{getValue()}</p>
+          <p className="text-[10px] text-gray-400">{row.original.email}</p>
+        </div>
+      ),
+    },
+    {
+      accessorKey: 'title',
+      header: 'Title',
+      cell: ({ getValue }) => <span className="font-medium text-gray-700 text-xs">{trunc(getValue(), 40)}</span>,
+    },
+    {
+      accessorKey: 'status',
+      header: 'Status',
+      size: 100,
+      cell: ({ getValue }) => {
+        const v = getValue();
+        const s = v === 'approved' ? 'bg-green-100 text-green-700' : v === 'rejected' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700';
+        return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${s}`}>{v || 'pending'}</span>;
+      },
+    },
+    {
+      accessorKey: 'tags',
+      header: 'Tags',
+      size: 120,
+      cell: ({ getValue }) => <span className="text-[10px] text-gray-500">{getValue()}</span>,
+    },
+    {
+      accessorKey: 'file',
+      header: 'File',
+      size: 140,
+      cell: ({ getValue, row }) => {
+        const url = row.original.fileUrl;
+        return url ? (
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 text-[10px] font-medium truncate max-w-[130px]">
+            <ExternalLink className="w-3 h-3 flex-shrink-0" />
+            {trunc(getValue(), 20)}
+          </a>
+        ) : <span className="text-[10px] text-gray-400">{trunc(getValue(), 20)}</span>;
+      },
+    },
+    {
+      accessorKey: 'created',
+      header: 'Date',
+      size: 90,
+      cell: ({ getValue }) => <span className="text-xs text-gray-500">{getValue()}</span>,
+    },
+  ], []);
+
+  return <DataTable columns={columns} data={data} searchPlaceholder="Search by name, title, email…" pageSize={15} />;
+}
+
+// ─── Demographics DataTable sub-components ───────────────────────────────────
+function CountryDataTable({ countryDist }) {
+  const total = countryDist.reduce((s, c) => s + c.count, 0);
+  const data = useMemo(() => countryDist.map((c, i) => ({
+    rank:       i + 1,
+    country:    c.country || 'Unknown',
+    students:   c.count,
+    share:      total > 0 ? (c.count / total) * 100 : 0,
+  })), [countryDist, total]);
+
+  const columns = useMemo(() => [
+    {
+      accessorKey: 'rank',
+      header: '#',
+      size: 40,
+      enableSorting: false,
+      cell: ({ getValue }) => <span className="text-gray-400 font-medium">{getValue()}</span>,
+    },
+    {
+      accessorKey: 'country',
+      header: 'Country',
+      cell: ({ getValue }) => (
+        <span className="flex items-center gap-1.5 font-medium text-gray-800">
+          <MapPin className="w-3 h-3 text-gray-400 flex-shrink-0" />{getValue()}
+        </span>
+      ),
+    },
+    {
+      accessorKey: 'students',
+      header: 'Students',
+      size: 90,
+      cell: ({ getValue }) => <span className="font-bold text-gray-900">{num(getValue())}</span>,
+    },
+    {
+      accessorKey: 'share',
+      header: '% Share',
+      size: 160,
+      cell: ({ getValue, row }) => {
+        const val = getValue();
+        const i = row.index;
+        return (
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div className="h-full rounded-full" style={{ width: `${Math.min(val, 100)}%`, background: C[i % C.length] }} />
+            </div>
+            <span className="font-semibold text-xs w-10 text-right" style={{ color: C[i % C.length] }}>{pct(val)}</span>
+          </div>
+        );
+      },
+    },
+  ], []);
+
+  return <DataTable columns={columns} data={data} searchPlaceholder="Search country…" pageSize={10} />;
+}
+
 // ─── main component ──────────────────────────────────────────────────────────
 export default function AnalyticsDashboard() {
   const [loading, setLoading]           = useState(true);
@@ -207,6 +438,9 @@ export default function AnalyticsDashboard() {
   const [behaviorPeriod, setBehaviorPeriod]   = useState('weekly');
   const [activeTab, setActiveTab]             = useState('overview');
   const [lastUpdated, setLastUpdated]         = useState(null);
+  const [capstones, setCapstones]             = useState([]);
+  const [caseStudies, setCaseStudies]         = useState([]);
+  const [subsLoading, setSubsLoading]         = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -291,6 +525,31 @@ export default function AnalyticsDashboard() {
   }, [behaviorPeriod]);
 
   useEffect(() => { loadAll(); }, []);
+
+  // Load submissions lazily when the tab is first activated
+  useEffect(() => {
+    if (activeTab !== 'submissions') return;
+    if (capstones.length > 0 || caseStudies.length > 0) return;
+    setSubsLoading(true);
+    Promise.allSettled([
+      capstoneService.getAllCapstones({ limit: 200 }),
+      projectService.getAdminSubmissions({ limit: 200 }),
+    ]).then(([cap, proj]) => {
+      if (cap.status === 'fulfilled')  setCapstones(cap.value?.data  ?? []);
+      if (proj.status === 'fulfilled') setCaseStudies(proj.value?.projects ?? proj.value?.data ?? []);
+    }).finally(() => setSubsLoading(false));
+  }, [activeTab]);
+
+  const refreshSubmissions = useCallback(() => {
+    setSubsLoading(true);
+    Promise.allSettled([
+      capstoneService.getAllCapstones({ limit: 200 }),
+      projectService.getAdminSubmissions({ limit: 200 }),
+    ]).then(([cap, proj]) => {
+      if (cap.status === 'fulfilled')  setCapstones(cap.value?.data  ?? []);
+      if (proj.status === 'fulfilled') setCaseStudies(proj.value?.projects ?? proj.value?.data ?? []);
+    }).finally(() => setSubsLoading(false));
+  }, []);
 
   const refreshBehavior = useCallback(async (period) => {
     setBehaviorPeriod(period);
@@ -465,6 +724,7 @@ export default function AnalyticsDashboard() {
                   { value: 'demographics',  icon: Globe,         label: 'Demographics'  },
                   { value: 'fellows',       icon: GraduationCap, label: 'Fellows'       },
                   { value: 'performers',    icon: Trophy,        label: 'Top Performers'},
+                  { value: 'submissions',   icon: FolderOpen,    label: 'Submissions'   },
                 ].map(({ value, icon: Icon, label }) => (
                   <TabsTrigger key={value} value={value}
                     className="flex items-center gap-1.5 px-4 h-12 text-xs font-semibold rounded-none border-b-2 border-transparent data-[state=active]:border-indigo-600 data-[state=active]:text-indigo-600 data-[state=active]:bg-transparent text-gray-500 hover:text-gray-700 whitespace-nowrap">
@@ -1474,106 +1734,167 @@ export default function AnalyticsDashboard() {
 
             {/* ═══════════════ DEMOGRAPHICS ════════════════════════════════════ */}
             <TabsContent value="demographics" className="p-5 space-y-6">
-              <SectionHeader icon={Globe} title="Demographic Analytics" description="Diversity and distribution of your student population" />
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card className="border-0 shadow-none bg-gray-50">
+              {/* ── Page title ── */}
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-indigo-50 rounded-lg mt-0.5"><Globe className="w-4 h-4 text-indigo-600" /></div>
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">Demographic Analytics</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Understand who your students are — where they come from, gender balance, cohort spread, and growth trends</p>
+                </div>
+              </div>
+
+              {/* ── Summary KPI strip ── */}
+              {(() => {
+                const totalStudents = genderDist.reduce((s, g) => s + g.count, 0) || countryDist.reduce((s, c) => s + c.count, 0);
+                const topCountry = countryDist[0];
+                const male   = genderDist.find(g => g.gender === 'M');
+                const female = genderDist.find(g => g.gender === 'F');
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <KPICard icon={Globe}     label="Countries Represented" value={num(countryDist.length)}                                                       color="indigo" />
+                    <KPICard icon={MapPin}    label="Top Country"           value={topCountry?.country || '—'} sub={topCountry ? `${num(topCountry.count)} students` : ''} color="teal" />
+                    <KPICard icon={Users}     label="Male Students"         value={male   ? `${pct((male.count   / totalStudents) * 100)}` : '—'} sub={male   ? `${num(male.count)} students`   : ''} color="sky"   />
+                    <KPICard icon={Users}     label="Female Students"       value={female ? `${pct((female.count / totalStudents) * 100)}` : '—'} sub={female ? `${num(female.count)} students` : ''} color="violet"/>
+                  </div>
+                );
+              })()}
+
+              {/* ── Map + Top Countries side by side ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+
+                {/* Map — wider */}
+                <Card className="lg:col-span-2 border border-gray-100 shadow-sm">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Gender Distribution</CardTitle>
-                    <CardDescription className="text-xs">Breakdown of students by gender</CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-2 pb-4">
-                    {genderDist.length > 0 ? (
-                      <div className="flex items-center gap-6">
-                        <ResponsiveContainer width={180} height={180}>
-                          <PieChart>
-                            <Pie data={genderDist} cx="50%" cy="50%" innerRadius={50} outerRadius={80} dataKey="count" nameKey="label" paddingAngle={3}>
-                              {genderDist.map((_, i) => <Cell key={i} fill={C[i % C.length]} />)}
-                            </Pie>
-                            <ReTooltip content={<Tip />} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="space-y-3 flex-1">
-                          {genderDist.map((g, i) => {
-                            const total = genderDist.reduce((s, x) => s + x.count, 0);
-                            return (
-                              <div key={g.gender ?? i}>
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full" style={{ background: C[i % C.length] }} /><span className="font-medium text-gray-700">{g.label}</span></span>
-                                  <span className="font-bold text-gray-900">{num(g.count)} <span className="font-normal text-gray-400">({pct((g.count / total) * 100)})</span></span>
-                                </div>
-                                <ProgressBar value={(g.count / total) * 100} color={C[i % C.length]} />
-                              </div>
-                            );
-                          })}
-                        </div>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div>
+                        <CardTitle className="text-sm font-bold text-gray-900">Geographic Distribution</CardTitle>
+                        <CardDescription className="text-xs">Bubble size = number of students · Click a bubble for details</CardDescription>
                       </div>
-                    ) : <Empty message="No gender data yet" />}
+                      <div className="flex items-center gap-3 text-[10px] text-gray-400">
+                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" /> Top</span>
+                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> High</span>
+                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> Others</span>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <DemographicsMap countryData={countryDist} />
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-none bg-gray-50">
+                {/* Top Countries ranked list */}
+                <Card className="border border-gray-100 shadow-sm">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Top Countries by Enrollment</CardTitle>
-                    <CardDescription className="text-xs">Where are your students coming from?</CardDescription>
+                    <CardTitle className="text-sm font-bold text-gray-900">Top Countries</CardTitle>
+                    <CardDescription className="text-xs">Ranked by enrollment count</CardDescription>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4 space-y-2">
-                    {countryDist.length > 0 ? countryDist.slice(0, 10).map((c, i) => {
-                      const total = countryDist.reduce((s, x) => s + x.count, 0);
+                  <CardContent className="px-4 pb-4">
+                    {countryDist.length > 0 ? (() => {
+                      const total = countryDist.reduce((s, c) => s + c.count, 0);
                       return (
-                        <div key={c.country ?? i} className="flex items-center gap-3">
-                          <span className="text-xs text-gray-400 w-5 font-medium">{i + 1}</span>
-                          <div className="flex-1">
-                            <div className="flex justify-between text-xs mb-1">
-                              <span className="font-medium text-gray-700 flex items-center gap-1"><MapPin className="w-3 h-3 text-gray-400" />{c.country || 'Unknown'}</span>
-                              <span className="text-gray-500">{num(c.count)} <span className="text-gray-400">({pct((c.count / total) * 100)})</span></span>
+                        <div className="space-y-3">
+                          {countryDist.slice(0, 8).map((c, i) => (
+                            <div key={c.country ?? i} className="flex items-center gap-2">
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-extrabold ${i === 0 ? 'bg-indigo-100 text-indigo-700' : i === 1 ? 'bg-teal-100 text-teal-700' : i === 2 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+                                {i + 1}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="font-semibold text-gray-800 truncate">{c.country || 'Unknown'}</span>
+                                  <span className="font-bold text-gray-900 ml-2 flex-shrink-0">{num(c.count)}</span>
+                                </div>
+                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full transition-all" style={{ width: `${(c.count / total) * 100}%`, background: C[i % C.length] }} />
+                                </div>
+                              </div>
+                              <span className="text-[10px] text-gray-400 flex-shrink-0 w-9 text-right">{pct((c.count / total) * 100)}</span>
                             </div>
-                            <ProgressBar value={(c.count / total) * 100} color={C[i % C.length]} />
-                          </div>
+                          ))}
+                          {countryDist.length > 8 && (
+                            <p className="text-[10px] text-gray-400 pt-1 border-t border-gray-100">
+                              +{countryDist.length - 8} more countries — see full table below
+                            </p>
+                          )}
                         </div>
                       );
-                    }) : <Empty message="No country data yet" />}
+                    })() : <Empty message="No country data yet" />}
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Registration trend — multi line */}
-              <Card className="border-0 shadow-none bg-gray-50">
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Student Registration Trend — Last 12 Months</CardTitle>
-                  <CardDescription className="text-xs">How student sign-ups have grown over time</CardDescription>
-                </CardHeader>
-                <CardContent className="px-2 pb-4">
-                  {regTrend.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={220}>
-                      <LineChart data={regTrend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                        <ReTooltip content={<Tip />} />
-                        <Line type="monotone" dataKey="count" name="New Students" stroke="#6366f1" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 3 }} activeDot={{ r: 5 }} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : <Empty message="No registration trend data" />}
-                </CardContent>
-              </Card>
-
-              {/* Cohort + cert monthly trend — multiple lines */}
+              {/* ── Gender + Cohort side by side ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card className="border-0 shadow-none bg-gray-50">
+
+                {/* Gender distribution — visual cards */}
+                <Card className="border border-gray-100 shadow-sm">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm font-bold text-gray-900">Gender Distribution</CardTitle>
+                    <CardDescription className="text-xs">Student breakdown by gender</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    {genderDist.length > 0 ? (() => {
+                      const total = genderDist.reduce((s, g) => s + g.count, 0);
+                      const GENDER_COLORS = ['#6366f1', '#f472b6', '#94a3b8'];
+                      return (
+                        <div className="space-y-4">
+                          {/* Stacked bar */}
+                          <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
+                            {genderDist.map((g, i) => (
+                              <div key={g.gender ?? i} title={`${g.label}: ${num(g.count)}`}
+                                style={{ width: `${(g.count / total) * 100}%`, background: GENDER_COLORS[i % GENDER_COLORS.length] }}
+                                className="h-full transition-all" />
+                            ))}
+                          </div>
+                          {/* Big stat cards per gender */}
+                          <div className="grid grid-cols-2 gap-3">
+                            {genderDist.map((g, i) => {
+                              const share = (g.count / total) * 100;
+                              const color = GENDER_COLORS[i % GENDER_COLORS.length];
+                              return (
+                                <div key={g.gender ?? i} className="rounded-xl p-3 border" style={{ borderColor: color + '33', background: color + '08' }}>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-xs font-semibold text-gray-700">{g.label}</span>
+                                    <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+                                  </div>
+                                  <div className="text-2xl font-extrabold text-gray-900">{num(g.count)}</div>
+                                  <div className="text-xs font-bold mt-0.5" style={{ color }}>{pct(share)} of total</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {/* Donut */}
+                          <ResponsiveContainer width="100%" height={130}>
+                            <PieChart>
+                              <Pie data={genderDist.map((g, i) => ({ ...g, name: g.label, fill: GENDER_COLORS[i] }))}
+                                cx="50%" cy="50%" innerRadius={38} outerRadius={58} dataKey="count" paddingAngle={3}>
+                                {genderDist.map((_, i) => <Cell key={i} fill={GENDER_COLORS[i % GENDER_COLORS.length]} />)}
+                              </Pie>
+                              <ReTooltip content={<Tip />} />
+                              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })() : <Empty message="No gender data yet" />}
+                  </CardContent>
+                </Card>
+
+                {/* Cohort distribution */}
+                <Card className="border border-gray-100 shadow-sm">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <CardTitle className="text-sm font-bold text-gray-900">Students by Cohort</CardTitle>
-                    <CardDescription className="text-xs">Distribution of fellows across different cohorts</CardDescription>
+                    <CardDescription className="text-xs">How fellows are distributed across cohorts</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
                     {cohortDist.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={220}>
-                        <BarChart data={cohortDist} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                      <ResponsiveContainer width="100%" height={260}>
+                        <BarChart data={cohortDist} margin={{ top: 8, right: 16, left: -20, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                           <XAxis dataKey="cohort" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
                           <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
                           <ReTooltip content={<Tip />} />
-                          <Bar dataKey="count" name="Students" radius={[4, 4, 0, 0]}>
+                          <Bar dataKey="count" name="Students" radius={[5, 5, 0, 0]} maxBarSize={48}>
                             {cohortDist.map((_, i) => <Cell key={i} fill={C[i % C.length]} />)}
                           </Bar>
                         </BarChart>
@@ -1581,15 +1902,45 @@ export default function AnalyticsDashboard() {
                     ) : <Empty message="No cohort data available" />}
                   </CardContent>
                 </Card>
+              </div>
 
-                <Card className="border-0 shadow-none bg-gray-50">
+              {/* ── Registration trend (area) + Certs vs Registrations ── */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+                <Card className="border border-gray-100 shadow-sm">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Certificates vs Registrations</CardTitle>
-                    <CardDescription className="text-xs">Registration growth vs certificate issuance over time</CardDescription>
+                    <CardTitle className="text-sm font-bold text-gray-900">New Student Registrations</CardTitle>
+                    <CardDescription className="text-xs">Monthly sign-up growth over the last 12 months</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-2 pb-4">
+                    {regTrend.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={220}>
+                        <AreaChart data={regTrend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="gReg" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%"  stopColor="#6366f1" stopOpacity={0.25} />
+                              <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                          <XAxis dataKey="label" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                          <ReTooltip content={<Tip />} />
+                          <Area type="monotone" dataKey="count" name="New Students" stroke="#6366f1" fill="url(#gReg)" strokeWidth={2.5} dot={{ fill: '#6366f1', r: 3 }} activeDot={{ r: 5 }} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    ) : <Empty message="No registration trend data" />}
+                  </CardContent>
+                </Card>
+
+                <Card className="border border-gray-100 shadow-sm">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <CardTitle className="text-sm font-bold text-gray-900">Registrations vs Certificates</CardTitle>
+                    <CardDescription className="text-xs">Are students completing what they sign up for?</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
                     {(regTrend.length > 0 || certData.monthlyTrend?.length > 0) ? (() => {
-                      const regMap = Object.fromEntries((regTrend ?? []).map(r => [r.label, r.count]));
+                      const regMap  = Object.fromEntries((regTrend ?? []).map(r => [r.label, r.count]));
                       const certMap = Object.fromEntries((certData.monthlyTrend ?? []).map(c => [c.label, c.count]));
                       const allLabels = Array.from(new Set([...Object.keys(regMap), ...Object.keys(certMap)])).sort();
                       const merged = allLabels.slice(-12).map(label => ({ label, registrations: regMap[label] ?? 0, certificates: certMap[label] ?? 0 }));
@@ -1602,7 +1953,7 @@ export default function AnalyticsDashboard() {
                             <ReTooltip content={<Tip />} />
                             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11 }} />
                             <Line type="monotone" dataKey="registrations" name="Registrations" stroke="#6366f1" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
-                            <Line type="monotone" dataKey="certificates" name="Certificates" stroke="#14b8a6" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
+                            <Line type="monotone" dataKey="certificates"  name="Certificates"  stroke="#14b8a6" strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 4 }} />
                           </LineChart>
                         </ResponsiveContainer>
                       );
@@ -1610,6 +1961,25 @@ export default function AnalyticsDashboard() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* ── Full Country Table (searchable / sortable) ── */}
+              <Card className="border border-gray-100 shadow-sm">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-bold text-gray-900">All Countries — Enrollment Breakdown</CardTitle>
+                      <CardDescription className="text-xs">Search, sort and browse the full country list · click any column header to sort</CardDescription>
+                    </div>
+                    <Chip type="info"><Globe className="w-3 h-3" /> {countryDist.length} countries</Chip>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  {countryDist.length > 0 ? (
+                    <CountryDataTable countryDist={countryDist} />
+                  ) : <Empty message="No country data yet" />}
+                </CardContent>
+              </Card>
+
             </TabsContent>
 
             {/* ═══════════════ FELLOWS ═════════════════════════════════════════ */}
@@ -2115,7 +2485,8 @@ export default function AnalyticsDashboard() {
                   <CardHeader className="pb-2 pt-4 px-4">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-bold text-gray-900">Stars This Week</CardTitle>
-                      <Chip type="success"><Sparkles className="w-3 h-3" /> Active 7d</Chip>
+                      <Chip type="success">
+                        <Sparkles className="w-3 h-3" /> Active 7d</Chip>
                     </div>
                     <CardDescription className="text-xs">High-progress students active in the last 7 days</CardDescription>
                   </CardHeader>
@@ -2189,6 +2560,78 @@ export default function AnalyticsDashboard() {
                   </CardContent>
                 </Card>
               )}
+            </TabsContent>
+
+            {/* ═══════════════ SUBMISSIONS ══════════════════════════════════════ */}
+            <TabsContent value="submissions" className="p-5 space-y-6">
+              <div className="flex items-start justify-between flex-wrap gap-3">
+                <SectionHeader
+                  icon={FolderOpen}
+                  title="Student Submissions"
+                  description="View all capstone project proposals and case study submissions, who submitted them, and their current status"
+                />
+                <Button variant="outline" size="sm" className="gap-2" onClick={refreshSubmissions} disabled={subsLoading}>
+                  <RefreshCw className={`w-4 h-4 ${subsLoading ? 'animate-spin' : ''}`} /> Refresh
+                </Button>
+              </div>
+
+              {/* KPI strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <KPICard icon={FileText}    label="Capstone Submissions"  value={num(capstones.length)}                                                                        color="indigo" />
+                <KPICard icon={CheckCircle} label="Capstones Graded"      value={num(capstones.filter(c => c.status === 'graded' || c.status === 'completed').length)}         color="green"  />
+                <KPICard icon={FolderOpen}  label="Case Studies"          value={num(caseStudies.length)}                                                                       color="violet" />
+                <KPICard icon={AlertTriangle} label="Pending Review"      value={num(capstones.filter(c => c.status === 'submitted' || c.status === 'implementation_submitted').length + caseStudies.filter(p => p.status === 'pending').length)} color="amber" />
+              </div>
+
+              {/* ── Capstone Projects ── */}
+              <Card className="border-0 shadow-none bg-gray-50">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-bold text-gray-900">Capstone Project Submissions</CardTitle>
+                      <CardDescription className="text-xs">All student capstone proposals and implementations — searchable and sortable</CardDescription>
+                    </div>
+                    <Chip type="info"><FileText className="w-3 h-3" /> {capstones.length} Total</Chip>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  {subsLoading ? (
+                    <div className="py-12 flex items-center justify-center gap-3">
+                      <RefreshCw className="w-5 h-5 animate-spin text-indigo-400" />
+                      <span className="text-sm text-gray-400">Loading submissions…</span>
+                    </div>
+                  ) : capstones.length > 0 ? (
+                    <CapstoneDataTable capstones={capstones} />
+                  ) : (
+                    <Empty message="No capstone submissions yet" />
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* ── Case Study / Project Submissions ── */}
+              <Card className="border-0 shadow-none bg-gray-50">
+                <CardHeader className="pb-2 pt-4 px-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-bold text-gray-900">Case Study & Project Submissions</CardTitle>
+                      <CardDescription className="text-xs">Student-uploaded projects and resources awaiting review or already approved</CardDescription>
+                    </div>
+                    <Chip type="violet"><FolderOpen className="w-3 h-3" /> {caseStudies.length} Total</Chip>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4 pb-4">
+                  {subsLoading ? (
+                    <div className="py-12 flex items-center justify-center gap-3">
+                      <RefreshCw className="w-5 h-5 animate-spin text-indigo-400" />
+                      <span className="text-sm text-gray-400">Loading submissions…</span>
+                    </div>
+                  ) : caseStudies.length > 0 ? (
+                    <CaseStudyDataTable projects={caseStudies} />
+                  ) : (
+                    <Empty message="No case study submissions yet" />
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
           </div>

@@ -173,6 +173,11 @@ export default function AdminSidebar() {
             path: '/admin/categories',
         },
         {
+            icon: 'ShieldCheck',
+            label: 'Student Verifications',
+            path: '/admin/student-verifications',
+        },
+        {
             icon: 'BarChart3',
             label: 'Analytics & Reports',
             path: '/admin/analytics',

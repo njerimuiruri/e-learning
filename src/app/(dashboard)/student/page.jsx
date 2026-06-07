@@ -28,6 +28,7 @@ const Icons = {
 };
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import progressionService from '@/lib/api/progressionService';
+import studentVerificationService from '@/lib/api/studentVerificationService';
 import api from '@/lib/api/config';
 import moduleService from '@/lib/api/moduleService';
 import authService from '@/lib/api/authService';
@@ -524,6 +525,7 @@ function StudentDashboardContent() {
     const [unreadMessages, setUnreadMessages] = useState(0);
     const [issuedCerts, setIssuedCerts] = useState([]);
     const [certBannerDismissed, setCertBannerDismissed] = useState(false);
+    const [verificationStatus, setVerificationStatus] = useState(null);
 
     useEffect(() => {
         const u = authService.getCurrentUser?.() || null;
@@ -540,6 +542,11 @@ function StudentDashboardContent() {
 
         fetchAll();
         messageService.getUnreadCount().then((r) => setUnreadMessages(r?.count ?? 0)).catch(() => {});
+
+        // Check student verification status
+        studentVerificationService.getMyStatus()
+          .then((s) => { if (s?.status && s.status !== 'none') setVerificationStatus(s); })
+          .catch(() => {});
 
         // Only re-fetch critical data (enrollments) on tab focus
         const handleVisibility = () => {
@@ -765,6 +772,42 @@ function StudentDashboardContent() {
                         )}
                     </div>
                 </div>
+
+                {/* ════════════════════════════════
+                    STUDENT VERIFICATION BANNER
+                ════════════════════════════════ */}
+                {verificationStatus && verificationStatus.status === 'pending' && (
+                    <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 lg:px-8 py-3">
+                        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-3">
+                                <Icons.Clock className="w-5 h-5 text-amber-600 shrink-0" />
+                                <div>
+                                    <p className="text-sm font-semibold text-amber-800">Student ID Under Review</p>
+                                    <p className="text-xs text-amber-700">Your student ID is being reviewed. You'll get access to Arin Publishing Academy once approved.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+                {verificationStatus && verificationStatus.status === 'rejected' && (
+                    <div className="bg-red-50 border-b border-red-200 px-4 sm:px-6 lg:px-8 py-3">
+                        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex items-center gap-3">
+                                <Icons.XCircle className="w-5 h-5 text-red-600 shrink-0" />
+                                <div>
+                                    <p className="text-sm font-semibold text-red-800">Student ID Rejected</p>
+                                    <p className="text-xs text-red-700">
+                                        Reason: {verificationStatus.rejectionReason || 'Invalid or unreadable ID'}. Please re-upload.
+                                    </p>
+                                </div>
+                            </div>
+                            <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white text-xs h-8 shrink-0"
+                                onClick={() => router.push('/student-verification/upload')}>
+                                Re-upload ID
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {/* ════════════════════════════════
                     CERTIFICATE READY BANNER

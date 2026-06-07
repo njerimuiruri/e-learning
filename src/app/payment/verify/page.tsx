@@ -38,7 +38,14 @@ function VerifyPaymentContent() {
       localStorage.removeItem('pendingPaymentId');
       localStorage.removeItem('pendingCourseId');
 
-      // Auto-enroll in module after successful payment
+      // Student payment: redirect to ID upload page
+      if (verificationResult.success && verificationResult.requiresStudentVerification) {
+        localStorage.removeItem('pendingUserTier');
+        router.push(`/student-verification/upload?categoryId=${verificationResult.categoryId}&moduleId=${verificationResult.moduleId || ''}`);
+        return;
+      }
+
+      // Auto-enroll in module after successful non-student payment
       if (verificationResult.success && verificationResult.moduleId) {
         try {
           await moduleEnrollmentService.enrollInModule(verificationResult.moduleId);

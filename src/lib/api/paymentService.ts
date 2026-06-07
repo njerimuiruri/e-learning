@@ -107,12 +107,31 @@ const paymentService = {
 
   /**
    * Initialize a Paystack payment for a module (category-level access)
-   * @param moduleId - ID of the module to purchase access for
-   * @returns Payment initialization data with authorization URL
    */
   initializeModulePayment: async (moduleId: string, paymentType?: 'local' | 'international'): Promise<PaymentInitializationResponse> => {
     const callbackBaseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
     const { data } = await api.post('/module/initialize', { moduleId, paymentType, callbackBaseUrl });
+    return data;
+  },
+
+  /**
+   * Initialize payment with tier selection (student/non-student)
+   */
+  initializeModulePaymentWithTier: async (
+    moduleId: string,
+    userTier: 'student' | 'non-student',
+    paymentType?: 'local' | 'international',
+  ): Promise<PaymentInitializationResponse & { isStudentPrice: boolean; userTier: string }> => {
+    const callbackBaseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const { data } = await api.post('/module/initialize', { moduleId, userTier, paymentType, callbackBaseUrl });
+    return data;
+  },
+
+  /**
+   * Get tiered pricing info for a category
+   */
+  getCategoryPricing: async (categoryId: string) => {
+    const { data } = await api.get(`/category-pricing/${categoryId}`);
     return data;
   },
 
