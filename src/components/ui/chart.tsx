@@ -81,7 +81,7 @@ const ChartTooltip = RechartsPrimitive.Tooltip
 
 type ChartTooltipContentProps = RechartsPrimitive.TooltipContentProps<
   RechartsPrimitive.TooltipValueType,
-  RechartsPrimitive.TooltipNameType
+  string
 > &
   React.ComponentProps<"div"> & {
     hideLabel?: boolean
