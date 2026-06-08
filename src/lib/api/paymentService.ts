@@ -35,6 +35,7 @@ export interface PaymentVerificationResponse {
   moduleId?: string;
   amount?: number;
   status?: string;
+  requiresStudentVerification?: boolean;
 }
 
 export interface CourseAccessCheckResponse {
