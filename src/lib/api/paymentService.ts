@@ -110,8 +110,7 @@ const paymentService = {
    * Initialize a Paystack payment for a module (category-level access)
    */
   initializeModulePayment: async (moduleId: string, paymentType?: 'local' | 'international'): Promise<PaymentInitializationResponse> => {
-    const callbackBaseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-    const { data } = await api.post('/module/initialize', { moduleId, paymentType, callbackBaseUrl });
+    const { data } = await api.post('/module/initialize', { moduleId, paymentType });
     return data;
   },
 
@@ -123,8 +122,7 @@ const paymentService = {
     userTier: 'student' | 'non-student',
     paymentType?: 'local' | 'international',
   ): Promise<PaymentInitializationResponse & { isStudentPrice: boolean; userTier: string }> => {
-    const callbackBaseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-    const { data } = await api.post('/module/initialize', { moduleId, userTier, paymentType, callbackBaseUrl });
+    const { data } = await api.post('/module/initialize', { moduleId, userTier, paymentType });
     return data;
   },
 
@@ -156,13 +154,11 @@ const paymentService = {
     paymentOption: 'full' | 'installment1' | 'installment2',
     paymentType?: 'local' | 'international',
   ) => {
-    const callbackBaseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
     const { data } = await api.post('/category/initialize', {
       categoryId,
       userTier,
       paymentOption,
       paymentType,
-      callbackBaseUrl,
     });
     return data;
   },
