@@ -16,9 +16,10 @@ api.interceptors.request.use((config) => {
 });
 
 const studentVerificationService = {
-  uploadStudentId: async (file: File) => {
+  uploadStudentId: async (file: File, categoryId?: string) => {
     const formData = new FormData();
     formData.append('file', file);
+    if (categoryId) formData.append('categoryId', categoryId);
     const { data } = await api.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });

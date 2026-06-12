@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
     ArrowRight, Layers, BookOpen, Users, Award,
-    DollarSign, Unlock, GraduationCap,
+    DollarSign, Unlock, GraduationCap, Briefcase,
     CheckCircle, ChevronRight, Target, FileText, X, Star, Sparkles,
 } from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
@@ -59,7 +59,7 @@ const CoursesSection = () => {
             try {
                 setLoading(true);
                 const [modulesData, categoriesData] = await Promise.all([
-                    moduleService.getAllModules({ limit: 6 }),
+                    moduleService.getAllModules({ limit: 500 }),
                     categoryService.getAllCategories()
                 ]);
                 if (mounted) {
@@ -204,9 +204,21 @@ const CoursesSection = () => {
                                                     <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20 text-white' : 'bg-purple-50 text-purple-600'
                                                         }`}>Fellows</span>
                                                 )}
-                                                {isPaid && cat.price > 0 && (
-                                                    <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-700'
-                                                        }`}>KES {cat.price.toLocaleString()}</span>
+                                                {isPaid && (
+                                                    cat.hasTieredPricing ? (
+                                                        <>
+                                                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${isActive ? 'bg-sky-400/20 text-sky-100 border-sky-400/30' : 'bg-sky-50 text-sky-700 border-sky-200'}`}>
+                                                                Student KES {cat.studentPrice}
+                                                            </span>
+                                                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${isActive ? 'bg-orange-400/20 text-orange-100 border-orange-400/30' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                                                                Non-Student KES {cat.nonStudentPrice}
+                                                            </span>
+                                                        </>
+                                                    ) : cat.price > 0 ? (
+                                                        <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-700'}`}>
+                                                            KES {cat.price?.toLocaleString()}
+                                                        </span>
+                                                    ) : null
                                                 )}
                                                 {!isPaid && !isFellowOnly && !isRestricted && (
                                                     <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20 text-white' : 'bg-emerald-50 text-emerald-600'
@@ -277,11 +289,24 @@ const CoursesSection = () => {
                                                 {isFellowOnly ? 'Fellows Only' : 'Fellows Priority'}
                                             </span>
                                         )}
-                                        {isPaid && catPrice > 0 && (
-                                            <span className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
-                                                <DollarSign className="w-3.5 h-3.5" />
-                                                KES {catPrice.toLocaleString()} one-time
-                                            </span>
+                                        {isPaid && (
+                                            cat.hasTieredPricing ? (
+                                                <>
+                                                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-3 py-1.5 rounded-full">
+                                                        <GraduationCap className="w-3.5 h-3.5" />
+                                                        Student — KES {cat.studentPrice}
+                                                    </span>
+                                                    <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full">
+                                                        <Briefcase className="w-3.5 h-3.5" />
+                                                        Non-Student — KES {cat.nonStudentPrice}
+                                                    </span>
+                                                </>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
+                                                    <DollarSign className="w-3.5 h-3.5" />
+                                                    KES {catPrice?.toLocaleString()} one-time
+                                                </span>
+                                            )
                                         )}
                                         {!isPaid && !isFellowOnly && !isRestricted && (
                                             <span className="inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
@@ -317,21 +342,59 @@ const CoursesSection = () => {
                                                     ? 'Exclusively available to ARIN Fellows.'
                                                     : 'ARIN Fellows get free access. Others can pay a one-time fee.'}
                                             </p>
-                                            {isPaid && catPrice > 0 && (
+                                            {isPaid && cat.hasTieredPricing && (
+                                                <div className="space-y-2 mt-3">
+                                                    <p className="text-xs text-amber-600 font-semibold uppercase tracking-wider">Non-Fellow Price</p>
+                                                    <div className="flex items-center justify-between bg-sky-50 border border-sky-200 rounded-lg px-3 py-2">
+                                                        <span className="text-xs font-semibold text-sky-700 flex items-center gap-1"><GraduationCap className="w-3 h-3" /> Student</span>
+                                                        <span className="text-sm font-extrabold text-sky-700">KES {cat.studentPrice}</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
+                                                        <span className="text-xs font-semibold text-orange-700 flex items-center gap-1"><Briefcase className="w-3 h-3" /> Non-Student</span>
+                                                        <span className="text-sm font-extrabold text-orange-700">KES {cat.nonStudentPrice}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {isPaid && !cat.hasTieredPricing && catPrice > 0 && (
                                                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                                                     <p className="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-1">Non-Fellow Price</p>
-                                                    <p className="text-2xl font-extrabold text-gray-900">KES {catPrice.toLocaleString()}</p>
+                                                    <p className="text-2xl font-extrabold text-gray-900">KES {catPrice?.toLocaleString()}</p>
                                                     <p className="text-xs text-gray-500 mt-1">One-time · Unlocks all modules</p>
                                                 </div>
                                             )}
                                         </div>
                                     )}
 
-                                    {!isFellowOnly && !isRestricted && isPaid && catPrice > 0 && (
-                                        <div className="bg-white border border-amber-200 rounded-2xl p-5">
-                                            <p className="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-2">Category Price</p>
-                                            <p className="text-3xl font-extrabold text-gray-900 mb-1">KES {catPrice.toLocaleString()}</p>
-                                            <p className="text-sm text-gray-500 mb-4">One-time payment</p>
+                                    {!isFellowOnly && !isRestricted && isPaid && (
+                                        <div className="bg-white border border-gray-200 rounded-2xl p-5">
+                                            <p className="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-3">Category Price</p>
+                                            {cat.hasTieredPricing ? (
+                                                <div className="space-y-2 mb-4">
+                                                    <div className="flex items-center justify-between bg-sky-50 border border-sky-200 rounded-xl px-4 py-3">
+                                                        <div>
+                                                            <p className="text-xs font-bold text-sky-600 uppercase tracking-wide flex items-center gap-1">
+                                                                <GraduationCap className="w-3.5 h-3.5" /> Student
+                                                            </p>
+                                                            <p className="text-[11px] text-sky-400 mt-0.5">Requires ID verification</p>
+                                                        </div>
+                                                        <p className="text-2xl font-extrabold text-sky-700">KES {cat.studentPrice}</p>
+                                                    </div>
+                                                    <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+                                                        <div>
+                                                            <p className="text-xs font-bold text-orange-600 uppercase tracking-wide flex items-center gap-1">
+                                                                <Briefcase className="w-3.5 h-3.5" /> Non-Student
+                                                            </p>
+                                                            <p className="text-[11px] text-orange-400 mt-0.5">Immediate access</p>
+                                                        </div>
+                                                        <p className="text-2xl font-extrabold text-orange-700">KES {cat.nonStudentPrice}</p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <p className="text-3xl font-extrabold text-gray-900 mb-1">KES {catPrice?.toLocaleString()}</p>
+                                                    <p className="text-sm text-gray-500 mb-4">One-time payment</p>
+                                                </>
+                                            )}
                                             <div className="space-y-2">
                                                 <div className="flex items-center gap-2 text-sm text-gray-600">
                                                     <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
@@ -508,9 +571,21 @@ const CoursesSection = () => {
                                                 )}
                                                 {(isFellowOnly || isRestricted) ? (
                                                     <span className="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full">Fellows</span>
+                                                ) : isPaid && cat?.hasTieredPricing ? (
+                                                    <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] text-sky-500 font-medium">Student</span>
+                                                            <span className="text-sm font-extrabold text-sky-700">${cat.studentPrice}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-[10px] text-orange-500 font-medium">Non-Student</span>
+                                                            <span className="text-sm font-extrabold text-orange-600">${cat.nonStudentPrice}</span>
+                                                        </div>
+                                                        <span className="text-[9px] text-gray-400 font-medium">KES · one-time</span>
+                                                    </div>
                                                 ) : isPaid && catPrice > 0 ? (
                                                     <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                                                        KES {catPrice.toLocaleString()}
+                                                        KES {catPrice?.toLocaleString()}
                                                     </span>
                                                 ) : (
                                                     <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Free</span>

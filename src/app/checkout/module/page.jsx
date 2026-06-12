@@ -139,13 +139,12 @@ function ModuleCheckoutContent() {
                   <CheckCircle className="w-4 h-4 text-[#021d49] ml-auto" />
                 )}
               </div>
-              <div className="flex items-baseline gap-1">
+              <div className="flex items-baseline gap-1.5 mt-1">
                 <span className="text-3xl font-extrabold text-[#021d49]">
-                  ${pricing?.studentPrice}
+                  KES {pricing?.studentPrice}
                 </span>
-                <span className="text-sm text-gray-500">USD</span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">One-time · All modules included</p>
+              <p className="text-xs text-gray-400 mt-1">One-time · Unlocks all modules</p>
             </button>
 
             {/* Non-Student */}
@@ -171,13 +170,12 @@ function ModuleCheckoutContent() {
                   <CheckCircle className="w-4 h-4 text-[#021d49] ml-auto" />
                 )}
               </div>
-              <div className="flex items-baseline gap-1">
+              <div className="flex items-baseline gap-1.5 mt-1">
                 <span className="text-3xl font-extrabold text-gray-900">
-                  ${pricing?.nonStudentPrice}
+                  KES {pricing?.nonStudentPrice}
                 </span>
-                <span className="text-sm text-gray-500">USD</span>
               </div>
-              <p className="text-xs text-gray-500 mt-1">One-time · All modules included</p>
+              <p className="text-xs text-gray-400 mt-1">One-time · Unlocks all modules</p>
             </button>
           </div>
 
@@ -244,7 +242,7 @@ function ModuleCheckoutContent() {
               </h2>
               {selectedPrice != null && (
                 <span className="text-lg font-extrabold text-[#021d49]">
-                  ${selectedPrice} USD
+                  KES {selectedPrice}
                 </span>
               )}
             </div>
@@ -269,7 +267,7 @@ function ModuleCheckoutContent() {
                   {processing === 'local' ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
                   ) : (
-                    <><Smartphone className="w-4 h-4" /> Pay ${selectedPrice}</>
+                    <><Smartphone className="w-4 h-4" /> Pay KES {selectedPrice}</>
                   )}
                 </button>
               </div>
@@ -293,7 +291,7 @@ function ModuleCheckoutContent() {
                   {processing === 'international' ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Processing…</>
                   ) : (
-                    <><CreditCard className="w-4 h-4" /> Pay ${selectedPrice}</>
+                    <><CreditCard className="w-4 h-4" /> Pay KES {selectedPrice}</>
                   )}
                 </button>
               </div>

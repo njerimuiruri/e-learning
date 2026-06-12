@@ -7,6 +7,7 @@ import moduleService from '@/lib/api/moduleService';
 import categoryService from '@/lib/api/categoryService';
 import progressionService from '@/lib/api/progressionService';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
+import authService from '@/lib/api/authService';
 import Navbar from '@/components/navbar/navbar';
 import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
 
@@ -48,6 +49,16 @@ function getFellowCategoryIds() {
     } catch { return []; }
 }
 
+function getPurchasedCategoryIds() {
+    try {
+        if (typeof window === 'undefined') return [];
+        const raw = localStorage.getItem('user');
+        if (!raw) return [];
+        const user = JSON.parse(raw);
+        return (user?.purchasedCategories || []).map((id) => id?.toString?.() || String(id));
+    } catch { return []; }
+}
+
 function ModuleBrowsingContent() {
     const router = useRouter();
     const [modules, setModules] = useState([]);
@@ -56,7 +67,8 @@ function ModuleBrowsingContent() {
     const [myEnrollments, setMyEnrollments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [enrollingId, setEnrollingId] = useState(null);
-    const [fellowCategoryIds] = useState(() => getFellowCategoryIds());
+    const [fellowCategoryIds, setFellowCategoryIds] = useState(() => getFellowCategoryIds());
+    const [purchasedCategoryIds, setPurchasedCategoryIds] = useState(() => getPurchasedCategoryIds());
     const [congratsModule, setCongratsModule] = useState(null);
 
     const [selectedCategory, setSelectedCategory] = useState('');
@@ -87,7 +99,8 @@ function ModuleBrowsingContent() {
                 progressionService.getMyProgressions().catch(() => []),
                 moduleEnrollmentService.getMyEnrollments().catch(() => []),
             ]);
-            setCategories(Array.isArray(cats) ? cats : []);
+            const catList = Array.isArray(cats) ? cats : [];
+            setCategories(catList);
 
             // Normalize module response (handle array, { modules: [] }, or { data: [] })
             let moduleList = [];
@@ -103,6 +116,24 @@ function ModuleBrowsingContent() {
             setProgressions(Array.isArray(progs) ? progs : progs?.progressions || []);
             const enrollList = Array.isArray(enrollments) ? enrollments : enrollments?.enrollments || [];
             setMyEnrollments(enrollList);
+
+            // Refresh user data from server so fellowData is up to date after payment
+            const freshUser = await authService.refreshFromServer().catch(() => null);
+            const freshFellowIds = freshUser
+                ? (freshUser.fellowData?.assignedCategories || []).map(id => id?.toString?.() || String(id))
+                : getFellowCategoryIds();
+            const freshPurchasedIds = freshUser
+                ? (freshUser.purchasedCategories || []).map(id => id?.toString?.() || String(id))
+                : getPurchasedCategoryIds();
+            setFellowCategoryIds(freshFellowIds);
+            setPurchasedCategoryIds(freshPurchasedIds);
+
+            // Auto-select the category the user is enrolled in (fellow or purchased)
+            const enrolledIds = [...new Set([...freshFellowIds, ...freshPurchasedIds])];
+            if (enrolledIds.length > 0 && !selectedCategory) {
+                const match = catList.find(c => enrolledIds.includes(c._id?.toString()));
+                if (match) setSelectedCategory(match._id);
+            }
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
     };
@@ -192,12 +223,33 @@ function ModuleBrowsingContent() {
         if (!cat) return 'open';
         const catId = (cat._id || cat)?.toString?.();
         const isFellow = catId ? fellowCategoryIds.includes(catId) : false;
+        const hasPurchased = catId ? purchasedCategoryIds.includes(catId) : false;
         if (cat.accessType === 'free') return isFellow ? 'fellow_free' : 'fellow_blocked';
-        if (cat.isPaid || cat.accessType === 'paid') return isFellow ? 'paid_free' : 'paid';
+        if (cat.isPaid || cat.accessType === 'paid') {
+            // Tiered-pricing categories: paid access grants fellow membership
+            if (cat.hasTieredPricing) return (isFellow || hasPurchased) ? 'paid_free' : 'paid';
+            return (isFellow || hasPurchased) ? 'paid_free' : 'paid';
+        }
         return 'open';
     };
 
     const handleEnroll = async (module) => {
+        // Cross-category restriction: block only FREE/fellows categories from other programmes.
+        // Paid/tiered-pricing categories remain accessible via payment even to users enrolled elsewhere.
+        const userEnrolledCatIds = [...new Set([...fellowCategoryIds, ...purchasedCategoryIds])];
+        if (userEnrolledCatIds.length > 0) {
+            const modCatId = (module.categoryId?._id || module.categoryId)?.toString?.() || String(module.categoryId?._id || module.categoryId);
+            if (modCatId && !userEnrolledCatIds.includes(modCatId)) {
+                const modCat = getCategoryPricing(module);
+                const modCatIsPaid = modCat?.hasTieredPricing || modCat?.isPaid || modCat?.accessType === 'paid';
+                if (!modCatIsPaid) {
+                    alert('This module is not part of your enrolled programme. You can only access modules from your enrolled category.');
+                    return;
+                }
+                // Paid category — fall through to normal payment flow
+            }
+        }
+
         // Intermediate modules are self-paced — skip sequential lock check entirely.
         const isIntermediate = module.level === 'intermediate';
         if (!module.isOptional && !isIntermediate && isSequentiallyLocked(module)) {
@@ -227,10 +279,9 @@ function ModuleBrowsingContent() {
             setEnrollingId(module._id);
             const result = await moduleEnrollmentService.enrollInModule(module._id);
             if (result.requiresPayment) {
-                const cat = getCategoryPricing(module);
-                if (cat?.hasTieredPricing) {
+                if (result.hasTieredPricing) {
                     router.push(
-                        `/checkout/module?moduleId=${module._id}&categoryId=${result.categoryId}&categoryName=${encodeURIComponent(cat?.name || '')}`
+                        `/checkout/module?moduleId=${module._id}&categoryId=${result.categoryId}&categoryName=${encodeURIComponent(result.categoryName || '')}`
                     );
                     return;
                 }
@@ -249,6 +300,14 @@ function ModuleBrowsingContent() {
         setSearchInput(''); setSearchQuery(''); setCurrentPage(1);
     };
     const hasFilters = !!(selectedCategory || selectedLevel || searchQuery);
+
+    // True when user has paid for a tiered-pricing (Academy) category and it is selected
+    const selectedCategoryObj = categories.find(c => c._id === selectedCategory);
+    const selCatId = selectedCategoryObj?._id?.toString();
+    const isAcademyEnrolledView = !!(
+        selectedCategoryObj?.hasTieredPricing &&
+        (fellowCategoryIds.includes(selCatId) || purchasedCategoryIds.includes(selCatId))
+    );
 
     return (
         <>
@@ -354,7 +413,7 @@ function ModuleBrowsingContent() {
                                 const isCatPaid = cat.isPaid || cat.accessType === 'paid' || cat.accessType === 'restricted';
                                 const isCatFellows = cat.accessType === 'free' || cat.accessType === 'restricted';
                                 const isCatFree = !isCatPaid && !isCatFellows;
-                                const catIsFellowId = fellowCategoryIds.includes(catIdStr);
+                                const catIsFellowId = fellowCategoryIds.includes(catIdStr) || purchasedCategoryIds.includes(catIdStr);
                                 const catModCount = modules.filter(m => {
                                     const modCatId = (m.categoryId?._id || m.categoryId)?.toString?.();
                                     return modCatId === catIdStr;
@@ -395,11 +454,21 @@ function ModuleBrowsingContent() {
                                                     <Icons.Award className="w-2.5 h-2.5" /> Fellows Priority
                                                 </span>
                                             )}
-                                            {isCatPaid && cat.price > 0 && (
-                                                <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-amber-400/30 text-amber-100' : 'bg-amber-100 text-amber-700'
-                                                    }`}>
-                                                    KES {cat.price.toLocaleString()}
-                                                </span>
+                                            {isCatPaid && (
+                                                cat.hasTieredPricing ? (
+                                                    <>
+                                                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${isActive ? 'bg-sky-400/20 text-sky-100 border-sky-400/30' : 'bg-sky-50 text-sky-700 border-sky-200'}`}>
+                                                            <Icons.GraduationCap className="w-2.5 h-2.5" /> Student · KES {cat.studentPrice}
+                                                        </span>
+                                                        <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border ${isActive ? 'bg-orange-400/20 text-orange-100 border-orange-400/30' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
+                                                            <Icons.Briefcase className="w-2.5 h-2.5" /> Non-Student · KES {cat.nonStudentPrice}
+                                                        </span>
+                                                    </>
+                                                ) : cat.price > 0 ? (
+                                                    <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${isActive ? 'bg-amber-400/30 text-amber-100' : 'bg-amber-100 text-amber-700'}`}>
+                                                        KES {cat.price?.toLocaleString()}
+                                                    </span>
+                                                ) : null
                                             )}
                                             {isCatFree && (
                                                 <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${isActive ? 'bg-blue-400/30 text-blue-100' : 'bg-blue-100 text-blue-700'
@@ -408,9 +477,9 @@ function ModuleBrowsingContent() {
                                                 </span>
                                             )}
                                             {catIsFellowId && (
-                                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-[#021d49]/10 text-[#021d49]'
-                                                    }`}>
-                                                    <Icons.CheckCircle className="w-2.5 h-2.5" /> You're a Fellow
+                                                <span className={`inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full ${isActive ? 'bg-emerald-400/30 text-emerald-100' : 'bg-emerald-50 text-emerald-700'}`}>
+                                                    <Icons.CheckCircle className="w-2.5 h-2.5" />
+                                                    {cat.hasTieredPricing ? 'Enrolled' : "You're a Fellow"}
                                                 </span>
                                             )}
                                         </div>
@@ -502,11 +571,30 @@ function ModuleBrowsingContent() {
                                                         <span className="text-purple-700 text-xs font-semibold">Fellows Priority</span>
                                                     </div>
                                                 )}
-                                                {catIsPaid && catPrice > 0 && (
-                                                    <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
-                                                        <Icons.DollarSign className="w-3.5 h-3.5 text-amber-600" />
-                                                        <span className="text-amber-700 text-xs font-semibold">KES {catPrice.toLocaleString()} one-time</span>
+                                                {isAcademyEnrolledView && (
+                                                    <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1.5">
+                                                        <Icons.CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                                        <span className="text-emerald-700 text-xs font-semibold">Enrolled</span>
                                                     </div>
+                                                )}
+                                                {catIsPaid && !isAcademyEnrolledView && (
+                                                    cat.hasTieredPricing ? (
+                                                        <>
+                                                            <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5">
+                                                                <Icons.GraduationCap className="w-3.5 h-3.5 text-blue-600" />
+                                                                <span className="text-blue-700 text-xs font-semibold">Student KES {cat.studentPrice}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
+                                                                <Icons.Briefcase className="w-3.5 h-3.5 text-amber-600" />
+                                                                <span className="text-amber-700 text-xs font-semibold">Non-Student KES {cat.nonStudentPrice}</span>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
+                                                            <Icons.DollarSign className="w-3.5 h-3.5 text-amber-600" />
+                                                            <span className="text-amber-700 text-xs font-semibold">KES {catPrice?.toLocaleString()} one-time</span>
+                                                        </div>
+                                                    )
                                                 )}
                                                 {!catIsPaid && !catIsFellowRestricted && (
                                                     <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5">
@@ -532,15 +620,41 @@ function ModuleBrowsingContent() {
                                                 </div>
                                             )}
 
+                                            {/* Enrolled card (replaces pricing card when user has paid) */}
+                                            {isAcademyEnrolledView && (
+                                                <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <Icons.CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
+                                                        <p className="text-emerald-700 font-bold text-sm">You're Enrolled</p>
+                                                    </div>
+                                                    <p className="text-emerald-600 text-xs leading-relaxed">
+                                                        Your registration for this programme is confirmed. Content will be available soon.
+                                                    </p>
+                                                </div>
+                                            )}
+
                                             {/* Paid pricing card */}
-                                            {catIsPaid && catPrice > 0 && (
+                                            {catIsPaid && !isAcademyEnrolledView && (
                                                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                                                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-1">
+                                                    <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-2">
                                                         One-Time Category Price
                                                     </p>
-                                                    <p className="text-4xl font-extrabold text-gray-900 mb-0.5">
-                                                        KES {catPrice.toLocaleString()}
-                                                    </p>
+                                                    {cat.hasTieredPricing ? (
+                                                        <div className="space-y-2 mb-3">
+                                                            <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                                                <span className="text-xs font-semibold text-gray-600">🎓 Student</span>
+                                                                <span className="text-lg font-extrabold text-[#021d49]">KES {cat.studentPrice}</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2">
+                                                                <span className="text-xs font-semibold text-gray-600">💼 Professional</span>
+                                                                <span className="text-lg font-extrabold text-gray-800">KES {cat.nonStudentPrice}</span>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <p className="text-4xl font-extrabold text-gray-900 mb-0.5">
+                                                            KES {catPrice?.toLocaleString()}
+                                                        </p>
+                                                    )}
                                                     <p className="text-gray-500 text-xs mb-3">
                                                         Pay once · unlock <strong className="text-gray-800">all {totalModules} modules</strong>
                                                     </p>
@@ -601,24 +715,39 @@ function ModuleBrowsingContent() {
                                     </div>
                                 )}
 
-                                {/* ── Footer hint ── */}
-                                <div className="border-t border-gray-100 bg-gray-50 px-6 py-3 flex items-center justify-between">
-                                    <p className="text-gray-400 text-xs flex items-center gap-2">
-                                        <Icons.ChevronDown className="w-3.5 h-3.5" />
-                                        {totalModules} module{totalModules !== 1 ? 's' : ''} available below — click any to view details
-                                    </p>
-                                </div>
+                                {/* ── Footer hint or Content Coming Soon ── */}
+                                {isAcademyEnrolledView ? (
+                                    <div className="border-t border-emerald-100 bg-emerald-50 px-6 py-5 flex flex-col items-center text-center gap-2">
+                                        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mb-1">
+                                            <Icons.Clock className="w-6 h-6 text-emerald-600" />
+                                        </div>
+                                        <p className="text-emerald-800 font-bold text-sm">Content Coming Soon</p>
+                                        <p className="text-emerald-600 text-xs leading-relaxed max-w-xs">
+                                            You're successfully enrolled in <strong>{cat.name}</strong>.
+                                            Modules will appear here once published by the programme team.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="border-t border-gray-100 bg-gray-50 px-6 py-3 flex items-center justify-between">
+                                        <p className="text-gray-400 text-xs flex items-center gap-2">
+                                            <Icons.ChevronDown className="w-3.5 h-3.5" />
+                                            {totalModules} module{totalModules !== 1 ? 's' : ''} available below — click any to view details
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         );
                     })()}
 
                     {/* ── Sequential Learning Notice ── */}
+                    {!isAcademyEnrolledView && (
                     <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                         <Icons.ListOrdered className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <p className="text-xs text-amber-800 leading-relaxed">
                             <span className="font-semibold">Sequential Learning:</span> Modules within each programme must be completed in order — you must finish Module 1 before you can access Module 2, and so on. Locked modules will become available once you complete the preceding one.
                         </p>
                     </div>
+                    )}
 
                     {/* ── Loading ── */}
                     {loading && (
@@ -638,7 +767,7 @@ function ModuleBrowsingContent() {
                     )}
 
                     {/* ── Modules Grid ── */}
-                    {!loading && displayedModules.length > 0 && (
+                    {!loading && displayedModules.length > 0 && !isAcademyEnrolledView && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {displayedModules.map((mod) => {
                                 const lvl = getLvl(mod.level);
@@ -659,6 +788,12 @@ function ModuleBrowsingContent() {
                                 const seqLocked = !isEnrolled && isSequentiallyLocked(mod);
                                 const prevModTitle = seqLocked ? getPrevModuleTitle(mod) : null;
                                 const isLocked = (!hasLevelAccess && !isFellowBlocked) || seqLocked;
+                                // Cross-category: only block FREE/fellows categories from other programmes.
+                                // Paid/tiered-pricing categories always remain accessible via payment.
+                                const userEnrolledCatIds = [...new Set([...fellowCategoryIds, ...purchasedCategoryIds])];
+                                const modCatId = (mod.categoryId?._id || mod.categoryId)?.toString?.() || String(mod.categoryId?._id || mod.categoryId);
+                                const modCatIsPaid = category?.hasTieredPricing || category?.isPaid || category?.accessType === 'paid';
+                                const isCrossCategory = !isEnrolled && userEnrolledCatIds.length > 0 && modCatId && !userEnrolledCatIds.includes(modCatId) && !modCatIsPaid;
                                 const desc = stripHtml(mod.description);
                                 const instructors = (mod.instructorIds || [])
                                     .filter(i => typeof i === 'object')
@@ -713,9 +848,23 @@ function ModuleBrowsingContent() {
                                                     </Badge>
                                                 )}
                                                 {!isEnrolled && isPaid && (
-                                                    <Badge className="text-[10px] bg-amber-500 text-white border-0">
-                                                        KES {price.toLocaleString()}
-                                                    </Badge>
+                                                    category?.hasTieredPricing ? (
+                                                        <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[9px] text-sky-500 font-medium">Student</span>
+                                                                <span className="text-xs font-extrabold text-sky-700">${category.studentPrice}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[9px] text-orange-500 font-medium">Non-Student</span>
+                                                                <span className="text-xs font-extrabold text-orange-600">${category.nonStudentPrice}</span>
+                                                            </div>
+                                                            <span className="text-[8px] text-gray-400 font-medium">KES · one-time</span>
+                                                        </div>
+                                                    ) : (
+                                                        <Badge className="text-[10px] bg-amber-500 text-white border-0">
+                                                            KES {price.toLocaleString()}
+                                                        </Badge>
+                                                    )
                                                 )}
                                                 {!isEnrolled && hasAccess && isFree && (
                                                     <Badge className="text-[10px] bg-blue-700 text-white border-0">
@@ -798,7 +947,14 @@ function ModuleBrowsingContent() {
                                             )}
 
                                             {/* Action button */}
-                                            {isFellowBlocked ? (
+                                            {isCrossCategory ? (
+                                                <div className="rounded-lg bg-slate-50 border border-slate-200 p-2.5 flex items-start gap-2">
+                                                    <Icons.ShieldX className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                                                    <p className="text-[10px] text-slate-500 leading-snug">
+                                                        Not available for your enrolled programme.
+                                                    </p>
+                                                </div>
+                                            ) : isFellowBlocked ? (
                                                 <div className="rounded-lg bg-purple-50 border border-purple-100 p-2.5 flex items-start gap-2">
                                                     <Icons.Award className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" />
                                                     <p className="text-[10px] text-purple-700 leading-snug">
@@ -834,7 +990,7 @@ function ModuleBrowsingContent() {
                                                         <><Icons.Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Enrolling…</>
                                                     ) : (
                                                         <><Icons.PlusCircle className="w-3.5 h-3.5 mr-1.5" />
-                                                            {isFree ? 'Enroll Free' : `Enroll · KES ${price.toLocaleString()}`}</>
+                                                            {isFree ? 'Enroll Free' : category?.hasTieredPricing ? `Enroll · Student KES ${category.studentPrice} / Non-Student KES ${category.nonStudentPrice}` : `Enroll · KES ${price.toLocaleString()}`}</>
                                                     )}
                                                 </Button>
                                             )}
@@ -846,7 +1002,7 @@ function ModuleBrowsingContent() {
                     )}
 
                     {/* ── Empty state ── */}
-                    {!loading && filteredModules.length === 0 && (
+                    {!loading && filteredModules.length === 0 && !isAcademyEnrolledView && (
                         <Card className="border-gray-100 shadow-sm">
                             <CardContent className="py-16 text-center">
                                 <Icons.SearchX className="w-14 h-14 text-gray-200 mx-auto mb-4" />

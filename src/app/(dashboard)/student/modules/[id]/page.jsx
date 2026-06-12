@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
+import paymentService from '@/lib/api/paymentService';
 import { useEnrollmentProgress } from '@/hooks/useEnrollmentProgress';
 import moduleRatingService from '@/lib/api/moduleRatingService';
 import Navbar from '@/components/navbar/navbar';
@@ -133,6 +134,7 @@ function ModuleLearningContent() {
     // Data state
     const [moduleData, setModuleData] = useState(null);
     const [enrollment, setEnrollment] = useState(null);
+    const [accessStatus, setAccessStatus] = useState(null); // null = loading, 'granted' | 'payment_required' | 'verification_pending' | 'verification_rejected' | 'restricted'
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
@@ -190,13 +192,47 @@ function ModuleLearningContent() {
     const fetchModuleData = async () => {
         try {
             setLoading(true); setError('');
+
+            // ── Step 1: Check payment/access FIRST before loading anything ──
+            let payStatus = null;
+            try {
+                payStatus = await paymentService.checkModulePaymentStatus(moduleId);
+            } catch {
+                // Cannot verify access — block by default
+                setError('Unable to verify access. Please try again.');
+                return;
+            }
+
+            // ── Step 2: Gate — block if not paid ──
+            if (payStatus && !payStatus.paid) {
+                if (payStatus.reason === 'verification_pending') {
+                    setAccessStatus('verification_pending');
+                    return;
+                }
+                if (payStatus.reason === 'verification_rejected') {
+                    setAccessStatus({ type: 'verification_rejected', reason: payStatus.rejectionReason });
+                    return;
+                }
+                // Requires payment — redirect to correct checkout
+                if (payStatus.hasTieredPricing) {
+                    router.replace(`/checkout/module?moduleId=${moduleId}&categoryId=${payStatus.categoryId}&categoryName=${encodeURIComponent(payStatus.categoryName || '')}`);
+                } else if (payStatus.requiresPayment) {
+                    router.replace(`/modules/${moduleId}`);
+                } else {
+                    // Any other blocked reason (restricted, not assigned, etc.)
+                    router.replace(`/student/modules`);
+                }
+                return;
+            }
+
+            // ── Step 3: Access granted — load module content ──
             const [mod, enrollmentData] = await Promise.all([
                 moduleService.getModuleById(moduleId),
                 moduleEnrollmentService.getMyEnrollmentForModule(moduleId).catch(() => null),
             ]);
             setModuleData(mod);
             setEnrollment(enrollmentData);
-            console.log('[ModuleLearning] Module loaded | moduleId=', moduleId, '| enrollmentId=', enrollmentData?._id, '| lastAccessedLesson=', enrollmentData?.lastAccessedLesson);
+            setAccessStatus('granted');
         } catch (err) {
             setError('Failed to load module');
         } finally { setLoading(false); }
@@ -743,6 +779,59 @@ function ModuleLearningContent() {
             </>
         );
     }
+    // ── Payment gate screens ──────────────────────────────────────────────────
+    if (accessStatus === 'verification_pending') {
+        return (
+            <>
+                <Navbar />
+                <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+                    <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+                        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Icons.Clock className="w-8 h-8 text-amber-600" />
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">Verification Pending</h2>
+                        <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                            Your student ID is currently under review. You will get access to all modules once our team approves your ID.
+                        </p>
+                        <Button onClick={() => router.push('/student')} className="w-full bg-[#021d49] hover:bg-[#032a66] text-white">
+                            Go to Dashboard
+                        </Button>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
+    if (accessStatus?.type === 'verification_rejected') {
+        return (
+            <>
+                <Navbar />
+                <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+                    <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-red-100 p-8 text-center">
+                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <Icons.XCircle className="w-8 h-8 text-red-600" />
+                        </div>
+                        <h2 className="text-xl font-bold text-gray-900 mb-2">ID Verification Rejected</h2>
+                        <p className="text-sm text-gray-500 mb-2 leading-relaxed">
+                            Your student ID was rejected.
+                        </p>
+                        {accessStatus.reason && (
+                            <p className="text-sm text-red-600 font-medium mb-6">Reason: {accessStatus.reason}</p>
+                        )}
+                        <div className="space-y-3">
+                            <Button onClick={() => router.push('/student-verification/upload')} className="w-full bg-[#021d49] hover:bg-[#032a66] text-white">
+                                Re-upload Student ID
+                            </Button>
+                            <Button variant="outline" onClick={() => router.push('/student')} className="w-full border-gray-200">
+                                Go to Dashboard
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            </>
+        );
+    }
+
     if (!enrollment) {
         router.replace(`/modules/${moduleId}`);
         return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Icons.Loader2 className="w-8 h-8 animate-spin text-green-600" /></div>;

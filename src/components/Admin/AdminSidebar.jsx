@@ -178,6 +178,11 @@ export default function AdminSidebar() {
             path: '/admin/student-verifications',
         },
         {
+            icon: 'CreditCard',
+            label: 'Academy Payments',
+            path: '/admin/payments',
+        },
+        {
             icon: 'BarChart3',
             label: 'Analytics & Reports',
             path: '/admin/analytics',

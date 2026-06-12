@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import paymentService from '@/lib/api/paymentService';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
+import authService from '@/lib/api/authService';
 import Navbar from '@/components/navbar/navbar';
 import Footer from '@/components/Footer/Footer';
 import { CheckCircle, XCircle, Loader2, AlertTriangle } from 'lucide-react';
@@ -37,8 +38,14 @@ function VerifyPaymentContent() {
 
       localStorage.removeItem('pendingPaymentId');
       localStorage.removeItem('pendingCourseId');
+      localStorage.removeItem('pendingCategoryId');
 
-      // Student payment: redirect to ID upload page
+      // Refresh user in localStorage so fellowData.assignedCategories is up to date
+      if (verificationResult.success && verificationResult.categoryId) {
+        await (authService as any).refreshFromServer().catch(() => {});
+      }
+
+      // Student payment that still needs ID upload (old flow)
       if (verificationResult.success && verificationResult.requiresStudentVerification) {
         localStorage.removeItem('pendingUserTier');
         router.push(`/student-verification/upload?categoryId=${verificationResult.categoryId}&moduleId=${verificationResult.moduleId || ''}`);
@@ -55,7 +62,6 @@ function VerifyPaymentContent() {
       }
     } catch (err: any) {
       const msg: string = err.response?.data?.message || err.message || 'Failed to verify payment';
-      // Distinguish a Paystack-level failure from a network/server error
       if (
         msg.toLowerCase().includes('payment failed') ||
         msg.toLowerCase().includes('failed:') ||
@@ -147,6 +153,66 @@ function VerifyPaymentContent() {
   if (result?.success) {
     const moduleId = result.moduleId;
     const courseId = result.courseId;
+    // Category-level payment (no module) = Academy registration
+    const isAcademyRegistration = result.categoryId && !moduleId && !courseId;
+
+    if (isAcademyRegistration) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+          <div className="max-w-md w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+            <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+              <CheckCircle className="w-8 h-8 text-green-500" />
+            </div>
+
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
+              Registration Confirmed
+            </p>
+            <h1 className="text-2xl font-bold text-gray-900 mb-3">
+              You are registered under the ARIN Publishing Academy
+            </h1>
+            <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+              Your payment was successful. You are now a registered member of the
+              ARIN Publishing Academy. Our team will be in touch with onboarding details
+              and programme information before the start date.
+            </p>
+
+            <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 mb-6 text-left space-y-2 text-sm">
+              {result.amount && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Amount Paid</span>
+                  <span className="font-semibold text-gray-900">KES {result.amount}</span>
+                </div>
+              )}
+              {reference && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Reference</span>
+                  <span className="font-mono text-xs text-gray-700">{reference}</span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-gray-500">Status</span>
+                <span className="font-semibold text-green-600">Confirmed</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => router.push('/arin-publishing-academy')}
+                className="w-full bg-[#021d49] text-white py-3 rounded-xl font-semibold text-sm hover:bg-[#032a5e] transition"
+              >
+                Back to ARIN Publishing Academy
+              </button>
+              <button
+                onClick={() => router.push('/student')}
+                className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-200 transition"
+              >
+                Go to My Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -168,7 +234,7 @@ function VerifyPaymentContent() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Amount Paid:</span>
                   <span className="font-semibold text-gray-900">
-                    KES {result.amount.toLocaleString()}
+                    KES {result.amount}
                   </span>
                 </div>
               )}

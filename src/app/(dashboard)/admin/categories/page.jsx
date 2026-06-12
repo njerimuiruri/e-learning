@@ -55,6 +55,9 @@ const emptyForm = {
     welcomeMessage: '',
     accessType: 'fellows_only', // UI value — mapped to backend on submit
     price: 0,
+    hasTieredPricing: false,
+    studentPrice: 0,
+    nonStudentPrice: 0,
     courseDescription: '',
     overallObjectives: '',
     learningOutcomes: '',
@@ -120,6 +123,9 @@ export default function CategoriesPage() {
             welcomeMessage: category.welcomeMessage || '',
             accessType: toUiAccessType(category),
             price: category.price || 0,
+            hasTieredPricing: category.hasTieredPricing || false,
+            studentPrice: category.studentPrice || 0,
+            nonStudentPrice: category.nonStudentPrice || 0,
             courseDescription: category.courseDescription || '',
             overallObjectives: category.overallObjectives || '',
             learningOutcomes: category.learningOutcomes || '',
@@ -153,6 +159,9 @@ export default function CategoriesPage() {
                 academicStructure: formData.academicStructure,
                 progressionFramework: formData.progressionFramework,
                 fellowshipLevels: formData.fellowshipLevels,
+                hasTieredPricing: formData.hasTieredPricing,
+                studentPrice: formData.hasTieredPricing ? (parseFloat(formData.studentPrice) || 0) : 0,
+                nonStudentPrice: formData.hasTieredPricing ? (parseFloat(formData.nonStudentPrice) || 0) : 0,
                 ...accessFields,
             };
             if (editingId) {
@@ -192,7 +201,10 @@ export default function CategoriesPage() {
             return (
                 <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full flex items-center gap-1">
                     <CreditCard size={11} /> Paid
-                    {category.price > 0 && <span className="ml-1 opacity-70">· ${category.price.toLocaleString()}</span>}
+                    {category.hasTieredPricing
+                        ? <span className="ml-1 opacity-70">· KES {category.studentPrice}/{category.nonStudentPrice}</span>
+                        : category.price > 0 && <span className="ml-1 opacity-70">· KES {category.price.toLocaleString()}</span>
+                    }
                 </span>
             );
         }
@@ -200,7 +212,10 @@ export default function CategoriesPage() {
             return (
                 <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full flex items-center gap-1">
                     <Users size={11} /> Fellows Priority
-                    {category.price > 0 && <span className="ml-1 opacity-70">· ${category.price.toLocaleString()}</span>}
+                    {category.hasTieredPricing
+                        ? <span className="ml-1 opacity-70">· KES {category.studentPrice}/{category.nonStudentPrice}</span>
+                        : category.price > 0 && <span className="ml-1 opacity-70">· KES {category.price.toLocaleString()}</span>
+                    }
                 </span>
             );
         }
@@ -344,26 +359,78 @@ export default function CategoriesPage() {
                         {/* Price — always required for both options */}
                         <div className={`mt-5 rounded-xl p-4 border ${formData.accessType === 'fellows_only' ? 'bg-purple-50 border-purple-200' : 'bg-orange-50 border-orange-200'}`}>
                             <label className={`block text-sm font-semibold mb-2 ${formData.accessType === 'fellows_only' ? 'text-purple-800' : 'text-orange-800'}`}>
-                                Enrollment Price
+                                Enrollment Price (KES)
                                 <span className={`font-normal ml-1 ${formData.accessType === 'fellows_only' ? 'text-purple-600' : 'text-orange-600'}`}>
                                     (optional — charged to non-assigned users and the general public)
                                 </span>
                             </label>
                             <div className="relative max-w-xs">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">$</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">KES</span>
                                 <input
                                     type="number"
                                     min="0"
                                     value={formData.price ?? ''}
                                     onChange={e => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                                     placeholder="e.g. 5000"
-                                    className={`w-full pl-7 pr-4 py-2 rounded-lg focus:ring-2 focus:border-transparent bg-white text-sm border ${formData.accessType === 'fellows_only' ? 'border-purple-300 focus:ring-purple-500' : 'border-orange-300 focus:ring-orange-500'}`}
+                                    className={`w-full pl-12 pr-4 py-2 rounded-lg focus:ring-2 focus:border-transparent bg-white text-sm border ${formData.accessType === 'fellows_only' ? 'border-purple-300 focus:ring-purple-500' : 'border-orange-300 focus:ring-orange-500'}`}
                                 />
                             </div>
                             <p className={`text-xs mt-2 ${formData.accessType === 'fellows_only' ? 'text-purple-600' : 'text-orange-600'}`}>
                                 Fellows you specifically assign to <strong>this category</strong> always enroll for free.
                                 Everyone else — including fellows assigned to other categories — must pay this price. Leave at 0 if you want non-fellows to have free access too.
                             </p>
+                        </div>
+
+                        {/* Tiered Pricing toggle */}
+                        <div className="mt-4 rounded-xl p-4 border border-blue-200 bg-blue-50">
+                            <label className="flex items-center gap-3 cursor-pointer mb-1">
+                                <input
+                                    type="checkbox"
+                                    checked={formData.hasTieredPricing}
+                                    onChange={e => setFormData({ ...formData, hasTieredPricing: e.target.checked })}
+                                    className="w-4 h-4 accent-blue-600"
+                                />
+                                <span className="text-sm font-semibold text-blue-800">Enable Tiered Pricing (Student / Non-Student)</span>
+                            </label>
+                            <p className="text-xs text-blue-600 mb-3 ml-7">
+                                Used by the ARIN Publishing Academy. Students get a discounted rate after ID verification; non-students pay the higher rate immediately.
+                            </p>
+
+                            {formData.hasTieredPricing && (
+                                <div className="grid sm:grid-cols-2 gap-4 mt-3">
+                                    <div>
+                                        <label className="block text-xs font-semibold text-blue-800 mb-1">Student Price (KES)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">KES</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.studentPrice ?? ''}
+                                                onChange={e => setFormData({ ...formData, studentPrice: parseFloat(e.target.value) || 0 })}
+                                                placeholder="e.g. 5"
+                                                className="w-full pl-12 pr-4 py-2 rounded-lg border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-semibold text-blue-800 mb-1">Non-Student Price (KES)</label>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">KES</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.nonStudentPrice ?? ''}
+                                                onChange={e => setFormData({ ...formData, nonStudentPrice: parseFloat(e.target.value) || 0 })}
+                                                placeholder="e.g. 10"
+                                                className="w-full pl-12 pr-4 py-2 rounded-lg border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-blue-500 sm:col-span-2">
+                                        Installments are automatically calculated as 50% of each tier's price.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -455,9 +522,9 @@ export default function CategoriesPage() {
                                     {/* Access explainer line */}
                                     <p className="text-xs text-gray-400 mt-2">
                                         {category.accessType === 'paid'
-                                            ? `Open enrollment · $${(category.price || 0).toLocaleString()} · Assigned fellows enroll free — all others pay`
+                                            ? `Open enrollment · KES ${(category.price || 0).toLocaleString()} · Assigned fellows enroll free — all others pay`
                                             : category.accessType === 'restricted'
-                                            ? `Fellows Priority · $${(category.price || 0).toLocaleString()} · Assigned fellows free — public & non-assigned fellows pay`
+                                            ? `Fellows Priority · KES ${(category.price || 0).toLocaleString()} · Assigned fellows free — public & non-assigned fellows pay`
                                             : 'Legacy — fellows only, public blocked (edit to update access type)'
                                         }
                                     </p>

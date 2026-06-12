@@ -119,6 +119,10 @@ const adminService = {
     const { data } = await api.delete(`/fellows/${id}`);
     return data;
   },
+  revokeUserCategoryAccess: async (userId: string, categoryId: string) => {
+    const { data } = await api.delete(`/users/${userId}/category-access/${categoryId}`);
+    return data;
+  },
   sendBulkEmail: async (fellowIds: string[], subject: string, message: string, cc?: string[], bcc?: string[]) => {
     const { data } = await api.post('/fellows/bulk-email', { fellowIds, subject, message, cc, bcc });
     return data;

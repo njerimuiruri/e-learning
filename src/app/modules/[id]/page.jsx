@@ -135,7 +135,8 @@ export default function ModuleDetailPage() {
                     if (isPaid) {
                         try {
                             const payStatus = await paymentService.checkModulePaymentStatus(moduleId);
-                            setHasPaid(payStatus?.hasPaid === true || payStatus?.status === 'completed');
+                            // paid = true means category is in purchasedCategories or admin bypass
+                            setHasPaid(payStatus?.paid === true);
                         } catch {
                             setHasPaid(false);
                         }
@@ -156,15 +157,22 @@ export default function ModuleDetailPage() {
     const isFellow = catId ? fellowCategoryIds.includes(catId) : false;
     const hasFellowAccess = isFellow;
     const isFellowBlocked = isFellowOnly && !hasFellowAccess && !hasPaid && !enrollment;
-    const effectivelyFree = isFree || (isFellowOnly && hasFellowAccess) || (isPaid && hasFellowAccess) || hasPaid;
-    const effectivelyPaid = isPaid && !hasFellowAccess && !hasPaid;
+    // Tiered-pricing categories: fellow status gives no free pass — everyone pays
+    const fellowGivesFreeAccess = !category?.hasTieredPricing && hasFellowAccess;
+    const effectivelyFree = isFree || (isFellowOnly && hasFellowAccess) || (isPaid && fellowGivesFreeAccess) || hasPaid;
+    const effectivelyPaid = isPaid && !fellowGivesFreeAccess && !hasPaid;
 
     const handleEnroll = async () => {
         if (!isLoggedIn) {
-            router.push(`/login?redirect=/modules/${moduleId}`);
+            // Send to register for paid modules, login for free modules
+            if (effectivelyPaid) {
+                router.push(`/register?redirect=/modules/${moduleId}`);
+            } else {
+                router.push(`/login?redirect=/modules/${moduleId}`);
+            }
             return;
         }
-        if (enrollment) {
+        if (enrollment && !effectivelyPaid) {
             router.push(`/student/modules/${moduleId}`);
             return;
         }
@@ -190,9 +198,9 @@ export default function ModuleDetailPage() {
             setEnrolling(true);
             const enrollResult = await moduleEnrollmentService.enrollInModule(moduleId);
             if (enrollResult?.requiresPayment) {
-                if (category?.hasTieredPricing) {
+                if (enrollResult.hasTieredPricing) {
                     router.push(
-                        `/checkout/module?moduleId=${moduleId}&categoryId=${catId}&categoryName=${encodeURIComponent(category?.name || '')}`
+                        `/checkout/module?moduleId=${moduleId}&categoryId=${enrollResult.categoryId}&categoryName=${encodeURIComponent(enrollResult.categoryName || '')}`
                     );
                     return;
                 }
@@ -217,13 +225,14 @@ export default function ModuleDetailPage() {
 
     const getCTA = () => {
         if (isFellowBlocked) return { label: 'Fellows Only', icon: Award, style: 'bg-purple-200 text-purple-800 cursor-not-allowed', disabled: true };
-        if (enrollment) {
+        // Only show Resume if user has actually paid — not just enrolled
+        if (enrollment && !effectivelyPaid) {
             const lastLesson = enrollment.lastAccessedLesson ?? 0;
             return { label: `Resume from Lesson ${lastLesson + 1}`, icon: Play, style: 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white' };
         }
-        if (!isLoggedIn) return { label: isFellowOnly ? 'Sign In (Fellows Only)' : effectivelyPaid ? 'Sign In' : 'Sign In to Enroll for Free', icon: UserCheck, style: 'bg-gradient-to-r from-[#021d49] to-blue-700 hover:from-[#032e6b] hover:to-blue-800 text-white' };
+        if (!isLoggedIn) return { label: isFellowOnly ? 'Create Account' : effectivelyPaid ? 'Create Account to Enroll' : 'Create Account — Enroll for Free', icon: UserCheck, style: 'bg-gradient-to-r from-[#021d49] to-blue-700 hover:from-[#032e6b] hover:to-blue-800 text-white' };
         if (effectivelyFree) return { label: 'Enroll for Free', icon: Unlock, style: 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white' };
-        if (effectivelyPaid) return { label: catPrice ? `Pay KES ${catPrice.toLocaleString()} to Access` : 'Purchase Access', icon: DollarSign, style: 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white' };
+        if (effectivelyPaid) return { label: category?.hasTieredPricing ? 'Select Your Plan & Pay' : catPrice ? `Pay KES ${catPrice.toLocaleString()} to Access` : 'Purchase Access', icon: DollarSign, style: 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white' };
         return { label: 'Access Restricted', icon: Lock, style: 'bg-gray-300 text-gray-600 cursor-not-allowed', disabled: true };
     };
 
@@ -685,8 +694,27 @@ export default function ModuleDetailPage() {
                                 )}
                                 {effectivelyPaid && !enrollment && !hasPaid && (
                                     <div className="pb-5 border-b border-gray-100 text-center">
-                                        <p className="text-3xl font-extrabold text-[#021d49]">KES {catPrice?.toLocaleString() || '—'}</p>
-                                        <p className="text-xs text-gray-500 mt-1">Category access · All modules included</p>
+                                        {category?.hasTieredPricing ? (
+                                            <>
+                                                <div className="flex items-center justify-center gap-3 mb-1">
+                                                    <div className="text-center">
+                                                        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Student</p>
+                                                        <p className="text-2xl font-extrabold text-[#021d49]">KES {category.studentPrice}</p>
+                                                    </div>
+                                                    <div className="text-gray-300 text-xl font-light">/</div>
+                                                    <div className="text-center">
+                                                        <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide">Professional</p>
+                                                        <p className="text-2xl font-extrabold text-gray-700">KES {category.nonStudentPrice}</p>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-1">One-time · All modules included</p>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="text-3xl font-extrabold text-[#021d49]">KES {catPrice?.toLocaleString() || '—'}</p>
+                                                <p className="text-xs text-gray-500 mt-1">Category access · All modules included</p>
+                                            </>
+                                        )}
                                     </div>
                                 )}
 
@@ -706,7 +734,7 @@ export default function ModuleDetailPage() {
                                 {!isLoggedIn && (
                                     <p className="text-center text-sm text-gray-500">
                                         Already have an account?{' '}
-                                        <a href="/login" className="text-[#021d49] font-semibold hover:underline">Sign in</a>
+                                        <a href="/login" className="text-[#021d49] font-semibold hover:underline">Sign In</a>
                                     </p>
                                 )}
 

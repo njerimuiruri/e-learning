@@ -147,6 +147,67 @@ const paymentService = {
   },
 
   /**
+   * Initialize a Paystack payment directly for a category (no module required)
+   * Used by the Arin Publishing Academy page
+   */
+  initializeCategoryPayment: async (
+    categoryId: string,
+    userTier: 'student' | 'non-student',
+    paymentOption: 'full' | 'installment1' | 'installment2',
+    paymentType?: 'local' | 'international',
+  ) => {
+    const callbackBaseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const { data } = await api.post('/category/initialize', {
+      categoryId,
+      userTier,
+      paymentOption,
+      paymentType,
+      callbackBaseUrl,
+    });
+    return data;
+  },
+
+  /**
+   * Check access/payment status for a category directly
+   */
+  checkCategoryStatus: async (categoryId: string) => {
+    const { data } = await api.get(`/category/status/${categoryId}`);
+    return data;
+  },
+
+  /**
+   * Admin: get all payments for a specific category
+   */
+  adminGetCategoryPayments: async (categoryId: string, page = 1, limit = 50) => {
+    const { data } = await api.get(`/admin/category/${categoryId}`, { params: { page, limit } });
+    return data;
+  },
+
+  /**
+   * Admin: get all payments across all categories
+   */
+  adminGetAllPayments: async (page = 1, limit = 50, status?: string) => {
+    const { data } = await api.get('/admin/all', { params: { page, limit, status } });
+    return data;
+  },
+
+  /**
+   * Admin: get installment overview for a category
+   */
+  adminGetInstallmentOverview: async (categoryId: string) => {
+    const { data } = await api.get(`/admin/category/${categoryId}/installments`);
+    return data;
+  },
+
+  /**
+   * Admin: send installment 2 reminder emails
+   */
+  adminSendInstallment2Reminders: async (categoryId: string) => {
+    const { data } = await api.post(`/admin/category/${categoryId}/send-installment2-reminders`);
+    return data;
+  },
+
+  /**
    * Redirect user to Paystack payment page
    * @param authorizationUrl - Paystack authorization URL
    */

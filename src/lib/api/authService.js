@@ -222,6 +222,25 @@ class AuthService {
   }
 
   /**
+   * Fetch fresh user data from the server and update both localStorage and cookie.
+   * Call this after any server-side change to the user (e.g. payment enrolled them as a fellow).
+   */
+  async refreshFromServer() {
+    try {
+      const response = await api.get('/api/auth/me');
+      const freshUser = response.data?.user;
+      if (!freshUser) return null;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('user', JSON.stringify(freshUser));
+      }
+      this.setCookie('user', JSON.stringify(freshUser), 1);
+      return freshUser;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Update current user in cookie
    * @param {Object} userData - Updated user data
    */

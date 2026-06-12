@@ -943,11 +943,12 @@ function ResetPasswordDialog({ fellow, onClose }) {
 // ─────────────────────────────────────────────────────────────────
 export default function FellowsManagementPage() {
   const router = useRouter();
-  const [fellows, setFellows]           = useState([]);
-  const [categories, setCategories]     = useState([]);
-  const [loading, setLoading]           = useState(false);
-  const [search, setSearch]             = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [fellows, setFellows]             = useState([]);
+  const [categories, setCategories]       = useState([]);
+  const [loading, setLoading]             = useState(false);
+  const [search, setSearch]               = useState('');
+  const [filterStatus, setFilterStatus]   = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
   const [pagination, setPagination]     = useState({ page: 1, limit: 50, total: 0, pages: 0 });
 
   // Selection
@@ -1042,6 +1043,27 @@ export default function FellowsManagementPage() {
     return <Badge variant="secondary" className="text-xs">Unknown</Badge>;
   };
 
+  // Resolve a fellow's category names from their assignedCategories + purchasedCategories
+  const getFellowCategoryNames = (f) => {
+    const ids = [
+      ...(f.fellowData?.assignedCategories || []),
+      ...(f.purchasedCategories || []),
+    ].map(id => id?.toString?.() || String(id));
+    const unique = [...new Set(ids)];
+    return unique.map(id => categories.find(c => c._id === id)?.name).filter(Boolean);
+  };
+
+  // Client-side filter by category
+  const displayedFellows = filterCategory === 'all'
+    ? fellows
+    : fellows.filter(f => {
+        const ids = [
+          ...(f.fellowData?.assignedCategories || []),
+          ...(f.purchasedCategories || []),
+        ].map(id => id?.toString?.() || String(id));
+        return ids.includes(filterCategory);
+      });
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-right" />
@@ -1072,6 +1094,41 @@ export default function FellowsManagementPage() {
           <StatCard label="Inactive"            value={fellows.filter(f=>!f.isActive).length}              icon={Icons.UserX}      color="red" />
         </div>
 
+        {/* ── Per-category breakdown ── */}
+        {categories.length > 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {categories.map(cat => {
+              const count = fellows.filter(f => {
+                const ids = [
+                  ...(f.fellowData?.assignedCategories || []),
+                  ...(f.purchasedCategories || []),
+                ].map(id => id?.toString?.() || String(id));
+                return ids.includes(cat._id);
+              }).length;
+              return (
+                <button
+                  key={cat._id}
+                  onClick={() => setFilterCategory(filterCategory === cat._id ? 'all' : cat._id)}
+                  className={`text-left rounded-xl border-2 p-4 transition-all ${filterCategory === cat._id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white hover:border-blue-300'}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-0.5">Category</p>
+                      <p className="font-semibold text-gray-900 text-sm">{cat.name}</p>
+                    </div>
+                    <div className={`text-2xl font-extrabold ${filterCategory === cat._id ? 'text-blue-600' : 'text-gray-700'}`}>
+                      {count}
+                    </div>
+                  </div>
+                  {filterCategory === cat._id && (
+                    <p className="text-xs text-blue-600 mt-1">Showing filtered results · click to clear</p>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* ── Toolbar ──────────────────────────────── */}
         <Card>
           <CardContent className="pt-4 pb-3">
@@ -1095,6 +1152,17 @@ export default function FellowsManagementPage() {
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="completed">Completed</SelectItem>
                   <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Category filter */}
+              <Select value={filterCategory} onValueChange={v => { setFilterCategory(v); setSelected(new Set()); }}>
+                <SelectTrigger className="w-52"><SelectValue placeholder="All categories" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All categories</SelectItem>
+                  {categories.map(c => (
+                    <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -1136,25 +1204,25 @@ export default function FellowsManagementPage() {
                   <th className="px-4 py-3 text-left w-10">
                     <Checkbox checked={allOnPageSelected} onCheckedChange={toggleAll} aria-label="Select all" />
                   </th>
-                  {['Fellow', 'Track / Region', 'Country', 'Status', 'Invitation', 'Joined', 'Actions'].map(h => (
+                  {['Fellow', 'Category', 'Track / Region', 'Country', 'Status', 'Invitation', 'Joined', 'Actions'].map(h => (
                     <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {loading && fellows.length === 0 ? (
-                  <tr><td colSpan={8} className="text-center py-16">
+                  <tr><td colSpan={9} className="text-center py-16">
                     <Icons.Loader2 className="w-8 h-8 animate-spin text-gray-300 mx-auto mb-2" />
                     <p className="text-gray-400 text-sm">Loading fellows…</p>
                   </td></tr>
-                ) : fellows.length === 0 ? (
-                  <tr><td colSpan={8} className="text-center py-16">
+                ) : displayedFellows.length === 0 ? (
+                  <tr><td colSpan={9} className="text-center py-16">
                     <Icons.Users className="w-12 h-12 text-gray-200 mx-auto mb-3" />
                     <p className="text-gray-500 font-medium">No fellows found</p>
-                    <p className="text-gray-400 text-xs mt-1">Try adjusting your search or add fellows using the buttons above.</p>
+                    <p className="text-gray-400 text-xs mt-1">Try adjusting your search or filters.</p>
                   </td></tr>
                 ) : (
-                  fellows.map(f => (
+                  displayedFellows.map(f => (
                     <tr key={f._id} className={`border-b last:border-0 hover:bg-gray-50/60 transition-colors ${selected.has(f._id) ? 'bg-blue-50/40' : ''}`}>
                       <td className="px-4 py-3">
                         <Checkbox checked={selected.has(f._id)} onCheckedChange={() => toggleSelect(f._id)} />
@@ -1173,6 +1241,20 @@ export default function FellowsManagementPage() {
                             {f.gender && <p className="text-xs text-gray-400">{f.gender}</p>}
                           </div>
                         </div>
+                      </td>
+                      {/* Category */}
+                      <td className="px-3 py-3">
+                        {(() => {
+                          const names = getFellowCategoryNames(f);
+                          if (names.length === 0) return <span className="text-gray-300 text-xs">—</span>;
+                          return (
+                            <div className="flex flex-wrap gap-1">
+                              {names.map(name => (
+                                <span key={name} className="text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full">{name}</span>
+                              ))}
+                            </div>
+                          );
+                        })()}
                       </td>
                       {/* Track / Region */}
                       <td className="px-3 py-3">

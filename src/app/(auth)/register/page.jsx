@@ -159,9 +159,13 @@ export default function RegisterPage() {
                 if (response.token) {
                     localStorage.setItem('token', response.token);
                     localStorage.setItem('user', JSON.stringify(response.user));
+                    // Set the cookie that getCurrentUser() reads — needed so the
+                    // redirect destination sees the user as logged in immediately
+                    authService.setCookie('user', JSON.stringify(response.user), 1);
                 }
                 showToast('Registration successful! Welcome aboard.', 'success');
-                setTimeout(() => router.push('/student'), 1500);
+                const redirectTo = new URLSearchParams(window.location.search).get('redirect') || '/student';
+                setTimeout(() => router.push(redirectTo), 1500);
             } else {
                 await authService.registerInstructor({
                     firstName: formData.firstName, lastName: formData.lastName,
