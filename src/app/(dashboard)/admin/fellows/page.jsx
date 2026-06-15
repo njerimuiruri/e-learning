@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 import adminService from '@/lib/api/adminService';
 import categoryService from '@/lib/api/categoryService';
 
@@ -1064,6 +1065,117 @@ export default function FellowsManagementPage() {
         return ids.includes(filterCategory);
       });
 
+  const [exporting, setExporting] = useState(false);
+
+  const exportToExcel = async () => {
+    setExporting(true);
+    try {
+      // Fetch all fellows at once (high limit to bypass pagination)
+      const res = await adminService.getAllFellows({ status: 'all', page: 1, limit: 10000 });
+      const allFellows = res.fellows || [];
+
+      // Helper to get category names for a fellow using the loaded categories list
+      const getCatNames = (f) => {
+        const ids = [
+          ...(f.fellowData?.assignedCategories || []),
+          ...(f.purchasedCategories || []),
+        ].map(id => id?.toString?.() || String(id));
+        return [...new Set(ids)]
+          .map(id => categories.find(c => c._id === id)?.name)
+          .filter(Boolean);
+      };
+
+      // Exclude PRS fellows — fellows whose track or any category name contains "PRS"
+      const nonPrs = allFellows.filter(f => {
+        const track = (f.fellowData?.track || '').toUpperCase();
+        const catNames = getCatNames(f).map(n => n.toUpperCase());
+        return !track.includes('PRS') && !catNames.some(n => n.includes('PRS'));
+      });
+
+      // ── Tally by gender ──
+      const byGender = {};
+      nonPrs.forEach(f => {
+        const g = f.gender || 'Not specified';
+        byGender[g] = (byGender[g] || 0) + 1;
+      });
+
+      // ── Tally by country ──
+      const byCountry = {};
+      nonPrs.forEach(f => {
+        const c = f.country || 'Not specified';
+        byCountry[c] = (byCountry[c] || 0) + 1;
+      });
+
+      // ── Tally by category ──
+      const byCategory = {};
+      nonPrs.forEach(f => {
+        const names = getCatNames(f);
+        if (names.length === 0) {
+          byCategory['Unassigned'] = (byCategory['Unassigned'] || 0) + 1;
+        } else {
+          names.forEach(name => { byCategory[name] = (byCategory[name] || 0) + 1; });
+        }
+      });
+
+      const wb = XLSX.utils.book_new();
+
+      // ── Sheet 1: Summary ──
+      const summaryRows = [
+        ['ARIN FELLOWS REPORT'],
+        ['Generated on', new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })],
+        [],
+        ['Total Admitted Fellows (excluding PRS)', nonPrs.length],
+        [],
+        ['BREAKDOWN BY GENDER'],
+        ['Gender', 'Count'],
+        ...Object.entries(byGender).sort((a, b) => a[0].localeCompare(b[0])),
+        [],
+        ['BREAKDOWN BY COUNTRY'],
+        ['Country', 'Count'],
+        ...Object.entries(byCountry).sort((a, b) => a[0].localeCompare(b[0])),
+        [],
+        ['BREAKDOWN BY CATEGORY'],
+        ['Category', 'Count'],
+        ...Object.entries(byCategory).sort((a, b) => a[0].localeCompare(b[0])),
+      ];
+      const summarySheet = XLSX.utils.aoa_to_sheet(summaryRows);
+      summarySheet['!cols'] = [{ wch: 42 }, { wch: 14 }];
+      XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+      // ── Sheet 2: Full Fellows List ──
+      const listRows = [
+        ['Full Name', 'Email', 'Gender', 'Country', 'Category', 'Track', 'Region', 'Status', 'Date Joined'],
+        ...nonPrs.map(f => {
+          const catNames = getCatNames(f);
+          return [
+            f.fullName || '',
+            f.email || '',
+            f.gender || '',
+            f.country || '',
+            catNames.join(', ') || 'Unassigned',
+            f.fellowData?.track || '',
+            f.fellowData?.region || '',
+            f.fellowData?.fellowshipStatus || '',
+            f.createdAt ? new Date(f.createdAt).toLocaleDateString('en-GB') : '',
+          ];
+        }),
+      ];
+      const listSheet = XLSX.utils.aoa_to_sheet(listRows);
+      listSheet['!cols'] = [
+        { wch: 28 }, { wch: 32 }, { wch: 14 }, { wch: 18 },
+        { wch: 22 }, { wch: 24 }, { wch: 18 }, { wch: 12 }, { wch: 14 },
+      ];
+      XLSX.utils.book_append_sheet(wb, listSheet, 'Fellows List');
+
+      XLSX.writeFile(wb, `fellows-report-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.success('Excel report downloaded');
+    } catch (err) {
+      toast.error('Failed to generate report');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-right" />
@@ -1075,6 +1187,11 @@ export default function FellowsManagementPage() {
           <p className="text-sm text-gray-500 mt-0.5">Add, manage, and communicate with programme fellows</p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={exportToExcel} disabled={exporting} variant="outline" className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+            {exporting
+              ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Exporting…</>
+              : <><Icons.FileDown className="w-4 h-4" /> Export Excel</>}
+          </Button>
           <Button onClick={() => setModal('single')} variant="outline" className="gap-2">
             <Icons.UserPlus className="w-4 h-4" /> Add Fellow
           </Button>
