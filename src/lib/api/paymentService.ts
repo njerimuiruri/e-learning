@@ -204,6 +204,15 @@ const paymentService = {
   },
 
   /**
+   * Admin: look up a user by email — returns their category associations and
+   * Publishing Academy payment status.
+   */
+  adminLookupUserCategories: async (email: string) => {
+    const { data } = await api.get('/admin/user-lookup', { params: { email } });
+    return data;
+  },
+
+  /**
    * Redirect user to Paystack payment page
    * @param authorizationUrl - Paystack authorization URL
    */

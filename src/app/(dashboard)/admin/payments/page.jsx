@@ -11,7 +11,7 @@ import categoryService from '@/lib/api/categoryService';
 import adminService from '@/lib/api/adminService';
 
 export default function AdminPaymentsPage() {
-  const [tab, setTab] = useState('all'); // 'all' | 'installments'
+  const [tab, setTab] = useState('all'); // 'all' | 'installments' | 'lookup'
   const [payments, setPayments] = useState([]);
   const [installments, setInstallments] = useState({ overview: [], total: 0, owingInstallment2: 0, completedBoth: 0 });
   const [stats, setStats] = useState({ total: 0, totalRevenue: 0, students: 0, nonStudents: 0 });
@@ -21,6 +21,10 @@ export default function AdminPaymentsPage() {
   const [search, setSearch] = useState('');
   const [filterTier, setFilterTier] = useState('all');
   const [academyId, setAcademyId] = useState(null);
+  const [lookupEmail, setLookupEmail] = useState('');
+  const [lookupResult, setLookupResult] = useState(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  const [lookupError, setLookupError] = useState(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -52,6 +56,22 @@ export default function AdminPaymentsPage() {
       console.error('Failed to load payments', e);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const lookupUser = async () => {
+    const email = lookupEmail.trim();
+    if (!email) return;
+    try {
+      setLookupLoading(true);
+      setLookupError(null);
+      setLookupResult(null);
+      const result = await paymentService.adminLookupUserCategories(email);
+      setLookupResult(result);
+    } catch (e) {
+      setLookupError(e?.response?.data?.message || 'Lookup failed. Please try again.');
+    } finally {
+      setLookupLoading(false);
     }
   };
 
@@ -129,6 +149,7 @@ export default function AdminPaymentsPage() {
         {[
           { key: 'all', label: 'All Payments' },
           { key: 'installments', label: `Installments (${installments.owingInstallment2} owe 2nd)` },
+          { key: 'lookup', label: 'User Lookup' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
@@ -273,6 +294,147 @@ export default function AdminPaymentsPage() {
           </div>
         </div>
       )}
+      {/* ── User Lookup tab ── */}
+      {tab === 'lookup' && (
+        <div className="space-y-5 max-w-xl">
+          <div>
+            <h2 className="text-sm font-bold text-gray-800 mb-1">Check user enrollment</h2>
+            <p className="text-xs text-gray-500">Enter any email address to see which categories that user is associated with and whether they have paid for the ARIN Publishing Academy.</p>
+          </div>
+
+          {/* Email input */}
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="email"
+                placeholder="user@example.com"
+                value={lookupEmail}
+                onChange={e => { setLookupEmail(e.target.value); setLookupResult(null); setLookupError(null); }}
+                onKeyDown={e => e.key === 'Enter' && lookupUser()}
+                className="w-full pl-9 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#021d49] bg-white"
+              />
+            </div>
+            <button
+              onClick={lookupUser}
+              disabled={lookupLoading || !lookupEmail.trim()}
+              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-semibold text-white bg-[#021d49] rounded-lg hover:bg-[#032a66] transition-colors disabled:opacity-40"
+            >
+              {lookupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+              {lookupLoading ? 'Checking…' : 'Check'}
+            </button>
+          </div>
+
+          {/* Error */}
+          {lookupError && (
+            <div className="flex items-start gap-2 bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-xs">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              {lookupError}
+            </div>
+          )}
+
+          {/* Result */}
+          {lookupResult && !lookupResult.found && (
+            <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center shadow-sm">
+              <XCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-gray-700">No account found</p>
+              <p className="text-xs text-gray-400 mt-1">No user registered with <span className="font-mono">{lookupEmail}</span></p>
+            </div>
+          )}
+
+          {lookupResult?.found && (
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+              {/* User header */}
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-[#021d49]/10 flex items-center justify-center text-sm font-bold text-[#021d49]">
+                  {(lookupResult.user.firstName?.[0] || lookupResult.user.email[0]).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-gray-900">
+                    {lookupResult.user.firstName || ''} {lookupResult.user.lastName || ''}
+                  </p>
+                  <p className="text-xs text-gray-400">{lookupResult.user.email}</p>
+                </div>
+                <span className={`ml-auto text-xs font-semibold px-2.5 py-1 rounded-full ${lookupResult.user.userType === 'fellow' ? 'bg-purple-50 text-purple-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {lookupResult.user.userType || lookupResult.user.role}
+                </span>
+              </div>
+
+              <div className="divide-y divide-gray-50">
+                {/* Publishing Academy status */}
+                {lookupResult.publishingAcademy && (
+                  <div className="px-5 py-4">
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">ARIN Publishing Academy</p>
+                    {lookupResult.publishingAcademy.status === 'paid' && (
+                      <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
+                        <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm font-semibold">Paid — has access</span>
+                      </div>
+                    )}
+                    {lookupResult.publishingAcademy.status === 'assigned_free' && (
+                      <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                        <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-semibold text-amber-800">Assigned but not paid</p>
+                          <p className="text-xs text-amber-700 mt-0.5">This user is in the Academy's assigned categories but has not completed payment. They must pay to get access.</p>
+                        </div>
+                      </div>
+                    )}
+                    {lookupResult.publishingAcademy.status === 'pending_verification' && (
+                      <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                        <Clock className="w-4 h-4 flex-shrink-0" />
+                        <span className="text-sm font-semibold">Student ID under review — awaiting payment</span>
+                      </div>
+                    )}
+                    {lookupResult.publishingAcademy.status === 'not_enrolled' && (
+                      <div className="flex items-center gap-2 text-gray-600 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
+                        <XCircle className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                        <div>
+                          <p className="text-sm font-semibold">Not enrolled — payment required</p>
+                          <p className="text-xs text-gray-500 mt-0.5">This user has not paid for the ARIN Publishing Academy.</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Assigned categories (fellow) */}
+                <div className="px-5 py-4">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Fellow categories assigned</p>
+                  {lookupResult.assignedCategories.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">None — not a fellow in any category</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {lookupResult.assignedCategories.map(c => (
+                        <span key={c.id} className="text-xs font-medium px-3 py-1 bg-purple-50 text-purple-700 border border-purple-100 rounded-full">
+                          {c.name || c.id}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Purchased categories */}
+                <div className="px-5 py-4">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Paid access to</p>
+                  {lookupResult.purchasedCategories.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic">No paid category access</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {lookupResult.purchasedCategories.map(c => (
+                        <span key={c.id} className="text-xs font-medium px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full">
+                          <CheckCircle className="w-3 h-3 inline mr-1" />{c.name || c.id}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 }

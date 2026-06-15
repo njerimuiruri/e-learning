@@ -108,8 +108,8 @@ const Navbar = () => {
         { name: 'Home', href: '/' },
         { name: 'About', href: '/about' },
         { name: 'Publishing Academy', href: '/arin-publishing-academy' },
+        { name: 'AI For Climate Resilience', href: '/ai-climate-resilience' },
         { name: 'Modules', href: '/modules' },
-        { name: 'Community', href: '#community' },
         { name: 'Contact', href: '#contact' }
     ];
 
