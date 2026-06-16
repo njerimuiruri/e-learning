@@ -10,8 +10,16 @@ import {
   TrendingUp,
   UserRound,
   Users,
+  GraduationCap,
+  Trophy,
+  Search,
+  XCircle,
+  Clock,
+  FileText,
+  ChevronRight,
 } from 'lucide-react';
 import adminService from '@/lib/api/adminService';
+import capstoneService from '@/lib/api/capstoneService';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -164,8 +172,216 @@ function StatCard({ label, value, helper, icon: Icon, tone }) {
   );
 }
 
+// ── Capstone status meta ─────────────────────────────────────────────────────
+const CAPSTONE_STATUS = {
+  submitted:                { label: 'Pending Review',  cls: 'bg-amber-50 text-amber-700 border-amber-200',     Icon: Clock       },
+  under_review:             { label: 'Under Review',    cls: 'bg-blue-50 text-blue-700 border-blue-200',        Icon: Clock       },
+  revision_requested:       { label: 'Revision Req.',   cls: 'bg-orange-50 text-orange-700 border-orange-200',  Icon: RefreshCw   },
+  approved:                 { label: 'Approved',        cls: 'bg-green-50 text-green-700 border-green-200',     Icon: CheckCircle2},
+  implementation:           { label: 'Building',        cls: 'bg-teal-50 text-teal-700 border-teal-200',        Icon: FileText    },
+  implementation_submitted: { label: 'Final Submitted', cls: 'bg-purple-50 text-purple-700 border-purple-200',  Icon: ChevronRight},
+  grading:                  { label: 'Grading',         cls: 'bg-violet-50 text-violet-700 border-violet-200',  Icon: Clock       },
+  graded:                   { label: 'Graded',          cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', Icon: Trophy    },
+  completed:                { label: 'Completed',       cls: 'bg-emerald-50 text-emerald-700 border-emerald-200', Icon: Trophy    },
+  rejected:                 { label: 'Rejected',        cls: 'bg-red-50 text-red-700 border-red-200',           Icon: XCircle    },
+};
+
+// ── Capstone projects tab ─────────────────────────────────────────────────────
+function CapstoneProjectsTab({ capstones, fellows }) {
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  // Merge fellow profile data (cohort, track) by email
+  const fellowMap = useMemo(() => {
+    const m = new Map();
+    fellows.forEach((f) => { if (f.email) m.set(f.email.toLowerCase(), f); });
+    return m;
+  }, [fellows]);
+
+  const enriched = useMemo(() => capstones.map((c) => {
+    const email = (c.studentEmail || '').toLowerCase();
+    const fellow = fellowMap.get(email);
+    return {
+      ...c,
+      cohort: fellow?.cohort || '—',
+      track:  fellow?.track  || '—',
+    };
+  }), [capstones, fellowMap]);
+
+  const STATUS_GROUPS = {
+    all:                     null,
+    review:                  ['submitted','under_review'],
+    awaiting_grade:          ['implementation_submitted','grading'],
+    graded:                  ['graded','completed'],
+  };
+
+  const q = search.toLowerCase();
+  const filtered = enriched.filter((c) => {
+    const matchSearch = !q ||
+      (c.studentName || '').toLowerCase().includes(q) ||
+      (c.studentEmail || '').toLowerCase().includes(q) ||
+      (c.title || '').toLowerCase().includes(q);
+    const group = STATUS_GROUPS[filterStatus];
+    const matchStatus = filterStatus === 'all' || (group ? group.includes(c.status) : c.status === filterStatus);
+    return matchSearch && matchStatus && c.status !== 'draft';
+  });
+
+  const counts = useMemo(() => ({
+    total:    enriched.filter((c) => c.status !== 'draft').length,
+    graded:   enriched.filter((c) => ['graded','completed'].includes(c.status)).length,
+    pending:  enriched.filter((c) => ['submitted','under_review'].includes(c.status)).length,
+    building: enriched.filter((c) => ['approved','implementation','revision_requested'].includes(c.status)).length,
+    awaitingGrade: enriched.filter((c) => ['implementation_submitted','grading'].includes(c.status)).length,
+  }), [enriched]);
+
+  if (capstones.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-gray-400 bg-white rounded-xl border border-gray-200">
+        <GraduationCap className="w-12 h-12 mb-3 opacity-30" />
+        <p className="font-medium text-gray-500">No capstone submissions yet.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Summary chips */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {[
+          { key: 'all',            label: 'All',            count: counts.total,         cls: 'bg-gray-100 text-gray-700'         },
+          { key: 'review',         label: 'Needs Review',   count: counts.pending,       cls: 'bg-amber-50 text-amber-700'        },
+          { key: 'awaiting_grade', label: 'Awaiting Grade', count: counts.awaitingGrade, cls: 'bg-purple-50 text-purple-700'      },
+          { key: 'graded',         label: 'Graded',         count: counts.graded,        cls: 'bg-emerald-50 text-emerald-700'    },
+        ].map(({ key, label, count, cls }) => (
+          <button
+            key={key}
+            onClick={() => setFilterStatus(key)}
+            className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border transition-all ${
+              filterStatus === key
+                ? 'border-[#021d49] bg-[#021d49] text-white'
+                : `${cls} border-transparent hover:border-gray-200`
+            }`}
+          >
+            {label}
+            <span className={`rounded-full px-1.5 text-[10px] font-bold ${filterStatus === key ? 'bg-white/20' : 'bg-white/80'}`}>
+              {count}
+            </span>
+          </button>
+        ))}
+
+        <div className="ml-auto relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search student or project…"
+            className="pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:border-blue-400 bg-gray-50 w-52"
+          />
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {/* Header */}
+        <div className="grid grid-cols-12 gap-2 px-5 py-3 bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-400 uppercase tracking-wider">
+          <div className="col-span-3">Student</div>
+          <div className="col-span-2">Cohort / Track</div>
+          <div className="col-span-3">Project Title</div>
+          <div className="col-span-2 text-center">Status</div>
+          <div className="col-span-2 text-center">Result</div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <div className="flex items-center justify-center py-14 text-sm text-gray-400">
+            No capstone projects match your filter.
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {filtered.map((c) => {
+              const meta = CAPSTONE_STATUS[c.status] || CAPSTONE_STATUS.submitted;
+              const StatusIcon = meta.Icon;
+              const isGraded = ['graded','completed'].includes(c.status);
+              const initials = (c.studentName || '?').trim().split(' ').slice(0,2).map((p) => p[0]||'').join('').toUpperCase();
+              const avatarColors = ['bg-blue-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500'];
+              const avatarColor = avatarColors[((c.studentName||'').charCodeAt(0)||0) % avatarColors.length];
+
+              return (
+                <div key={c._id} className="grid grid-cols-12 gap-2 px-5 py-3.5 items-center hover:bg-gray-50/60 transition-colors">
+                  {/* Student */}
+                  <div className="col-span-3 flex items-center gap-2.5 min-w-0">
+                    <div className={`w-8 h-8 rounded-full ${avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{c.studentName || '—'}</p>
+                      <p className="text-xs text-gray-400 truncate">{c.studentEmail || '—'}</p>
+                    </div>
+                  </div>
+
+                  {/* Cohort / Track */}
+                  <div className="col-span-2 min-w-0">
+                    <p className="text-sm text-gray-700">{c.cohort}</p>
+                    {c.track !== '—' && <p className="text-xs text-gray-400 mt-0.5 truncate">{c.track}</p>}
+                  </div>
+
+                  {/* Project title */}
+                  <div className="col-span-3 min-w-0">
+                    <p className="text-sm font-medium text-gray-800 truncate" title={c.title}>{c.title || 'Untitled'}</p>
+                  </div>
+
+                  {/* Status */}
+                  <div className="col-span-2 flex justify-center">
+                    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${meta.cls}`}>
+                      <StatusIcon className="w-3 h-3" />
+                      {meta.label}
+                    </span>
+                  </div>
+
+                  {/* Result */}
+                  <div className="col-span-2 flex justify-center items-center gap-2">
+                    {isGraded ? (
+                      <>
+                        <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full ${c.grade >= 75 ? 'bg-emerald-500' : c.grade >= 50 ? 'bg-amber-400' : 'bg-red-400'}`}
+                            style={{ width: `${c.grade ?? 0}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-bold text-gray-700">{c.grade ?? '—'}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${c.passed ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
+                          {c.passed ? 'Pass' : 'Fail'}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-xs text-gray-300">—</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Footer */}
+        {filtered.length > 0 && (
+          <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+            <span>{filtered.length} project{filtered.length !== 1 ? 's' : ''}</span>
+            <span>
+              {counts.graded} graded ·{' '}
+              {enriched.filter((c) => c.status !== 'draft' && ['graded','completed'].includes(c.status) && c.passed).length} passed
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function FellowProgressPage() {
   const [fellows, setFellows] = useState([]);
+  const [capstones, setCapstones] = useState([]);
+  const [pageTab, setPageTab] = useState('progress');
   const [loading, setLoading] = useState(true);
   const [totalProgrammeModules, setTotalProgrammeModules] = useState(0);
   const [totalBeginnerModules, setTotalBeginnerModules] = useState(0);
@@ -179,11 +395,22 @@ export default function FellowProgressPage() {
   const fetchProgress = useCallback(async () => {
     setLoading(true);
     try {
-      const [progressRes, modulesRes, certsRes] = await Promise.allSettled([
+      const [progressRes, modulesRes, certsRes, capstoneRes] = await Promise.allSettled([
         adminService.getFellowsProgress({ limit: 500 }),
         adminService.getAllModules({ status: 'published', limit: 500 }),
         certificateService.getAll(),
+        capstoneService.getAllCapstones({ limit: 500 }),
       ]);
+
+      // Capstones
+      if (capstoneRes.status === 'fulfilled') {
+        const raw = capstoneRes.value;
+        const list = Array.isArray(raw) ? raw
+          : Array.isArray(raw?.data) ? raw.data
+          : Array.isArray(raw?.capstones) ? raw.capstones
+          : [];
+        setCapstones(list.filter((c) => c.status !== 'draft'));
+      }
 
       const fellowData = progressRes.status === 'fulfilled' ? asArray(progressRes.value) : [];
 
@@ -482,19 +709,59 @@ export default function FellowProgressPage() {
         </div>
       )}
 
-      {/* Data table */}
-      {loading ? (
-        <Card className="border-gray-200 shadow-sm">
-          <CardContent className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-          </CardContent>
-        </Card>
-      ) : (
-        <FellowsDataTable
-          columns={fellowProgressColumns}
-          data={fellows}
-          title={`All Fellows (${fellows.length})`}
-        />
+      {/* Page-level tab switcher */}
+      <div className="flex items-center gap-1 border-b border-gray-200 pb-0">
+        {[
+          { key: 'progress',  label: 'Module Progress',    icon: TrendingUp,     count: summary.total },
+          { key: 'capstone',  label: 'Capstone Projects',  icon: GraduationCap,  count: capstones.length },
+        ].map(({ key, label, icon: Icon, count }) => (
+          <button
+            key={key}
+            onClick={() => setPageTab(key)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold border-b-2 transition-all -mb-px ${
+              pageTab === key
+                ? 'border-[#021d49] text-[#021d49]'
+                : 'border-transparent text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            <Icon className="h-4 w-4" />
+            {label}
+            <span className={`rounded-full px-1.5 py-0 text-[10px] font-bold ${
+              pageTab === key ? 'bg-[#021d49] text-white' : 'bg-gray-100 text-gray-500'
+            }`}>
+              {count}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      {pageTab === 'progress' && (
+        loading ? (
+          <Card className="border-gray-200 shadow-sm">
+            <CardContent className="flex justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </CardContent>
+          </Card>
+        ) : (
+          <FellowsDataTable
+            columns={fellowProgressColumns}
+            data={fellows}
+            title={`All Fellows (${fellows.length})`}
+          />
+        )
+      )}
+
+      {pageTab === 'capstone' && (
+        loading ? (
+          <Card className="border-gray-200 shadow-sm">
+            <CardContent className="flex justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            </CardContent>
+          </Card>
+        ) : (
+          <CapstoneProjectsTab capstones={capstones} fellows={fellows} />
+        )
       )}
 
       {/* ── Bulk reminder dialog ── */}

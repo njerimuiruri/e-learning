@@ -65,6 +65,11 @@ const moduleService = {
     return response.data;
   },
 
+  async getInstructorStudents() {
+    const response = await api.get('/instructor/students');
+    return response.data;
+  },
+
   async getModulesByLevelAndCategory(categoryId, level) {
     const response = await api.get(`/category/${categoryId}/level/${level}`);
     return response.data;

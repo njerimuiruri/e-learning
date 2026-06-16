@@ -964,6 +964,8 @@ export default function FellowsManagementPage() {
   const [reminderTarget, setReminderTarget] = useState(null);
   const [resetTarget, setResetTarget]       = useState(null);
   const [deleting, setDeleting]           = useState(false);
+  const [unenrollTarget, setUnenrollTarget] = useState(null); // { fellow, categoryId, categoryName }
+  const [unenrolling, setUnenrolling]       = useState(false);
 
   const fetchFellows = useCallback(async (page = 1) => {
     setLoading(true);
@@ -1034,6 +1036,21 @@ export default function FellowsManagementPage() {
     if (failed === 0) toast.success(`${ids.length} fellow${ids.length !== 1 ? 's' : ''} deleted`);
     else toast.error(`${ids.length - failed} deleted, ${failed} failed`);
     reload();
+  };
+
+  const handleUnenroll = async () => {
+    if (!unenrollTarget) return;
+    setUnenrolling(true);
+    try {
+      await adminService.revokeUserCategoryAccess(unenrollTarget.fellow._id, unenrollTarget.categoryId);
+      toast.success(`Removed from "${unenrollTarget.categoryName}"`);
+      setUnenrollTarget(null);
+      reload();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to unenroll fellow');
+    } finally {
+      setUnenrolling(false);
+    }
   };
 
   const statusBadge = (f) => {
@@ -1362,12 +1379,26 @@ export default function FellowsManagementPage() {
                       {/* Category */}
                       <td className="px-3 py-3">
                         {(() => {
-                          const names = getFellowCategoryNames(f);
-                          if (names.length === 0) return <span className="text-gray-300 text-xs">—</span>;
+                          const ids = [
+                            ...(f.fellowData?.assignedCategories || []),
+                            ...(f.purchasedCategories || []),
+                          ].map(id => id?.toString?.() || String(id));
+                          const unique = [...new Set(ids)];
+                          const catEntries = unique.map(id => ({ id, name: categories.find(c => c._id === id)?.name })).filter(e => e.name);
+                          if (catEntries.length === 0) return <span className="text-gray-300 text-xs">—</span>;
                           return (
                             <div className="flex flex-wrap gap-1">
-                              {names.map(name => (
-                                <span key={name} className="text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full">{name}</span>
+                              {catEntries.map(({ id, name }) => (
+                                <span key={id} className="group inline-flex items-center gap-1 text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full">
+                                  {name}
+                                  <button
+                                    title={`Remove from "${name}"`}
+                                    onClick={(e) => { e.stopPropagation(); setUnenrollTarget({ fellow: f, categoryId: id, categoryName: name }); }}
+                                    className="opacity-0 group-hover:opacity-100 transition-opacity ml-0.5 text-blue-400 hover:text-red-500"
+                                  >
+                                    <Icons.X className="w-2.5 h-2.5" />
+                                  </button>
+                                </span>
                               ))}
                             </div>
                           );
@@ -1540,6 +1571,32 @@ export default function FellowsManagementPage() {
               <Button variant="outline" onClick={() => setModal(null)} disabled={deleting}>Cancel</Button>
               <Button onClick={handleBulkDelete} disabled={deleting} className="gap-1.5 bg-red-600 hover:bg-red-700 text-white">
                 {deleting ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Deleting...</> : <><Icons.Trash2 className="w-4 h-4" /> Delete {selected.size}</>}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unenroll from Category Confirm */}
+      {unenrollTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setUnenrollTarget(null)} />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                <Icons.UserMinus className="w-5 h-5 text-amber-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Remove from Category?</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Remove <strong>{unenrollTarget.fellow.fullName || unenrollTarget.fellow.email}</strong> from <strong>{unenrollTarget.categoryName}</strong>? Their progress in this category will be retained but they will lose access.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setUnenrollTarget(null)} disabled={unenrolling}>Cancel</Button>
+              <Button onClick={handleUnenroll} disabled={unenrolling} className="gap-1.5 bg-amber-600 hover:bg-amber-700 text-white">
+                {unenrolling ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Removing…</> : <><Icons.UserMinus className="w-4 h-4" /> Remove</>}
               </Button>
             </div>
           </div>

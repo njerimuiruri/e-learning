@@ -158,6 +158,11 @@ export default function AdminSidebar() {
             badgeColor: 'amber',
         },
         {
+            icon: 'PenTool',
+            label: 'Whiteboards',
+            path: '/admin/whiteboards',
+        },
+        {
             icon: 'Award',
             label: 'Certificates',
             path: '/admin/certificates',

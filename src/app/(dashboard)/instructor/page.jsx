@@ -648,6 +648,20 @@ function InstructorDashboardContent() {
 
                 {/* Module Quick-View Sheet */}
                 <ModuleSheet module={selectedModule} open={sheetOpen} onClose={closeSheet} router={router} />
+
+                {/* Logout */}
+                <div className="pt-2 pb-4">
+                    <button
+                        onClick={() => {
+                            authService.logout();
+                            router.push('/auth/login');
+                        }}
+                        className="w-full flex items-center justify-center gap-2.5 py-3 rounded-2xl border border-red-100 bg-white text-red-600 hover:bg-red-50 hover:border-red-200 transition-all text-sm font-semibold shadow-sm"
+                    >
+                        <Icons.LogOut className="w-4 h-4" />
+                        Log Out
+                    </button>
+                </div>
             </div>
         </TooltipProvider>
     );

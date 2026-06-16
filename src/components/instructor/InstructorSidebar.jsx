@@ -186,21 +186,6 @@ export default function InstructorSidebar() {
             path: '/instructor/modules',
         },
         {
-            icon: 'PlusCircle',
-            label: 'Create Module',
-            path: '/instructor/modules/create',
-        },
-        {
-            icon: 'ClipboardList',
-            label: 'Assessments',
-            path: '/instructor/assessments',
-        },
-        {
-            icon: 'FileCheck',
-            label: 'Review Submissions',
-            path: '/instructor/submissions',
-        },
-        {
             icon: 'GraduationCap',
             label: 'Capstone Reviews',
             path: '/instructor/capstone',
@@ -219,6 +204,11 @@ export default function InstructorSidebar() {
             badge: unreadMessagesCount,
         },
         {
+            icon: 'PenTool',
+            label: 'Whiteboard',
+            path: '/instructor/whiteboard',
+        },
+        {
             icon: 'BarChart3',
             label: 'Analytics',
             path: '/instructor/analytics',
@@ -232,8 +222,8 @@ export default function InstructorSidebar() {
     return (
         <>
             {/* Top Navigation */}
-            <header className="fixed top-0 left-0 lg:left-72 right-0 bg-white border-b border-gray-200 z-40 shadow-sm">
-                <div className="flex items-center justify-between px-6 py-4">
+            <header className="fixed top-0 left-0 lg:left-72 right-0 h-16 bg-white border-b border-gray-200 z-40 shadow-sm flex items-center">
+                <div className="flex items-center justify-between px-6 w-full">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-gradient-to-br from-[#16a34a] to-emerald-700 rounded-lg flex items-center justify-center shadow-md">
@@ -418,19 +408,6 @@ export default function InstructorSidebar() {
                             </div>
                         </div>
 
-                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-3 border border-emerald-100">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-gray-700 text-xs font-medium">Teaching Status</span>
-                                <span className="text-green-600 text-xs flex items-center gap-1">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                                    Active
-                                </span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs text-gray-600">
-                                <span>Modules: {moduleStats.totalModules}</span>
-                                <span>Students: {moduleStats.totalStudents}</span>
-                            </div>
-                        </div>
                     </div>
 
                     {/* Navigation Menu */}
@@ -472,19 +449,17 @@ export default function InstructorSidebar() {
                         </div>
                     </nav>
 
-                    {/* Footer */}
-                    <div className="p-4 border-t border-gray-200">
-                        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg p-4 border border-emerald-200">
-                            <Icons.Lightbulb className="w-8 h-8 text-emerald-600 mb-2" />
-                            <h4 className="font-semibold text-gray-900 text-sm mb-1">Need Help?</h4>
-                            <p className="text-xs text-gray-600 mb-3">
-                                Check our instructor guide for tips and best practices.
-                            </p>
-                            <button className="w-full px-3 py-2 bg-gradient-to-r from-[#16a34a] to-emerald-600 text-white rounded-lg text-xs font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all">
-                                View Guide
-                            </button>
-                        </div>
+                    {/* Logout */}
+                    <div className="px-3 py-4 border-t border-gray-100">
+                        <button
+                            onClick={handleLogout}
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200 group"
+                        >
+                            <Icons.LogOut className="w-5 h-5 text-red-500" />
+                            <span className="font-medium">Log Out</span>
+                        </button>
                     </div>
+
                 </div>
             </aside>
 

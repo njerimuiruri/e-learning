@@ -179,6 +179,7 @@ export default function StudentSidebar() {
     const menuItems = [
         { icon: 'LayoutDashboard', label: 'Dashboard',         path: '/student'                   },
         { icon: 'BookOpen',        label: 'Browse Modules',    path: '/student/modules'            },
+        { icon: 'PenTool',         label: 'Whiteboards',       path: '/student/whiteboards'        },
         { icon: 'FileText',        label: 'My Notes',          path: '/notes'                      },
         { icon: 'Inbox',           label: 'Inbox',             path: '/student/messages',  badge: unreadMessages },
         { icon: 'Library',         label: 'Resource Hub',      path: '/student/projects'           },
