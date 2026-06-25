@@ -202,7 +202,7 @@ export default function CategoriesPage() {
                 <span className="px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full flex items-center gap-1">
                     <CreditCard size={11} /> Paid
                     {category.hasTieredPricing
-                        ? <span className="ml-1 opacity-70">· KES {category.studentPrice}/{category.nonStudentPrice}</span>
+                        ? <span className="ml-1 opacity-70">· USD {category.studentPrice}/{category.nonStudentPrice}</span>
                         : category.price > 0 && <span className="ml-1 opacity-70">· KES {category.price.toLocaleString()}</span>
                     }
                 </span>
@@ -213,7 +213,7 @@ export default function CategoriesPage() {
                 <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full flex items-center gap-1">
                     <Users size={11} /> Fellows Priority
                     {category.hasTieredPricing
-                        ? <span className="ml-1 opacity-70">· KES {category.studentPrice}/{category.nonStudentPrice}</span>
+                        ? <span className="ml-1 opacity-70">· USD {category.studentPrice}/{category.nonStudentPrice}</span>
                         : category.price > 0 && <span className="ml-1 opacity-70">· KES {category.price.toLocaleString()}</span>
                     }
                 </span>
@@ -399,30 +399,30 @@ export default function CategoriesPage() {
                             {formData.hasTieredPricing && (
                                 <div className="grid sm:grid-cols-2 gap-4 mt-3">
                                     <div>
-                                        <label className="block text-xs font-semibold text-blue-800 mb-1">Student Price (KES)</label>
+                                        <label className="block text-xs font-semibold text-blue-800 mb-1">Student Price (USD)</label>
                                         <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">KES</span>
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">$</span>
                                             <input
                                                 type="number"
                                                 min="0"
                                                 value={formData.studentPrice ?? ''}
                                                 onChange={e => setFormData({ ...formData, studentPrice: parseFloat(e.target.value) || 0 })}
-                                                placeholder="e.g. 5"
-                                                className="w-full pl-12 pr-4 py-2 rounded-lg border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                                                placeholder="e.g. 100"
+                                                className="w-full pl-8 pr-4 py-2 rounded-lg border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
                                             />
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-semibold text-blue-800 mb-1">Non-Student Price (KES)</label>
+                                        <label className="block text-xs font-semibold text-blue-800 mb-1">Non-Student Price (USD)</label>
                                         <div className="relative">
-                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">KES</span>
+                                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">$</span>
                                             <input
                                                 type="number"
                                                 min="0"
                                                 value={formData.nonStudentPrice ?? ''}
                                                 onChange={e => setFormData({ ...formData, nonStudentPrice: parseFloat(e.target.value) || 0 })}
-                                                placeholder="e.g. 10"
-                                                className="w-full pl-12 pr-4 py-2 rounded-lg border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
+                                                placeholder="e.g. 200"
+                                                className="w-full pl-8 pr-4 py-2 rounded-lg border border-blue-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
                                             />
                                         </div>
                                     </div>

@@ -18,13 +18,10 @@ function VerifyPaymentContent() {
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [paymentFailed, setPaymentFailed] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!reference) {
-      setError('Payment reference is missing');
-      setVerifying(false);
-      return;
-    }
+    if (!reference) return; // wait silently — null on first SSR render
     verifyPayment();
   }, [reference]);
 
@@ -40,9 +37,11 @@ function VerifyPaymentContent() {
       localStorage.removeItem('pendingCourseId');
       localStorage.removeItem('pendingCategoryId');
 
-      // Refresh user in localStorage so fellowData.assignedCategories is up to date
+      // Refresh user and capture their role for correct routing
       if (verificationResult.success && verificationResult.categoryId) {
         await (authService as any).refreshFromServer().catch(() => {});
+        const refreshedUser = (authService as any).getCurrentUser?.();
+        setUserRole(refreshedUser?.role || null);
       }
 
       // Student payment that still needs ID upload (old flow)
@@ -180,7 +179,7 @@ function VerifyPaymentContent() {
               {result.amount && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Amount Paid</span>
-                  <span className="font-semibold text-gray-900">KES {result.amount}</span>
+                  <span className="font-semibold text-gray-900">USD {result.amount}</span>
                 </div>
               )}
               {reference && (
@@ -197,16 +196,16 @@ function VerifyPaymentContent() {
 
             <div className="space-y-3">
               <button
-                onClick={() => router.push('/arin-publishing-academy')}
+                onClick={() => router.push(userRole === 'admin' ? '/admin' : '/student')}
                 className="w-full bg-[#021d49] text-white py-3 rounded-xl font-semibold text-sm hover:bg-[#032a5e] transition"
               >
-                Back to ARIN Publishing Academy
+                Go to My Dashboard
               </button>
               <button
-                onClick={() => router.push('/student')}
+                onClick={() => router.push('/arin-publishing-academy')}
                 className="w-full bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold text-sm hover:bg-gray-200 transition"
               >
-                Go to My Dashboard
+                View Programme Details
               </button>
             </div>
           </div>
@@ -234,7 +233,7 @@ function VerifyPaymentContent() {
                 <div className="flex justify-between">
                   <span className="text-gray-600">Amount Paid:</span>
                   <span className="font-semibold text-gray-900">
-                    KES {result.amount}
+                    USD {result.amount}
                   </span>
                 </div>
               )}

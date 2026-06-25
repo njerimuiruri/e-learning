@@ -34,6 +34,8 @@ import moduleService from '@/lib/api/moduleService';
 import authService from '@/lib/api/authService';
 import notificationService from '@/lib/api/notificationService';
 import messageService from '@/lib/api/messageService';
+import paymentService from '@/lib/api/paymentService';
+import categoryService from '@/lib/api/categoryService';
 import { normalizeEnrollment, summarizeEnrollments } from '@/lib/utils/enrollmentProgress';
 import Navbar from '@/components/navbar/navbar';
 import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
@@ -416,6 +418,215 @@ function Empty({ icon, title, sub, action, onAction }) {
 }
 
 
+/* Category tab switcher — shown only when student is enrolled in 2+ programmes */
+function CategorySwitcher({ categories, active, onSelect }) {
+    if (!categories || categories.length <= 1) return null;
+    return (
+        <div className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8 py-0">
+            <div className="max-w-7xl mx-auto">
+                <div className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
+                    {categories.map((cat) => {
+                        const isActive = active?._id === cat._id;
+                        const isPaid = cat.hasTieredPricing && cat.isPaid;
+                        return (
+                            <button
+                                key={cat._id}
+                                onClick={() => onSelect(cat)}
+                                className={`relative flex items-center gap-2 px-4 py-4 text-sm font-semibold transition-all shrink-0 border-b-2 ${
+                                    isActive
+                                        ? 'border-[#021d49] text-[#021d49]'
+                                        : 'border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-200'
+                                }`}
+                            >
+                                {isPaid ? (
+                                    <Icons.GraduationCap className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#021d49]' : 'text-gray-400'}`} />
+                                ) : (
+                                    <Icons.BookOpen className={`w-4 h-4 shrink-0 ${isActive ? 'text-[#021d49]' : 'text-gray-400'}`} />
+                                )}
+                                <span className="max-w-[200px] truncate">{cat.name}</span>
+                                {isPaid && (
+                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                                        isActive ? 'bg-[#021d49] text-white' : 'bg-amber-100 text-amber-700'
+                                    }`}>
+                                        PAID
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+/* Empty/coming-soon dashboard for paid categories with no published modules yet */
+function PublishingAcademyView({ category, paymentStatus, router }) {
+    const tier = paymentStatus?.userTier;
+    const tierLabel = tier === 'student' ? 'Student' : tier === 'non-student' ? 'Non-Student' : null;
+
+    const benefits = [
+        { icon: 'Award',        text: 'Certificate upon programme completion' },
+        { icon: 'Users',        text: 'Mentorship from senior scholars & editors' },
+        { icon: 'Star',         text: 'Alumni network for co-authorship & peer learning' },
+        { icon: 'FileText',     text: 'Opportunity to publish in a high-impact journal' },
+        { icon: 'ArrowRight',   text: 'Linkages to funding calls & fellowships' },
+        { icon: 'Trophy',       text: 'Competitive recognition for outstanding outputs' },
+    ];
+
+    return (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                {/* ── Left / Main column ── */}
+                <div className="lg:col-span-2 space-y-5">
+
+                    {/* Registration confirmation card */}
+                    <div className="bg-gradient-to-br from-[#021d49] to-[#0a3070] rounded-2xl p-6 text-white">
+                        <div className="flex items-start gap-4">
+                            <div className="w-12 h-12 bg-emerald-400/20 rounded-xl flex items-center justify-center shrink-0">
+                                <Icons.CheckCircle className="w-6 h-6 text-emerald-300" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1">Registration Confirmed</p>
+                                <h2 className="text-xl font-bold text-white leading-tight mb-1">{category?.name}</h2>
+                                <p className="text-blue-200 text-sm">In partnership with <span className="font-semibold text-white">Taylor &amp; Francis</span></p>
+                                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                                    <span className="bg-white/10 text-white/80 text-xs font-medium px-3 py-1 rounded-full border border-white/20">
+                                        First Cohort · 2026
+                                    </span>
+                                    {tierLabel && (
+                                        <span className="bg-amber-400/20 text-amber-200 text-xs font-semibold px-3 py-1 rounded-full border border-amber-300/30">
+                                            {tierLabel} Tier
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Modules coming soon card */}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+                        <div className="p-8 text-center">
+                            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <Icons.BookOpen className="w-8 h-8 text-[#021d49]" />
+                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 mb-2">Modules Are Being Prepared</h3>
+                            <p className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto mb-6">
+                                Content for the first cohort is currently being developed by our expert team.
+                                You will receive an email notification as soon as modules go live.
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left mb-6">
+                                {[
+                                    { icon: 'Calendar', label: 'Programme Start', value: '2026' },
+                                    { icon: 'Clock',    label: 'Duration',        value: '2–3 months' },
+                                    { icon: 'Globe',    label: 'Delivery',        value: 'Blended / Online' },
+                                ].map(({ icon, label, value }) => {
+                                    const Ic = Icons[icon];
+                                    return (
+                                        <div key={label} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
+                                            {Ic && <Ic className="w-4 h-4 text-[#021d49] shrink-0" />}
+                                            <div>
+                                                <p className="text-[10px] text-gray-400 font-medium">{label}</p>
+                                                <p className="text-sm font-semibold text-gray-800">{value}</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                            <button
+                                onClick={() => router.push('/arin-publishing-academy')}
+                                className="inline-flex items-center gap-2 text-sm font-semibold text-[#021d49] hover:text-[#032a66] transition-colors"
+                            >
+                                View Programme Details <Icons.ArrowRight className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* What to expect / learning structure */}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+                        <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Icons.Sparkles className="w-4 h-4 text-amber-500" />
+                            What to Expect
+                        </h3>
+                        <div className="grid sm:grid-cols-2 gap-3">
+                            {[
+                                { title: 'Live Webinars',             sub: 'Virtual instructor-led sessions' },
+                                { title: 'Self-paced Modules',        sub: 'Flexible e-learning on this platform' },
+                                { title: 'Mentorship Clinics',        sub: 'One-on-one & small group coaching' },
+                                { title: 'Peer Learning Circles',     sub: 'Collaborative feedback sessions' },
+                                { title: 'Practical Writing Labs',    sub: 'Real-time manuscript development' },
+                                { title: 'Policy Brief Workshops',    sub: 'Transform evidence into policy outputs' },
+                            ].map((item) => (
+                                <div key={item.title} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
+                                    <Icons.CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="text-sm font-semibold text-gray-800">{item.title}</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                {/* ── Right sidebar ── */}
+                <div className="space-y-5">
+
+                    {/* Benefits card */}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                        <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <Icons.Trophy className="w-4 h-4 text-amber-500" />
+                            What's Included
+                        </h3>
+                        <ul className="space-y-3">
+                            {benefits.map(({ icon, text }) => {
+                                const Ic = Icons[icon];
+                                return (
+                                    <li key={text} className="flex items-start gap-3">
+                                        <div className="w-7 h-7 bg-[#021d49]/8 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
+                                            {Ic && <Ic className="w-3.5 h-3.5 text-[#021d49]" />}
+                                        </div>
+                                        <p className="text-xs text-gray-600 leading-relaxed">{text}</p>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+
+                    {/* Stay tuned card */}
+                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">
+                        <div className="flex items-start gap-3">
+                            <Icons.Bell className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-sm font-bold text-amber-900 mb-1">Stay Tuned</p>
+                                <p className="text-xs text-amber-700 leading-relaxed">
+                                    We'll send you an email to <strong>your registered address</strong> the moment modules are published.
+                                    No action needed — just check your inbox.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Partner card */}
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Programme Partner</p>
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
+                                <Icons.BookMarked className="w-5 h-5 text-gray-500" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-gray-900">Taylor &amp; Francis</p>
+                                <p className="text-xs text-gray-400">Academic publishing partner</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 /* ══════════════════════════════════════════
    HELPERS
 ══════════════════════════════════════════ */
@@ -526,6 +737,9 @@ function StudentDashboardContent() {
     const [issuedCerts, setIssuedCerts] = useState([]);
     const [certBannerDismissed, setCertBannerDismissed] = useState(false);
     const [verificationStatus, setVerificationStatus] = useState(null);
+    const [accessibleCategories, setAccessibleCategories] = useState([]);
+    const [activeCategory, setActiveCategory] = useState(null);
+    const [activeCategoryPaymentStatus, setActiveCategoryPaymentStatus] = useState(null);
 
     useEffect(() => {
         const u = authService.getCurrentUser?.() || null;
@@ -540,7 +754,7 @@ function StudentDashboardContent() {
             }
         } catch (_) {}
 
-        fetchAll();
+        fetchAll(u);
         messageService.getUnreadCount().then((r) => setUnreadMessages(r?.count ?? 0)).catch(() => {});
 
         // Check student verification status
@@ -570,7 +784,7 @@ function StudentDashboardContent() {
         } catch (_) {}
     }, []);
 
-    const fetchAll = useCallback(async () => {
+    const fetchAll = useCallback(async (u) => {
         try {
             setLoading(true);
             setFetchError(false);
@@ -586,6 +800,9 @@ function StudentDashboardContent() {
             setEnrollments(eList);
             setProgressions(pList);
             setLoading(false); // ← show dashboard now, don't wait for secondary data
+
+            // Derive which categories this user can access and build the switcher
+            fetchAccessibleCategories(u);
 
             // Check sessionStorage for dismissed cert banner
             try {
@@ -634,6 +851,59 @@ function StudentDashboardContent() {
         }
     }, []);
 
+    const fetchAccessibleCategories = useCallback(async (u) => {
+        try {
+            const currentUser = u || authService.getCurrentUser?.();
+            const allCats = await categoryService.getAllCategories();
+            if (!Array.isArray(allCats) || allCats.length === 0) return;
+
+            const accessible = [];
+
+            for (const cat of allCats) {
+                if (cat.hasTieredPricing && cat.isPaid) {
+                    // Paid/tiered category — check if user has paid
+                    try {
+                        const status = await paymentService.checkCategoryStatus(cat._id);
+                        if (status?.hasAccess || status?.awaitingPayment) {
+                            accessible.push({ ...cat, _paymentStatus: status });
+                        }
+                    } catch { /* user hasn't paid — skip */ }
+                } else {
+                    // Free/fellow category — check if user is assigned
+                    const assignedCats = currentUser?.fellowData?.assignedCategories || [];
+                    const isAssigned = assignedCats.some((ac) => {
+                        const id = typeof ac === 'object' ? (ac._id || ac.id || ac) : ac;
+                        return id?.toString() === cat._id?.toString();
+                    });
+                    if (isAssigned) accessible.push(cat);
+                }
+            }
+
+            setAccessibleCategories(accessible);
+
+            // Default to first category; restore last active from sessionStorage
+            if (accessible.length > 0) {
+                try {
+                    const saved = sessionStorage.getItem('activeCategoryId');
+                    const restored = saved ? accessible.find(c => c._id === saved) : null;
+                    const defaultCat = restored || accessible[0];
+                    setActiveCategory(defaultCat);
+                    if (defaultCat._paymentStatus) setActiveCategoryPaymentStatus(defaultCat._paymentStatus);
+                } catch {
+                    setActiveCategory(accessible[0]);
+                }
+            }
+        } catch (err) {
+            console.error('[Categories] Failed to load accessible categories:', err);
+        }
+    }, []);
+
+    const handleCategorySelect = (cat) => {
+        setActiveCategory(cat);
+        setActiveCategoryPaymentStatus(cat._paymentStatus || null);
+        try { sessionStorage.setItem('activeCategoryId', cat._id); } catch { /* ignore */ }
+    };
+
     const handleMarkRead = async (id) => {
         try {
             await notificationService.markAsRead(id);
@@ -641,9 +911,33 @@ function StudentDashboardContent() {
         } catch (_) { }
     };
 
-    /* ── Derived data ── */
-    const { totalLessons, completedLessons, overallProgress } = summarizeEnrollments(enrollments);
-    const inProgress = enrollments.filter(e => {
+    /* ── Per-category filtering ── */
+    const activeCatId = activeCategory?._id?.toString();
+    const filteredEnrollments = activeCatId
+        ? enrollments.filter(e => {
+            const catId = e.moduleId?.categoryId?._id?.toString()
+                       || e.moduleId?.categoryId?.toString();
+            return catId === activeCatId;
+        })
+        : enrollments;
+
+    const filteredProgressions = activeCatId
+        ? progressions.filter(p => {
+            const catId = p.categoryId?._id?.toString() || p.categoryId?.toString();
+            return catId === activeCatId;
+        })
+        : progressions;
+
+    const filteredAvailableModules = activeCatId
+        ? availableModules.filter(m => {
+            const catId = m.categoryId?._id?.toString() || m.categoryId?.toString();
+            return catId === activeCatId;
+        })
+        : availableModules;
+
+    /* ── Derived data (scoped to active category) ── */
+    const { totalLessons, completedLessons, overallProgress } = summarizeEnrollments(filteredEnrollments);
+    const inProgress = filteredEnrollments.filter(e => {
         if (e.isCompleted) return false;
         // Any enrollment where all lessons are done is no longer "in progress" —
         // it's either pending assessment or completed.
@@ -651,7 +945,7 @@ function StudentDashboardContent() {
         return true;
     });
 
-    const pendingAssessments = enrollments.filter(e => {
+    const pendingAssessments = filteredEnrollments.filter(e => {
         if (e.isCompleted) return false;
         const hasSubmitted = (e.finalAssessmentAttempts || 0) > 0;
         const hasPending = (e.pendingManualGradingCount || 0) > 0;
@@ -662,10 +956,15 @@ function StudentDashboardContent() {
             hasPending;
     });
 
-    const completed = enrollments.filter(e => e.isCompleted);
+    const completed = filteredEnrollments.filter(e => e.isCompleted);
     const certsEarned = completed.filter(e => e.certificateEarned).length;
     const unreadCount = notifications.filter(n => !n.isRead).length;
     const visibleNotifs = showAllActivity ? notifications : notifications.slice(0, 5);
+
+    /* Paid/tiered category with no modules yet → show PublishingAcademyView */
+    const isActivePaidCategory = activeCategory?.hasTieredPricing && activeCategory?.isPaid;
+    const activeCategoryHasContent = filteredEnrollments.length > 0 || filteredAvailableModules.length > 0;
+    const showPaidEmptyView = isActivePaidCategory && !activeCategoryHasContent;
 
     if (loading) {
         return (
@@ -713,56 +1012,72 @@ function StudentDashboardContent() {
     return (
         <>
             <Navbar />
-            <div className="min-h-screen bg-gray-50/80">
+            <div className="min-h-screen bg-gray-50">
 
                 {/* ════════════════════════════════
-                    HERO WELCOME BANNER
+                    PAGE HEADER — clean white
                 ════════════════════════════════ */}
-                <div className="bg-gradient-to-r from-[#021d49] via-[#0a2d6e] to-[#0f3a8a] px-4 sm:px-6 lg:px-8 py-8">
+                <div className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8 py-5">
                     <div className="max-w-7xl mx-auto">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
                             {/* Left: Identity */}
-                            <div className="flex items-center gap-4">
-                                <Avatar className="h-14 w-14 border-2 border-white/30 shrink-0">
-                                    <AvatarFallback className="bg-white/20 text-white text-lg font-bold backdrop-blur-sm">
+                            <div className="flex items-center gap-3">
+                                <Avatar className="h-11 w-11 border border-gray-200 shrink-0">
+                                    <AvatarFallback className="bg-[#021d49] text-white text-sm font-bold">
                                         {initials}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div>
-                                    <p className="text-blue-200/80 text-xs font-medium">Welcome back</p>
-                                    <h1 className="text-2xl font-bold text-white">{fullName || firstName}</h1>
-                                    {user?.email && (
-                                        <p className="text-blue-200/60 text-xs mt-0.5">{user.email}</p>
+                                    <p className="text-[11px] text-gray-400 font-medium uppercase tracking-wider">Welcome back</p>
+                                    <h1 className="text-base font-bold text-gray-900 leading-tight">{fullName || firstName}</h1>
+                                    {activeCategory && (
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                                            <span className="text-xs font-medium text-gray-500 truncate max-w-[240px]">{activeCategory.name}</span>
+                                            {activeCategory.isPaid && activeCategory.hasTieredPricing && (
+                                                <span className="text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full shrink-0">PAID</span>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>
-                            {/* Right: Hero stats */}
+
+                            {/* Right: Stats */}
                             <div className="flex items-center gap-2 flex-wrap">
-                                <HeroStat icon="BookOpen" label="Enrolled" value={enrollments.length} />
-                                <HeroStat icon="Zap" label="In Progress" value={inProgress.length} />
-                                <HeroStat icon="CheckCircle" label="Completed" value={completed.length} />
-                                <HeroStat icon="Award" label="Certificates" value={certsEarned} />
+                                {[
+                                    { label: 'Enrolled',    value: filteredEnrollments.length, color: 'text-[#021d49]',  bg: 'bg-blue-50'   },
+                                    { label: 'In Progress', value: inProgress.length,           color: 'text-amber-600', bg: 'bg-amber-50'  },
+                                    { label: 'Completed',   value: completed.length,             color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                                    { label: 'Certificates',value: certsEarned,                 color: 'text-violet-600', bg: 'bg-violet-50' },
+                                ].map(({ label, value, color, bg }) => (
+                                    <div key={label} className={`flex flex-col items-center justify-center ${bg} rounded-xl px-4 py-2.5 min-w-[68px]`}>
+                                        <span className={`text-xl font-extrabold ${color} leading-none`}>{value}</span>
+                                        <span className="text-[10px] text-gray-500 mt-1 font-medium text-center">{label}</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
                         {/* Progress bar */}
-                        {enrollments.length > 0 && (
-                            <div className="mt-5 bg-white/10 rounded-xl p-3 flex items-center gap-4 backdrop-blur-sm">
+                        {filteredEnrollments.length > 0 && (
+                            <div className="mt-4 flex items-center gap-4">
                                 <div className="flex-1">
                                     <div className="flex items-center justify-between mb-1.5">
-                                        <span className="text-xs text-white/70">Overall learning progress</span>
-                                        <span className="text-xs font-bold text-white">{overallProgress}%</span>
+                                        <span className="text-xs text-gray-400">Overall progress</span>
+                                        <span className="text-xs font-bold text-gray-700">{overallProgress}%</span>
                                     </div>
-                                    <div className="h-2 rounded-full bg-white/20 overflow-hidden">
+                                    <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
                                         <div
-                                            className="h-full rounded-full bg-gradient-to-r from-[#00c4b3] to-blue-300 transition-all duration-700"
+                                            className="h-full rounded-full bg-[#021d49] transition-all duration-700"
                                             style={{ width: `${Math.min(100, overallProgress)}%` }}
                                         />
                                     </div>
                                 </div>
                                 <Button
                                     size="sm"
-                                    className="shrink-0 bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs h-8 backdrop-blur-sm"
+                                    variant="outline"
+                                    className="shrink-0 border-gray-200 text-gray-600 hover:text-[#021d49] hover:border-[#021d49] text-xs h-8"
                                     onClick={() => router.push('/student/modules')}
                                 >
                                     <Icons.Compass className="w-3.5 h-3.5 mr-1.5" />
@@ -772,6 +1087,15 @@ function StudentDashboardContent() {
                         )}
                     </div>
                 </div>
+
+                {/* ════════════════════════════════
+                    PROGRAMME SWITCHER
+                ════════════════════════════════ */}
+                <CategorySwitcher
+                    categories={accessibleCategories}
+                    active={activeCategory}
+                    onSelect={handleCategorySelect}
+                />
 
                 {/* ════════════════════════════════
                     STUDENT VERIFICATION BANNER
@@ -856,13 +1180,79 @@ function StudentDashboardContent() {
                 )}
 
                 {/* ════════════════════════════════
+                    INSTALLMENT BALANCE BANNER
+                ════════════════════════════════ */}
+                {(() => {
+                    const inst = activeCategoryPaymentStatus?.installmentInfo;
+                    if (!inst?.installment1Paid || inst?.installment2Paid) return null;
+                    return (
+                        <div className="px-4 sm:px-6 lg:px-8 pt-4">
+                            <div className="max-w-7xl mx-auto">
+                                <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+                                    <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center shrink-0">
+                                                <Icons.CreditCard className="w-5 h-5 text-amber-600" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Balance Due</p>
+                                                <p className="text-sm font-semibold text-gray-900 mt-0.5">
+                                                    {activeCategory?.name} — Installment 2 of 2
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            <div className="flex items-center gap-4 bg-white rounded-xl px-4 py-2 border border-amber-100">
+                                                <div className="text-center">
+                                                    <p className="text-[10px] text-gray-400 font-medium">Paid</p>
+                                                    <p className="text-sm font-bold text-emerald-600">USD {inst.paidAmount?.toLocaleString()}</p>
+                                                </div>
+                                                <div className="w-px h-8 bg-gray-200" />
+                                                <div className="text-center">
+                                                    <p className="text-[10px] text-gray-400 font-medium">Balance</p>
+                                                    <p className="text-sm font-bold text-amber-600">USD {inst.balanceDue?.toLocaleString()}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={() => router.push('/arin-publishing-academy?action=pay-installment2')}
+                                                className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap"
+                                            >
+                                                Pay Now
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {/* ════════════════════════════════
                     MAIN CONTENT
                 ════════════════════════════════ */}
+                {showPaidEmptyView ? (
+                    <PublishingAcademyView
+                        category={activeCategory}
+                        paymentStatus={activeCategoryPaymentStatus}
+                        router={router}
+                    />
+                ) : (
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                         {/* ══ LEFT / MAIN COLUMN ══ */}
                         <div className="lg:col-span-2 space-y-6">
+
+                            {/* Programme title */}
+                            {activeCategory && (
+                                <div className="flex items-center gap-3">
+                                    <div className="w-1 h-8 bg-[#021d49] rounded-full shrink-0" />
+                                    <div>
+                                        <h2 className="text-xl font-bold text-gray-900 leading-tight">{activeCategory.name}</h2>
+                                        <p className="text-xs text-gray-400 mt-0.5">Your learning dashboard for this programme</p>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Quick Links */}
                             <Card className="border-gray-100 shadow-sm">
@@ -959,8 +1349,8 @@ function StudentDashboardContent() {
                                                 className={`text-xs font-semibold px-3 py-1.5 rounded-md transition-all ${modulesTab === 'available' ? 'bg-white shadow-sm text-[#021d49]' : 'text-gray-500 hover:text-gray-700'}`}
                                             >
                                                 Available Modules
-                                                {availableModules.length > 0 && (
-                                                    <span className="ml-1.5 bg-[#021d49] text-white text-[10px] rounded-full px-1.5 py-0.5">{availableModules.length}</span>
+                                                {filteredAvailableModules.length > 0 && (
+                                                    <span className="ml-1.5 bg-[#021d49] text-white text-[10px] rounded-full px-1.5 py-0.5">{filteredAvailableModules.length}</span>
                                                 )}
                                             </button>
                                             <button
@@ -979,7 +1369,7 @@ function StudentDashboardContent() {
                                 </CardHeader>
                                 <CardContent className="px-5 pb-5">
                                     {modulesTab === 'available' ? (
-                                        availableModules.length > 0 ? (
+                                        filteredAvailableModules.length > 0 ? (
                                             <>
                                                 {/* Sequential learning notice */}
                                                 <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 mb-3">
@@ -989,7 +1379,7 @@ function StudentDashboardContent() {
                                                     </p>
                                                 </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                                                    {availableModules.slice(0, 6).map((mod) => (
+                                                    {filteredAvailableModules.slice(0, 6).map((mod) => (
                                                         <AvailableModuleCard
                                                             key={mod._id}
                                                             mod={mod}
@@ -1004,9 +1394,9 @@ function StudentDashboardContent() {
                                                     onClick={() => router.push('/student/modules')}>
                                                     <Icons.Grid className="w-3.5 h-3.5 mr-2" />
                                                     View All Modules
-                                                    {availableModules.length > 6 && (
+                                                    {filteredAvailableModules.length > 6 && (
                                                         <Badge className="ml-2 h-4 px-1.5 text-[10px] bg-gray-200 text-gray-600 border-0">
-                                                            +{availableModules.length - 6} more
+                                                            +{filteredAvailableModules.length - 6} more
                                                         </Badge>
                                                     )}
                                                 </Button>
@@ -1016,9 +1406,9 @@ function StudentDashboardContent() {
                                         )
                                     ) : (
                                         /* Progress view */
-                                        enrollments.length > 0 ? (
+                                        filteredEnrollments.length > 0 ? (
                                             <div className="space-y-2">
-                                                {enrollments.map((e) => {
+                                                {filteredEnrollments.map((e) => {
                                                     const mod = e.moduleId || {};
                                                     const lvl = getLvl(mod.level);
                                                     const prog = clamp(e.progress);
@@ -1083,7 +1473,7 @@ function StudentDashboardContent() {
                             </Card>
 
                             {/* Learning Progression by Level */}
-                            {progressions.length > 0 && (
+                            {filteredProgressions.length > 0 && (
                                 <Card className="border-gray-100 shadow-sm">
                                     <CardHeader className="px-5 pt-5 pb-3">
                                         <CardTitle className="text-sm font-bold text-gray-900 flex items-center gap-2">
@@ -1093,7 +1483,7 @@ function StudentDashboardContent() {
                                         <p className="text-xs text-gray-400 mt-0.5">Your journey through each category — complete a level to unlock the next</p>
                                     </CardHeader>
                                     <CardContent className="px-5 pb-5 space-y-4">
-                                        {progressions.map((prog) => {
+                                        {filteredProgressions.map((prog) => {
                                             const catName = prog.categoryId?.name || prog.categoryName || 'Category';
                                             const catId   = prog.categoryId?._id || prog.categoryId;
                                             const levels = ['beginner', 'intermediate', 'advanced'];
@@ -1104,7 +1494,7 @@ function StudentDashboardContent() {
                                             const levelStats = (level) => {
                                                 const backend = prog.levels?.[level] || {};
                                                 if (backend.totalModules > 0) return backend;
-                                                const matching = enrollments.filter(e => {
+                                                const matching = filteredEnrollments.filter(e => {
                                                     const modLevel = (e.moduleId?.level || '').toLowerCase();
                                                     const modCat   = e.moduleId?.categoryId?._id?.toString()
                                                                   || e.moduleId?.categoryId?.toString();
@@ -1237,7 +1627,7 @@ function StudentDashboardContent() {
                             )}
 
                             {/* Empty state: no enrollments at all */}
-                            {enrollments.length === 0 && availableModules.length === 0 && (
+                            {filteredEnrollments.length === 0 && filteredAvailableModules.length === 0 && (
                                 <Card className="border-gray-100 shadow-sm">
                                     <CardContent className="p-10 text-center">
                                         <Icons.BookOpen className="w-14 h-14 text-gray-200 mx-auto mb-4" />
@@ -1256,37 +1646,37 @@ function StudentDashboardContent() {
                         <div className="space-y-5">
 
                             {/* Summary Card */}
-                            <Card className="border-0 shadow-sm bg-gradient-to-br from-[#021d49] to-[#0a2d6e] text-white overflow-hidden">
+                            <Card className="border-gray-100 shadow-sm">
                                 <CardContent className="p-5">
-                                    <p className="text-xs text-white/60 font-medium mb-3">Your Summary</p>
+                                    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-4">Programme Summary</p>
                                     <div className="space-y-3">
                                         {[
-                                            { label: 'Lessons Completed', value: `${completedLessons}/${totalLessons}`, icon: 'BookOpen' },
-                                            { label: 'Overall Progress', value: `${overallProgress}%`, icon: 'BarChart2' },
-                                            { label: 'Certificates', value: certsEarned, icon: 'Award' },
-                                            { label: 'Completed Modules', value: completed.length, icon: 'CheckCircle' },
-                                        ].map(({ label, value, icon }) => {
+                                            { label: 'Lessons Completed', value: `${completedLessons}/${totalLessons}`, icon: 'BookOpen',    color: 'text-[#021d49]'   },
+                                            { label: 'Overall Progress',   value: `${overallProgress}%`,                icon: 'BarChart2',   color: 'text-[#021d49]'   },
+                                            { label: 'Certificates',       value: certsEarned,                         icon: 'Award',       color: 'text-violet-500'  },
+                                            { label: 'Completed Modules',  value: completed.length,                    icon: 'CheckCircle', color: 'text-emerald-500' },
+                                        ].map(({ label, value, icon, color }) => {
                                             const Ic = Icons[icon];
                                             return (
-                                                <div key={label} className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2 text-xs text-white/70">
-                                                        {Ic && <Ic className="w-3.5 h-3.5 text-white/50" />}
+                                                <div key={label} className="flex items-center justify-between py-0.5">
+                                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                        {Ic && <Ic className={`w-3.5 h-3.5 ${color}`} />}
                                                         {label}
                                                     </div>
-                                                    <span className="text-sm font-bold text-white">{value}</span>
+                                                    <span className="text-sm font-bold text-gray-900">{value}</span>
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                    <Separator className="my-3 bg-white/10" />
+                                    <Separator className="my-4" />
                                     <div className="flex gap-2">
-                                        <Button size="sm" variant="ghost"
-                                            className="flex-1 text-xs text-white/80 hover:bg-white/15 hover:text-white h-8 border border-white/20"
+                                        <Button size="sm" variant="outline"
+                                            className="flex-1 text-xs border-gray-200 text-gray-600 hover:text-[#021d49] hover:border-[#021d49] h-8"
                                             onClick={() => router.push('/student/certificates')}>
                                             <Icons.Award className="w-3.5 h-3.5 mr-1.5" /> Certificates
                                         </Button>
-                                        <Button size="sm" variant="ghost"
-                                            className="flex-1 text-xs text-white/80 hover:bg-white/15 hover:text-white h-8 border border-white/20"
+                                        <Button size="sm" variant="outline"
+                                            className="flex-1 text-xs border-gray-200 text-gray-600 hover:text-[#021d49] hover:border-[#021d49] h-8"
                                             onClick={() => router.push('/student/achievements')}>
                                             <Icons.Trophy className="w-3.5 h-3.5 mr-1.5" /> Achievements
                                         </Button>
@@ -1512,6 +1902,7 @@ function StudentDashboardContent() {
                         </div>
                     </div>
                 </div>
+                )} {/* end showPaidEmptyView ternary */}
             </div>
 
             {/* Module Detail Drawer */}

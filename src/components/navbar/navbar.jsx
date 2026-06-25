@@ -110,7 +110,6 @@ const Navbar = () => {
         { name: 'Publishing Academy', href: '/arin-publishing-academy' },
         { name: 'AI For Climate Resilience', href: '/ai-climate-resilience' },
         { name: 'Modules', href: '/modules' },
-        { name: 'Contact', href: '#contact' }
     ];
 
     const handleLogout = () => {
