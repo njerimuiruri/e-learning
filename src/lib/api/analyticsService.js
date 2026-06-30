@@ -64,6 +64,11 @@ class AnalyticsService {
     return data;
   }
 
+  async getCertificatesSummary() {
+    const { data } = await api.get("/api/admin/analytics/certificates-summary");
+    return data;
+  }
+
   async getDebugCounts() {
     const { data } = await api.get("/api/admin/analytics/debug-counts");
     return data;

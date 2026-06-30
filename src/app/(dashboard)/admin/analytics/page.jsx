@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import dynamic from 'next/dynamic';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -22,12 +22,14 @@ import {
   ArrowUp, ArrowDown, Minus, Medal, Zap, Brain, Calendar, UserX,
   Award, GraduationCap, Trophy, ClipboardList, Sparkles,
   ThumbsUp, ThumbsDown, ScrollText, FileText, FolderOpen, ExternalLink,
+  Download, ImageIcon, Trash2,
 } from 'lucide-react';
+import adminService from '@/lib/api/adminService';
 import Navbar from '@/components/navbar/navbar';
 
 const DemographicsMap = dynamic(() => import('@/components/shared/DemographicsMap'), {
   ssr: false,
-  loading: () => <div className="w-full h-[380px] rounded-xl bg-gray-100 animate-pulse" />,
+  loading: () => <div className="w-full h-[460px] rounded-xl bg-gray-100 animate-pulse" />,
 });
 
 // ─── palette ──────────────────────────────────────────────────────────────────
@@ -189,10 +191,132 @@ function StarRating({ rating, max = 5 }) {
   );
 }
 
+function YAxisWrappedTick({ x, y, payload, width = 190 }) {
+  const words = (payload.value ?? '').split(' ');
+  const lines = [];
+  let current = '';
+  const maxChars = Math.floor(width / 6.5);
+  words.forEach(word => {
+    if ((current + ' ' + word).trim().length <= maxChars) {
+      current = (current + ' ' + word).trim();
+    } else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  });
+  if (current) lines.push(current);
+  const lineH = 13;
+  const totalH = lines.length * lineH;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {lines.map((line, i) => (
+        <text
+          key={i}
+          x={0} y={0}
+          dy={-totalH / 2 + i * lineH + lineH / 2}
+          textAnchor="end"
+          fill="#6b7280"
+          fontSize={10}
+        >
+          {line}
+        </text>
+      ))}
+    </g>
+  );
+}
+
 function ProgressBar({ value, color = '#6366f1', className = '' }) {
   return (
     <div className={`h-1.5 bg-gray-200 rounded-full overflow-hidden ${className}`}>
       <div className="h-full rounded-full transition-all" style={{ width: `${Math.min(value ?? 0, 100)}%`, background: color }} />
+    </div>
+  );
+}
+
+function ExportBtn({ targetRef, filename = 'chart' }) {
+  const [open, setOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [dropPos, setDropPos] = useState({ top: 0, right: 0 });
+  const btnRef = useRef(null);
+
+  const openMenu = () => {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setDropPos({ top: r.bottom + 6, right: window.innerWidth - r.right });
+    }
+    setOpen(o => !o);
+  };
+
+  const capture = async () => {
+    const { default: html2canvas } = await import('html2canvas');
+    return html2canvas(targetRef.current, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      imageTimeout: 15000,
+      onclone: (doc) => {
+        // Hide export buttons from the captured image
+        doc.querySelectorAll('[data-export-btn]').forEach(el => { el.style.display = 'none'; });
+      },
+    });
+  };
+
+  const downloadPng = async () => {
+    if (!targetRef.current) return;
+    setExporting(true); setOpen(false);
+    try {
+      const canvas = await capture();
+      const a = document.createElement('a');
+      a.download = `${filename}.png`;
+      a.href = canvas.toDataURL('image/png');
+      a.click();
+    } finally { setExporting(false); }
+  };
+
+  const downloadPdf = async () => {
+    if (!targetRef.current) return;
+    setExporting(true); setOpen(false);
+    try {
+      const canvas = await capture();
+      const { jsPDF } = await import('jspdf');
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: canvas.width > canvas.height ? 'landscape' : 'portrait', unit: 'px', format: [canvas.width / 2, canvas.height / 2] });
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width / 2, canvas.height / 2);
+      pdf.save(`${filename}.pdf`);
+    } finally { setExporting(false); }
+  };
+
+  return (
+    <div>
+      <button
+        ref={btnRef}
+        onClick={openMenu}
+        disabled={exporting}
+        data-export-btn="true"
+        className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 hover:border-gray-300 rounded-lg px-2.5 py-1.5 transition-colors bg-white disabled:opacity-50"
+        title="Export chart"
+      >
+        {exporting ? <span className="w-3.5 h-3.5 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+        Export
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+          <div
+            className="fixed z-[9999] bg-white border border-gray-200 rounded-xl shadow-lg py-1.5 w-36"
+            style={{ top: dropPos.top, right: dropPos.right }}
+          >
+            <button onClick={downloadPng} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 text-gray-700 text-xs font-medium">
+              <ImageIcon className="w-3.5 h-3.5 text-indigo-500" /> Save as PNG
+            </button>
+            <button onClick={downloadPdf} className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 text-gray-700 text-xs font-medium">
+              <FileText className="w-3.5 h-3.5 text-red-500" /> Save as PDF
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -430,6 +554,7 @@ export default function AnalyticsDashboard() {
   const [engagementData, setEngagementData]   = useState(null);
   const [demoData, setDemoData]               = useState(null);
   const [extData, setExtData]                 = useState(null);
+  const [certSummary, setCertSummary]         = useState(null);
   const [fellowStats, setFellowStats]         = useState(null);
   const [fellowsData, setFellowsData]         = useState(null);
   const [fellowActivity, setFellowActivity]   = useState(null);
@@ -442,10 +567,23 @@ export default function AnalyticsDashboard() {
   const [caseStudies, setCaseStudies]         = useState([]);
   const [subsLoading, setSubsLoading]         = useState(false);
 
+  // Export refs — one per exportable section
+  const refMostAccessed      = useRef(null);
+  const refHighestCompletion = useRef(null);
+  const refModuleProgress    = useRef(null);
+  const refDropOff           = useRef(null);
+  const refModuleOverview    = useRef(null);
+  const refAssessmentPerf    = useRef(null);
+  const refGeoSection        = useRef(null);
+  const refGenderDist        = useRef(null);
+  const refCountryTable      = useRef(null);
+  const refCertInfographic   = useRef(null);
+  const refEnrollmentByModule = useRef(null);
+
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [ov, sp, cc, ai, bh, eg, dm, ex, fs, fw, fa, tp] = await Promise.allSettled([
+      const [ov, sp, cc, ai, bh, eg, dm, ex, fs, fw, fa, tp, cs] = await Promise.allSettled([
         analyticsService.getOverview(),
         analyticsService.getStudentProgress(100),
         analyticsService.getCourseCompletion(),
@@ -458,6 +596,7 @@ export default function AnalyticsDashboard() {
         analyticsService.getFellowsProgress({ limit: 200 }),
         analyticsService.getFellowLearningAnalytics({ days: 30 }),
         analyticsService.getTopPerformers(),
+        analyticsService.getCertificatesSummary(),
       ]);
       if (ov.status === 'fulfilled') setOverview(ov.value);
       if (sp.status === 'fulfilled') setStudentProgress(sp.value);
@@ -471,6 +610,7 @@ export default function AnalyticsDashboard() {
       if (fw.status === 'fulfilled') setFellowsData(fw.value);
       if (fa.status === 'fulfilled') setFellowActivity(fa.value);
       if (tp.status === 'fulfilled') setTopPerformers(tp.value);
+      if (cs.status === 'fulfilled') setCertSummary(cs.value);
       setLastUpdated(new Date());
 
       // ── DEBUG LOGS — open browser console (F12) to inspect ──────────────
@@ -525,6 +665,19 @@ export default function AnalyticsDashboard() {
   }, [behaviorPeriod]);
 
   useEffect(() => { loadAll(); }, []);
+
+  const handleDeleteModule = async (moduleId, moduleName) => {
+    if (!confirm(`Permanently delete "${moduleName}"?\n\nThis cannot be undone.`)) return;
+    try {
+      await adminService.deleteModule(moduleId);
+      setCourseCompletion(prev => prev
+        ? { ...prev, courses: prev.courses.filter(m => m.courseId !== moduleId) }
+        : prev
+      );
+    } catch (err) {
+      alert(err?.response?.data?.message || 'Failed to delete module');
+    }
+  };
 
   // Load submissions lazily when the tab is first activated
   useEffect(() => {
@@ -613,7 +766,7 @@ export default function AnalyticsDashboard() {
 
   const levelStats        = extData?.levelStats ?? [];
   const moduleProgressStats = extData?.moduleProgressStats ?? [];
-  const certData          = extData?.certificates ?? {};
+  const certData          = certSummary ?? extData?.certificates ?? {};
   const ratingsData       = extData?.ratings ?? {};
   const streakData        = extData?.streaks ?? {};
   const gradingData       = extData?.grading ?? {};
@@ -875,21 +1028,24 @@ export default function AnalyticsDashboard() {
 
               {/* Most accessed + highest completion — interactive bar */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card className="border-0 shadow-none bg-gray-50">
+                <Card ref={refMostAccessed} className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-bold text-gray-900">Most Accessed Modules</CardTitle>
-                      <Chip type="success"><TrendingUp className="w-3 h-3" /> Popular</Chip>
+                      <div className="flex items-center gap-2">
+                        <Chip type="success"><TrendingUp className="w-3 h-3" /> Popular</Chip>
+                        <ExportBtn targetRef={refMostAccessed} filename="most-accessed-modules" />
+                      </div>
                     </div>
                     <CardDescription className="text-xs">Sorted by total student enrollments</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
                     {mostAccessed.length > 0 ? (
-                      <ResponsiveContainer width="100%" height={280}>
-                        <BarChart layout="vertical" data={mostAccessed} margin={{ top: 0, right: 50, left: 8, bottom: 0 }}>
+                      <ResponsiveContainer width="100%" height={mostAccessed.length * 52 + 20}>
+                        <BarChart layout="vertical" data={mostAccessed} margin={{ top: 0, right: 55, left: 4, bottom: 0 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" horizontal={false} />
                           <XAxis type="number" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                          <YAxis type="category" dataKey="courseName" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={130} tickFormatter={v => trunc(v, 22)} />
+                          <YAxis type="category" dataKey="courseName" axisLine={false} tickLine={false} width={200} tick={<YAxisWrappedTick width={200} />} />
                           <ReTooltip content={<Tip />} />
                           <Bar dataKey="totalEnrollments" name="Enrollments" fill="#6366f1" radius={[0, 4, 4, 0]} label={{ position: 'right', fontSize: 10, fill: '#6b7280' }} />
                         </BarChart>
@@ -898,11 +1054,14 @@ export default function AnalyticsDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-none bg-gray-50">
+                <Card ref={refHighestCompletion} className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-bold text-gray-900">Highest Completion Rates</CardTitle>
-                      <Chip type="success"><Medal className="w-3 h-3" /> Top Performers</Chip>
+                      <div className="flex items-center gap-2">
+                        <Chip type="success"><Medal className="w-3 h-3" /> Top Performers</Chip>
+                        <ExportBtn targetRef={refHighestCompletion} filename="highest-completion-rates" />
+                      </div>
                     </div>
                     <CardDescription className="text-xs">Modules where students successfully complete</CardDescription>
                   </CardHeader>
@@ -926,12 +1085,83 @@ export default function AnalyticsDashboard() {
                 </Card>
               </div>
 
+              {/* ── Enrollment by Module table ── */}
+              {allModules.length > 0 && (
+                <Card ref={refEnrollmentByModule} className="border-0 shadow-none bg-gray-50">
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm font-bold text-gray-900">Enrollment by Module</CardTitle>
+                        <CardDescription className="text-xs">All modules ranked by number of enrolled students</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Chip type="info"><Users className="w-3 h-3" /> {allModules.length} modules</Chip>
+                        <ExportBtn targetRef={refEnrollmentByModule} filename="enrollment-by-module" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="px-4 pb-4">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="border-gray-100">
+                          <TableHead className="text-xs font-semibold text-gray-500 w-8">#</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500">Module</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Enrolled</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Completed</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Completion Rate</TableHead>
+                          <TableHead className="text-xs font-semibold text-gray-500 text-center">Avg Progress</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {[...allModules]
+                          .sort((a, b) => b.totalEnrollments - a.totalEnrollments)
+                          .map((m, i) => {
+                            const maxEnroll = allModules.reduce((mx, x) => Math.max(mx, x.totalEnrollments), 1);
+                            const barPct = (m.totalEnrollments / maxEnroll) * 100;
+                            return (
+                              <TableRow key={m.courseId ?? i} className="border-gray-50">
+                                <TableCell className="text-xs text-gray-400 font-medium">{i + 1}</TableCell>
+                                <TableCell className="text-xs font-medium text-gray-800 max-w-[260px]">
+                                  {m.courseName || '—'}
+                                </TableCell>
+                                <TableCell className="text-center">
+                                  <div className="flex flex-col items-center gap-1">
+                                    <span className="text-sm font-bold text-indigo-600">{num(m.totalEnrollments)}</span>
+                                    <div className="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                      <div className="h-full rounded-full bg-indigo-400" style={{ width: `${barPct}%` }} />
+                                    </div>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs text-center text-gray-600 font-medium">{num(m.completedCount ?? 0)}</TableCell>
+                                <TableCell className="text-xs text-center">
+                                  <div className="flex items-center gap-2 justify-center">
+                                    <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                                      <div className="h-full rounded-full" style={{ width: `${Math.min(m.completionRate, 100)}%`, background: m.completionRate >= 60 ? '#22c55e' : m.completionRate >= 30 ? '#f59e0b' : '#ef4444' }} />
+                                    </div>
+                                    <span className={`font-semibold text-xs ${m.completionRate >= 60 ? 'text-green-600' : m.completionRate >= 30 ? 'text-amber-600' : 'text-red-500'}`}>{pct(m.completionRate)}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-xs text-center text-gray-600">{pct(m.avgProgress ?? 0)}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
+
               {/* Per-module progress stats (from extended analytics) */}
               {moduleProgressStats.length > 0 && (
-                <Card className="border-0 shadow-none bg-gray-50">
+                <Card ref={refModuleProgress} className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Module Progress Stats</CardTitle>
-                    <CardDescription className="text-xs">Detailed per-module breakdown including ratings, repeat rate and grading queue</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm font-bold text-gray-900">Module Progress Stats</CardTitle>
+                        <CardDescription className="text-xs">Detailed per-module breakdown including ratings, repeat rate and grading queue</CardDescription>
+                      </div>
+                      <ExportBtn targetRef={refModuleProgress} filename="module-progress-stats" />
+                    </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
                     <Table>
@@ -982,14 +1212,17 @@ export default function AnalyticsDashboard() {
               )}
 
               {/* Drop-off analysis */}
-              <Card className="border-0 shadow-none bg-gray-50">
+              <Card ref={refDropOff} className="border-0 shadow-none bg-gray-50">
                 <CardHeader className="pb-2 pt-4 px-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-sm font-bold text-gray-900">Drop-Off Risk Modules</CardTitle>
                       <CardDescription className="text-xs">High enrollments but low completion — students may be struggling</CardDescription>
                     </div>
-                    <Chip type="danger"><AlertTriangle className="w-3 h-3" /> Needs Attention</Chip>
+                    <div className="flex items-center gap-2">
+                      <Chip type="danger"><AlertTriangle className="w-3 h-3" /> Needs Attention</Chip>
+                      <ExportBtn targetRef={refDropOff} filename="drop-off-risk-modules" />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">
@@ -1039,10 +1272,15 @@ export default function AnalyticsDashboard() {
               </Card>
 
               {/* All modules completion bar */}
-              <Card className="border-0 shadow-none bg-gray-50">
+              <Card ref={refModuleOverview} className="border-0 shadow-none bg-gray-50">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Module Completion Rates Overview</CardTitle>
-                  <CardDescription className="text-xs">All modules ranked by completion percentage</CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-sm font-bold text-gray-900">Module Completion Rates Overview</CardTitle>
+                      <CardDescription className="text-xs">All modules ranked by completion percentage</CardDescription>
+                    </div>
+                    <ExportBtn targetRef={refModuleOverview} filename="module-completion-overview" />
+                  </div>
                 </CardHeader>
                 <CardContent className="px-2 pb-4">
                   {allModules.length > 0 ? (
@@ -1290,10 +1528,15 @@ export default function AnalyticsDashboard() {
 
               {/* Per-module assessment table */}
               {coursePerf.length > 0 && (
-                <Card className="border-0 shadow-none bg-gray-50">
+                <Card ref={refAssessmentPerf} className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Assessment Performance by Module</CardTitle>
-                    <CardDescription className="text-xs">Strongest and weakest assessment results per module</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-sm font-bold text-gray-900">Assessment Performance by Module</CardTitle>
+                        <CardDescription className="text-xs">Strongest and weakest assessment results per module</CardDescription>
+                      </div>
+                      <ExportBtn targetRef={refAssessmentPerf} filename="assessment-performance-by-module" />
+                    </div>
                   </CardHeader>
                   <CardContent className="px-4 pb-4">
                     <Table>
@@ -1466,83 +1709,150 @@ export default function AnalyticsDashboard() {
             </TabsContent>
 
             {/* ═══════════════ CERTIFICATES ════════════════════════════════════ */}
-            <TabsContent value="certificates" className="p-5 space-y-6">
-              <SectionHeader icon={ScrollText} title="Certificate Analytics" description="Track certificate issuance, trends, and completion quality" />
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <KPICard icon={ScrollText}   label="Total Issued"       value={num(certData.totalIssued)}                    color="teal"   />
-                <KPICard icon={Award}        label="Issuance Rate"       value={`${certData.issuanceRate ?? 0}%`}            color="green"  />
-                <KPICard icon={CheckCircle}  label="Total Completions"   value={num(certData.totalCompletions)}              color="indigo" />
-                <KPICard icon={Zap}          label="Pending Grading"     value={num(gradingData.totalPendingGrading)}        color="amber"  />
+            <TabsContent value="certificates" className="p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <SectionHeader icon={ScrollText} title="Certificate Analytics" description="Beginner level achievement — export for your report" />
+                <ExportBtn targetRef={refCertInfographic} filename="arin-beginner-certificate-report" />
               </div>
 
-              {/* Monthly cert trend — interactive line */}
-              <Card className="border-0 shadow-none bg-gray-50">
-                <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Certificates Issued — Last 12 Months</CardTitle>
-                  <CardDescription className="text-xs">Monthly trend of certificates earned by students</CardDescription>
-                </CardHeader>
-                <CardContent className="px-2 pb-4">
+              {/* ── INFOGRAPHIC ───────────────────────────────────────────────── */}
+              <div ref={refCertInfographic} className="bg-white border border-gray-200 rounded-2xl overflow-hidden" style={{ fontFamily: 'system-ui, sans-serif' }}>
+
+                {/* ① Header */}
+                <div className="px-8 pt-7 pb-5 border-b border-gray-100">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-gray-400">ARIN Publishing Academy · AI for Climate Resilience Programme</p>
+                      <h2 className="mt-1 text-2xl font-black text-gray-900 tracking-tight">Beginner Certificate Achievement</h2>
+                    </div>
+                    <p className="text-xs text-gray-400 whitespace-nowrap mt-1">
+                      {new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}
+                    </p>
+                  </div>
+                </div>
+
+                {/* ② Main body */}
+                <div className="grid grid-cols-5 gap-0">
+
+                  {/* Left — donut + big number */}
+                  <div className="col-span-2 flex flex-col items-center justify-center py-10 px-6 border-r border-gray-100">
+                    <div className="relative">
+                      <ResponsiveContainer width={180} height={180}>
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Issued',   value: certData.byLevel?.beginner?.issued  ?? 0 },
+                              { name: 'Remaining', value: Math.max(0, (certData.byLevel?.beginner?.total ?? 0) - (certData.byLevel?.beginner?.issued ?? 0)) },
+                            ]}
+                            cx="50%" cy="50%"
+                            innerRadius={62} outerRadius={82}
+                            startAngle={90} endAngle={-270}
+                            dataKey="value" strokeWidth={0}
+                          >
+                            <Cell fill="#4f46e5" />
+                            <Cell fill="#e8e9ff" />
+                          </Pie>
+                        </PieChart>
+                      </ResponsiveContainer>
+                      {/* Centre label */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-4xl font-black text-gray-900 leading-none">{certData.byLevel?.beginner?.issued ?? 0}</span>
+                        <span className="text-[10px] font-semibold text-gray-400 mt-0.5">issued</span>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-sm font-bold text-gray-700 text-center">Beginner Certificates</p>
+                    <p className="text-xs text-gray-400 text-center mt-0.5">out of {certData.byLevel?.beginner?.total ?? 0} completions</p>
+                  </div>
+
+                  {/* Right — stat grid + bars */}
+                  <div className="col-span-3 py-8 px-8 space-y-6">
+
+                    {/* KPI row */}
+                    <div className="grid grid-cols-3 gap-4">
+                      {[
+                        { value: certData.byLevel?.beginner?.issued ?? 0, label: 'Certificates\nIssued',    color: '#4f46e5' },
+                        { value: certData.byLevel?.beginner?.total  ?? 0, label: 'Fellows\nCompleted',     color: '#0891b2' },
+                        { value: `${certData.byLevel?.beginner?.total > 0 ? Math.round(((certData.byLevel?.beginner?.issued ?? 0) / certData.byLevel.beginner.total) * 100) : 0}%`,
+                          label: 'Certification\nRate', color: '#059669' },
+                      ].map(({ value, label, color }) => (
+                        <div key={label} className="text-center">
+                          <div className="text-3xl font-black leading-none" style={{ color }}>{value}</div>
+                          <div className="text-[10px] text-gray-500 mt-1 whitespace-pre-line font-medium leading-tight">{label}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Divider */}
+                    <div className="border-t border-gray-100" />
+
+                    {/* Level breakdown bars */}
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Certificate Status by Level</p>
+                      {[
+                        { label: 'Beginner',     issued: certData.byLevel?.beginner?.issued     ?? 0, pending: certData.byLevel?.beginner?.pending     ?? 0, color: '#4f46e5' },
+                        { label: 'Intermediate', issued: certData.byLevel?.intermediate?.issued ?? 0, pending: certData.byLevel?.intermediate?.pending ?? 0, color: '#0891b2' },
+                        { label: 'Advanced',     issued: certData.byLevel?.advanced?.issued     ?? 0, pending: certData.byLevel?.advanced?.pending     ?? 0, color: '#059669' },
+                      ].map(({ label, issued, pending, color }) => {
+                        const total = issued + pending;
+                        const pct   = total > 0 ? Math.round((issued / total) * 100) : 0;
+                        return (
+                          <div key={label}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-semibold text-gray-600">{label}</span>
+                              <span className="text-xs text-gray-400">{issued} issued{pending > 0 ? ` · ${pending} pending` : ''}</span>
+                            </div>
+                            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full" style={{ width: `${total > 0 ? pct : (issued > 0 ? 100 : 0)}%`, background: color }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* ③ Monthly trend */}
+                <div className="px-8 pb-7 border-t border-gray-100">
+                  <div className="flex items-center justify-between pt-5 mb-4">
+                    <div>
+                      <p className="text-sm font-bold text-gray-800">Monthly Certificate Issuance</p>
+                      <p className="text-xs text-gray-400">Last 12 months</p>
+                    </div>
+                    <TrendingUp className="w-4 h-4 text-gray-300" />
+                  </div>
                   {certData.monthlyTrend?.length > 0 ? (
-                    <ResponsiveContainer width="100%" height={240}>
-                      <AreaChart data={certData.monthlyTrend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                    <ResponsiveContainer width="100%" height={160}>
+                      <AreaChart data={certData.monthlyTrend} margin={{ top: 5, right: 5, left: -28, bottom: 0 }}>
                         <defs>
-                          <linearGradient id="gCert" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%"  stopColor="#14b8a6" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#14b8a6" stopOpacity={0}   />
+                          <linearGradient id="gCertIG" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%"  stopColor="#4f46e5" stopOpacity={0.25} />
+                            <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}    />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                        <XAxis dataKey="month" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                        <YAxis tick={{ fontSize: 11 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                        <XAxis dataKey="month" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
+                        <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} allowDecimals={false} />
                         <ReTooltip content={<Tip />} />
-                        <Area type="monotone" dataKey="count" name="Certificates Issued" stroke="#14b8a6" fill="url(#gCert)" strokeWidth={2.5} dot={{ fill: '#14b8a6', r: 3 }} activeDot={{ r: 5 }} />
+                        <Area type="monotone" dataKey="count" name="Certificates Issued" stroke="#4f46e5" fill="url(#gCertIG)" strokeWidth={2} dot={{ fill: '#4f46e5', r: 3, strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 5 }} />
                       </AreaChart>
                     </ResponsiveContainer>
-                  ) : <Empty message="No certificate trend data yet" />}
-                </CardContent>
-              </Card>
-
-              {/* Cert issuance rate radial */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <Card className="border-0 shadow-none bg-gray-50">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Issuance Rate</CardTitle>
-                    <CardDescription className="text-xs">% of completions that resulted in a certificate</CardDescription>
-                  </CardHeader>
-                  <CardContent className="px-2 pb-4 flex flex-col items-center">
-                    <ResponsiveContainer width="100%" height={200}>
-                      <RadialBarChart cx="50%" cy="50%" innerRadius={60} outerRadius={100} data={[{ name: 'Issued', value: certData.issuanceRate ?? 0, fill: '#14b8a6' }, { name: 'Remaining', value: 100 - (certData.issuanceRate ?? 0), fill: '#e2e8f0' }]} startAngle={90} endAngle={-270}>
-                        <RadialBar dataKey="value" cornerRadius={6} />
-                        <ReTooltip content={<Tip />} />
-                      </RadialBarChart>
-                    </ResponsiveContainer>
-                    <div className="text-center -mt-2">
-                      <div className="text-3xl font-extrabold text-teal-600">{certData.issuanceRate ?? 0}%</div>
-                      <div className="text-xs text-gray-500">of completions certified</div>
+                  ) : (
+                    <div className="h-[160px] flex items-center justify-center text-xs text-gray-400">
+                      Trend data will appear as certificates are issued
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
 
-                <Card className="border-0 shadow-none bg-gray-50">
-                  <CardContent className="p-5 flex flex-col justify-center h-full space-y-4">
-                    <h4 className="text-xs font-bold text-gray-900">Certificate Summary</h4>
-                    {[
-                      { label: 'Total Certificates Issued', val: num(certData.totalIssued), color: '#14b8a6' },
-                      { label: 'Total Module Completions', val: num(certData.totalCompletions), color: '#6366f1' },
-                      { label: 'Issuance Rate', val: `${certData.issuanceRate ?? 0}%`, color: '#22c55e' },
-                      { label: 'Pending Manual Grading', val: num(gradingData.totalPendingGrading), color: '#f59e0b' },
-                    ].map(({ label, val, color }) => (
-                      <div key={label} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-                          <span className="text-xs text-gray-600">{label}</span>
-                        </div>
-                        <span className="text-sm font-bold text-gray-900">{val}</span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                {/* ④ Footer */}
+                <div className="px-8 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                  <p className="text-xs text-gray-500 italic max-w-lg">
+                    <span className="font-bold not-italic text-gray-700">{certData.byLevel?.beginner?.issued ?? 0} fellows</span> have successfully completed all beginner-level modules and received their ARIN certificates of achievement.
+                  </p>
+                  <div className="flex items-center gap-1.5 ml-6 flex-shrink-0">
+                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Verified · ARIN LMS</span>
+                  </div>
+                </div>
               </div>
             </TabsContent>
 
@@ -1737,10 +2047,10 @@ export default function AnalyticsDashboard() {
 
               {/* ── Page title ── */}
               <div className="flex items-start gap-3">
-                <div className="p-2 bg-indigo-50 rounded-lg mt-0.5"><Globe className="w-4 h-4 text-indigo-600" /></div>
+                <div className="p-2.5 bg-indigo-50 rounded-xl mt-0.5"><Globe className="w-5 h-5 text-indigo-600" /></div>
                 <div>
-                  <h3 className="text-sm font-bold text-gray-900">Demographic Analytics</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Understand who your students are — where they come from, gender balance, cohort spread, and growth trends</p>
+                  <h3 className="text-lg font-bold text-gray-900">Demographic Analytics</h3>
+                  <p className="text-sm text-gray-500 mt-0.5">Understand who your students are — where they come from, gender balance, cohort spread, and growth trends</p>
                 </div>
               </div>
 
@@ -1761,59 +2071,67 @@ export default function AnalyticsDashboard() {
               })()}
 
               {/* ── Map + Top Countries side by side ── */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div ref={refGeoSection} className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
-                {/* Map — wider */}
-                <Card className="lg:col-span-2 border border-gray-100 shadow-sm">
-                  <CardHeader className="pb-2 pt-4 px-4">
+                {/* Map — wider (3/5) */}
+                <Card className="lg:col-span-3 border border-gray-100 shadow-sm">
+                  <CardHeader className="pb-3 pt-4 px-5">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div>
-                        <CardTitle className="text-sm font-bold text-gray-900">Geographic Distribution</CardTitle>
-                        <CardDescription className="text-xs">Bubble size = number of students · Click a bubble for details</CardDescription>
+                        <CardTitle className="text-base font-bold text-gray-900">Geographic Distribution</CardTitle>
+                        <CardDescription className="text-xs mt-0.5">Bubble size = number of students · Click a bubble for details</CardDescription>
                       </div>
-                      <div className="flex items-center gap-3 text-[10px] text-gray-400">
-                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500 inline-block" /> Top</span>
-                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-green-500 inline-block" /> High</span>
-                        <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" /> Others</span>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-indigo-500 inline-block" /> Top</span>
+                          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-green-500 inline-block" /> High</span>
+                          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-amber-400 inline-block" /> Others</span>
+                        </div>
+                        <ExportBtn targetRef={refGeoSection} filename="geographic-distribution" />
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4">
+                  <CardContent className="px-5 pb-5">
                     <DemographicsMap countryData={countryDist} />
                   </CardContent>
                 </Card>
 
-                {/* Top Countries ranked list */}
-                <Card className="border border-gray-100 shadow-sm">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Top Countries</CardTitle>
-                    <CardDescription className="text-xs">Ranked by enrollment count</CardDescription>
+                {/* Top Countries ranked list (2/5) */}
+                <Card className="lg:col-span-2 border border-gray-100 shadow-sm">
+                  <CardHeader className="pb-3 pt-4 px-5">
+                    <CardTitle className="text-base font-bold text-gray-900">Top Countries</CardTitle>
+                    <CardDescription className="text-xs mt-0.5">Ranked by enrollment count</CardDescription>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4">
+                  <CardContent className="px-5 pb-5">
                     {countryDist.length > 0 ? (() => {
                       const total = countryDist.reduce((s, c) => s + c.count, 0);
+                      const rankColors = ['bg-indigo-500', 'bg-teal-500', 'bg-amber-500'];
                       return (
-                        <div className="space-y-3">
-                          {countryDist.slice(0, 8).map((c, i) => (
-                            <div key={c.country ?? i} className="flex items-center gap-2">
-                              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[9px] font-extrabold ${i === 0 ? 'bg-indigo-100 text-indigo-700' : i === 1 ? 'bg-teal-100 text-teal-700' : i === 2 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
-                                {i + 1}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex justify-between text-xs mb-1">
-                                  <span className="font-semibold text-gray-800 truncate">{c.country || 'Unknown'}</span>
-                                  <span className="font-bold text-gray-900 ml-2 flex-shrink-0">{num(c.count)}</span>
+                        <div className="divide-y divide-gray-50">
+                          {countryDist.slice(0, 10).map((c, i) => {
+                            const share = (c.count / total) * 100;
+                            const barColor = C[i % C.length];
+                            return (
+                              <div key={c.country ?? i} className="py-3 first:pt-0 last:pb-0">
+                                {/* Row 1: rank + name + count + pct */}
+                                <div className="flex items-center gap-3 mb-2">
+                                  <span className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-[11px] font-extrabold text-white ${rankColors[i] ?? 'bg-gray-400'}`}>
+                                    {i + 1}
+                                  </span>
+                                  <span className="flex-1 text-sm font-semibold text-gray-800 min-w-0">{c.country || 'Unknown'}</span>
+                                  <span className="text-sm font-bold text-gray-900 flex-shrink-0">{num(c.count)}</span>
+                                  <span className="text-xs font-semibold w-11 text-right flex-shrink-0" style={{ color: barColor }}>{pct(share)}</span>
                                 </div>
-                                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                  <div className="h-full rounded-full transition-all" style={{ width: `${(c.count / total) * 100}%`, background: C[i % C.length] }} />
+                                {/* Row 2: progress bar */}
+                                <div className="ml-9 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className="h-full rounded-full transition-all" style={{ width: `${share}%`, background: barColor }} />
                                 </div>
                               </div>
-                              <span className="text-[10px] text-gray-400 flex-shrink-0 w-9 text-right">{pct((c.count / total) * 100)}</span>
-                            </div>
-                          ))}
-                          {countryDist.length > 8 && (
-                            <p className="text-[10px] text-gray-400 pt-1 border-t border-gray-100">
-                              +{countryDist.length - 8} more countries — see full table below
+                            );
+                          })}
+                          {countryDist.length > 10 && (
+                            <p className="text-xs text-gray-400 pt-3 border-t border-gray-100">
+                              +{countryDist.length - 10} more countries — see full table below
                             </p>
                           )}
                         </div>
@@ -1827,19 +2145,24 @@ export default function AnalyticsDashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                 {/* Gender distribution — visual cards */}
-                <Card className="border border-gray-100 shadow-sm">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Gender Distribution</CardTitle>
-                    <CardDescription className="text-xs">Student breakdown by gender</CardDescription>
+                <Card ref={refGenderDist} className="border border-gray-100 shadow-sm">
+                  <CardHeader className="pb-3 pt-4 px-5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="text-base font-bold text-gray-900">Gender Distribution</CardTitle>
+                        <CardDescription className="text-xs mt-0.5">Student breakdown by gender</CardDescription>
+                      </div>
+                      <ExportBtn targetRef={refGenderDist} filename="gender-distribution" />
+                    </div>
                   </CardHeader>
-                  <CardContent className="px-4 pb-4">
+                  <CardContent className="px-5 pb-5">
                     {genderDist.length > 0 ? (() => {
                       const total = genderDist.reduce((s, g) => s + g.count, 0);
                       const GENDER_COLORS = ['#6366f1', '#f472b6', '#94a3b8'];
                       return (
-                        <div className="space-y-4">
+                        <div className="space-y-5">
                           {/* Stacked bar */}
-                          <div className="flex h-3 rounded-full overflow-hidden gap-0.5">
+                          <div className="flex h-4 rounded-full overflow-hidden gap-0.5">
                             {genderDist.map((g, i) => (
                               <div key={g.gender ?? i} title={`${g.label}: ${num(g.count)}`}
                                 style={{ width: `${(g.count / total) * 100}%`, background: GENDER_COLORS[i % GENDER_COLORS.length] }}
@@ -1847,18 +2170,18 @@ export default function AnalyticsDashboard() {
                             ))}
                           </div>
                           {/* Big stat cards per gender */}
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid grid-cols-2 gap-4">
                             {genderDist.map((g, i) => {
                               const share = (g.count / total) * 100;
                               const color = GENDER_COLORS[i % GENDER_COLORS.length];
                               return (
-                                <div key={g.gender ?? i} className="rounded-xl p-3 border" style={{ borderColor: color + '33', background: color + '08' }}>
-                                  <div className="flex items-center justify-between mb-1">
-                                    <span className="text-xs font-semibold text-gray-700">{g.label}</span>
-                                    <span className="w-2 h-2 rounded-full" style={{ background: color }} />
+                                <div key={g.gender ?? i} className="rounded-xl p-4 border" style={{ borderColor: color + '33', background: color + '08' }}>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-sm font-semibold text-gray-700">{g.label}</span>
+                                    <span className="w-3 h-3 rounded-full" style={{ background: color }} />
                                   </div>
-                                  <div className="text-2xl font-extrabold text-gray-900">{num(g.count)}</div>
-                                  <div className="text-xs font-bold mt-0.5" style={{ color }}>{pct(share)} of total</div>
+                                  <div className="text-3xl font-extrabold text-gray-900">{num(g.count)}</div>
+                                  <div className="text-sm font-bold mt-1" style={{ color }}>{pct(share)} of total</div>
                                 </div>
                               );
                             })}
@@ -1882,9 +2205,9 @@ export default function AnalyticsDashboard() {
 
                 {/* Cohort distribution */}
                 <Card className="border border-gray-100 shadow-sm">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Students by Cohort</CardTitle>
-                    <CardDescription className="text-xs">How fellows are distributed across cohorts</CardDescription>
+                  <CardHeader className="pb-3 pt-4 px-5">
+                    <CardTitle className="text-base font-bold text-gray-900">Students by Cohort</CardTitle>
+                    <CardDescription className="text-xs mt-0.5">How fellows are distributed across cohorts</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
                     {cohortDist.length > 0 ? (
@@ -1908,9 +2231,9 @@ export default function AnalyticsDashboard() {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
                 <Card className="border border-gray-100 shadow-sm">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">New Student Registrations</CardTitle>
-                    <CardDescription className="text-xs">Monthly sign-up growth over the last 12 months</CardDescription>
+                  <CardHeader className="pb-3 pt-4 px-5">
+                    <CardTitle className="text-base font-bold text-gray-900">New Student Registrations</CardTitle>
+                    <CardDescription className="text-xs mt-0.5">Monthly sign-up growth over the last 12 months</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
                     {regTrend.length > 0 ? (
@@ -1934,9 +2257,9 @@ export default function AnalyticsDashboard() {
                 </Card>
 
                 <Card className="border border-gray-100 shadow-sm">
-                  <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Registrations vs Certificates</CardTitle>
-                    <CardDescription className="text-xs">Are students completing what they sign up for?</CardDescription>
+                  <CardHeader className="pb-3 pt-4 px-5">
+                    <CardTitle className="text-base font-bold text-gray-900">Registrations vs Certificates</CardTitle>
+                    <CardDescription className="text-xs mt-0.5">Are students completing what they sign up for?</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
                     {(regTrend.length > 0 || certData.monthlyTrend?.length > 0) ? (() => {
@@ -1963,14 +2286,17 @@ export default function AnalyticsDashboard() {
               </div>
 
               {/* ── Full Country Table (searchable / sortable) ── */}
-              <Card className="border border-gray-100 shadow-sm">
-                <CardHeader className="pb-2 pt-4 px-4">
+              <Card ref={refCountryTable} className="border border-gray-100 shadow-sm">
+                <CardHeader className="pb-3 pt-4 px-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-sm font-bold text-gray-900">All Countries — Enrollment Breakdown</CardTitle>
-                      <CardDescription className="text-xs">Search, sort and browse the full country list · click any column header to sort</CardDescription>
+                      <CardTitle className="text-base font-bold text-gray-900">All Countries — Enrollment Breakdown</CardTitle>
+                      <CardDescription className="text-xs mt-0.5">Search, sort and browse the full country list · click any column header to sort</CardDescription>
                     </div>
-                    <Chip type="info"><Globe className="w-3 h-3" /> {countryDist.length} countries</Chip>
+                    <div className="flex items-center gap-2">
+                      <Chip type="info"><Globe className="w-3 h-3" /> {countryDist.length} countries</Chip>
+                      <ExportBtn targetRef={refCountryTable} filename="country-enrollment-breakdown" />
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="px-4 pb-4">

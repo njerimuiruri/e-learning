@@ -151,7 +151,6 @@ const Navbar = () => {
             router.push('/');
         }
     };
-
     const handleContinueLearning = async () => {
         try {
             console.log('[ContinueLearning] Navbar button clicked — fetching enrollments...');

@@ -179,6 +179,21 @@ export default function AdminModulesPage() {
         setShowStudentPreviewModal(true);
     };
 
+    const handleDelete = async (mod, e) => {
+        e?.stopPropagation();
+        if (!confirm(`Delete "${mod.title}"?\n\nThis will permanently remove the module and cannot be undone.`)) return;
+        setActionLoading(true);
+        try {
+            await adminService.deleteModule(mod._id);
+            fetchModules();
+            fetchStats();
+        } catch (error) {
+            alert(error.response?.data?.message || 'Failed to delete module');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const getInstructorNames = (instructorIds) => {
         if (!instructorIds || instructorIds.length === 0) return 'No instructor';
         return instructorIds.map(i => `${i.firstName || ''} ${i.lastName || ''}`.trim()).join(', ');
@@ -586,6 +601,16 @@ export default function AdminModulesPage() {
                                                 </button>
                                             </div>
                                         )}
+                                        {/* Delete — always visible */}
+                                        <div className={`${['draft','submitted','approved','published'].includes(mod.status) ? 'mt-2' : 'mt-3 pt-3 border-t border-gray-100'}`}>
+                                            <button
+                                                onClick={(e) => handleDelete(mod, e)}
+                                                disabled={actionLoading}
+                                                className="w-full px-3 py-1.5 bg-red-50 text-red-600 text-xs font-medium rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center gap-1.5"
+                                            >
+                                                <Icons.Trash2 className="w-3.5 h-3.5" /> Delete Module
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             );
@@ -697,6 +722,14 @@ export default function AdminModulesPage() {
                                                                 <Icons.Globe className="w-4 h-4" />
                                                             </button>
                                                         )}
+                                                        <button
+                                                            onClick={(e) => handleDelete(mod, e)}
+                                                            disabled={actionLoading}
+                                                            className="p-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors disabled:opacity-50"
+                                                            title="Delete module"
+                                                        >
+                                                            <Icons.Trash2 className="w-4 h-4" />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
