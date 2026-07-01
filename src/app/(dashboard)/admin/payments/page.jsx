@@ -98,7 +98,7 @@ export default function AdminPaymentsPage() {
   });
 
   const exportCSV = () => {
-    const headers = ['Name', 'Email', 'Tier', 'Amount (KES)', 'Payment Type', 'Installment #', 'Status', 'Date'];
+    const headers = ['Name', 'Email', 'Tier', 'Amount (USD)', 'Payment Type', 'Installment #', 'Status', 'Date'];
     const rows = filtered.map(p => [
       `${p.userId?.firstName || ''} ${p.userId?.lastName || ''}`.trim(),
       p.userId?.email || '',
@@ -139,7 +139,7 @@ export default function AdminPaymentsPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <StatCard icon={<Users className="w-4 h-4 text-[#021d49]" />} label="Total Paid" value={stats.total} bg="bg-[#021d49]/5" />
-        <StatCard icon={<DollarSign className="w-4 h-4 text-emerald-600" />} label="Total Revenue" value={`KES ${stats.totalRevenue.toLocaleString()}`} bg="bg-emerald-50" />
+        <StatCard icon={<DollarSign className="w-4 h-4 text-emerald-600" />} label="Total Revenue" value={`$${stats.totalRevenue.toLocaleString()}`} bg="bg-emerald-50" />
         <StatCard icon={<GraduationCap className="w-4 h-4 text-sky-600" />} label="Students" value={stats.students} bg="bg-sky-50" />
         <StatCard icon={<Briefcase className="w-4 h-4 text-orange-600" />} label="Non-Students" value={stats.nonStudents} bg="bg-orange-50" />
       </div>
@@ -263,17 +263,17 @@ export default function AdminPaymentsPage() {
                           </td>
                           <td className="px-4 py-3">
                             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                              <CheckCircle className="w-3 h-3" /> KES {row.amount1} paid
+                              <CheckCircle className="w-3 h-3" /> ${row.amount1} paid
                             </span>
                           </td>
                           <td className="px-4 py-3">
                             {row.hasPaidInstallment2 ? (
                               <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                                <CheckCircle className="w-3 h-3" /> KES {row.amount1} paid
+                                <CheckCircle className="w-3 h-3" /> ${row.amount1} paid
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
-                                <Clock className="w-3 h-3" /> KES {row.amount1} pending
+                                <Clock className="w-3 h-3" /> ${row.amount1} pending
                               </span>
                             )}
                           </td>
@@ -521,7 +521,7 @@ function PaymentsTable({ payments, loading, academyId, onRevoke }) {
                         {isStudent ? 'Student' : 'Non-Student'}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">KES {p.amount}</td>
+                    <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">${p.amount}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{payType}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${STATUS_COLORS[p.status] || STATUS_COLORS.pending}`}>

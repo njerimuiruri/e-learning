@@ -203,7 +203,7 @@ export default function CategoriesPage() {
                     <CreditCard size={11} /> Paid
                     {category.hasTieredPricing
                         ? <span className="ml-1 opacity-70">· USD {category.studentPrice}/{category.nonStudentPrice}</span>
-                        : category.price > 0 && <span className="ml-1 opacity-70">· KES {category.price.toLocaleString()}</span>
+                        : category.price > 0 && <span className="ml-1 opacity-70">· ${category.price.toLocaleString()}</span>
                     }
                 </span>
             );
@@ -214,7 +214,7 @@ export default function CategoriesPage() {
                     <Users size={11} /> Fellows Priority
                     {category.hasTieredPricing
                         ? <span className="ml-1 opacity-70">· USD {category.studentPrice}/{category.nonStudentPrice}</span>
-                        : category.price > 0 && <span className="ml-1 opacity-70">· KES {category.price.toLocaleString()}</span>
+                        : category.price > 0 && <span className="ml-1 opacity-70">· ${category.price.toLocaleString()}</span>
                     }
                 </span>
             );
@@ -359,13 +359,13 @@ export default function CategoriesPage() {
                         {/* Price — always required for both options */}
                         <div className={`mt-5 rounded-xl p-4 border ${formData.accessType === 'fellows_only' ? 'bg-purple-50 border-purple-200' : 'bg-orange-50 border-orange-200'}`}>
                             <label className={`block text-sm font-semibold mb-2 ${formData.accessType === 'fellows_only' ? 'text-purple-800' : 'text-orange-800'}`}>
-                                Enrollment Price (KES)
+                                Enrollment Price (USD)
                                 <span className={`font-normal ml-1 ${formData.accessType === 'fellows_only' ? 'text-purple-600' : 'text-orange-600'}`}>
                                     (optional — charged to non-assigned users and the general public)
                                 </span>
                             </label>
                             <div className="relative max-w-xs">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">KES</span>
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">$</span>
                                 <input
                                     type="number"
                                     min="0"
@@ -522,9 +522,9 @@ export default function CategoriesPage() {
                                     {/* Access explainer line */}
                                     <p className="text-xs text-gray-400 mt-2">
                                         {category.accessType === 'paid'
-                                            ? `Open enrollment · KES ${(category.price || 0).toLocaleString()} · Assigned fellows enroll free — all others pay`
+                                            ? `Open enrollment · $${(category.price || 0).toLocaleString()} · Assigned fellows enroll free — all others pay`
                                             : category.accessType === 'restricted'
-                                            ? `Fellows Priority · KES ${(category.price || 0).toLocaleString()} · Assigned fellows free — public & non-assigned fellows pay`
+                                            ? `Fellows Priority · $${(category.price || 0).toLocaleString()} · Assigned fellows free — public & non-assigned fellows pay`
                                             : 'Legacy — fellows only, public blocked (edit to update access type)'
                                         }
                                     </p>

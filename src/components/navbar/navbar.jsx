@@ -250,10 +250,10 @@ const Navbar = () => {
                         </div>
 
                         {/* ── Desktop nav links (lg+) ── */}
-                        <div className="hidden lg:flex items-center space-x-5 xl:space-x-6">
+                        <div className="hidden lg:flex items-center space-x-3 xl:space-x-5">
                             {navLinks.map((link) => (
                                 <a key={link.name} href={link.href}
-                                    className="text-gray-700 hover:text-[#021d49] font-medium text-sm transition-colors duration-200 relative group px-1 py-1 whitespace-nowrap">
+                                    className="text-gray-700 hover:text-[#021d49] font-medium text-xs xl:text-sm transition-colors duration-200 relative group px-1 py-1 whitespace-nowrap">
                                     {link.name}
                                     <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-[#021d49] group-hover:w-full transition-all duration-300" />
                                 </a>
@@ -261,30 +261,28 @@ const Navbar = () => {
                         </div>
 
                         {/* ── Desktop right actions (lg+) ── */}
-                        <div className="hidden lg:flex items-center gap-2 xl:gap-3">
+                        <div className="hidden lg:flex items-center gap-1.5 xl:gap-2">
                             {!mounted ? (
-                                <div className="flex items-center gap-3">
-                                    <div className="h-9 w-28 bg-gray-200 rounded-lg animate-pulse" />
+                                <div className="flex items-center gap-2">
+                                    <div className="h-9 w-9 bg-gray-200 rounded-lg animate-pulse" />
                                     <div className="h-9 w-9 bg-gray-200 rounded-full animate-pulse" />
                                 </div>
                             ) : isLoggedIn ? (
                                 <>
                                     {userRole === 'student' && (
                                         <button onClick={handleContinueLearning}
-                                            className="flex items-center gap-1.5 bg-[#1e40af] hover:bg-[#1a35a0] text-white font-medium px-3 py-2 rounded-lg transition-all text-sm shadow-sm hover:shadow-md whitespace-nowrap">
-                                            <Play size={15} />
-                                            <span className="hidden xl:inline">Continue Learning</span>
-                                            <span className="xl:hidden">Continue</span>
+                                            className="flex items-center gap-1.5 bg-[#1e40af] hover:bg-[#1a35a0] text-white font-medium px-2.5 py-1.5 rounded-lg transition-all text-xs shadow-sm hover:shadow-md whitespace-nowrap">
+                                            <Play size={12} />
+                                            Resume
                                         </button>
                                     )}
 
                                     <button onClick={handleDashboardClick}
-                                        className="flex items-center gap-1.5 text-gray-700 hover:text-[#021d49] font-medium px-3 py-2 rounded-lg hover:bg-blue-50 transition-all text-sm border border-gray-200 hover:border-[#021d49] whitespace-nowrap">
-                                        <LayoutDashboard size={15} />
+                                        className="flex items-center gap-1.5 text-gray-700 hover:text-[#021d49] font-medium px-2.5 xl:px-3 py-2 rounded-lg hover:bg-blue-50 transition-all text-xs xl:text-sm border border-gray-200 hover:border-[#021d49] whitespace-nowrap">
+                                        <LayoutDashboard size={14} />
                                         <span className="hidden xl:inline">
                                             {userRole === 'instructor' ? 'Instructor Dashboard' : userRole === 'admin' ? 'Admin Dashboard' : 'My Dashboard'}
                                         </span>
-                                        <span className="xl:hidden">Dashboard</span>
                                     </button>
 
                                     {userRole !== 'admin' && <NotificationBell />}
@@ -294,13 +292,13 @@ const Navbar = () => {
                                             className="flex items-center gap-2 p-1.5 hover:bg-blue-50 rounded-lg transition-all">
                                             {currentUser?.profilePhotoUrl ? (
                                                 <img src={currentUser.profilePhotoUrl} alt={getFullName()}
-                                                    className="w-9 h-9 rounded-full object-cover border-2 border-[#021d49]" />
+                                                    className="w-8 h-8 xl:w-9 xl:h-9 rounded-full object-cover border-2 border-[#021d49]" />
                                             ) : (
-                                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#021d49] to-[#1e40af] flex items-center justify-center text-white font-bold text-sm">
+                                                <div className="w-8 h-8 xl:w-9 xl:h-9 rounded-full bg-gradient-to-br from-[#021d49] to-[#1e40af] flex items-center justify-center text-white font-bold text-xs xl:text-sm">
                                                     {getInitials()}
                                                 </div>
                                             )}
-                                            <span className="text-gray-700 font-medium text-sm hidden xl:inline max-w-[120px] truncate">{getFullName()}</span>
+                                            <span className="text-gray-700 font-medium text-sm hidden xl:inline max-w-[100px] truncate">{getFullName()}</span>
                                         </button>
 
                                         {showProfileMenu && (
@@ -478,7 +476,7 @@ const Navbar = () => {
                                         <button onClick={() => { handleContinueLearning(); closeMobile(); }}
                                             className="w-full flex items-center gap-3 bg-[#1e40af] hover:bg-[#1a35a0] text-white font-medium px-3 py-2.5 rounded-xl transition-all text-sm mb-3">
                                             <Play size={16} className="flex-shrink-0" />
-                                            Continue Learning
+                                            Resume
                                         </button>
                                     )}
                                     <button onClick={() => { handleDashboardClick(); closeMobile(); }}

@@ -208,15 +208,15 @@ const CoursesSection = () => {
                                                     cat.hasTieredPricing ? (
                                                         <>
                                                             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${isActive ? 'bg-sky-400/20 text-sky-100 border-sky-400/30' : 'bg-sky-50 text-sky-700 border-sky-200'}`}>
-                                                                Student KES {cat.studentPrice}
+                                                                Student ${cat.studentPrice}
                                                             </span>
                                                             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${isActive ? 'bg-orange-400/20 text-orange-100 border-orange-400/30' : 'bg-orange-50 text-orange-700 border-orange-200'}`}>
-                                                                Non-Student KES {cat.nonStudentPrice}
+                                                                Non-Student ${cat.nonStudentPrice}
                                                             </span>
                                                         </>
                                                     ) : cat.price > 0 ? (
                                                         <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${isActive ? 'bg-white/20 text-white' : 'bg-amber-50 text-amber-700'}`}>
-                                                            KES {cat.price?.toLocaleString()}
+                                                            ${cat.price?.toLocaleString()}
                                                         </span>
                                                     ) : null
                                                 )}
@@ -294,17 +294,17 @@ const CoursesSection = () => {
                                                 <>
                                                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-3 py-1.5 rounded-full">
                                                         <GraduationCap className="w-3.5 h-3.5" />
-                                                        Student — KES {cat.studentPrice}
+                                                        Student — ${cat.studentPrice}
                                                     </span>
                                                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full">
                                                         <Briefcase className="w-3.5 h-3.5" />
-                                                        Non-Student — KES {cat.nonStudentPrice}
+                                                        Non-Student — ${cat.nonStudentPrice}
                                                     </span>
                                                 </>
                                             ) : (
                                                 <span className="inline-flex items-center gap-1.5 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
                                                     <DollarSign className="w-3.5 h-3.5" />
-                                                    KES {catPrice?.toLocaleString()} one-time
+                                                    ${catPrice?.toLocaleString()} one-time
                                                 </span>
                                             )
                                         )}
@@ -347,18 +347,18 @@ const CoursesSection = () => {
                                                     <p className="text-xs text-amber-600 font-semibold uppercase tracking-wider">Non-Fellow Price</p>
                                                     <div className="flex items-center justify-between bg-sky-50 border border-sky-200 rounded-lg px-3 py-2">
                                                         <span className="text-xs font-semibold text-sky-700 flex items-center gap-1"><GraduationCap className="w-3 h-3" /> Student</span>
-                                                        <span className="text-sm font-extrabold text-sky-700">KES {cat.studentPrice}</span>
+                                                        <span className="text-sm font-extrabold text-sky-700">${cat.studentPrice}</span>
                                                     </div>
                                                     <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-lg px-3 py-2">
                                                         <span className="text-xs font-semibold text-orange-700 flex items-center gap-1"><Briefcase className="w-3 h-3" /> Non-Student</span>
-                                                        <span className="text-sm font-extrabold text-orange-700">KES {cat.nonStudentPrice}</span>
+                                                        <span className="text-sm font-extrabold text-orange-700">${cat.nonStudentPrice}</span>
                                                     </div>
                                                 </div>
                                             )}
                                             {isPaid && !cat.hasTieredPricing && catPrice > 0 && (
                                                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
                                                     <p className="text-xs text-amber-600 font-semibold uppercase tracking-wider mb-1">Non-Fellow Price</p>
-                                                    <p className="text-2xl font-extrabold text-gray-900">KES {catPrice?.toLocaleString()}</p>
+                                                    <p className="text-2xl font-extrabold text-gray-900">${catPrice?.toLocaleString()}</p>
                                                     <p className="text-xs text-gray-500 mt-1">One-time · Unlocks all modules</p>
                                                 </div>
                                             )}
@@ -377,7 +377,7 @@ const CoursesSection = () => {
                                                             </p>
                                                             <p className="text-[11px] text-sky-400 mt-0.5">Requires ID verification</p>
                                                         </div>
-                                                        <p className="text-2xl font-extrabold text-sky-700">KES {cat.studentPrice}</p>
+                                                        <p className="text-2xl font-extrabold text-sky-700">${cat.studentPrice}</p>
                                                     </div>
                                                     <div className="flex items-center justify-between bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
                                                         <div>
@@ -386,12 +386,12 @@ const CoursesSection = () => {
                                                             </p>
                                                             <p className="text-[11px] text-orange-400 mt-0.5">Immediate access</p>
                                                         </div>
-                                                        <p className="text-2xl font-extrabold text-orange-700">KES {cat.nonStudentPrice}</p>
+                                                        <p className="text-2xl font-extrabold text-orange-700">${cat.nonStudentPrice}</p>
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <>
-                                                    <p className="text-3xl font-extrabold text-gray-900 mb-1">KES {catPrice?.toLocaleString()}</p>
+                                                    <p className="text-3xl font-extrabold text-gray-900 mb-1">${catPrice?.toLocaleString()}</p>
                                                     <p className="text-sm text-gray-500 mb-4">One-time payment</p>
                                                 </>
                                             )}
@@ -585,7 +585,7 @@ const CoursesSection = () => {
                                                     </div>
                                                 ) : isPaid && catPrice > 0 ? (
                                                     <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full">
-                                                        KES {catPrice?.toLocaleString()}
+                                                        ${catPrice?.toLocaleString()}
                                                     </span>
                                                 ) : (
                                                     <span className="text-xs font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">Free</span>

@@ -582,17 +582,17 @@ function ModuleBrowsingContent() {
                                                         <>
                                                             <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5">
                                                                 <Icons.GraduationCap className="w-3.5 h-3.5 text-blue-600" />
-                                                                <span className="text-blue-700 text-xs font-semibold">Student KES {cat.studentPrice}</span>
+                                                                <span className="text-blue-700 text-xs font-semibold">Student ${cat.studentPrice}</span>
                                                             </div>
                                                             <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
                                                                 <Icons.Briefcase className="w-3.5 h-3.5 text-amber-600" />
-                                                                <span className="text-amber-700 text-xs font-semibold">Non-Student KES {cat.nonStudentPrice}</span>
+                                                                <span className="text-amber-700 text-xs font-semibold">Non-Student ${cat.nonStudentPrice}</span>
                                                             </div>
                                                         </>
                                                     ) : (
                                                         <div className="flex items-center gap-1.5 bg-amber-50 border border-amber-100 rounded-lg px-3 py-1.5">
                                                             <Icons.DollarSign className="w-3.5 h-3.5 text-amber-600" />
-                                                            <span className="text-amber-700 text-xs font-semibold">KES {catPrice?.toLocaleString()} one-time</span>
+                                                            <span className="text-amber-700 text-xs font-semibold">${catPrice?.toLocaleString()} one-time</span>
                                                         </div>
                                                     )
                                                 )}
@@ -643,16 +643,16 @@ function ModuleBrowsingContent() {
                                                         <div className="space-y-2 mb-3">
                                                             <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2">
                                                                 <span className="text-xs font-semibold text-gray-600">🎓 Student</span>
-                                                                <span className="text-lg font-extrabold text-[#021d49]">KES {cat.studentPrice}</span>
+                                                                <span className="text-lg font-extrabold text-[#021d49]">${cat.studentPrice}</span>
                                                             </div>
                                                             <div className="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-3 py-2">
                                                                 <span className="text-xs font-semibold text-gray-600">💼 Professional</span>
-                                                                <span className="text-lg font-extrabold text-gray-800">KES {cat.nonStudentPrice}</span>
+                                                                <span className="text-lg font-extrabold text-gray-800">${cat.nonStudentPrice}</span>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <p className="text-4xl font-extrabold text-gray-900 mb-0.5">
-                                                            KES {catPrice?.toLocaleString()}
+                                                            ${catPrice?.toLocaleString()}
                                                         </p>
                                                     )}
                                                     <p className="text-gray-500 text-xs mb-3">
@@ -858,11 +858,11 @@ function ModuleBrowsingContent() {
                                                                 <span className="text-[9px] text-orange-500 font-medium">Non-Student</span>
                                                                 <span className="text-xs font-extrabold text-orange-600">${category.nonStudentPrice}</span>
                                                             </div>
-                                                            <span className="text-[8px] text-gray-400 font-medium">KES · one-time</span>
+                                                            <span className="text-[8px] text-gray-400 font-medium">USD · one-time</span>
                                                         </div>
                                                     ) : (
                                                         <Badge className="text-[10px] bg-amber-500 text-white border-0">
-                                                            KES {price.toLocaleString()}
+                                                            ${price.toLocaleString()}
                                                         </Badge>
                                                     )
                                                 )}
@@ -990,7 +990,7 @@ function ModuleBrowsingContent() {
                                                         <><Icons.Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Enrolling…</>
                                                     ) : (
                                                         <><Icons.PlusCircle className="w-3.5 h-3.5 mr-1.5" />
-                                                            {isFree ? 'Enroll Free' : category?.hasTieredPricing ? `Enroll · Student KES ${category.studentPrice} / Non-Student KES ${category.nonStudentPrice}` : `Enroll · KES ${price.toLocaleString()}`}</>
+                                                            {isFree ? 'Enroll Free' : category?.hasTieredPricing ? `Enroll · Student $${category.studentPrice} / Non-Student $${category.nonStudentPrice}` : `Enroll · $${price.toLocaleString()}`}</>
                                                     )}
                                                 </Button>
                                             )}

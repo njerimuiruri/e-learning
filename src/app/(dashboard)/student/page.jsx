@@ -460,167 +460,188 @@ function CategorySwitcher({ categories, active, onSelect }) {
     );
 }
 
-/* Empty/coming-soon dashboard for paid categories with no published modules yet */
+/* Publishing Academy dashboard — shows training modules, capstone, and deliverables */
 function PublishingAcademyView({ category, paymentStatus, router }) {
     const tier = paymentStatus?.userTier;
     const tierLabel = tier === 'student' ? 'Student' : tier === 'non-student' ? 'Non-Student' : null;
 
-    const benefits = [
-        { icon: 'Award',        text: 'Certificate upon programme completion' },
-        { icon: 'Users',        text: 'Mentorship from senior scholars & editors' },
-        { icon: 'Star',         text: 'Alumni network for co-authorship & peer learning' },
-        { icon: 'FileText',     text: 'Opportunity to publish in a high-impact journal' },
-        { icon: 'ArrowRight',   text: 'Linkages to funding calls & fellowships' },
-        { icon: 'Trophy',       text: 'Competitive recognition for outstanding outputs' },
+    const modules = [
+        {
+            code: 'M1', title: 'Academic Writing Mastery', hours: '9–12 hrs',
+            goal: 'Equip participants with the skills required to develop high-quality scholarly manuscripts that meet international publishing standards.',
+            sessions: ['Foundations of Academic Writing', 'Building a Strong Manuscript', 'Journal Selection and Submission Readiness'],
+        },
+        {
+            code: 'M2', title: 'Navigating the Publishing Process', hours: '6–8 hrs',
+            goal: 'Prepare participants for successful engagement with editors, reviewers, and publishers.',
+            sessions: ['Understanding the Publishing Ecosystem', 'Managing Revisions and Editorial Feedback'],
+        },
+        {
+            code: 'M3', title: 'Research Impact and Open Science', hours: '6–8 hrs',
+            goal: 'Help researchers maximise visibility, accessibility, and impact of their research.',
+            sessions: ['Open Science and Open Access', 'Measuring and Increasing Research Impact'],
+        },
+        {
+            code: 'M4', title: 'Science Communication for Policy Impact', hours: '9–12 hrs',
+            goal: "Strengthen participants' ability to translate research into policy and public influence.",
+            sessions: ['Principles of Knowledge Translation', 'Writing Policy Briefs and Op-Eds', 'Media Engagement and Storytelling'],
+        },
+        {
+            code: 'M5', title: 'Ethical Publishing and Research Integrity', hours: '6–8 hrs',
+            goal: 'Promote responsible conduct in research and publishing.',
+            sessions: ['Research Integrity', 'Responsible Publishing'],
+        },
+        {
+            code: 'M6', title: 'Responsible Use of AI in Academic Writing', hours: '6–8 hrs',
+            goal: 'Enable participants to use AI responsibly while maintaining academic integrity.',
+            sessions: ['AI for Research and Writing', 'Ethics, Transparency and Governance'],
+        },
+        {
+            code: 'M7', title: 'Linking Research to the SDGs', hours: '6–8 hrs',
+            goal: 'Strengthen the alignment of research with global sustainable development priorities.',
+            sessions: ['Understanding the SDG Framework', 'Demonstrating Development Impact'],
+        },
+    ];
+
+    const capstoneTracks = [
+        { label: 'Track A', desc: 'Academic Journal Manuscript' },
+        { label: 'Track B', desc: 'Policy Brief' },
+        { label: 'Track C', desc: 'Technical Paper' },
+        { label: 'Track D', desc: 'Book Chapter' },
+    ];
+
+    const deliverables = [
+        'Publishable manuscript or policy product',
+        'Journal submission package',
+        'Policy communication package',
+        'Research impact strategy',
+        'SDG alignment statement',
     ];
 
     return (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="w-full max-w-5xl mx-auto px-3 sm:px-5 lg:px-8 py-4 sm:py-6">
 
-                {/* ── Left / Main column ── */}
-                <div className="lg:col-span-2 space-y-5">
+            {/* ── Header ── */}
+            <div className="mb-4 sm:mb-5">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+                                <Icons.CheckCircle className="w-3 h-3" /> Enrolled
+                            </span>
+                            {tierLabel && (
+                                <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+                                    {tierLabel} Tier
+                                </span>
+                            )}
+                        </div>
+                        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 leading-tight break-words">{category?.name || 'ARIN Publishing Academy'}</h1>
+                        <p className="text-xs sm:text-sm text-gray-400 mt-0.5">In partnership with Taylor &amp; Francis · First Cohort 2026</p>
+                    </div>
+                    <button
+                        onClick={() => router.push('/arin-publishing-academy')}
+                        className="self-start sm:shrink-0 text-xs font-semibold text-[#021d49] border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                    >
+                        Programme Details <Icons.ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                </div>
 
-                    {/* Registration confirmation card */}
-                    <div className="bg-gradient-to-br from-[#021d49] to-[#0a3070] rounded-2xl p-6 text-white">
-                        <div className="flex items-start gap-4">
-                            <div className="w-12 h-12 bg-emerald-400/20 rounded-xl flex items-center justify-center shrink-0">
-                                <Icons.CheckCircle className="w-6 h-6 text-emerald-300" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-1">Registration Confirmed</p>
-                                <h2 className="text-xl font-bold text-white leading-tight mb-1">{category?.name}</h2>
-                                <p className="text-blue-200 text-sm">In partnership with <span className="font-semibold text-white">Taylor &amp; Francis</span></p>
-                                <div className="flex items-center gap-2 mt-3 flex-wrap">
-                                    <span className="bg-white/10 text-white/80 text-xs font-medium px-3 py-1 rounded-full border border-white/20">
-                                        First Cohort · 2026
-                                    </span>
-                                    {tierLabel && (
-                                        <span className="bg-amber-400/20 text-amber-200 text-xs font-semibold px-3 py-1 rounded-full border border-amber-300/30">
-                                            {tierLabel} Tier
-                                        </span>
-                                    )}
+                {/* Stats row */}
+                <div className="mt-3 sm:mt-4 grid grid-cols-4 sm:flex sm:gap-8 border-t border-gray-100 pt-3 sm:pt-4">
+                    {[
+                        { value: '7',     label: 'Modules' },
+                        { value: '16',    label: 'Sessions' },
+                        { value: '48–68', label: 'Hours' },
+                        { value: '2026',  label: 'Cohort' },
+                    ].map(({ value, label }) => (
+                        <div key={label} className="text-center sm:text-left">
+                            <p className="text-sm sm:text-base font-bold text-gray-900">{value}</p>
+                            <p className="text-[10px] sm:text-xs text-gray-400">{label}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Notice bar ── */}
+            <div className="flex items-start sm:items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-3 sm:px-4 py-3 mb-4 sm:mb-6">
+                <Icons.Bell className="w-4 h-4 text-amber-500 shrink-0 mt-0.5 sm:mt-0" />
+                <p className="text-xs text-amber-800">
+                    <span className="font-semibold">Modules launching soon.</span> You'll receive an email notification the moment content goes live.
+                </p>
+            </div>
+
+            {/* ── Training Modules ── */}
+            <div className="mb-4 sm:mb-6">
+                <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3 sm:mb-4">Training Modules</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {modules.map((mod) => (
+                        <div key={mod.code} className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-5 hover:shadow-md transition-all flex flex-col">
+                            {/* Header: badge + title side by side */}
+                            <div className="flex items-start gap-3 mb-3">
+                                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center shrink-0">
+                                    <span className="text-[10px] sm:text-[11px] font-extrabold text-gray-500">{mod.code}</span>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Modules coming soon card */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-                        <div className="p-8 text-center">
-                            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                                <Icons.BookOpen className="w-8 h-8 text-[#021d49]" />
-                            </div>
-                            <h3 className="text-lg font-bold text-gray-900 mb-2">Modules Are Being Prepared</h3>
-                            <p className="text-sm text-gray-500 leading-relaxed max-w-md mx-auto mb-6">
-                                Content for the first cohort is currently being developed by our expert team.
-                                You will receive an email notification as soon as modules go live.
-                            </p>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left mb-6">
-                                {[
-                                    { icon: 'Calendar', label: 'Programme Start', value: '2026' },
-                                    { icon: 'Clock',    label: 'Duration',        value: '2–3 months' },
-                                    { icon: 'Globe',    label: 'Delivery',        value: 'Blended / Online' },
-                                ].map(({ icon, label, value }) => {
-                                    const Ic = Icons[icon];
-                                    return (
-                                        <div key={label} className="flex items-center gap-3 bg-gray-50 rounded-xl px-4 py-3">
-                                            {Ic && <Ic className="w-4 h-4 text-[#021d49] shrink-0" />}
-                                            <div>
-                                                <p className="text-[10px] text-gray-400 font-medium">{label}</p>
-                                                <p className="text-sm font-semibold text-gray-800">{value}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                            <button
-                                onClick={() => router.push('/arin-publishing-academy')}
-                                className="inline-flex items-center gap-2 text-sm font-semibold text-[#021d49] hover:text-[#032a66] transition-colors"
-                            >
-                                View Programme Details <Icons.ArrowRight className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* What to expect / learning structure */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                        <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Icons.Sparkles className="w-4 h-4 text-amber-500" />
-                            What to Expect
-                        </h3>
-                        <div className="grid sm:grid-cols-2 gap-3">
-                            {[
-                                { title: 'Live Webinars',             sub: 'Virtual instructor-led sessions' },
-                                { title: 'Self-paced Modules',        sub: 'Flexible e-learning on this platform' },
-                                { title: 'Mentorship Clinics',        sub: 'One-on-one & small group coaching' },
-                                { title: 'Peer Learning Circles',     sub: 'Collaborative feedback sessions' },
-                                { title: 'Practical Writing Labs',    sub: 'Real-time manuscript development' },
-                                { title: 'Policy Brief Workshops',    sub: 'Transform evidence into policy outputs' },
-                            ].map((item) => (
-                                <div key={item.title} className="flex items-start gap-3 p-3 bg-gray-50 rounded-xl">
-                                    <Icons.CheckCircle className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                                    <div>
-                                        <p className="text-sm font-semibold text-gray-800">{item.title}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">{item.sub}</p>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs sm:text-sm font-bold text-gray-900 leading-snug">{mod.title}</p>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        <Icons.Clock className="w-3 h-3 text-gray-300 shrink-0" />
+                                        <span className="text-[10px] text-gray-400">{mod.hours}</span>
                                     </div>
                                 </div>
-                            ))}
+                            </div>
+
+                            {/* Goal */}
+                            <p className="text-[11px] text-gray-400 leading-relaxed mb-3 line-clamp-2">{mod.goal}</p>
+
+                            {/* Sessions */}
+                            <div className="mt-auto pl-3 border-l-2 border-gray-100 flex flex-col gap-2">
+                                {mod.sessions.map((s, idx) => (
+                                    <div key={idx}>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wide leading-none mb-0.5">Session {idx + 1}</p>
+                                        <p className="text-[11px] font-medium text-gray-700 leading-snug">{s}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Capstone + Deliverables ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+
+                {/* Capstone */}
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 sm:p-5">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Icons.Grid className="w-4 h-4 text-gray-500 shrink-0" />
+                        <h3 className="text-sm font-bold text-gray-900">Capstone Project</h3>
+                    </div>
+                    <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">Each participant develops one publication product throughout the Academy.</p>
+                    <div className="grid grid-cols-2 gap-2">
+                        {capstoneTracks.map((t) => (
+                            <div key={t.label} className="bg-white border border-gray-100 rounded-xl px-3 py-2.5">
+                                <p className="text-[10px] font-bold text-[#021d49] mb-0.5">{t.label}</p>
+                                <p className="text-[11px] text-gray-600 leading-snug">{t.desc}</p>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
-                {/* ── Right sidebar ── */}
-                <div className="space-y-5">
-
-                    {/* Benefits card */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                        <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <Icons.Trophy className="w-4 h-4 text-amber-500" />
-                            What's Included
-                        </h3>
-                        <ul className="space-y-3">
-                            {benefits.map(({ icon, text }) => {
-                                const Ic = Icons[icon];
-                                return (
-                                    <li key={text} className="flex items-start gap-3">
-                                        <div className="w-7 h-7 bg-[#021d49]/8 rounded-lg flex items-center justify-center shrink-0 mt-0.5">
-                                            {Ic && <Ic className="w-3.5 h-3.5 text-[#021d49]" />}
-                                        </div>
-                                        <p className="text-xs text-gray-600 leading-relaxed">{text}</p>
-                                    </li>
-                                );
-                            })}
-                        </ul>
+                {/* Final Deliverables */}
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 sm:p-5">
+                    <div className="flex items-center gap-2 mb-1">
+                        <Icons.Award className="w-4 h-4 text-gray-500 shrink-0" />
+                        <h3 className="text-sm font-bold text-gray-900">Final Deliverables</h3>
                     </div>
-
-                    {/* Stay tuned card */}
-                    <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">
-                        <div className="flex items-start gap-3">
-                            <Icons.Bell className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
-                            <div>
-                                <p className="text-sm font-bold text-amber-900 mb-1">Stay Tuned</p>
-                                <p className="text-xs text-amber-700 leading-relaxed">
-                                    We'll send you an email to <strong>your registered address</strong> the moment modules are published.
-                                    No action needed — just check your inbox.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Partner card */}
-                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-3">Programme Partner</p>
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">
-                                <Icons.BookMarked className="w-5 h-5 text-gray-500" />
-                            </div>
-                            <div>
-                                <p className="text-sm font-bold text-gray-900">Taylor &amp; Francis</p>
-                                <p className="text-xs text-gray-400">Academic publishing partner</p>
-                            </div>
-                        </div>
-                    </div>
+                    <p className="text-[11px] text-gray-400 mb-3 leading-relaxed">Participants graduate with a completed, publication-ready product.</p>
+                    <ul className="space-y-2.5">
+                        {deliverables.map((d) => (
+                            <li key={d} className="flex items-start gap-2.5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 mt-1.5" />
+                                <span className="text-[11px] text-gray-600 leading-snug">{d}</span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </div>
         </div>
@@ -740,6 +761,7 @@ function StudentDashboardContent() {
     const [accessibleCategories, setAccessibleCategories] = useState([]);
     const [activeCategory, setActiveCategory] = useState(null);
     const [activeCategoryPaymentStatus, setActiveCategoryPaymentStatus] = useState(null);
+    const [categoriesLoading, setCategoriesLoading] = useState(true);
 
     useEffect(() => {
         const u = authService.getCurrentUser?.() || null;
@@ -859,15 +881,27 @@ function StudentDashboardContent() {
 
             const accessible = [];
 
+            // Build a Set of purchased category IDs from the login response for fast lookup
+            const purchasedIds = new Set(
+                (currentUser?.purchasedCategories || []).map((id) =>
+                    typeof id === 'object' ? (id._id || id.id || id)?.toString() : id?.toString()
+                )
+            );
+
             for (const cat of allCats) {
                 if (cat.hasTieredPricing && cat.isPaid) {
-                    // Paid/tiered category — check if user has paid
+                    const alreadyPurchased = purchasedIds.has(cat._id?.toString());
+
+                    let status = null;
                     try {
-                        const status = await paymentService.checkCategoryStatus(cat._id);
-                        if (status?.hasAccess || status?.awaitingPayment) {
-                            accessible.push({ ...cat, _paymentStatus: status });
-                        }
-                    } catch { /* user hasn't paid — skip */ }
+                        status = await paymentService.checkCategoryStatus(cat._id);
+                    } catch (e) {
+                        console.warn(`[Categories] API error for "${cat.name}":`, e?.message || e);
+                    }
+
+                    if (status?.hasAccess || status?.awaitingPayment || alreadyPurchased) {
+                        accessible.push({ ...cat, _paymentStatus: status });
+                    }
                 } else {
                     // Free/fellow category — check if user is assigned
                     const assignedCats = currentUser?.fellowData?.assignedCategories || [];
@@ -878,6 +912,7 @@ function StudentDashboardContent() {
                     if (isAssigned) accessible.push(cat);
                 }
             }
+            console.log('[Categories] Final accessible list:', accessible.map(c => c.name));
 
             setAccessibleCategories(accessible);
 
@@ -895,6 +930,8 @@ function StudentDashboardContent() {
             }
         } catch (err) {
             console.error('[Categories] Failed to load accessible categories:', err);
+        } finally {
+            setCategoriesLoading(false);
         }
     }, []);
 
@@ -966,7 +1003,7 @@ function StudentDashboardContent() {
     const activeCategoryHasContent = filteredEnrollments.length > 0 || filteredAvailableModules.length > 0;
     const showPaidEmptyView = isActivePaidCategory && !activeCategoryHasContent;
 
-    if (loading) {
+    if (loading || categoriesLoading) {
         return (
             <>
                 <Navbar />
