@@ -59,6 +59,19 @@ function getPurchasedCategoryIds() {
     } catch { return []; }
 }
 
+function getPayLaterCategoryIds() {
+    try {
+        if (typeof window === 'undefined') return [];
+        const raw = localStorage.getItem('user');
+        if (!raw) return [];
+        const user = JSON.parse(raw);
+        return (user?.payLaterEnrollments || []).map((e) => {
+            const id = e?.categoryId;
+            return (typeof id === 'object' ? (id?._id || id) : id)?.toString?.() || String(id);
+        }).filter(Boolean);
+    } catch { return []; }
+}
+
 function ModuleBrowsingContent() {
     const router = useRouter();
     const [modules, setModules] = useState([]);
@@ -66,9 +79,11 @@ function ModuleBrowsingContent() {
     const [progressions, setProgressions] = useState([]);
     const [myEnrollments, setMyEnrollments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [redirecting, setRedirecting] = useState(false);
     const [enrollingId, setEnrollingId] = useState(null);
     const [fellowCategoryIds, setFellowCategoryIds] = useState(() => getFellowCategoryIds());
     const [purchasedCategoryIds, setPurchasedCategoryIds] = useState(() => getPurchasedCategoryIds());
+    const [payLaterCategoryIds, setPayLaterCategoryIds] = useState(() => getPayLaterCategoryIds());
     const [congratsModule, setCongratsModule] = useState(null);
 
     const [selectedCategory, setSelectedCategory] = useState('');
@@ -76,20 +91,19 @@ function ModuleBrowsingContent() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchInput, setSearchInput] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
-    const [selectedCategoryFull, setSelectedCategoryFull] = useState(null);
 
-    useEffect(() => { fetchInitialData(); }, []);
+    // Instant redirect from localStorage — no flicker
+    useEffect(() => {
+        const allIds = [...new Set([...getFellowCategoryIds(), ...getPurchasedCategoryIds(), ...getPayLaterCategoryIds()])];
+        if (allIds.length === 1) {
+            setRedirecting(true);
+            router.replace(`/student/modules/category/${allIds[0]}`);
+        }
+    }, []);
+
+    useEffect(() => { if (!redirecting) fetchInitialData(); }, [redirecting]);
     // Reset to first page whenever filters change
     useEffect(() => { setCurrentPage(1); }, [selectedCategory, selectedLevel, searchQuery]);
-    useEffect(() => {
-        if (selectedCategory) {
-            categoryService.getCategoryById(selectedCategory)
-                .then(data => setSelectedCategoryFull(data || null))
-                .catch(() => setSelectedCategoryFull(null));
-        } else {
-            setSelectedCategoryFull(null);
-        }
-    }, [selectedCategory]);
 
     const fetchInitialData = async () => {
         try {
@@ -125,14 +139,26 @@ function ModuleBrowsingContent() {
             const freshPurchasedIds = freshUser
                 ? (freshUser.purchasedCategories || []).map(id => id?.toString?.() || String(id))
                 : getPurchasedCategoryIds();
+            const freshPayLaterIds = freshUser
+                ? (freshUser.payLaterEnrollments || []).map(e => {
+                    const id = e?.categoryId;
+                    return (typeof id === 'object' ? (id?._id || id) : id)?.toString?.() || String(id);
+                }).filter(Boolean)
+                : getPayLaterCategoryIds();
             setFellowCategoryIds(freshFellowIds);
             setPurchasedCategoryIds(freshPurchasedIds);
+            setPayLaterCategoryIds(freshPayLaterIds);
 
-            // Auto-select the category the user is enrolled in (fellow or purchased)
-            const enrolledIds = [...new Set([...freshFellowIds, ...freshPurchasedIds])];
-            if (enrolledIds.length > 0 && !selectedCategory) {
-                const match = catList.find(c => enrolledIds.includes(c._id?.toString()));
-                if (match) setSelectedCategory(match._id);
+            // If user has exactly one enrolled category, redirect directly to its page
+            const enrolledIds = [...new Set([...freshFellowIds, ...freshPurchasedIds, ...freshPayLaterIds])];
+            const enrolledCats = catList.filter(c => enrolledIds.includes(c._id?.toString()));
+            if (enrolledCats.length === 1) {
+                router.replace(`/student/modules/category/${enrolledCats[0]._id}`);
+                return;
+            }
+            // Multi-category: auto-select first enrolled category
+            if (enrolledCats.length > 1 && !selectedCategory) {
+                setSelectedCategory(enrolledCats[0]._id);
             }
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
@@ -301,13 +327,21 @@ function ModuleBrowsingContent() {
     };
     const hasFilters = !!(selectedCategory || selectedLevel || searchQuery);
 
-    // True when user has paid for a tiered-pricing (Academy) category and it is selected
-    const selectedCategoryObj = categories.find(c => c._id === selectedCategory);
-    const selCatId = selectedCategoryObj?._id?.toString();
-    const isAcademyEnrolledView = !!(
-        selectedCategoryObj?.hasTieredPricing &&
-        (fellowCategoryIds.includes(selCatId) || purchasedCategoryIds.includes(selCatId))
+    // Enrolled category IDs across all access types
+    const allEnrolledCategoryIds = useMemo(
+        () => [...new Set([...fellowCategoryIds, ...purchasedCategoryIds, ...payLaterCategoryIds])],
+        [fellowCategoryIds, purchasedCategoryIds, payLaterCategoryIds]
     );
+
+    // If user has enrolled categories, only show those in the category grid
+    const visibleCategories = useMemo(() => {
+        if (allEnrolledCategoryIds.length === 0) return categories;
+        return categories.filter(c => allEnrolledCategoryIds.includes(c._id?.toString()));
+    }, [categories, allEnrolledCategoryIds]);
+
+    const selectedCategoryObj = categories.find(c => c._id === selectedCategory);
+
+    if (redirecting) return null;
 
     return (
         <>
@@ -381,7 +415,8 @@ function ModuleBrowsingContent() {
                         </h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
 
-                            {/* All Categories card */}
+                            {/* All Categories card — only show when user has no specific enrollments */}
+                            {allEnrolledCategoryIds.length === 0 && (
                             <button
                                 onClick={() => { setSelectedCategory(''); setCurrentPage(1); }}
                                 className={`group text-left rounded-xl border-2 p-4 transition-all duration-200 ${!selectedCategory
@@ -405,15 +440,16 @@ function ModuleBrowsingContent() {
                                     Browse all {modules.length} available modules
                                 </p>
                             </button>
+                            )}
 
                             {/* Per-category cards */}
-                            {categories.map((cat) => {
+                            {visibleCategories.map((cat) => {
                                 const catIdStr = cat._id?.toString();
-                                const isActive = selectedCategory === cat._id;
+                                const isActive = selectedCategory === cat._id?.toString() || selectedCategory === cat._id;
                                 const isCatPaid = cat.isPaid || cat.accessType === 'paid' || cat.accessType === 'restricted';
                                 const isCatFellows = cat.accessType === 'free' || cat.accessType === 'restricted';
                                 const isCatFree = !isCatPaid && !isCatFellows;
-                                const catIsFellowId = fellowCategoryIds.includes(catIdStr) || purchasedCategoryIds.includes(catIdStr);
+                                const catIsFellowId = fellowCategoryIds.includes(catIdStr) || purchasedCategoryIds.includes(catIdStr) || payLaterCategoryIds.includes(catIdStr);
                                 const catModCount = modules.filter(m => {
                                     const modCatId = (m.categoryId?._id || m.categoryId)?.toString?.();
                                     return modCatId === catIdStr;
@@ -422,7 +458,7 @@ function ModuleBrowsingContent() {
                                 return (
                                     <button
                                         key={cat._id}
-                                        onClick={() => { setSelectedCategory(cat._id); setCurrentPage(1); }}
+                                        onClick={() => router.push(`/student/modules/category/${cat._id}`)}
                                         className={`group text-left rounded-xl border-2 p-4 transition-all duration-200 ${isActive
                                             ? 'border-[#021d49] bg-[#021d49] shadow-md'
                                             : 'border-gray-200 bg-white hover:border-[#021d49]/40 hover:shadow-sm'
@@ -489,10 +525,10 @@ function ModuleBrowsingContent() {
                         </div>
                     </div>
 
-                    {/* ── Selected Category Info ── */}
-                    {selectedCategory && (() => {
+                    {/* ── Selected Category Info — removed, cards now navigate directly ── */}
+                    {false && selectedCategory && (() => {
                         const baseCat = categories.find(c => c._id === selectedCategory);
-                        const cat = selectedCategoryFull || baseCat;
+                        const cat = baseCat;
                         if (!cat) return null;
 
                         const catIsFellowRestricted = cat.accessType === 'free' || cat.accessType === 'restricted';
@@ -571,13 +607,13 @@ function ModuleBrowsingContent() {
                                                         <span className="text-purple-700 text-xs font-semibold">Fellows Priority</span>
                                                     </div>
                                                 )}
-                                                {isAcademyEnrolledView && (
+                                                {allEnrolledCategoryIds.length > 0 && (
                                                     <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-1.5">
                                                         <Icons.CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
                                                         <span className="text-emerald-700 text-xs font-semibold">Enrolled</span>
                                                     </div>
                                                 )}
-                                                {catIsPaid && !isAcademyEnrolledView && (
+                                                {catIsPaid && allEnrolledCategoryIds.length === 0 && (
                                                     cat.hasTieredPricing ? (
                                                         <>
                                                             <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-lg px-3 py-1.5">
@@ -621,7 +657,7 @@ function ModuleBrowsingContent() {
                                             )}
 
                                             {/* Enrolled card (replaces pricing card when user has paid) */}
-                                            {isAcademyEnrolledView && (
+                                            {allEnrolledCategoryIds.length > 0 && (
                                                 <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
                                                     <div className="flex items-center gap-2 mb-2">
                                                         <Icons.CheckCircle className="w-4 h-4 text-emerald-600 flex-shrink-0" />
@@ -634,7 +670,7 @@ function ModuleBrowsingContent() {
                                             )}
 
                                             {/* Paid pricing card */}
-                                            {catIsPaid && !isAcademyEnrolledView && (
+                                            {catIsPaid && allEnrolledCategoryIds.length === 0 && (
                                                 <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                                                     <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-2">
                                                         One-Time Category Price
@@ -740,11 +776,11 @@ function ModuleBrowsingContent() {
                     })()}
 
                     {/* ── Sequential Learning Notice ── */}
-                    {!isAcademyEnrolledView && (
+                    {allEnrolledCategoryIds.length === 0 && (
                     <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                         <Icons.ListOrdered className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <p className="text-xs text-amber-800 leading-relaxed">
-                            <span className="font-semibold">Sequential Learning:</span> Modules within each programme must be completed in order  you must finish Module 1 before you can access Module 2, and so on. Locked modules will become available once you complete the preceding one.
+                            <span className="font-semibold">Sequential Learning:</span> Modules within each programme must be completed in order — you must finish Module 1 before you can access Module 2, and so on. Locked modules will become available once you complete the preceding one.
                         </p>
                     </div>
                     )}
@@ -767,7 +803,7 @@ function ModuleBrowsingContent() {
                     )}
 
                     {/* ── Modules Grid ── */}
-                    {!loading && displayedModules.length > 0 && !isAcademyEnrolledView && (
+                    {!loading && displayedModules.length > 0 && allEnrolledCategoryIds.length === 0 && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                             {displayedModules.map((mod) => {
                                 const lvl = getLvl(mod.level);
@@ -1002,7 +1038,7 @@ function ModuleBrowsingContent() {
                     )}
 
                     {/* ── Empty state ── */}
-                    {!loading && filteredModules.length === 0 && !isAcademyEnrolledView && (
+                    {!loading && filteredModules.length === 0 && allEnrolledCategoryIds.length === 0 && (
                         <Card className="border-gray-100 shadow-sm">
                             <CardContent className="py-16 text-center">
                                 <Icons.SearchX className="w-14 h-14 text-gray-200 mx-auto mb-4" />

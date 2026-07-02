@@ -409,9 +409,19 @@ export default function ResourceHubPage() {
     router.push(`/student/projects/${project._id}?type=${type}`);
   };
 
+  const isFellowUser = (() => {
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+      if (!raw) return false;
+      const u = JSON.parse(raw);
+      return (u?.fellowData?.assignedCategories || []).length > 0;
+    } catch { return false; }
+  })();
+
   useEffect(() => {
     const user = authService.getCurrentUser();
     setCurrentUser(user);
+    if (!isFellowUser) return; // Publishing Academy users see an empty hub
     fetchCommunity();
     fetchMine();
     fetchAdminResources();
@@ -546,6 +556,23 @@ export default function ResourceHubPage() {
   };
 
   // ── render ───────────────────────────────────────────────────────────────────
+
+  if (!isFellowUser) {
+    return (
+      <>
+        <Navbar />
+        <div className="min-h-screen bg-gray-50/80 flex flex-col items-center justify-center pt-24 pb-16 px-4">
+          <div className="w-16 h-16 rounded-2xl bg-gray-100 flex items-center justify-center mb-4">
+            <Library className="w-8 h-8 text-gray-300" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-800 mb-1">Resource Hub</h2>
+          <p className="text-sm text-gray-500 text-center max-w-xs leading-relaxed">
+            The Resource Hub will be available once your programme modules go live. Check back soon!
+          </p>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

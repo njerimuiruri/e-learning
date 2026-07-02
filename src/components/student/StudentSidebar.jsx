@@ -176,14 +176,20 @@ export default function StudentSidebar() {
         }
     };
 
+    const isFellow = (currentUser?.fellowData?.assignedCategories || []).length > 0;
+
     const menuItems = [
         { icon: 'LayoutDashboard', label: 'Dashboard',         path: '/student'                   },
         { icon: 'BookOpen',        label: 'Browse Modules',    path: '/student/modules'            },
+        ...(isFellow ? [
         { icon: 'PenTool',         label: 'Whiteboards',       path: '/student/whiteboards'        },
+        ] : []),
         { icon: 'FileText',        label: 'My Notes',          path: '/notes'                      },
         { icon: 'Inbox',           label: 'Inbox',             path: '/student/messages',  badge: unreadMessages },
+        ...(isFellow ? [
         { icon: 'Library',         label: 'Resource Hub',      path: '/student/projects'           },
         { icon: 'GraduationCap',   label: 'Capstone Project',  path: '/student/capstone'           },
+        ] : []),
         { icon: 'Trophy',          label: 'Your Achievements', path: '/student/achievements'       },
         { icon: 'Award',           label: 'Certificates',      path: '/student/certificates', locked: certCount === 0, badge: certCount, badgeColor: 'bg-amber-500' },
         { icon: 'Settings',        label: 'Account Settings',  path: '/student/account-settings'   },

@@ -77,7 +77,7 @@ function CategoryPageContent() {
             setError(false);
             const [cat, modsResult, enrollResult, progResult, statusResult] = await Promise.allSettled([
                 categoryService.getCategoryById(categoryId),
-                moduleService.getAllModules({ category: categoryId, limit: 100 }),
+                moduleService.getAllModules({ limit: 500 }),
                 moduleEnrollmentService.getMyEnrollments(),
                 progressionService.getMyProgressions(),
                 paymentService.checkCategoryStatus(categoryId),
@@ -91,7 +91,11 @@ function CategoryPageContent() {
             if (modsResult.status === 'fulfilled') {
                 const v = modsResult.value;
                 let mods = Array.isArray(v) ? v : v?.modules || [];
-                // Sort modules by order field
+                // Filter client-side by categoryId (server filter may not be supported)
+                mods = mods.filter(m => {
+                    const modCatId = (m.categoryId?._id || m.categoryId)?.toString?.() || String(m.categoryId?._id || m.categoryId);
+                    return modCatId === categoryId?.toString();
+                });
                 mods = mods.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
                 setModules(mods);
             }
@@ -240,47 +244,42 @@ function CategoryPageContent() {
     return (
         <>
             <Navbar />
-            <div className="min-h-screen bg-gray-50/80 pt-20">
+            <div className="min-h-screen bg-gray-50/80">
 
                 {/* ── Hero header ── */}
-                <div className="bg-gradient-to-r from-[#021d49] via-[#0a2d6e] to-[#1e40af]">
-                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+                <div className="bg-white border-b border-gray-100">
+                    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
                         {/* Breadcrumb */}
                         <button
                             onClick={() => router.push('/student/modules')}
-                            className="flex items-center gap-1.5 text-blue-200/70 hover:text-white text-xs font-medium mb-4 transition-colors group"
+                            className="flex items-center gap-1.5 text-gray-400 hover:text-[#021d49] text-xs font-medium mb-4 transition-colors group"
                         >
                             <Icons.ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
                             Browse Modules
                         </button>
 
-                        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div className="flex-1 min-w-0">
                                 <div className="flex flex-wrap items-center gap-2 mb-2">
                                     {catIsFellowRestricted && (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-purple-500/30 text-purple-100 px-2.5 py-1 rounded-full">
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-purple-100 text-purple-700 px-2.5 py-1 rounded-full">
                                             <Icons.Award className="w-3 h-3" /> Fellows Priority
                                         </span>
                                     )}
-                                    {catIsPaid && category.price > 0 && (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-500/30 text-amber-100 px-2.5 py-1 rounded-full">
-                                            KES {category.price?.toLocaleString()}
-                                        </span>
-                                    )}
                                     {!catIsPaid && !catIsFellowRestricted && (
-                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-white/20 text-white px-2.5 py-1 rounded-full">
+                                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">
                                             <Icons.Unlock className="w-3 h-3" /> Free Access
                                         </span>
                                     )}
                                 </div>
-                                <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">{category.name}</h1>
-                                {desc && <p className="text-blue-200/70 text-sm mt-1.5 leading-relaxed max-w-2xl">{desc}</p>}
+                                <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 leading-tight">{category.name}</h1>
+                                {desc && <p className="text-gray-500 text-sm mt-1.5 leading-relaxed max-w-2xl">{desc}</p>}
                             </div>
 
                             {/* Module count pill */}
-                            <div className="shrink-0 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl px-4 py-3 text-center min-w-[80px]">
-                                <p className="text-2xl font-black text-white">{modules.length}</p>
-                                <p className="text-[10px] text-blue-200/70 font-medium uppercase tracking-wide">
+                            <div className="shrink-0 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-center min-w-[80px]">
+                                <p className="text-2xl font-black text-[#021d49]">{modules.length}</p>
+                                <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wide">
                                     {modules.length === 1 ? 'Module' : 'Modules'}
                                 </p>
                             </div>
