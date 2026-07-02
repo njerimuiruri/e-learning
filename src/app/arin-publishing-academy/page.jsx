@@ -212,17 +212,12 @@ function AcademyContent() {
   };
 
   const selectTier = (t) => {
-    if (!categoryId) {
-      setError('Registration is not yet available. Please try again shortly.');
-      return;
-    }
     setTier(t); setError(null);
     if (!user) {
       localStorage.setItem('pendingAcademyTier', t);
       setStep('auth');
       return;
     }
-    // Show pay-choice step (Pay Now / Pay Later) before going to payment/ID upload
     setStep('pay-choice');
   };
 
@@ -233,7 +228,8 @@ function AcademyContent() {
   };
 
   const handlePayLater = async () => {
-    if (!categoryId || !tier) return;
+    if (!tier) return;
+    if (!categoryId) { setError('Category could not be loaded. Please refresh the page.'); return; }
     try {
       setProcessing(true); setError(null);
       await paymentService.enrollPayLater(categoryId, tier);
@@ -700,6 +696,8 @@ function Panel({
               />
             </div>
 
+            {error && <ErrBox msg={error} />}
+
             <ul className="space-y-1.5 pt-1">
               {[
                 'One-time payment  no recurring fees',
@@ -777,31 +775,39 @@ function Panel({
               <span>USD {total} total</span>
             </div>
 
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Select a payment option</p>
             <div className="space-y-3">
-              {/* Full payment option */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Full Payment</p>
-                <p className="text-2xl font-extrabold text-gray-900">USD {total}</p>
-                <p className="text-xs text-gray-400">One-time · Instant full access</p>
-              </div>
-
-              {/* Installment option */}
-              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Installments</p>
-                <p className="text-2xl font-extrabold text-gray-900">USD {half} <span className="text-sm font-medium text-gray-400">now</span></p>
-                <p className="text-xs text-gray-400">+ USD {half} later · Full access after 1st payment</p>
-              </div>
+              <OptionCard
+                selected={paymentOption === 'full'}
+                onClick={() => { setPaymentOption('full'); setError(null); }}
+                title="Full Payment"
+                sub="One-time · Instant full access"
+                price={`USD ${total}`}
+              />
+              <OptionCard
+                selected={paymentOption === 'installment1'}
+                onClick={() => { setPaymentOption('installment1'); setError(null); }}
+                title="Installments"
+                sub={`USD ${half} now · + USD ${half} later`}
+                price={`USD ${half}`}
+              />
             </div>
+
+            {paymentOption === 'installment1' && (
+              <p className="text-xs text-amber-600 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                You'll pay <strong>USD {half} now</strong> for full access. The 2nd installment of <strong>USD {half}</strong> will be communicated by the admin when due.
+              </p>
+            )}
 
             {error && <ErrBox msg={error} />}
 
             <button
               onClick={onPayNow}
-              disabled={processing}
-              className="w-full bg-[#021d49] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#032a66] transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+              disabled={processing || !paymentOption}
+              className="w-full bg-[#021d49] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#032a66] transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-              Pay Now
+              {paymentOption ? 'Continue to Payment' : 'Select an option above'}
             </button>
 
             {/* Pay Later with tooltip */}
@@ -980,11 +986,12 @@ function Panel({
   );
 }
 
-function TierCard({ icon, label, sub, price, onClick }) {
+function TierCard({ icon, label, sub, price, onClick, disabled }) {
   return (
     <button
       onClick={onClick}
-      className="flex flex-col items-start p-4 border border-gray-200 rounded-xl hover:border-gray-400 hover:shadow-sm transition-all text-left group w-full"
+      disabled={disabled}
+      className="flex flex-col items-start p-4 border border-gray-200 rounded-xl hover:border-gray-400 hover:shadow-sm transition-all text-left group w-full disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-gray-200 disabled:hover:shadow-none"
     >
       <div className="w-9 h-9 rounded-lg border border-gray-100 bg-gray-50 flex items-center justify-center mb-3 group-hover:bg-white transition-colors">
         {icon}
