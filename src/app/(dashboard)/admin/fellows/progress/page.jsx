@@ -70,10 +70,10 @@ function normalizeModule(module) {
 
 // Derive the level the student is currently at.
 // Rules (highest wins):
-//   advanced    — enrolled in at least one advanced module
-//   intermediate — enrolled in at least one intermediate module
+//   advanced     enrolled in at least one advanced module
+//   intermediate  enrolled in at least one intermediate module
 //                  OR has completed ALL enrolled beginner modules (beginner level done)
-//   beginner    — still working through beginner modules
+//   beginner     still working through beginner modules
 function deriveCurrentLevel(modules) {
   if (modules.some((m) => m.level === 'advanced')) return 'advanced';
   if (modules.some((m) => m.level === 'intermediate')) return 'intermediate';
@@ -95,7 +95,7 @@ function deriveCurrentLevel(modules) {
 
 function statusForProgress(completedModules, totalModules, overallProgress) {
   if (!totalModules) return 'notstarted';
-  // Primary: completed when every enrolled module is done — avoids floating-point edge cases
+  // Primary: completed when every enrolled module is done  avoids floating-point edge cases
   if (completedModules === totalModules && totalModules > 0) return 'completed';
   if (overallProgress === 100) return 'completed';
   if (overallProgress === 0 && completedModules === 0) return 'notstarted';
@@ -130,7 +130,7 @@ function normalizeFellow(fellow, index) {
   const modules = (fellow?.modules || []).map(normalizeModule).sort((a, b) => a.order - b.order);
   const totalModules = modules.length;
   const completedModules = modules.filter((m) => m.isCompleted || m.progress === 100).length;
-  // Force 100% when every enrolled module is marked done — avoids rounding surprises
+  // Force 100% when every enrolled module is marked done  avoids rounding surprises
   const overallProgress = totalModules === 0
     ? 0
     : completedModules === totalModules
@@ -203,8 +203,8 @@ function CapstoneProjectsTab({ capstones, fellows }) {
     const fellow = fellowMap.get(email);
     return {
       ...c,
-      cohort: fellow?.cohort || '—',
-      track:  fellow?.track  || '—',
+      cohort: fellow?.cohort || '',
+      track:  fellow?.track  || '',
     };
   }), [capstones, fellowMap]);
 
@@ -314,15 +314,15 @@ function CapstoneProjectsTab({ capstones, fellows }) {
                       {initials}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{c.studentName || '—'}</p>
-                      <p className="text-xs text-gray-400 truncate">{c.studentEmail || '—'}</p>
+                      <p className="text-sm font-semibold text-gray-900 truncate">{c.studentName || ''}</p>
+                      <p className="text-xs text-gray-400 truncate">{c.studentEmail || ''}</p>
                     </div>
                   </div>
 
                   {/* Cohort / Track */}
                   <div className="col-span-2 min-w-0">
                     <p className="text-sm text-gray-700">{c.cohort}</p>
-                    {c.track !== '—' && <p className="text-xs text-gray-400 mt-0.5 truncate">{c.track}</p>}
+                    {c.track !== '' && <p className="text-xs text-gray-400 mt-0.5 truncate">{c.track}</p>}
                   </div>
 
                   {/* Project title */}
@@ -348,13 +348,13 @@ function CapstoneProjectsTab({ capstones, fellows }) {
                             style={{ width: `${c.grade ?? 0}%` }}
                           />
                         </div>
-                        <span className="text-xs font-bold text-gray-700">{c.grade ?? '—'}</span>
+                        <span className="text-xs font-bold text-gray-700">{c.grade ?? ''}</span>
                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${c.passed ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
                           {c.passed ? 'Pass' : 'Fail'}
                         </span>
                       </>
                     ) : (
-                      <span className="text-xs text-gray-300">—</span>
+                      <span className="text-xs text-gray-300"></span>
                     )}
                   </div>
                 </div>
@@ -513,7 +513,7 @@ export default function FellowProgressPage() {
     setSendingBulk(true);
     setBulkDone({ sent: 0, failed: 0 });
 
-    // Step 1 — resolve MongoDB IDs for all in-progress fellows
+    // Step 1  resolve MongoDB IDs for all in-progress fellows
     const resolvedIds = [];
     let failed = 0;
 
@@ -543,12 +543,12 @@ export default function FellowProgressPage() {
       return;
     }
 
-    // Step 2 — send one bulk email with the animated HTML template
+    // Step 2  send one bulk email with the animated HTML template
     // Note: bulk uses a generic greeting since one HTML goes to all recipients
     try {
       const sampleFellow = inProgressFellows[0];
       const htmlBody = buildReminderEmail({
-        name: 'Fellow',           // generic — backend may substitute per-recipient
+        name: 'Fellow',           // generic  backend may substitute per-recipient
         modules: sampleFellow?.modules ?? [],
         overallProgress: sampleFellow?.overallProgress ?? 0,
         personalNote: bulkNote.trim(),
@@ -635,7 +635,7 @@ export default function FellowProgressPage() {
         <StatCard
           label="Certificate Ready"
           value={summary.certReady}
-          helper="Completed all beginner modules — eligible for certificate"
+          helper="Completed all beginner modules  eligible for certificate"
           icon={Award}
           tone="bg-emerald-50 text-emerald-700"
         />
@@ -672,7 +672,7 @@ export default function FellowProgressPage() {
               </div>
               <div>
                 <h2 className="text-base font-bold text-green-900">
-                  Certificate Ready — {certReadyFellows.length} Fellow{certReadyFellows.length !== 1 ? 's' : ''}
+                  Certificate Ready  {certReadyFellows.length} Fellow{certReadyFellows.length !== 1 ? 's' : ''}
                 </h2>
                 <p className="text-xs text-green-700">
                   These fellows have completed all {totalBeginnerModules} beginner modules and are ready to receive their certificates.
@@ -826,18 +826,18 @@ export default function FellowProgressPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="bulk-note">
-                      Personal note <span className="text-gray-400 font-normal">(optional — added to every email)</span>
+                      Personal note <span className="text-gray-400 font-normal">(optional  added to every email)</span>
                     </Label>
                     <Textarea
                       id="bulk-note"
                       rows={3}
-                      placeholder="e.g. The deadline for Module 3 is approaching — please ensure you complete it by Friday."
+                      placeholder="e.g. The deadline for Module 3 is approaching  please ensure you complete it by Friday."
                       value={bulkNote}
                       onChange={(e) => setBulkNote(e.target.value)}
                       className="resize-none"
                     />
                     <p className="text-xs text-gray-400">
-                      Each email will be personalised with the fellow's own name, modules, and progress — only this note is shared across all.
+                      Each email will be personalised with the fellow's own name, modules, and progress  only this note is shared across all.
                     </p>
                   </div>
 

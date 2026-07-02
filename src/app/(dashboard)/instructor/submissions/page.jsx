@@ -21,7 +21,7 @@ import Navbar from '@/components/navbar/navbar';
 // ── helpers ───────────────────────────────────────────────────────────────────
 
 function fmt(dateStr) {
-  if (!dateStr) return '—';
+  if (!dateStr) return '';
   return new Date(dateStr).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
 
@@ -155,7 +155,7 @@ function GradingView({ submission, onClose, onSaved }) {
         reviewedAt: new Date().toISOString(),
       };
       await courseService.submitAssessmentReview(reviewData);
-      showToast(`Review saved! Final score: ${finalScore}% — ${passed ? 'PASSED' : 'FAILED'}`, { type: 'success' });
+      showToast(`Review saved! Final score: ${finalScore}%  ${passed ? 'PASSED' : 'FAILED'}`, { type: 'success' });
       onSaved?.();
     } catch (err) {
       showToast(err?.response?.data?.message || 'Failed to save review', { type: 'error' });
@@ -412,7 +412,7 @@ function GradingView({ submission, onClose, onSaved }) {
           <Textarea
             value={currentFeedback.feedback}
             onChange={(e) => updateFb('feedback', e.target.value)}
-            placeholder="Provide constructive feedback — what was strong, what was missing, what to review…"
+            placeholder="Provide constructive feedback  what was strong, what was missing, what to review…"
             rows={3}
             className="resize-none rounded-xl border-gray-200 text-sm focus-visible:ring-[#021d49]/30"
           />
@@ -440,7 +440,7 @@ function GradingView({ submission, onClose, onSaved }) {
           <div className="text-xs text-gray-400 text-center">
             {currentFeedback.isCorrect === null || currentFeedback.isCorrect === undefined
               ? 'Grade this answer to continue'
-              : <span className="text-emerald-600 font-semibold">✓ Graded — move to next</span>}
+              : <span className="text-emerald-600 font-semibold">✓ Graded  move to next</span>}
           </div>
 
           {step < essayIdxs.length - 1 ? (
@@ -516,7 +516,7 @@ export default function SubmissionsPage() {
           <div className="flex-1 max-w-3xl w-full mx-auto bg-white rounded-2xl shadow-sm border border-gray-100 my-6 flex flex-col overflow-hidden"
             style={{ maxHeight: 'calc(100vh - 6rem)' }}>
             {essayCount === 0 ? (
-              // No essay questions — just show a summary
+              // No essay questions  just show a summary
               <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
                 <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
                   <Target className="w-8 h-8 text-blue-500" />
@@ -609,7 +609,7 @@ export default function SubmissionsPage() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
-                  Submissions — {selectedCourse.title}
+                  Submissions  {selectedCourse.title}
                 </p>
                 {submissions.length > 0 && (
                   <div className="flex items-center gap-2 text-xs text-gray-400">

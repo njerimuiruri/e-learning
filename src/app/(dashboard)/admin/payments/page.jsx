@@ -8,10 +8,11 @@ import {
 } from 'lucide-react';
 import paymentService from '@/lib/api/paymentService';
 import categoryService from '@/lib/api/categoryService';
-import adminService from '@/lib/api/adminService';
+import adminService, { bankPaymentService } from '@/lib/api/adminService';
+import * as XLSX from 'xlsx';
 
 export default function AdminPaymentsPage() {
-  const [tab, setTab] = useState('all'); // 'all' | 'installments' | 'lookup'
+  const [tab, setTab] = useState('all'); // 'all' | 'installments' | 'lookup' | 'bank' | 'pay_later'
   const [payments, setPayments] = useState([]);
   const [installments, setInstallments] = useState({ overview: [], total: 0, owingInstallment2: 0, completedBoth: 0 });
   const [stats, setStats] = useState({ total: 0, totalRevenue: 0, students: 0, nonStudents: 0 });
@@ -25,6 +26,18 @@ export default function AdminPaymentsPage() {
   const [lookupResult, setLookupResult] = useState(null);
   const [lookupLoading, setLookupLoading] = useState(false);
   const [lookupError, setLookupError] = useState(null);
+
+  // Bank payments state
+  const [bankRecords, setBankRecords] = useState([]);
+  const [bankStats, setBankStats] = useState({ paid: 0, partial: 0, pending: 0, totalAmountDue: 0, totalAmountPaid: 0, totalBalance: 0 });
+  const [bankSearch, setBankSearch] = useState('');
+  const [bankFilterStatus, setBankFilterStatus] = useState('all');
+  const [bankLoading, setBankLoading] = useState(false);
+  // Pay-later state
+  const [payLaterUsers, setPayLaterUsers] = useState([]);
+  const [payLaterLoading, setPayLaterLoading] = useState(false);
+  const [payLaterSearch, setPayLaterSearch] = useState('');
+  const [reminderSending, setReminderSending] = useState(null);
 
   useEffect(() => { loadData(); }, []);
 
@@ -57,6 +70,73 @@ export default function AdminPaymentsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadBankPayments = async (catId) => {
+    const id = catId || academyId;
+    if (!id) return;
+    setBankLoading(true);
+    try {
+      const res = await bankPaymentService.getAll({ categoryId: id, status: bankFilterStatus !== 'all' ? bankFilterStatus : undefined, search: bankSearch || undefined, limit: 500 });
+      setBankRecords(res.records || []);
+      setBankStats(res.stats || { paid: 0, partial: 0, pending: 0, totalAmountDue: 0, totalAmountPaid: 0, totalBalance: 0 });
+    } catch (e) {
+      console.error('Failed to load bank payments', e);
+    } finally {
+      setBankLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (tab === 'bank' && academyId) loadBankPayments();
+  }, [tab, academyId, bankFilterStatus, bankSearch]);
+
+  const loadPayLaterUsers = async () => {
+    if (!academyId) return;
+    setPayLaterLoading(true);
+    try {
+      const data = await paymentService.adminGetPayLaterEnrollments(academyId);
+      setPayLaterUsers(Array.isArray(data) ? data : []);
+    } catch (e) { console.error('Failed to load pay-later users', e); }
+    finally { setPayLaterLoading(false); }
+  };
+
+  useEffect(() => {
+    if (tab === 'pay_later' && academyId) loadPayLaterUsers();
+  }, [tab, academyId]);
+
+  const sendSingleReminder = async (userId) => {
+    if (!academyId) return;
+    setReminderSending(userId);
+    try {
+      await paymentService.adminSendPayLaterReminder(academyId, userId);
+      alert('Reminder sent successfully');
+    } catch { alert('Failed to send reminder'); }
+    finally { setReminderSending(null); }
+  };
+
+  const exportBankPaymentsExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const filteredBank = bankRecords.filter(r => {
+      const matchSearch = !bankSearch || r.fullName?.toLowerCase().includes(bankSearch.toLowerCase()) || r.email?.toLowerCase().includes(bankSearch.toLowerCase());
+      const matchStatus = bankFilterStatus === 'all' || r.paymentStatus === bankFilterStatus;
+      return matchSearch && matchStatus;
+    });
+    const rows = [
+      ['Full Name', 'Email', 'Gender', 'Nationality', 'Phone', 'Institution', 'Category', 'Amount Due (USD)', 'Amount Paid (USD)', 'Balance (USD)', 'Status', 'Tranche', 'Date of Payment', 'Comments'],
+      ...filteredBank.map(r => [
+        r.fullName, r.email, r.gender || '', r.nationality || '',
+        r.phoneNumber || '', r.institution || '', r.participantCategory || '',
+        r.amountDue, r.amountPaid, r.balance,
+        r.paymentStatus, r.tranche || '',
+        r.dateOfPayment ? new Date(r.dateOfPayment).toLocaleDateString('en-GB') : '',
+        r.comments || '',
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = rows[0].map(() => ({ wch: 20 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Bank Payments');
+    XLSX.writeFile(wb, `bank-payments-${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const lookupUser = async () => {
@@ -124,7 +204,7 @@ export default function AdminPaymentsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-gray-900">Academy Payments</h1>
-          <p className="text-sm text-gray-500 mt-0.5">ARIN Publishing Academy — payment records and installment tracking</p>
+          <p className="text-sm text-gray-500 mt-0.5">ARIN Publishing Academy  payment records and installment tracking</p>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={loadData} className="flex items-center gap-1.5 px-3 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
@@ -145,10 +225,12 @@ export default function AdminPaymentsPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit flex-wrap">
         {[
-          { key: 'all', label: 'All Payments' },
+          { key: 'all', label: 'All Payments (Paystack)' },
           { key: 'installments', label: `Installments (${installments.owingInstallment2} owe 2nd)` },
+          { key: 'bank', label: `Bank Payments (${bankStats.paid + bankStats.partial + bankStats.pending || bankRecords.length})` },
+          { key: 'pay_later', label: `Pay Later (${payLaterUsers.length})` },
           { key: 'lookup', label: 'User Lookup' },
         ].map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -249,12 +331,12 @@ export default function AdminPaymentsPage() {
                   <tbody className="divide-y divide-gray-50">
                     {installments.overview.map((row, i) => {
                       const user = row.user || {};
-                      const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || '—';
+                      const name = `${user.firstName || ''} ${user.lastName || ''}`.trim() || '';
                       const isStudent = row.userTier === 'student';
                       return (
                         <tr key={i} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 font-medium text-gray-900">{name}</td>
-                          <td className="px-4 py-3 text-gray-500">{user.email || '—'}</td>
+                          <td className="px-4 py-3 text-gray-500">{user.email || ''}</td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${isStudent ? 'bg-sky-50 text-sky-700' : 'bg-orange-50 text-orange-700'}`}>
                               {isStudent ? <GraduationCap className="w-3 h-3" /> : <Briefcase className="w-3 h-3" />}
@@ -294,6 +376,82 @@ export default function AdminPaymentsPage() {
           </div>
         </div>
       )}
+      {/* ── Pay Later tab ── */}
+      {tab === 'pay_later' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <h2 className="text-sm font-bold text-gray-800">Pay Later Enrollments</h2>
+              <p className="text-xs text-gray-500 mt-0.5">Self-registered users with free Module 1 teaser access  awaiting payment for full access.</p>
+            </div>
+            <button onClick={() => paymentService.adminSendBulkPayLaterReminders(academyId).then(() => alert('Bulk reminders sent!'))}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors">
+              <Send className="w-3.5 h-3.5" /> Send All Reminders
+            </button>
+          </div>
+          <div className="relative max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input type="text" placeholder="Search…" value={payLaterSearch} onChange={e => setPayLaterSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#021d49] bg-white" />
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b">
+                  {['Name', 'Email', 'Tier', 'Enrolled', 'Status', 'Actions'].map(h => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {payLaterLoading ? (
+                  <tr><td colSpan={6} className="text-center py-12">
+                    <Loader2 className="w-7 h-7 animate-spin text-gray-300 mx-auto mb-2" />
+                    <p className="text-gray-400 text-sm">Loading…</p>
+                  </td></tr>
+                ) : payLaterUsers.filter(u => {
+                  const q = payLaterSearch.toLowerCase();
+                  return !q || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+                }).length === 0 ? (
+                  <tr><td colSpan={6} className="text-center py-12">
+                    <Clock className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                    <p className="text-gray-500 font-medium text-sm">No pay-later enrollments</p>
+                  </td></tr>
+                ) : payLaterUsers.filter(u => {
+                  const q = payLaterSearch.toLowerCase();
+                  return !q || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+                }).map(u => (
+                  <tr key={u._id} className="border-b last:border-0 hover:bg-gray-50/50">
+                    <td className="px-4 py-3 font-semibold text-gray-800 whitespace-nowrap">{u.firstName} {u.lastName}</td>
+                    <td className="px-4 py-3 text-xs text-gray-600">{u.email}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${u.tier === 'student' ? 'bg-sky-100 text-sky-700' : 'bg-orange-100 text-orange-700'}`}>
+                        {u.tier === 'student' ? 'Student' : 'Non-Student'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                      {u.enrolledAt ? new Date(u.enrolledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                    </td>
+                    <td className="px-4 py-3">
+                      {u.isLocked
+                        ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">Locked</span>
+                        : <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pay Later</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <button disabled={reminderSending === u._id} onClick={() => sendSingleReminder(u._id)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors disabled:opacity-40">
+                        {reminderSending === u._id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                        Send Reminder
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* ── User Lookup tab ── */}
       {tab === 'lookup' && (
         <div className="space-y-5 max-w-xl">
@@ -368,7 +526,7 @@ export default function AdminPaymentsPage() {
                     {lookupResult.publishingAcademy.status === 'paid' && (
                       <div className="flex items-center gap-2 text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3">
                         <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                        <span className="text-sm font-semibold">Paid — has access</span>
+                        <span className="text-sm font-semibold">Paid  has access</span>
                       </div>
                     )}
                     {lookupResult.publishingAcademy.status === 'assigned_free' && (
@@ -383,14 +541,14 @@ export default function AdminPaymentsPage() {
                     {lookupResult.publishingAcademy.status === 'pending_verification' && (
                       <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
                         <Clock className="w-4 h-4 flex-shrink-0" />
-                        <span className="text-sm font-semibold">Student ID under review — awaiting payment</span>
+                        <span className="text-sm font-semibold">Student ID under review  awaiting payment</span>
                       </div>
                     )}
                     {lookupResult.publishingAcademy.status === 'not_enrolled' && (
                       <div className="flex items-center gap-2 text-gray-600 bg-gray-50 border border-gray-100 rounded-xl px-4 py-3">
                         <XCircle className="w-4 h-4 flex-shrink-0 text-gray-400" />
                         <div>
-                          <p className="text-sm font-semibold">Not enrolled — payment required</p>
+                          <p className="text-sm font-semibold">Not enrolled  payment required</p>
                           <p className="text-xs text-gray-500 mt-0.5">This user has not paid for the ARIN Publishing Academy.</p>
                         </div>
                       </div>
@@ -402,7 +560,7 @@ export default function AdminPaymentsPage() {
                 <div className="px-5 py-4">
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Fellow categories assigned</p>
                   {lookupResult.assignedCategories.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic">None — not a fellow in any category</p>
+                    <p className="text-xs text-gray-400 italic">None  not a fellow in any category</p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
                       {lookupResult.assignedCategories.map(c => (
@@ -432,6 +590,95 @@ export default function AdminPaymentsPage() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Bank Payments tab ── */}
+      {tab === 'bank' && (
+        <div className="space-y-5">
+          {/* Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-4">
+            <StatCard icon={<CheckCircle className="w-4 h-4 text-green-600" />} label="Paid" value={bankStats.paid} bg="bg-green-50" />
+            <StatCard icon={<Clock className="w-4 h-4 text-amber-600" />} label="Partial" value={bankStats.partial} bg="bg-amber-50" />
+            <StatCard icon={<Clock className="w-4 h-4 text-gray-400" />} label="Pending" value={bankStats.pending} bg="bg-gray-50" />
+            <StatCard icon={<DollarSign className="w-4 h-4 text-blue-600" />} label="Total Due" value={`USD ${(bankStats.totalAmountDue || 0).toLocaleString()}`} bg="bg-blue-50" />
+            <StatCard icon={<DollarSign className="w-4 h-4 text-emerald-600" />} label="Total Paid" value={`USD ${(bankStats.totalAmountPaid || 0).toLocaleString()}`} bg="bg-emerald-50" />
+            <StatCard icon={<DollarSign className="w-4 h-4 text-red-500" />} label="Balance" value={`USD ${(bankStats.totalBalance || 0).toLocaleString()}`} bg="bg-red-50" />
+          </div>
+
+          {/* Search & filter */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input type="text" placeholder="Search by name or email…" value={bankSearch} onChange={e => setBankSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#021d49] bg-white" />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-gray-400" />
+              <select value={bankFilterStatus} onChange={e => setBankFilterStatus(e.target.value)}
+                className="text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none bg-white">
+                <option value="all">All statuses</option>
+                <option value="paid">Paid</option>
+                <option value="partial">Partial</option>
+                <option value="pending">Pending</option>
+              </select>
+              <button onClick={exportBankPaymentsExcel} disabled={bankRecords.length === 0}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm text-white bg-[#021d49] rounded-lg hover:bg-[#032a66] transition-colors disabled:opacity-40">
+                <Download className="w-3.5 h-3.5" /> Export Excel
+              </button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+            {bankLoading ? (
+              <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[#021d49]" /></div>
+            ) : bankRecords.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-sm text-gray-400">No bank payment records found</p>
+                <p className="text-xs text-gray-400 mt-1">Use the Fellows Management → Arin Publishing Academy tab to add records.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50">
+                      {['Full Name', 'Email', 'Category', 'Institution', 'Amount Due', 'Amount Paid', 'Balance', 'Status', 'Tranche', 'Date Paid', 'Comments'].map(h => (
+                        <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {bankRecords
+                      .filter(r => {
+                        const ms = !bankSearch || r.fullName?.toLowerCase().includes(bankSearch.toLowerCase()) || r.email?.toLowerCase().includes(bankSearch.toLowerCase());
+                        const mf = bankFilterStatus === 'all' || r.paymentStatus === bankFilterStatus;
+                        return ms && mf;
+                      })
+                      .map(r => (
+                        <tr key={r._id} className="hover:bg-gray-50/60 transition-colors">
+                          <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">{r.fullName}</td>
+                          <td className="px-4 py-3 text-xs text-gray-500">{r.email}</td>
+                          <td className="px-4 py-3 text-xs">{r.participantCategory ? <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">{r.participantCategory}</span> : <span className="text-gray-300"></span>}</td>
+                          <td className="px-4 py-3 text-xs text-gray-500 max-w-32 truncate">{r.institution || ''}</td>
+                          <td className="px-4 py-3 text-xs font-medium text-gray-700">USD {(r.amountDue || 0).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-xs font-medium text-green-700">USD {(r.amountPaid || 0).toLocaleString()}</td>
+                          <td className="px-4 py-3 text-xs font-medium text-red-600">USD {(r.balance || 0).toLocaleString()}</td>
+                          <td className="px-4 py-3">
+                            {r.paymentStatus === 'paid' && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Paid</span>}
+                            {r.paymentStatus === 'partial' && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Partial</span>}
+                            {r.paymentStatus === 'pending' && <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Pending</span>}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-500">{r.tranche || ''}</td>
+                          <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">{r.dateOfPayment ? new Date(r.dateOfPayment).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}</td>
+                          <td className="px-4 py-3 text-xs text-gray-500 max-w-40 truncate">{r.comments || ''}</td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -506,7 +753,7 @@ function PaymentsTable({ payments, loading, academyId, onRevoke }) {
             </thead>
             <tbody className="divide-y divide-gray-50">
               {payments.map((p, i) => {
-                const name = `${p.userId?.firstName || ''} ${p.userId?.lastName || ''}`.trim() || '—';
+                const name = `${p.userId?.firstName || ''} ${p.userId?.lastName || ''}`.trim() || '';
                 const isStudent = p.userTier === 'student';
                 const payType = p.isInstallment ? `Installment ${p.installmentNumber || 1} of 2` : 'Full payment';
                 const userId = p.userId?._id || p.userId;
@@ -514,7 +761,7 @@ function PaymentsTable({ payments, loading, academyId, onRevoke }) {
                 return (
                   <tr key={p._id || i} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap">{name}</td>
-                    <td className="px-4 py-3 text-gray-500">{p.userId?.email || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">{p.userId?.email || ''}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full ${isStudent ? 'bg-sky-50 text-sky-700' : 'bg-orange-50 text-orange-700'}`}>
                         {isStudent ? <GraduationCap className="w-3 h-3" /> : <Briefcase className="w-3 h-3" />}

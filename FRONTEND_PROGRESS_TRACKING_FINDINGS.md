@@ -336,8 +336,8 @@ const fetchModuleData = async () => {
 
 **API Endpoints Called**:
 
-- `GET /modules/${moduleId}` — Module metadata + lessons/slides
-- `GET /module-enrollments/modules/${moduleId}/my-enrollment` — Student's progress
+- `GET /modules/${moduleId}` Module metadata + lessons/slides
+- `GET /module-enrollments/modules/${moduleId}/my-enrollment` Student's progress
 
 ### Progress Data Structure Received
 
@@ -411,7 +411,7 @@ interface ModuleEnrollment {
 
 ## 8. After Completion: Does Frontend Refetch Progress?
 
-### ❌ **NO** — Progress NOT Refetched from Server
+### ❌ **NO** Progress NOT Refetched from Server
 
 **Current Behavior**:
 

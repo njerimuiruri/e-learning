@@ -314,7 +314,7 @@ function AccountSettingsContent() {
                                         {imageFile && (
                                             <p className="text-xs text-[#021d49] mt-1 font-medium flex items-center gap-1">
                                                 <Icons.Image className="w-3 h-3" />
-                                                {imageFile.name} — will upload on save
+                                                {imageFile.name}  will upload on save
                                             </p>
                                         )}
                                     </div>
@@ -326,7 +326,7 @@ function AccountSettingsContent() {
                                 <h2 className="text-base font-semibold text-gray-900 mb-4">Personal Details</h2>
 
                                 <div className="space-y-4">
-                                    {/* Full Name — read-only, pre-filled by admin */}
+                                    {/* Full Name  read-only, pre-filled by admin */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                             Full Name
@@ -340,7 +340,7 @@ function AccountSettingsContent() {
                                         />
                                     </div>
 
-                                    {/* Email — read-only */}
+                                    {/* Email  read-only */}
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-1.5">
                                             Email Address

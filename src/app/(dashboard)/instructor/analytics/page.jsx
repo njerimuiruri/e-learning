@@ -53,7 +53,7 @@ function StatCard({ icon: Icon, label, value, sub, accent }) {
         <Icon className={`w-6 h-6 ${accent ? accent.replace("border-", "text-").replace("-200", "-600") : "text-gray-500"}`} />
       </div>
       <div>
-        <p className="text-2xl font-extrabold text-gray-900 leading-none">{value ?? "—"}</p>
+        <p className="text-2xl font-extrabold text-gray-900 leading-none">{value ?? ""}</p>
         <p className="text-sm font-medium text-gray-700 mt-0.5">{label}</p>
         {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
       </div>
@@ -344,7 +344,7 @@ export default function InstructorAnalyticsPage() {
               {/* Quick stats */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="bg-emerald-50 rounded-xl p-3 text-center">
-                  <p className="text-2xl font-extrabold text-emerald-700">{avgGrade || "—"}</p>
+                  <p className="text-2xl font-extrabold text-emerald-700">{avgGrade || ""}</p>
                   <p className="text-xs text-emerald-600 mt-0.5">Avg Grade</p>
                 </div>
                 <div className={`rounded-xl p-3 text-center ${passRate >= 70 ? "bg-emerald-50" : "bg-amber-50"}`}>
@@ -411,7 +411,7 @@ export default function InstructorAnalyticsPage() {
                       <div key={mod._id} className="grid grid-cols-12 gap-2 px-6 py-4 items-center hover:bg-gray-50/60 transition-colors">
                         <div className="col-span-5 min-w-0">
                           <p className="text-sm font-semibold text-gray-800 truncate">{mod.title}</p>
-                          <p className="text-xs text-gray-400 mt-0.5 capitalize">{mod.level || "—"}</p>
+                          <p className="text-xs text-gray-400 mt-0.5 capitalize">{mod.level || ""}</p>
                         </div>
                         <div className="col-span-2 flex justify-center">
                           <span className={`inline-flex items-center border rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.color}`}>
@@ -450,7 +450,7 @@ export default function InstructorAnalyticsPage() {
           <div className="divide-y divide-gray-50">
             {gradedCapstones.map((c) => {
               const name = c.studentName || c.student?.fullName || "Student";
-              const score = c.grade ?? "—";
+              const score = c.grade ?? "";
               const passed = c.passed;
               return (
                 <div key={c._id} className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50/60 transition-colors">
@@ -614,7 +614,7 @@ export default function InstructorAnalyticsPage() {
                             {s.gender}
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-300">—</span>
+                          <span className="text-xs text-gray-300"></span>
                         )}
                       </div>
 
@@ -625,7 +625,7 @@ export default function InstructorAnalyticsPage() {
                             <span className="truncate">{s.country}</span>
                           </span>
                         ) : (
-                          <span className="text-xs text-gray-300">—</span>
+                          <span className="text-xs text-gray-300"></span>
                         )}
                       </div>
 

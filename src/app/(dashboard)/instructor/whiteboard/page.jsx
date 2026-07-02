@@ -212,7 +212,7 @@ function WhiteboardCanvas({
           </button>
           <button
             onClick={() => setTool('text')}
-            title="Text tool — click canvas to place text"
+            title="Text tool  click canvas to place text"
             className={`p-1.5 rounded-md transition-colors flex items-center gap-1 ${tool === 'text' ? 'bg-emerald-100 text-emerald-700' : 'hover:bg-gray-100 text-gray-600'}`}
           >
             <Icons.Type className="w-4 h-4" />
@@ -233,7 +233,7 @@ function WhiteboardCanvas({
           ))}
         </div>
 
-        {/* Stroke / font size — contextual */}
+        {/* Stroke / font size  contextual */}
         {tool === 'text' ? (
           <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-1">
             {FONT_SIZES.map((s) => (
@@ -309,7 +309,7 @@ function WhiteboardCanvas({
         style={{ cursor: tool === 'text' ? 'text' : 'crosshair' }}
         onClick={handleCanvasAreaClick}
       >
-        {/* Drawing canvas — disable pointer events when text tool is active so clicks pass through */}
+        {/* Drawing canvas  disable pointer events when text tool is active so clicks pass through */}
         <div style={{ pointerEvents: tool === 'text' ? 'none' : 'auto', width: '100%', height: '100%' }}>
           {mounted && (
             <ReactSketchCanvas
@@ -685,7 +685,7 @@ function WhiteboardEditorContent() {
 
   const saveWhiteboard = async () => {
     if (!canvasRef.current) {
-      showToast('Canvas not ready — please wait a moment and try again', 'error');
+      showToast('Canvas not ready  please wait a moment and try again', 'error');
       return;
     }
     setSaving(true);

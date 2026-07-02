@@ -237,7 +237,7 @@ export default function BulkAddFellowsPage() {
     const [categories, setCats]         = useState([]);
     const [step, setStep]               = useState(1);
     const [draftRows, setDraftRows]     = useState([]); // rows loaded from localStorage for preview
-    // 'cards' | 'table' — view mode for step 2
+    // 'cards' | 'table'  view mode for step 2
     const [viewMode, setViewMode]       = useState('cards');
     // File upload preview state
     const [previewData, setPreviewData] = useState(null); // { rows: [], fileName: '' }
@@ -267,11 +267,11 @@ export default function BulkAddFellowsPage() {
 
     const saveDraft = useCallback(() => {
         const nonEmpty = rows.filter(r => r.email || r.fullName?.trim());
-        if (nonEmpty.length === 0) return toast.error('Nothing to save — add at least one fellow first');
+        if (nonEmpty.length === 0) return toast.error('Nothing to save  add at least one fellow first');
         try {
             localStorage.setItem(DRAFT_KEY, JSON.stringify(nonEmpty));
             setDraftRows(nonEmpty);
-            toast.success(`Draft saved — ${nonEmpty.length} fellow${nonEmpty.length !== 1 ? 's' : ''} stored`);
+            toast.success(`Draft saved  ${nonEmpty.length} fellow${nonEmpty.length !== 1 ? 's' : ''} stored`);
         } catch {
             toast.error('Failed to save draft');
         }
@@ -281,7 +281,7 @@ export default function BulkAddFellowsPage() {
         if (!draftRows.length) return;
         setRows(draftRows.map(r => ({ ...r, id: Date.now() + Math.random() })));
         setStep(2);
-        toast.success('Draft restored — review and submit when ready');
+        toast.success('Draft restored  review and submit when ready');
     };
 
     const clearDraft = () => {
@@ -502,7 +502,7 @@ export default function BulkAddFellowsPage() {
             localStorage.setItem(DRAFT_KEY, JSON.stringify(nonEmpty));
             setDraftRows(nonEmpty);
             setPreviewData(null);
-            toast.success(`Draft saved — ${nonEmpty.length} fellow${nonEmpty.length !== 1 ? 's' : ''} stored`);
+            toast.success(`Draft saved  ${nonEmpty.length} fellow${nonEmpty.length !== 1 ? 's' : ''} stored`);
         } catch {
             toast.error('Failed to save draft');
         }
@@ -594,7 +594,7 @@ export default function BulkAddFellowsPage() {
                                         return (
                                             <tr key={i} className={`${invalid ? 'bg-amber-50/40' : noEmail ? 'bg-red-50/30' : 'hover:bg-gray-50'}`}>
                                                 <td className="px-4 py-2.5 text-xs text-gray-400 font-mono">{i + 1}</td>
-                                                <td className="px-3 py-2.5 font-medium text-gray-800">{row.fullName || <span className="text-gray-300 italic">—</span>}</td>
+                                                <td className="px-3 py-2.5 font-medium text-gray-800">{row.fullName || <span className="text-gray-300 italic"></span>}</td>
                                                 <td className="px-3 py-2.5">
                                                     {row.email ? (
                                                         <span className={valid ? 'text-gray-700' : 'text-amber-700 font-medium'}>
@@ -604,11 +604,11 @@ export default function BulkAddFellowsPage() {
                                                         <span className="text-red-500 italic text-xs">Missing</span>
                                                     )}
                                                 </td>
-                                                <td className="px-3 py-2.5 text-gray-600">{row.gender || '—'}</td>
-                                                <td className="px-3 py-2.5 text-gray-600">{row.country || '—'}</td>
-                                                <td className="px-3 py-2.5 text-gray-600">{row.region || '—'}</td>
-                                                <td className="px-3 py-2.5 text-gray-600 text-xs">{row.track || '—'}</td>
-                                                <td className="px-3 py-2.5 text-gray-600">{row.phoneNumber || '—'}</td>
+                                                <td className="px-3 py-2.5 text-gray-600">{row.gender || ''}</td>
+                                                <td className="px-3 py-2.5 text-gray-600">{row.country || ''}</td>
+                                                <td className="px-3 py-2.5 text-gray-600">{row.region || ''}</td>
+                                                <td className="px-3 py-2.5 text-gray-600 text-xs">{row.track || ''}</td>
+                                                <td className="px-3 py-2.5 text-gray-600">{row.phoneNumber || ''}</td>
                                                 <td className="px-3 py-2.5">
                                                     {valid && <span className="inline-flex items-center gap-1 text-xs text-green-700 font-medium"><Icons.CheckCircle className="w-3.5 h-3.5" /> Valid</span>}
                                                     {invalid && <span className="inline-flex items-center gap-1 text-xs text-amber-700 font-medium"><Icons.AlertCircle className="w-3.5 h-3.5" /> Bad email</span>}
@@ -694,7 +694,7 @@ export default function BulkAddFellowsPage() {
                                     <div>
                                         <CardTitle className="text-base text-amber-900">Saved Draft</CardTitle>
                                         <CardDescription className="text-amber-700">
-                                            {draftRows.filter(r => r.email && isValidEmail(r.email)).length} valid · {draftRows.length} total fellow{draftRows.length !== 1 ? 's' : ''} — saved locally
+                                            {draftRows.filter(r => r.email && isValidEmail(r.email)).length} valid · {draftRows.length} total fellow{draftRows.length !== 1 ? 's' : ''}  saved locally
                                         </CardDescription>
                                     </div>
                                 </div>
@@ -1091,10 +1091,10 @@ export default function BulkAddFellowsPage() {
                             <CardContent>
                                 <Select value={bulkCategory} onValueChange={setBulkCategory}>
                                     <SelectTrigger className="h-12 text-sm">
-                                        <SelectValue placeholder="Select a category (optional — can be set later)" />
+                                        <SelectValue placeholder="Select a category (optional  can be set later)" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="__none__">No category — assign later</SelectItem>
+                                        <SelectItem value="__none__">No category  assign later</SelectItem>
                                         {categories.map(c => (
                                             <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
                                         ))}
@@ -1213,7 +1213,7 @@ export default function BulkAddFellowsPage() {
                                         <CardTitle className="text-sm text-amber-800">Temporary Passwords</CardTitle>
                                     </div>
                                     <CardDescription className="text-amber-600 text-xs">
-                                        Share these with each fellow — they must change their password on first login.
+                                        Share these with each fellow  they must change their password on first login.
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>

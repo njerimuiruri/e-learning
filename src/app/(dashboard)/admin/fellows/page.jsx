@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import adminService from '@/lib/api/adminService';
+import adminService, { bankPaymentService } from '@/lib/api/adminService';
 import categoryService from '@/lib/api/categoryService';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -24,6 +24,16 @@ import { Checkbox } from '@/components/ui/checkbox';
 // ─────────────────────────────────────────────────────────────────
 const GENDER_OPTIONS = ['Male', 'Female', 'Non-binary', 'Prefer not to say'];
 const TRACK_OPTIONS  = ['AI & Machine Learning', 'Data Science', 'Climate Tech', 'Agri-Tech', 'Health Tech', 'FinTech', 'EdTech', 'Other'];
+const PARTICIPANT_CATEGORY_OPTIONS = ['Student', 'Working Professional'];
+const PAYMENT_STATUS_OPTIONS = ['paid', 'partial', 'pending', 'pay_later'];
+
+const BLANK_BP_ROW = () => ({
+  id: Date.now() + Math.random(),
+  fullName: '', email: '', gender: '', nationality: '', phoneNumber: '',
+  institution: '', participantCategory: '',
+  amountDue: '', amountPaid: '', paymentStatus: 'pending',
+  tranche: '', dateOfPayment: '', comments: '',
+});
 
 const BLANK_ROW = () => ({
   id: Date.now() + Math.random(),
@@ -31,6 +41,1126 @@ const BLANK_ROW = () => ({
   country: '', region: '', track: '', category: '', phoneNumber: '',
 });
 
+
+// ─────────────────────────────────────────────────────────────────
+// ARIN PUBLISHING ACADEMY  SINGLE ADD FORM
+// ─────────────────────────────────────────────────────────────────
+function BankPaymentForm({ categoryId, onSuccess, onClose }) {
+  const [form, setForm] = useState({
+    fullName: '', email: '', gender: '', nationality: '', phoneNumber: '',
+    institution: '', participantCategory: '',
+    amountDue: '', amountPaid: '', paymentStatus: 'pending',
+    tranche: '', dateOfPayment: '', comments: '',
+    sendEmail: true,
+  });
+  const [loading, setLoading] = useState(false);
+  const [created, setCreated] = useState(null);
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleSubmit = async () => {
+    if (!form.email) return toast.error('Email is required');
+    if (!form.fullName) return toast.error('Full name is required');
+    setLoading(true);
+    try {
+      const computedAmtDue  = parseFloat(form.amountDue) || 0;
+      const computedAmtPaid = form.paymentStatus === 'paid'
+        ? computedAmtDue
+        : form.paymentStatus === 'pay_later'
+          ? 0
+          : parseFloat(form.amountPaid) || 0;
+      const res = await bankPaymentService.create({
+        categoryId,
+        fullName: form.fullName,
+        email: form.email,
+        gender: form.gender || undefined,
+        nationality: form.nationality || undefined,
+        phoneNumber: form.phoneNumber || undefined,
+        institution: form.institution || undefined,
+        participantCategory: form.participantCategory || undefined,
+        amountDue: computedAmtDue,
+        amountPaid: computedAmtPaid,
+        paymentStatus: form.paymentStatus || undefined,
+        tranche: form.tranche || undefined,
+        dateOfPayment: form.paymentStatus === 'pay_later' ? undefined : form.dateOfPayment || undefined,
+        comments: form.comments || undefined,
+        sendEmail: form.sendEmail,
+      });
+      setCreated(res);
+      onSuccess?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Failed to create record');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (created) {
+    return (
+      <div className="space-y-4">
+        <div className="flex flex-col items-center gap-3 py-4">
+          <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center">
+            <Icons.CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+          <div className="text-center">
+            <h3 className="font-semibold text-gray-900">Record Created</h3>
+            <p className="text-sm text-gray-500 mt-0.5">{created.record?.email}</p>
+          </div>
+        </div>
+
+        {/* ── NEW user: show credentials ── */}
+        {created.isNewUser && created.temporaryPassword && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 space-y-2">
+            <div className="flex items-center gap-2">
+              <Icons.KeyRound className="w-4 h-4 text-blue-600 flex-shrink-0" />
+              <p className="text-sm font-semibold text-blue-800">New account created — credentials below</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="bg-white border border-blue-200 rounded-lg px-3 py-2">
+                <p className="text-blue-500 mb-0.5">Email</p>
+                <p className="font-mono font-semibold text-gray-900 select-all break-all">{created.record?.email}</p>
+              </div>
+              <div className="bg-white border border-blue-200 rounded-lg px-3 py-2">
+                <p className="text-blue-500 mb-0.5">Temporary Password</p>
+                <p className="font-mono font-bold text-gray-900 tracking-widest select-all">{created.temporaryPassword}</p>
+              </div>
+            </div>
+            <p className="text-xs text-blue-600">An invitation email has been sent. Share the password above as a backup in case the email is not received.</p>
+          </div>
+        )}
+
+        {/* ── EXISTING user: explain what was sent ── */}
+        {!created.isNewUser && (
+          <div className="flex items-start gap-2 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+            <Icons.UserCheck className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-gray-600">
+              This user already has an account and their own password —{' '}
+              {created.emailType === 'module1_access'
+                ? 'a notification email has been sent informing them that Module 1 is now available.'
+                : created.emailType === 'payment_confirmation'
+                  ? 'a payment confirmation email has been sent.'
+                  : 'no new credentials were sent.'}
+            </p>
+          </div>
+        )}
+
+        {/* ── Access level result ── */}
+        {created.record?.paymentStatus === 'paid' && (
+          <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-xl">
+            <Icons.ShieldCheck className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-green-700">Full access granted — all modules unlocked.</p>
+          </div>
+        )}
+        {created.record?.paymentStatus === 'partial' && (
+          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <Icons.Clock className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700">
+              Partial payment: <strong>USD {created.record?.amountPaid?.toLocaleString()}</strong> paid,{' '}
+              <strong>USD {created.record?.balance?.toLocaleString()}</strong> remaining. Full access granted — send a reminder for the balance.
+            </p>
+          </div>
+        )}
+        {created.record?.paymentStatus === 'pay_later' && (
+          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <Icons.Clock className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-amber-700"><strong>Module 1 access only.</strong> Appears in Pay Later sub-tab — send a payment reminder when ready.</p>
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <Button onClick={onClose} className="bg-green-600 hover:bg-green-700">Done</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const amtDue  = parseFloat(form.amountDue)  || 0;
+  const amtPaid = form.paymentStatus === 'paid'
+    ? amtDue
+    : form.paymentStatus === 'pay_later'
+      ? 0
+      : parseFloat(form.amountPaid) || 0;
+  const balance = Math.max(0, amtDue - amtPaid);
+  const isPayLater = form.paymentStatus === 'pay_later';
+  const isPaid     = form.paymentStatus === 'paid';
+  const isPartial  = form.paymentStatus === 'partial';
+
+  // Auto-set amountPaid when "paid" is selected and amountDue changes
+  const handleStatusChange = (v) => {
+    set('paymentStatus', v);
+    if (v === 'paid') {
+      set('tranche', 'Full Payment');
+      set('amountPaid', form.amountDue);
+    } else if (v === 'pay_later') {
+      set('amountPaid', '0');
+      set('tranche', 'Pay Later');
+      set('dateOfPayment', '');
+    }
+  };
+  const handleAmountDueChange = (v) => {
+    set('amountDue', v);
+    if (isPaid) set('amountPaid', v);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1 col-span-2">
+          <Label>Full Name <span className="text-red-500">*</span></Label>
+          <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} placeholder="e.g. Amara Diallo" />
+        </div>
+        <div className="space-y-1 col-span-2">
+          <Label>Email Address <span className="text-red-500">*</span></Label>
+          <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} placeholder="fellow@example.com" />
+        </div>
+        <div className="space-y-1">
+          <Label>Gender</Label>
+          <Select value={form.gender} onValueChange={v => set('gender', v)}>
+            <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+            <SelectContent>{GENDER_OPTIONS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Nationality</Label>
+          <Input value={form.nationality} onChange={e => set('nationality', e.target.value)} placeholder="e.g. Kenyan" />
+        </div>
+        <div className="space-y-1">
+          <Label>Phone Number</Label>
+          <Input value={form.phoneNumber} onChange={e => set('phoneNumber', e.target.value)} placeholder="+254 700 000 000" />
+        </div>
+        <div className="space-y-1">
+          <Label>Institution / Organization</Label>
+          <Input value={form.institution} onChange={e => set('institution', e.target.value)} placeholder="e.g. University of Nairobi" />
+        </div>
+        <div className="space-y-1 col-span-2">
+          <Label>Category (Tier)</Label>
+          <Select value={form.participantCategory} onValueChange={v => set('participantCategory', v)}>
+            <SelectTrigger><SelectValue placeholder="Student or Working Professional" /></SelectTrigger>
+            <SelectContent>{PARTICIPANT_CATEGORY_OPTIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Payment Status — drives smart amount display */}
+      <div className="space-y-1">
+        <Label>Payment Status</Label>
+        <Select value={form.paymentStatus} onValueChange={handleStatusChange}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="paid">Paid — Full Payment</SelectItem>
+            <SelectItem value="partial">Partial — Installment</SelectItem>
+            <SelectItem value="pending">Pending</SelectItem>
+            <SelectItem value="pay_later">Pay Later (Module 1 access only)</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Pay Later info box */}
+      {isPayLater && (
+        <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <Icons.Clock className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <p className="text-xs text-amber-700 leading-relaxed">
+            Fellow will get access to <strong>Module 1 only</strong>. They will appear in the <strong>Pay Later</strong> sub-tab. Set Amount Due so you can track the outstanding balance. No payment date is required yet.
+          </p>
+        </div>
+      )}
+
+      {/* Amount fields — smart display */}
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-1">
+          <Label>Amount Due (USD)</Label>
+          <Input
+            type="number" min="0"
+            value={form.amountDue}
+            onChange={e => handleAmountDueChange(e.target.value)}
+            placeholder="0"
+            disabled={isPayLater && !form.amountDue}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Amount Paid (USD)</Label>
+          <Input
+            type="number" min="0"
+            value={isPaid ? amtDue : isPayLater ? '0' : form.amountPaid}
+            onChange={e => !isPaid && !isPayLater && set('amountPaid', e.target.value)}
+            readOnly={isPaid || isPayLater}
+            className={isPaid || isPayLater ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}
+            placeholder="0"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Balance</Label>
+          <div className={`h-10 flex items-center px-3 border rounded-md text-sm font-semibold
+            ${isPaid ? 'bg-green-50 border-green-200 text-green-700' :
+              isPartial && balance > 0 ? 'bg-amber-50 border-amber-200 text-amber-700' :
+              'bg-gray-50 border-gray-200 text-gray-700'}`}>
+            {isPaid ? '✓ Paid in Full' : `USD ${balance.toLocaleString()}`}
+          </div>
+        </div>
+      </div>
+
+      {/* Partial payment summary */}
+      {isPartial && amtDue > 0 && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between text-xs">
+          <span className="text-amber-700">
+            Paid <strong>USD {amtPaid.toLocaleString()}</strong> of <strong>USD {amtDue.toLocaleString()}</strong>
+          </span>
+          <span className={`font-bold ${balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+            {balance > 0 ? `USD ${balance.toLocaleString()} remaining` : 'Fully settled'}
+          </span>
+        </div>
+      )}
+
+      {/* Full payment summary */}
+      {isPaid && amtDue > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2 text-xs text-green-700">
+          <Icons.CheckCircle className="w-3.5 h-3.5 text-green-600 flex-shrink-0" />
+          Full payment of <strong>USD {amtDue.toLocaleString()}</strong> recorded. Fellow will get immediate access to all modules.
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label>Tranche / Installment</Label>
+          <Input
+            value={form.tranche}
+            onChange={e => set('tranche', e.target.value)}
+            placeholder={isPaid ? 'Full Payment' : isPartial ? 'e.g. Installment 1' : 'e.g. Full Payment / Installment 1'}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label>Date of Payment</Label>
+          <Input
+            type="date"
+            value={form.dateOfPayment}
+            onChange={e => set('dateOfPayment', e.target.value)}
+            disabled={isPayLater}
+            className={isPayLater ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <Label>Comments</Label>
+        <Textarea value={form.comments} onChange={e => set('comments', e.target.value)} placeholder="Any additional notes…" rows={2} />
+      </div>
+
+      <Separator />
+
+      <div className={`flex items-start gap-3 p-4 rounded-xl border ${form.sendEmail ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'}`}>
+        <Checkbox id="bpSendEmail" checked={form.sendEmail} onCheckedChange={v => set('sendEmail', v)} className="mt-0.5" />
+        <div>
+          <label htmlFor="bpSendEmail" className={`text-sm font-medium cursor-pointer ${form.sendEmail ? 'text-blue-800' : 'text-gray-700'}`}>
+            Send invitation email (if new user)
+          </label>
+          <p className={`text-xs mt-0.5 ${form.sendEmail ? 'text-blue-600' : 'text-gray-500'}`}>
+            {form.sendEmail ? 'A welcome email with a temporary password will be sent if a new account is created.' : 'No email will be sent. A temporary password will be shown after creation.'}
+          </p>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-3 pt-2">
+        <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={loading} className="gap-2 bg-[#021d49] hover:bg-[#032a66]">
+          {loading ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : <><Icons.Plus className="w-4 h-4" /> Add Record</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ARIN PUBLISHING ACADEMY  BULK UPLOAD
+// ─────────────────────────────────────────────────────────────────
+function BankPaymentBulkForm({ categoryId, onSuccess, onClose }) {
+  const [rows, setRows] = useState([BLANK_BP_ROW(), BLANK_BP_ROW(), BLANK_BP_ROW()]);
+  const [sendEmail, setSendEmail] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const fileRef = useRef(null);
+
+  const updateRow = (idx, field, val) =>
+    setRows(prev => prev.map((r, i) => i === idx ? { ...r, [field]: val } : r));
+  const addRow = () => setRows(prev => [...prev, BLANK_BP_ROW()]);
+  const removeRow = (idx) => setRows(prev => prev.filter((_, i) => i !== idx));
+
+  const downloadTemplate = () => {
+    const headers = ['Full Name', 'Email', 'Gender', 'Nationality', 'Phone Number', 'Institution/Organization', 'Category (Student/Working Professional)', 'Amount Due', 'Amount Paid', 'Payment Status (paid/partial/pending)', 'Tranche', 'Date of Payment (YYYY-MM-DD)', 'Comments'];
+    const sample = ['Amara Diallo', 'amara@example.com', 'Female', 'Kenyan', '+254700000000', 'University of Nairobi', 'Student', '15000', '15000', 'paid', 'Full Payment', '2024-03-01', ''];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([headers, sample]);
+    ws['!cols'] = headers.map(() => ({ wch: 22 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
+    XLSX.writeFile(wb, 'arin-publishing-payments-template.xlsx');
+  };
+
+  const handleFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        if (raw.length < 2) return toast.error('File must have a header row and at least one data row');
+        const headers = (raw[0] || []).map(h => String(h).toLowerCase().trim().replace(/\s+/g, '').replace(/[^a-z0-9]/g, ''));
+        const col = (names) => names.map(n => headers.findIndex(h => h.includes(n))).find(i => i >= 0) ?? -1;
+        const nameIdx   = col(['fullname', 'name']);
+        const emailIdx  = col(['email']);
+        const genderIdx = col(['gender']);
+        const natIdx    = col(['nationality']);
+        const phoneIdx  = col(['phone']);
+        const instIdx   = col(['institution', 'organization']);
+        const catIdx    = col(['category']);
+        const dueIdx    = col(['amountdue', 'due']);
+        const paidIdx   = col(['amountpaid', 'paid']);
+        const statusIdx = col(['paymentstatus', 'status']);
+        const trancheIdx = col(['tranche', 'installment']);
+        const dateIdx   = col(['dateofpayment', 'date']);
+        const commIdx   = col(['comments', 'notes']);
+
+        if (emailIdx < 0) return toast.error('File must have an "Email" column');
+
+        const parsed = raw.slice(1).map(row => {
+          const r = (i) => (i >= 0 && row[i] != null) ? String(row[i]).trim() : '';
+          return {
+            id: Date.now() + Math.random(),
+            fullName: r(nameIdx),
+            email: r(emailIdx),
+            gender: r(genderIdx),
+            nationality: r(natIdx),
+            phoneNumber: r(phoneIdx),
+            institution: r(instIdx),
+            participantCategory: r(catIdx),
+            amountDue: r(dueIdx),
+            amountPaid: r(paidIdx),
+            paymentStatus: r(statusIdx) || 'pending',
+            tranche: r(trancheIdx),
+            dateOfPayment: r(dateIdx),
+            comments: r(commIdx),
+          };
+        }).filter(r => r.email);
+
+        setRows(prev => {
+          const nonEmpty = prev.filter(r => r.email || r.fullName);
+          return [...nonEmpty, ...parsed];
+        });
+        toast.success(`Imported ${parsed.length} row${parsed.length !== 1 ? 's' : ''}`);
+      } catch {
+        toast.error('Failed to parse file');
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
+  const handlePaste = (e) => {
+    const text = e.clipboardData.getData('text');
+    const lines = text.trim().split('\n').filter(l => l.trim());
+    if (!lines.length) return;
+    const parsed = lines.map(line => {
+      const cols = line.split('\t').map(s => s.trim());
+      return {
+        id: Date.now() + Math.random(),
+        fullName: cols[0] || '', email: cols[1] || '', gender: cols[2] || '',
+        nationality: cols[3] || '', phoneNumber: cols[4] || '', institution: cols[5] || '',
+        participantCategory: cols[6] || '', amountDue: cols[7] || '', amountPaid: cols[8] || '',
+        paymentStatus: cols[9] || 'pending', tranche: cols[10] || '',
+        dateOfPayment: cols[11] || '', comments: cols[12] || '',
+      };
+    });
+    setRows(prev => [...prev.filter(r => r.email || r.fullName), ...parsed]);
+    toast.success(`Pasted ${parsed.length} row${parsed.length !== 1 ? 's' : ''}`);
+  };
+
+  const validRows = rows.filter(r => r.email?.trim() && r.fullName?.trim());
+
+  const handleSubmit = async () => {
+    if (!validRows.length) return toast.error('Add at least one record with name and email');
+    setLoading(true);
+    try {
+      const res = await bankPaymentService.createBulk({
+        categoryId,
+        sendEmail,
+        records: validRows.map(r => ({
+          fullName: r.fullName,
+          email: r.email,
+          gender: r.gender || undefined,
+          nationality: r.nationality || undefined,
+          phoneNumber: r.phoneNumber || undefined,
+          institution: r.institution || undefined,
+          participantCategory: r.participantCategory || undefined,
+          amountDue: parseFloat(r.amountDue) || 0,
+          amountPaid: parseFloat(r.amountPaid) || 0,
+          paymentStatus: r.paymentStatus || 'pending',
+          tranche: r.tranche || undefined,
+          dateOfPayment: r.dateOfPayment || undefined,
+          comments: r.comments || undefined,
+        })),
+      });
+      setResults(res);
+      if (res.created > 0) onSuccess?.();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Bulk upload failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (results) {
+    return (
+      <div className="space-y-5">
+        <div className="flex flex-col items-center gap-3 py-4">
+          <div className={`w-14 h-14 rounded-full flex items-center justify-center ${results.failed === 0 ? 'bg-green-100' : 'bg-amber-100'}`}>
+            {results.failed === 0
+              ? <Icons.CheckCircle className="w-8 h-8 text-green-600" />
+              : <Icons.AlertCircle className="w-8 h-8 text-amber-600" />}
+          </div>
+          <div className="text-center">
+            <h3 className="font-semibold text-gray-900">Bulk Upload Complete</h3>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {results.created} created · {results.failed} failed
+            </p>
+          </div>
+        </div>
+        {results.errors?.length > 0 && (
+          <div className="border border-red-100 rounded-xl overflow-hidden">
+            <div className="bg-red-50 px-4 py-2.5 text-xs font-semibold text-red-700">Errors ({results.errors.length})</div>
+            <div className="max-h-48 overflow-y-auto divide-y divide-red-50">
+              {results.errors.map((e, i) => (
+                <div key={i} className="px-4 py-2 text-xs">
+                  <span className="font-medium text-gray-700">{e.email}</span>
+                  <span className="text-red-600 ml-2">{e.error}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="flex justify-end">
+          <Button onClick={onClose} className="bg-[#021d49] hover:bg-[#032a66]">Done</Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 items-center">
+        <Button type="button" variant="outline" size="sm" onClick={downloadTemplate} className="gap-1.5">
+          <Icons.Download className="w-3.5 h-3.5" /> Download Template
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} className="gap-1.5">
+          <Icons.Upload className="w-3.5 h-3.5" /> Import Excel / CSV
+        </Button>
+        <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleFile} />
+        <span className="text-xs text-gray-400 ml-1">or paste tab-separated rows below</span>
+        <span className="ml-auto text-xs font-medium text-gray-600">{validRows.length} / {rows.length} valid</span>
+      </div>
+
+      <Alert className="border-blue-100 bg-blue-50 py-2.5">
+        <Icons.Info className="w-4 h-4 text-blue-500" />
+        <AlertDescription className="text-blue-700 text-xs">
+          Columns: Full Name, Email, Gender, Nationality, Phone, Institution, Category, Amount Due, Amount Paid, Status, Tranche, Date, Comments
+        </AlertDescription>
+      </Alert>
+
+      <div className="border rounded-xl overflow-x-auto" onPaste={handlePaste}>
+        <table className="w-full text-sm" style={{ minWidth: 1400 }}>
+          <thead>
+            <tr className="bg-gray-50 border-b">
+              <th className="px-2 py-2 text-left text-xs font-semibold text-gray-500 w-6">#</th>
+              {['Full Name *', 'Email *', 'Gender', 'Nationality', 'Phone', 'Institution', 'Category', 'Amount Due', 'Amount Paid', 'Status', 'Tranche', 'Date Paid', 'Comments', ''].map(h => (
+                <th key={h} className="px-2 py-2 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, idx) => (
+              <tr key={row.id} className={`border-b last:border-0 ${row.email && row.fullName ? '' : 'bg-gray-50/50'}`}>
+                <td className="px-2 py-1 text-xs text-gray-400 font-mono">{idx + 1}</td>
+                <td className="px-1 py-1"><Input value={row.fullName} onChange={e => updateRow(idx, 'fullName', e.target.value)} placeholder="Full Name" className="h-7 text-xs w-32" /></td>
+                <td className="px-1 py-1"><Input type="email" value={row.email} onChange={e => updateRow(idx, 'email', e.target.value)} placeholder="email" className="h-7 text-xs w-44" /></td>
+                <td className="px-1 py-1">
+                  <select value={row.gender} onChange={e => updateRow(idx, 'gender', e.target.value)} className="h-7 text-xs border rounded px-1 w-24">
+                    <option value=""></option>
+                    {GENDER_OPTIONS.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </td>
+                <td className="px-1 py-1"><Input value={row.nationality} onChange={e => updateRow(idx, 'nationality', e.target.value)} placeholder="Kenyan" className="h-7 text-xs w-24" /></td>
+                <td className="px-1 py-1"><Input value={row.phoneNumber} onChange={e => updateRow(idx, 'phoneNumber', e.target.value)} placeholder="+254…" className="h-7 text-xs w-28" /></td>
+                <td className="px-1 py-1"><Input value={row.institution} onChange={e => updateRow(idx, 'institution', e.target.value)} placeholder="Institution" className="h-7 text-xs w-32" /></td>
+                <td className="px-1 py-1">
+                  <select value={row.participantCategory} onChange={e => updateRow(idx, 'participantCategory', e.target.value)} className="h-7 text-xs border rounded px-1 w-28">
+                    <option value=""></option>
+                    {PARTICIPANT_CATEGORY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </td>
+                <td className="px-1 py-1"><Input type="number" value={row.amountDue} onChange={e => updateRow(idx, 'amountDue', e.target.value)} placeholder="0" className="h-7 text-xs w-20" /></td>
+                <td className="px-1 py-1"><Input type="number" value={row.amountPaid} onChange={e => updateRow(idx, 'amountPaid', e.target.value)} placeholder="0" className="h-7 text-xs w-20" /></td>
+                <td className="px-1 py-1">
+                  <select value={row.paymentStatus} onChange={e => updateRow(idx, 'paymentStatus', e.target.value)} className="h-7 text-xs border rounded px-1 w-20">
+                    {PAYMENT_STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </td>
+                <td className="px-1 py-1"><Input value={row.tranche} onChange={e => updateRow(idx, 'tranche', e.target.value)} placeholder="Installment 1" className="h-7 text-xs w-28" /></td>
+                <td className="px-1 py-1"><Input type="date" value={row.dateOfPayment} onChange={e => updateRow(idx, 'dateOfPayment', e.target.value)} className="h-7 text-xs w-32" /></td>
+                <td className="px-1 py-1"><Input value={row.comments} onChange={e => updateRow(idx, 'comments', e.target.value)} placeholder="Notes…" className="h-7 text-xs w-28" /></td>
+                <td className="px-1 py-1">
+                  <button onClick={() => removeRow(idx)} className="text-red-400 hover:text-red-600 p-1">
+                    <Icons.X className="w-3.5 h-3.5" />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Button type="button" variant="outline" size="sm" onClick={addRow} className="gap-1.5">
+        <Icons.Plus className="w-3.5 h-3.5" /> Add Row
+      </Button>
+
+      <div className={`flex items-start gap-3 p-3 rounded-xl border ${sendEmail ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'}`}>
+        <Checkbox id="bpBulkEmail" checked={sendEmail} onCheckedChange={setSendEmail} className="mt-0.5" />
+        <label htmlFor="bpBulkEmail" className={`text-sm cursor-pointer ${sendEmail ? 'text-blue-800' : 'text-gray-700'}`}>
+          Send invitation emails to newly created accounts
+        </label>
+      </div>
+
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button onClick={handleSubmit} disabled={loading || validRows.length === 0} className="gap-2 bg-[#021d49] hover:bg-[#032a66]">
+          {loading ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Uploading…</> : <><Icons.Upload className="w-4 h-4" /> Upload {validRows.length} Record{validRows.length !== 1 ? 's' : ''}</>}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ARIN PUBLISHING ACADEMY  EDIT RECORD DIALOG
+// ─────────────────────────────────────────────────────────────────
+function EditBankPaymentDialog({ record, onClose, onDone }) {
+  const [form, setForm] = useState({
+    fullName: record.fullName || '',
+    gender: record.gender || '',
+    nationality: record.nationality || '',
+    phoneNumber: record.phoneNumber || '',
+    institution: record.institution || '',
+    participantCategory: record.participantCategory || '',
+    amountDue: record.amountDue?.toString() || '0',
+    amountPaid: record.amountPaid?.toString() || '0',
+    paymentStatus: record.paymentStatus || 'pending',
+    tranche: record.tranche || '',
+    dateOfPayment: record.dateOfPayment ? record.dateOfPayment.slice(0, 10) : '',
+    comments: record.comments || '',
+  });
+  const [loading, setLoading] = useState(false);
+  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await bankPaymentService.update(record._id, {
+        ...form,
+        amountDue: parseFloat(form.amountDue) || 0,
+        amountPaid: parseFloat(form.amountPaid) || 0,
+      });
+      toast.success('Record updated');
+      onDone?.();
+      onClose();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Update failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const amtDue = parseFloat(form.amountDue) || 0;
+  const amtPaid = parseFloat(form.amountPaid) || 0;
+  const balance = Math.max(0, amtDue - amtPaid);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1 col-span-2">
+          <Label>Full Name</Label>
+          <Input value={form.fullName} onChange={e => set('fullName', e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label>Gender</Label>
+          <Select value={form.gender} onValueChange={v => set('gender', v)}>
+            <SelectTrigger><SelectValue placeholder="Gender" /></SelectTrigger>
+            <SelectContent>{GENDER_OPTIONS.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Nationality</Label>
+          <Input value={form.nationality} onChange={e => set('nationality', e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label>Phone Number</Label>
+          <Input value={form.phoneNumber} onChange={e => set('phoneNumber', e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label>Institution / Organization</Label>
+          <Input value={form.institution} onChange={e => set('institution', e.target.value)} />
+        </div>
+        <div className="space-y-1 col-span-2">
+          <Label>Category</Label>
+          <Select value={form.participantCategory} onValueChange={v => set('participantCategory', v)}>
+            <SelectTrigger><SelectValue placeholder="Student or Working Professional" /></SelectTrigger>
+            <SelectContent>{PARTICIPANT_CATEGORY_OPTIONS.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <Separator />
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-1">
+          <Label>Amount Due (USD)</Label>
+          <Input type="number" min="0" value={form.amountDue} onChange={e => set('amountDue', e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label>Amount Paid (USD)</Label>
+          <Input type="number" min="0" value={form.amountPaid} onChange={e => set('amountPaid', e.target.value)} />
+        </div>
+        <div className="space-y-1">
+          <Label>Balance</Label>
+          <div className="h-10 flex items-center px-3 bg-gray-50 border rounded-md text-sm font-semibold">USD {balance.toLocaleString()}</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <Label>Payment Status</Label>
+          <Select value={form.paymentStatus} onValueChange={v => set('paymentStatus', v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="partial">Partial</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label>Tranche</Label>
+          <Input value={form.tranche} onChange={e => set('tranche', e.target.value)} placeholder="e.g. Installment 1" />
+        </div>
+      </div>
+      <div className="space-y-1">
+        <Label>Date of Payment</Label>
+        <Input type="date" value={form.dateOfPayment} onChange={e => set('dateOfPayment', e.target.value)} />
+      </div>
+      <div className="space-y-1">
+        <Label>Comments</Label>
+        <Textarea value={form.comments} onChange={e => set('comments', e.target.value)} rows={2} />
+      </div>
+      <div className="flex justify-end gap-3">
+        <Button variant="outline" onClick={onClose} disabled={loading}>Cancel</Button>
+        <Button onClick={handleSave} disabled={loading} className="bg-[#021d49] hover:bg-[#032a66]">
+          {loading ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Saving…</> : 'Save Changes'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// ARIN PUBLISHING ACADEMY  MAIN TAB CONTENT
+// ─────────────────────────────────────────────────────────────────
+function ArinPublishingTab({ categories }) {
+  const publishingCategory = categories.find(c =>
+    c.name?.toLowerCase().includes('publishing') || c.name?.toLowerCase().includes('arin publishing')
+  );
+  const categoryId = publishingCategory?._id;
+
+  const [subTab, setSubTab] = useState('bank'); // 'bank' | 'pay_later'
+  const [records, setRecords] = useState([]);
+  const [stats, setStats] = useState({ paid: 0, partial: 0, pending: 0, totalAmountDue: 0, totalAmountPaid: 0, totalBalance: 0 });
+  const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [modal, setModal] = useState(null); // 'single' | 'bulk' | 'edit' | 'delete'
+  const [editTarget, setEditTarget] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  // Pay-later state
+  const [payLaterUsers, setPayLaterUsers] = useState([]);
+  const [payLaterLoading, setPayLaterLoading] = useState(false);
+  const [payLaterSearch, setPayLaterSearch] = useState('');
+  const [reminderSending, setReminderSending] = useState(null);
+  const [lockingUser, setLockingUser] = useState(null);
+
+  const fetchRecords = useCallback(async () => {
+    if (!categoryId) return;
+    setLoading(true);
+    try {
+      const res = await bankPaymentService.getAll({ categoryId, status: filterStatus, search, limit: 500 });
+      setRecords(res.records || []);
+      setStats(res.stats || { paid: 0, partial: 0, pending: 0, totalAmountDue: 0, totalAmountPaid: 0, totalBalance: 0 });
+    } catch {
+      toast.error('Failed to load bank payment records');
+    } finally {
+      setLoading(false);
+    }
+  }, [categoryId, filterStatus, search]);
+
+  useEffect(() => {
+    const t = setTimeout(fetchRecords, search ? 400 : 0);
+    return () => clearTimeout(t);
+  }, [fetchRecords]);
+
+  const fetchPayLaterUsers = useCallback(async () => {
+    if (!categoryId) return;
+    setPayLaterLoading(true);
+    try {
+      const { default: paymentService } = await import('@/lib/api/paymentService');
+      const data = await paymentService.adminGetPayLaterEnrollments(categoryId);
+      setPayLaterUsers(Array.isArray(data) ? data : []);
+    } catch { toast.error('Failed to load pay-later users'); }
+    finally { setPayLaterLoading(false); }
+  }, [categoryId]);
+
+  useEffect(() => { if (subTab === 'pay_later') fetchPayLaterUsers(); }, [subTab, fetchPayLaterUsers]);
+
+  const handleSendReminder = async (userId) => {
+    setReminderSending(userId);
+    try {
+      const { default: paymentService } = await import('@/lib/api/paymentService');
+      await paymentService.adminSendPayLaterReminder(categoryId, userId);
+      toast.success('Reminder email sent');
+    } catch { toast.error('Failed to send reminder'); }
+    finally { setReminderSending(null); }
+  };
+
+  const handleToggleLock = async (user) => {
+    setLockingUser(user._id);
+    try {
+      const { default: paymentService } = await import('@/lib/api/paymentService');
+      if (user.isLocked) {
+        await paymentService.adminUnlockUser(categoryId, user._id);
+        toast.success(`${user.firstName} unlocked`);
+      } else {
+        await paymentService.adminLockUser(categoryId, user._id);
+        toast.success(`${user.firstName} locked`);
+      }
+      fetchPayLaterUsers();
+    } catch { toast.error('Failed to update lock status'); }
+    finally { setLockingUser(null); }
+  };
+
+  const handleSendBulkReminders = async () => {
+    try {
+      const { default: paymentService } = await import('@/lib/api/paymentService');
+      const res = await paymentService.adminSendBulkPayLaterReminders(categoryId);
+      toast.success(`Reminders sent: ${res.sent} sent, ${res.failed} failed`);
+    } catch { toast.error('Failed to send bulk reminders'); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await bankPaymentService.remove(deleteTarget._id);
+      toast.success('Record deleted');
+      setModal(null);
+      setDeleteTarget(null);
+      fetchRecords();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Delete failed');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const exportToExcel = () => {
+    const wb = XLSX.utils.book_new();
+    const rows = [
+      ['Full Name', 'Email', 'Gender', 'Nationality', 'Phone', 'Institution', 'Category', 'Amount Due (USD)', 'Amount Paid (USD)', 'Balance (USD)', 'Status', 'Tranche', 'Date of Payment', 'Comments'],
+      ...records.map(r => [
+        r.fullName, r.email, r.gender || '', r.nationality || '',
+        r.phoneNumber || '', r.institution || '', r.participantCategory || '',
+        r.amountDue, r.amountPaid, r.balance,
+        r.paymentStatus, r.tranche || '',
+        r.dateOfPayment ? new Date(r.dateOfPayment).toLocaleDateString('en-GB') : '',
+        r.comments || '',
+      ]),
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = rows[0].map(() => ({ wch: 20 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Bank Payments');
+    XLSX.writeFile(wb, `arin-publishing-bank-payments-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const statusBadge = (status) => {
+    if (status === 'paid')    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700">Paid</span>;
+    if (status === 'partial') return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Partial</span>;
+    return <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">Pending</span>;
+  };
+
+  if (!categoryId) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center">
+        <Icons.AlertCircle className="w-12 h-12 text-amber-300 mx-auto mb-3" />
+        <p className="text-gray-500 font-medium">Arin Publishing Academy category not found</p>
+        <p className="text-gray-400 text-xs mt-1">Make sure the category exists in the system.</p>
+      </div>
+    );
+  }
+
+  const filteredPayLater = payLaterUsers.filter(u => {
+    const q = payLaterSearch.toLowerCase();
+    return !q || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q);
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Sub-tab bar */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        {[{ key: 'bank', label: 'Bank / Manual Records', icon: Icons.CreditCard },
+          { key: 'pay_later', label: 'Pay Later (Self-Registered)', icon: Icons.Clock }].map(({ key, label, icon: Icon }) => (
+          <button key={key} onClick={() => setSubTab(key)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${subTab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+            <Icon className="w-4 h-4" />{label}
+          </button>
+        ))}
+      </div>
+
+      {/* Stats  bank only */}
+      {subTab === 'bank' && <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <StatCard label="Paid" value={stats.paid} icon={Icons.CheckCircle} color="green" />
+        <StatCard label="Partial" value={stats.partial} icon={Icons.Clock} color="amber" />
+        <StatCard label="Pending" value={stats.pending} icon={Icons.Clock} color="red" />
+        <StatCard label="Total Due" value={`USD ${(stats.totalAmountDue || 0).toLocaleString()}`} icon={Icons.DollarSign} color="blue" />
+        <StatCard label="Total Paid" value={`USD ${(stats.totalAmountPaid || 0).toLocaleString()}`} icon={Icons.DollarSign} color="purple" />
+        <StatCard label="Balance" value={`USD ${(stats.totalBalance || 0).toLocaleString()}`} icon={Icons.DollarSign} color="amber" />
+      </div>}
+
+      {/* Pay Later sub-tab */}
+      {subTab === 'pay_later' && (
+        <div className="space-y-4">
+          <Card>
+            <CardContent className="pt-4 pb-3">
+              <div className="flex flex-wrap gap-3 items-center">
+                <div className="relative flex-1 min-w-56">
+                  <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input value={payLaterSearch} onChange={e => setPayLaterSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
+                </div>
+                <Button variant="outline" size="icon" onClick={fetchPayLaterUsers} title="Refresh">
+                  <Icons.RefreshCw className={`w-4 h-4 ${payLaterLoading ? 'animate-spin' : ''}`} />
+                </Button>
+                <Button onClick={handleSendBulkReminders} className="gap-2 bg-amber-600 hover:bg-amber-700">
+                  <Icons.Send className="w-4 h-4" /> Send All Reminders
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b">
+                    {['Name', 'Email', 'Tier', 'Enrolled', 'Status', 'Locked', 'Actions'].map(h => (
+                      <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {payLaterLoading && filteredPayLater.length === 0 ? (
+                    <tr><td colSpan={7} className="text-center py-16">
+                      <Icons.Loader2 className="w-8 h-8 animate-spin text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-400 text-sm">Loading…</p>
+                    </td></tr>
+                  ) : filteredPayLater.length === 0 ? (
+                    <tr><td colSpan={7} className="text-center py-16">
+                      <Icons.Clock className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                      <p className="text-gray-500 font-medium">No pay-later enrollments yet</p>
+                      <p className="text-gray-400 text-xs mt-1">Users who register and choose "Pay Later" will appear here.</p>
+                    </td></tr>
+                  ) : filteredPayLater.map(u => (
+                    <tr key={u._id} className="border-b last:border-0 hover:bg-gray-50/60">
+                      <td className="px-3 py-3 font-semibold text-gray-800 whitespace-nowrap">{u.firstName} {u.lastName}</td>
+                      <td className="px-3 py-3 text-xs text-gray-600">{u.email}</td>
+                      <td className="px-3 py-3">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${u.tier === 'student' ? 'bg-sky-100 text-sky-700' : 'bg-orange-100 text-orange-700'}`}>
+                          {u.tier === 'student' ? 'Student' : 'Non-Student'}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">
+                        {u.enrolledAt ? new Date(u.enrolledAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Pay Later</span>
+                      </td>
+                      <td className="px-3 py-3">
+                        {u.isLocked
+                          ? <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700 flex items-center gap-1 w-fit"><Icons.Lock className="w-3 h-3" />Locked</span>
+                          : <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-700 flex items-center gap-1 w-fit"><Icons.Unlock className="w-3 h-3" />Active</span>}
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 text-amber-700 hover:bg-amber-50"
+                            disabled={reminderSending === u._id}
+                            onClick={() => handleSendReminder(u._id)}>
+                            {reminderSending === u._id ? <Icons.Loader2 className="w-3 h-3 animate-spin" /> : <Icons.Mail className="w-3 h-3" />}
+                            Remind
+                          </Button>
+                          <Button variant="ghost" size="sm" className={`h-8 text-xs gap-1 ${u.isLocked ? 'text-green-700 hover:bg-green-50' : 'text-red-600 hover:bg-red-50'}`}
+                            disabled={lockingUser === u._id}
+                            onClick={() => handleToggleLock(u)}>
+                            {lockingUser === u._id ? <Icons.Loader2 className="w-3 h-3 animate-spin" /> : u.isLocked ? <Icons.Unlock className="w-3 h-3" /> : <Icons.Lock className="w-3 h-3" />}
+                            {u.isLocked ? 'Unlock' : 'Lock'}
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Bank records UI */}
+      {subTab === 'bank' && <>
+      {/* Toolbar */}
+      <Card>
+        <CardContent className="pt-4 pb-3">
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="relative flex-1 min-w-56">
+              <Icons.Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name or email…" className="pl-9" />
+            </div>
+            <Select value={filterStatus} onValueChange={v => setFilterStatus(v)}>
+              <SelectTrigger className="w-36"><SelectValue placeholder="All statuses" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="partial">Partial</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button variant="outline" size="icon" onClick={fetchRecords} title="Refresh">
+              <Icons.RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button variant="outline" onClick={exportToExcel} className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+              <Icons.FileDown className="w-4 h-4" /> Export Excel
+            </Button>
+            <Button variant="outline" onClick={() => setModal('single')} className="gap-2">
+              <Icons.Plus className="w-4 h-4" /> Add Record
+            </Button>
+            <Button onClick={() => setModal('bulk')} className="gap-2 bg-[#021d49] hover:bg-[#032a66]">
+              <Icons.Upload className="w-4 h-4" /> Bulk Upload
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Table */}
+      <Card>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b">
+                {['Full Name', 'Gender', 'Nationality', 'Email', 'Phone', 'Institution', 'Category', 'Amount Due', 'Amount Paid', 'Balance', 'Status', 'Tranche', 'Date Paid', 'Comments', 'Actions'].map(h => (
+                  <th key={h} className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading && records.length === 0 ? (
+                <tr><td colSpan={15} className="text-center py-16">
+                  <Icons.Loader2 className="w-8 h-8 animate-spin text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-400 text-sm">Loading records…</p>
+                </td></tr>
+              ) : records.length === 0 ? (
+                <tr><td colSpan={15} className="text-center py-16">
+                  <Icons.BookOpen className="w-12 h-12 text-gray-200 mx-auto mb-3" />
+                  <p className="text-gray-500 font-medium">No bank payment records yet</p>
+                  <p className="text-gray-400 text-xs mt-1">Use "Add Record" or "Bulk Upload" to get started.</p>
+                </td></tr>
+              ) : (
+                records.map(r => (
+                  <tr key={r._id} className="border-b last:border-0 hover:bg-gray-50/60 transition-colors">
+                    <td className="px-3 py-3">
+                      <div>
+                        <p className="font-semibold text-gray-800 whitespace-nowrap">{r.fullName}</p>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-xs text-gray-600">{r.gender || <span className="text-gray-300"></span>}</td>
+                    <td className="px-3 py-3 text-xs text-gray-600">{r.nationality || <span className="text-gray-300"></span>}</td>
+                    <td className="px-3 py-3 text-xs text-gray-600">{r.email}</td>
+                    <td className="px-3 py-3 text-xs text-gray-600">{r.phoneNumber || <span className="text-gray-300"></span>}</td>
+                    <td className="px-3 py-3 text-xs text-gray-600 max-w-32 truncate">{r.institution || <span className="text-gray-300"></span>}</td>
+                    <td className="px-3 py-3 text-xs">{r.participantCategory ? <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-medium">{r.participantCategory}</span> : <span className="text-gray-300"></span>}</td>
+                    <td className="px-3 py-3 text-xs font-medium text-gray-700">USD {(r.amountDue || 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-xs font-medium text-green-700">USD {(r.amountPaid || 0).toLocaleString()}</td>
+                    <td className="px-3 py-3 text-xs font-medium text-red-600">USD {(r.balance || 0).toLocaleString()}</td>
+                    <td className="px-3 py-3">{statusBadge(r.paymentStatus)}</td>
+                    <td className="px-3 py-3 text-xs text-gray-600">{r.tranche || <span className="text-gray-300"></span>}</td>
+                    <td className="px-3 py-3 text-xs text-gray-500 whitespace-nowrap">{r.dateOfPayment ? new Date(r.dateOfPayment).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : <span className="text-gray-300"></span>}</td>
+                    <td className="px-3 py-3 text-xs text-gray-500 max-w-40 truncate">{r.comments || <span className="text-gray-300"></span>}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Edit" onClick={() => { setEditTarget(r); setModal('edit'); }}>
+                          <Icons.Pencil className="w-3.5 h-3.5 text-gray-500" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" title="Delete" onClick={() => { setDeleteTarget(r); setModal('delete'); }}>
+                          <Icons.Trash2 className="w-3.5 h-3.5 text-red-400" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Modals */}
+      <Modal open={modal === 'single'} onClose={() => setModal(null)} title="Add Bank Payment Record" maxWidth="max-w-2xl">
+        <BankPaymentForm categoryId={categoryId} onSuccess={fetchRecords} onClose={() => setModal(null)} />
+      </Modal>
+
+      <Modal open={modal === 'bulk'} onClose={() => setModal(null)} title="Bulk Upload  Bank Payments" maxWidth="max-w-[95vw]">
+        <BankPaymentBulkForm categoryId={categoryId} onSuccess={fetchRecords} onClose={() => setModal(null)} />
+      </Modal>
+
+      {editTarget && (
+        <Modal open={modal === 'edit'} onClose={() => { setModal(null); setEditTarget(null); }} title={`Edit  ${editTarget.fullName}`} maxWidth="max-w-2xl">
+          <EditBankPaymentDialog record={editTarget} onClose={() => { setModal(null); setEditTarget(null); }} onDone={fetchRecords} />
+        </Modal>
+      )}
+
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setModal(null)} />
+          <div className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <Icons.Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Delete Record?</h3>
+                <p className="text-sm text-gray-500 mt-1">Remove <strong>{deleteTarget.fullName}</strong> ({deleteTarget.email}) from bank payment records?</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => { setModal(null); setDeleteTarget(null); }} disabled={deleting}>Cancel</Button>
+              <Button onClick={handleDelete} disabled={deleting} className="gap-1.5 bg-red-600 hover:bg-red-700 text-white">
+                {deleting ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Deleting…</> : <><Icons.Trash2 className="w-4 h-4" /> Delete</>}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      </>} {/* end bank sub-tab */}
+    </div>
+  );
+}
 
 // ─────────────────────────────────────────────────────────────────
 // MODAL WRAPPER
@@ -88,6 +1218,8 @@ function SingleFellowForm({ categories, onSuccess, onClose }) {
     fullName: '', email: '', gender: '',
     country: '', region: '', track: '', category: '', phoneNumber: '',
     sendEmail: true,
+    tier: 'non-student',
+    accessType: 'full', // 'full' | 'pay_later'
   });
   const [loading, setLoading] = useState(false);
   const [created, setCreated] = useState(null); // { email, temporaryPassword, emailSent }
@@ -150,7 +1282,7 @@ function SingleFellowForm({ categories, onSuccess, onClose }) {
           </div>
         )}
 
-        {/* Temporary password — always visible */}
+        {/* Temporary password  always visible */}
         <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Icons.KeyRound className="w-4 h-4 text-gray-600 flex-shrink-0" />
@@ -235,6 +1367,46 @@ function SingleFellowForm({ categories, onSuccess, onClose }) {
         </div>
       </div>
 
+      {/* Tier + Access Type — only shown when a category is selected */}
+      {form.category && form.category !== '__none__' && (
+        <>
+          <Separator />
+          <div className="space-y-3">
+            <Label className="text-sm font-semibold text-gray-700">Publishing Academy Access</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500">Tier</Label>
+                <Select value={form.tier} onValueChange={v => set('tier', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="student">Student (USD 100)</SelectItem>
+                    <SelectItem value="non-student">Non-Student (USD 200)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-gray-500">Access Level</Label>
+                <Select value={form.accessType} onValueChange={v => set('accessType', v)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="full">Full Access</SelectItem>
+                    <SelectItem value="pay_later">Pay Later (Module 1 only)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {form.accessType === 'pay_later' && (
+              <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <Icons.Clock className="w-3.5 h-3.5 text-amber-600 mt-0.5 flex-shrink-0" />
+                <p className="text-xs text-amber-700 leading-relaxed">
+                  Fellow will access <strong>Module 1 only</strong> until they complete payment. They will appear in the <strong>Pay Later</strong> sub-tab and you can send them payment reminders.
+                </p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
       <Separator />
 
       <div className={`flex items-start gap-3 p-4 rounded-xl border ${form.sendEmail ? 'bg-blue-50 border-blue-100' : 'bg-gray-50 border-gray-200'}`}>
@@ -277,7 +1449,7 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
   const addRow = () => setRows(prev => [...prev, BLANK_ROW()]);
   const removeRow = (idx) => setRows(prev => prev.filter((_, i) => i !== idx));
 
-  // Paste handler — tab-separated rows: Full Name \t email \t gender \t country \t region \t track \t phone
+  // Paste handler  tab-separated rows: Full Name \t email \t gender \t country \t region \t track \t phone
   const handlePaste = (e) => {
     const text = e.clipboardData.getData('text');
     const lines = text.trim().split('\n').filter(l => l.trim());
@@ -526,7 +1698,7 @@ function BulkTableEditor({ categories, onSuccess, onClose }) {
             <div className="space-y-2">
               <div className="flex items-center gap-2 pt-1">
                 <Icons.KeyRound className="w-4 h-4 text-amber-600" />
-                <p className="text-xs font-semibold text-amber-800">Temporary Passwords — share these with each fellow</p>
+                <p className="text-xs font-semibold text-amber-800">Temporary Passwords  share these with each fellow</p>
               </div>
               <p className="text-xs text-amber-600">Fellows must change their password on first login. You can also send invitation emails later using the &quot;Send Invitations&quot; button.</p>
               <div className="bg-white rounded-lg border border-amber-200 divide-y divide-amber-100 max-h-48 overflow-y-auto">
@@ -944,6 +2116,7 @@ function ResetPasswordDialog({ fellow, onClose }) {
 // ─────────────────────────────────────────────────────────────────
 export default function FellowsManagementPage() {
   const router = useRouter();
+  const [activeTab, setActiveTab]         = useState('fellows'); // 'fellows' | 'publishing'
   const [fellows, setFellows]             = useState([]);
   const [categories, setCategories]       = useState([]);
   const [loading, setLoading]             = useState(false);
@@ -1102,7 +2275,7 @@ export default function FellowsManagementPage() {
           .filter(Boolean);
       };
 
-      // Exclude PRS fellows — fellows whose track or any category name contains "PRS"
+      // Exclude PRS fellows  fellows whose track or any category name contains "PRS"
       const nonPrs = allFellows.filter(f => {
         const track = (f.fellowData?.track || '').toUpperCase();
         const catNames = getCatNames(f).map(n => n.toUpperCase());
@@ -1203,21 +2376,53 @@ export default function FellowsManagementPage() {
           <h1 className="text-2xl font-bold text-gray-900">Fellows Management</h1>
           <p className="text-sm text-gray-500 mt-0.5">Add, manage, and communicate with programme fellows</p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={exportToExcel} disabled={exporting} variant="outline" className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-            {exporting
-              ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Exporting…</>
-              : <><Icons.FileDown className="w-4 h-4" /> Export Excel</>}
-          </Button>
-          <Button onClick={() => setModal('single')} variant="outline" className="gap-2">
-            <Icons.UserPlus className="w-4 h-4" /> Add Fellow
-          </Button>
-          <Button onClick={() => router.push('/admin/fellows/bulk')} className="gap-2 bg-green-600 hover:bg-green-700">
-            <Icons.Users className="w-4 h-4" /> Bulk Add Fellows
-          </Button>
+        {activeTab === 'fellows' && (
+          <div className="flex gap-2">
+            <Button onClick={exportToExcel} disabled={exporting} variant="outline" className="gap-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+              {exporting
+                ? <><Icons.Loader2 className="w-4 h-4 animate-spin" /> Exporting…</>
+                : <><Icons.FileDown className="w-4 h-4" /> Export Excel</>}
+            </Button>
+            <Button onClick={() => setModal('single')} variant="outline" className="gap-2">
+              <Icons.UserPlus className="w-4 h-4" /> Add Fellow
+            </Button>
+            <Button onClick={() => router.push('/admin/fellows/bulk')} className="gap-2 bg-green-600 hover:bg-green-700">
+              <Icons.Users className="w-4 h-4" /> Bulk Add Fellows
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Tab Bar ──────────────────────────────── */}
+      <div className="bg-white border-b px-6">
+        <div className="flex gap-1">
+          {[
+            { key: 'fellows', label: 'Fellows', icon: Icons.Users },
+            { key: 'publishing', label: 'Arin Publishing Academy', icon: Icons.BookOpen },
+          ].map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 transition-all -mb-px ${
+                activeTab === key
+                  ? 'border-[#021d49] text-[#021d49]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Icon className="w-4 h-4" /> {label}
+            </button>
+          ))}
         </div>
       </div>
 
+      {/* ── Arin Publishing Academy Tab ──────────── */}
+      {activeTab === 'publishing' && (
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <ArinPublishingTab categories={categories} />
+        </div>
+      )}
+
+      {activeTab === 'fellows' && (<>
       <div className="max-w-7xl mx-auto px-6 py-6 space-y-6">
 
         {/* ── Stats ────────────────────────────────── */}
@@ -1385,7 +2590,7 @@ export default function FellowsManagementPage() {
                           ].map(id => id?.toString?.() || String(id));
                           const unique = [...new Set(ids)];
                           const catEntries = unique.map(id => ({ id, name: categories.find(c => c._id === id)?.name })).filter(e => e.name);
-                          if (catEntries.length === 0) return <span className="text-gray-300 text-xs">—</span>;
+                          if (catEntries.length === 0) return <span className="text-gray-300 text-xs"></span>;
                           return (
                             <div className="flex flex-wrap gap-1">
                               {catEntries.map(({ id, name }) => (
@@ -1408,10 +2613,10 @@ export default function FellowsManagementPage() {
                       <td className="px-3 py-3">
                         {f.fellowData?.track && <p className="text-xs font-medium text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full inline-block">{f.fellowData.track}</p>}
                         {f.fellowData?.region && <p className="text-xs text-gray-500 mt-1">{f.fellowData.region}</p>}
-                        {!f.fellowData?.track && !f.fellowData?.region && <span className="text-gray-300 text-xs">—</span>}
+                        {!f.fellowData?.track && !f.fellowData?.region && <span className="text-gray-300 text-xs"></span>}
                       </td>
                       {/* Country */}
-                      <td className="px-3 py-3 text-sm text-gray-700">{f.country || <span className="text-gray-300">—</span>}</td>
+                      <td className="px-3 py-3 text-sm text-gray-700">{f.country || <span className="text-gray-300"></span>}</td>
                       {/* Status */}
                       <td className="px-3 py-3">{statusBadge(f)}</td>
                       {/* Invitation */}
@@ -1423,7 +2628,7 @@ export default function FellowsManagementPage() {
                       </td>
                       {/* Joined */}
                       <td className="px-3 py-3 text-xs text-gray-500">
-                        {f.createdAt ? new Date(f.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        {f.createdAt ? new Date(f.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                       </td>
                       {/* Actions */}
                       <td className="px-3 py-3">
@@ -1499,7 +2704,7 @@ export default function FellowsManagementPage() {
       </Modal>
 
       {/* Custom Bulk Email */}
-      <Modal open={modal === 'email'} onClose={() => setModal(null)} title={`Send Custom Email — ${selected.size} Fellows`} maxWidth="max-w-2xl">
+      <Modal open={modal === 'email'} onClose={() => setModal(null)} title={`Send Custom Email  ${selected.size} Fellows`} maxWidth="max-w-2xl">
         <BulkEmailDialog
           selected={selected}
           fellows={fellows}
@@ -1510,7 +2715,7 @@ export default function FellowsManagementPage() {
       </Modal>
 
       {/* Send Invitations */}
-      <Modal open={modal === 'invitation'} onClose={() => setModal(null)} title={`Send Fellowship Invitations — ${selected.size} Fellows`} maxWidth="max-w-xl">
+      <Modal open={modal === 'invitation'} onClose={() => setModal(null)} title={`Send Fellowship Invitations  ${selected.size} Fellows`} maxWidth="max-w-xl">
         <BulkEmailDialog
           selected={selected}
           fellows={fellows}
@@ -1542,7 +2747,7 @@ export default function FellowsManagementPage() {
 
       {/* Edit Fellow */}
       {editTarget && (
-        <Modal open={modal === 'edit'} onClose={() => setModal(null)} title={`Edit — ${editTarget.fullName || editTarget.email}`} maxWidth="max-w-lg">
+        <Modal open={modal === 'edit'} onClose={() => setModal(null)} title={`Edit  ${editTarget.fullName || editTarget.email}`} maxWidth="max-w-lg">
           <EditFellowDialog
             fellow={editTarget}
             onClose={() => { setModal(null); setEditTarget(null); }}
@@ -1628,6 +2833,7 @@ export default function FellowsManagementPage() {
           </div>
         </div>
       )}
+      </>)}
     </div>
   );
 }

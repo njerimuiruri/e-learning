@@ -140,6 +140,7 @@ function AcademyContent() {
   const [paymentType, setPaymentType] = useState(null);
   const [error, setError] = useState(null);
   const [processing, setProcessing] = useState(false);
+  const [payLaterFlow, setPayLaterFlow] = useState(false);
   const fileInputRef = useRef(null);
   const [idFile, setIdFile] = useState(null);
   const [idPreview, setIdPreview] = useState(null);
@@ -181,12 +182,12 @@ function AcademyContent() {
             } else if (s.hasAccess) {
               setStep('done');
             } else if (s.awaitingPayment) {
-              // ID approved — student should now choose Full or Installment and pay
+              // ID approved  student should now choose Full or Installment and pay
               // Works whether they arrive via email link or navigate directly to the page
               setTier('student');
               setStep('payment');
             } else if (s.verificationStatus === 'pending') {
-              // ID already submitted — show the "under review" state
+              // ID already submitted  show the "under review" state
               setStep('tier'); // Panel detects pending status and shows waiting screen
             } else {
               // Check for pending tier saved before login redirect
@@ -194,14 +195,13 @@ function AcademyContent() {
               if (pendingTier) {
                 localStorage.removeItem('pendingAcademyTier');
                 setTier(pendingTier);
-                if (pendingTier === 'non-student') setStep('payment');
-                else setStep('id-upload');
+                setStep('pay-choice');
               }
             }
           } catch { }
         }
       } else {
-        // Category not found — will surface as error when user tries to register
+        // Category not found  will surface as error when user tries to register
         console.warn('ARIN Publishing Academy category not found in:', cats.map(c => c.name));
       }
     } catch (e) {
@@ -218,14 +218,37 @@ function AcademyContent() {
     }
     setTier(t); setError(null);
     if (!user) {
-      // Save tier so we can restore it after they log in
       localStorage.setItem('pendingAcademyTier', t);
       setStep('auth');
       return;
     }
-    if (t === 'non-student') setStep('payment');
+    // Show pay-choice step (Pay Now / Pay Later) before going to payment/ID upload
+    setStep('pay-choice');
+  };
+
+  const handlePayNow = () => {
+    if (tier === 'non-student') setStep('payment');
     else if (status?.awaitingPayment) setStep('payment');
     else setStep('id-upload');
+  };
+
+  const handlePayLater = async () => {
+    if (!categoryId || !tier) return;
+    try {
+      setProcessing(true); setError(null);
+      await paymentService.enrollPayLater(categoryId, tier);
+      if (tier === 'student') {
+        // Student still needs to upload ID so admin can verify for the student rate
+        setPayLaterFlow(true);
+        setStep('id-upload');
+        setProcessing(false);
+      } else {
+        router.push(`/student/modules/category/${categoryId}`);
+      }
+    } catch (e) {
+      setError(e?.response?.data?.message || 'Enrollment failed. Please try again.');
+      setProcessing(false);
+    }
   };
 
   const handleFile = (e) => {
@@ -303,10 +326,10 @@ function AcademyContent() {
       {/* ── Body ── */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 space-y-5">
 
-        {/* Objectives + Registration panel — two column */}
+        {/* Objectives + Registration panel  two column */}
         <div className="flex flex-col lg:flex-row gap-12 items-start">
 
-          {/* Left — Objectives */}
+          {/* Left  Objectives */}
           <div className="flex-1 min-w-0">
             <div className="bg-white rounded-2xl border border-gray-100 px-6 py-6">
               <SectionHeading>Objectives</SectionHeading>
@@ -323,7 +346,7 @@ function AcademyContent() {
             </div>
           </div>
 
-          {/* Right — registration panel */}
+          {/* Right  registration panel */}
           <div className="lg:w-[380px] w-full flex-shrink-0">
             <div className="sticky top-24">
               <Panel
@@ -334,8 +357,10 @@ function AcademyContent() {
                 uploadDone={uploadDone} idFile={idFile} idPreview={idPreview}
                 fileInputRef={fileInputRef} uploading={uploading}
                 onTier={selectTier} onFile={handleFile} onSubmitId={submitId} onPay={pay}
-                onBack={() => { setStep('tier'); setTier(null); setPaymentOption(null); setError(null); }}
+                onBack={() => { setStep('tier'); setTier(null); setPaymentOption(null); setError(null); setPayLaterFlow(false); }}
+                onPayNow={handlePayNow} onPayLater={handlePayLater}
                 user={user} router={router} status={status}
+                payLaterFlow={payLaterFlow} categoryId={categoryId}
               />
             </div>
           </div>
@@ -588,7 +613,8 @@ function Panel({
   step, tier, paymentOption, setPaymentOption, error, setError,
   processing, paymentType, sp, nsp, total, half,
   uploadDone, idFile, idPreview, fileInputRef, uploading,
-  onTier, onFile, onSubmitId, onPay, onBack, user, router, status,
+  onTier, onFile, onSubmitId, onPay, onBack, onPayNow, onPayLater, user, router, status,
+  payLaterFlow, categoryId,
 }) {
   if (status?.hasAccess) {
     const dashPath = user?.role === 'admin' ? '/admin' : '/student';
@@ -620,9 +646,23 @@ function Panel({
       <p className="text-sm text-gray-500 mb-5 leading-relaxed">
         Your student ID has been submitted and is under review. We will respond within 1–2 business days.
       </p>
-      <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-left text-xs text-amber-700 leading-relaxed">
-        Once approved, you will receive an email with a link to complete your payment at the student rate of <strong>USD {sp}</strong>.
-      </div>
+      {payLaterFlow ? (
+        <>
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 text-left text-xs text-emerald-700 leading-relaxed mb-4">
+            <strong>Module 1 is now available.</strong> You can start exploring while your ID is reviewed. Once approved, you'll be able to pay the student rate of <strong>USD {sp}</strong> to unlock all modules.
+          </div>
+          <button
+            onClick={() => router.push(`/student/modules/category/${categoryId}`)}
+            className="w-full bg-[#021d49] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#032a66] transition-colors flex items-center justify-center gap-2"
+          >
+            Go to Module 1 <ArrowRight className="w-4 h-4" />
+          </button>
+        </>
+      ) : (
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-4 text-left text-xs text-amber-700 leading-relaxed">
+          Once approved, you will receive an email with a link to complete your payment at the student rate of <strong>USD {sp}</strong>.
+        </div>
+      )}
     </div>
   );
 
@@ -662,7 +702,7 @@ function Panel({
 
             <ul className="space-y-1.5 pt-1">
               {[
-                'One-time payment — no recurring fees',
+                'One-time payment  no recurring fees',
                 'Access to all modules when published',
                 'Certificate upon programme completion',
               ].map((t, i) => (
@@ -672,10 +712,17 @@ function Panel({
                 </li>
               ))}
             </ul>
+
+            <div className="flex items-start gap-2 border border-dashed border-amber-200 bg-amber-50 rounded-xl p-3">
+              <Clock className="w-3.5 h-3.5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-amber-700 leading-relaxed">
+                <strong>Not ready to pay?</strong> Select a tier then choose <em>Pay Later</em>  get Module 1 free and pay anytime to unlock the rest. Students still need to upload their ID for admin approval to access the student rate.
+              </p>
+            </div>
           </>
         )}
 
-        {/* Auth prompt — shown when tier selected but not logged in */}
+        {/* Auth prompt  shown when tier selected but not logged in */}
         {step === 'auth' && (
           <>
             <BackBtn onClick={onBack} />
@@ -711,8 +758,69 @@ function Panel({
             </div>
 
             <p className="text-center text-xs text-gray-400">
-              Your selection will be saved — continue straight after signing in.
+              Your selection will be saved  continue straight after signing in.
             </p>
+          </>
+        )}
+
+        {/* Pay Choice  Pay Now or Pay Later */}
+        {step === 'pay-choice' && (
+          <>
+            <BackBtn onClick={onBack} />
+
+            {/* Tier summary */}
+            <div className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold ${tier === 'student' ? 'bg-sky-50 text-sky-700' : 'bg-orange-50 text-orange-700'}`}>
+              <div className="flex items-center gap-2">
+                {tier === 'student' ? <GraduationCap className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
+                {tier === 'student' ? 'Student' : 'Non-Student'}
+              </div>
+              <span>USD {total} total</span>
+            </div>
+
+            <div className="space-y-3">
+              {/* Full payment option */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Full Payment</p>
+                <p className="text-2xl font-extrabold text-gray-900">USD {total}</p>
+                <p className="text-xs text-gray-400">One-time · Instant full access</p>
+              </div>
+
+              {/* Installment option */}
+              <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-1">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Installments</p>
+                <p className="text-2xl font-extrabold text-gray-900">USD {half} <span className="text-sm font-medium text-gray-400">now</span></p>
+                <p className="text-xs text-gray-400">+ USD {half} later · Full access after 1st payment</p>
+              </div>
+            </div>
+
+            {error && <ErrBox msg={error} />}
+
+            <button
+              onClick={onPayNow}
+              disabled={processing}
+              className="w-full bg-[#021d49] text-white py-3 rounded-xl text-sm font-semibold hover:bg-[#032a66] transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Pay Now
+            </button>
+
+            {/* Pay Later with tooltip */}
+            <div className="relative group">
+              <button
+                onClick={onPayLater}
+                disabled={processing}
+                className="w-full border border-gray-200 text-gray-600 py-3 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+              >
+                {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
+                Explore for Free · Pay Later
+              </button>
+              <div className="absolute bottom-full left-0 right-0 mb-2 hidden group-hover:block z-10">
+                <div className="bg-gray-900 text-white text-xs rounded-xl px-4 py-3 leading-relaxed shadow-lg">
+                  You'll get instant access to <strong>Module 1</strong> as a free preview. Pay anytime to unlock the full programme  your spot is saved and your progress won't be lost.
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900" />
+                </div>
+              </div>
+            </div>
           </>
         )}
 
@@ -724,8 +832,10 @@ function Panel({
             <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4">
               <Shield className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
               <p className="text-xs text-blue-700 leading-relaxed">
-                Upload a valid student ID or enrollment letter. Once approved, you'll receive an email
-                to complete payment at the <strong>student rate of USD {sp}</strong>.
+                {payLaterFlow
+                  ? <>You now have access to <strong>Module 1</strong>. Upload your student ID so the admin can verify your eligibility for the <strong>student rate of USD {sp}</strong> when you complete payment.</>
+                  : <>Upload a valid student ID or enrollment letter. Once approved, you'll receive an email to complete payment at the <strong>student rate of USD {sp}</strong>.</>
+                }
               </p>
             </div>
 
@@ -769,7 +879,7 @@ function Panel({
         {/* Payment */}
         {step === 'payment' && (
           <>
-            {/* Only show back button for non-students — students who are approved shouldn't go back to tier */}
+            {/* Only show back button for non-students  students who are approved shouldn't go back to tier */}
             {tier !== 'student' && <BackBtn onClick={onBack} />}
 
             {/* Approved student banner */}
@@ -794,7 +904,7 @@ function Panel({
               <span>USD {total} total</span>
             </div>
 
-            {/* Installment 2 — pre-selected from email link */}
+            {/* Installment 2  pre-selected from email link */}
             {paymentOption === 'installment2' ? (
               <div className="bg-[#021d49]/5 border border-[#021d49]/10 rounded-xl p-4">
                 <p className="text-xs font-semibold text-[#021d49] uppercase tracking-wider mb-2">2nd Installment Due</p>
@@ -818,7 +928,7 @@ function Panel({
                   <OptionCard
                     selected={paymentOption === 'installment1'}
                     onClick={() => { setPaymentOption('installment1'); setError(null); }}
-                    title="Installment 1 — 50%"
+                    title="Installment 1  50%"
                     sub="Pay now · 2nd installment TBA"
                     price={`USD ${half}`}
                   />

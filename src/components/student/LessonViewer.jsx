@@ -26,7 +26,7 @@ import { useEngagementTracker } from '@/hooks/useEngagementTracker';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 
 /**
- * LessonViewer — Netacad-style slide experience.
+ * LessonViewer  Netacad-style slide experience.
  * Phases: intro → slides → assessment
  */
 export default function LessonViewer({
@@ -112,7 +112,7 @@ export default function LessonViewer({
       setCheckedAnswers(restoredChecked);
       hasComputedRef.current = true; // prevent auto-submit for already-passed quizzes
       console.log(
-        `[LessonViewer] Quiz already passed — restored previous answers for review | lesson=${lessonIndex + 1} | answersRestored=${Object.keys(restoredAnswers).length}`,
+        `[LessonViewer] Quiz already passed  restored previous answers for review | lesson=${lessonIndex + 1} | answersRestored=${Object.keys(restoredAnswers).length}`,
       );
     } else {
       setAnswers({});
@@ -174,7 +174,7 @@ export default function LessonViewer({
   }, [lessonIndex, reportSlideProgressToServer, slides.length]);
 
   useEffect(() => {
-    // Stop the tracker when the student moves to the assessment — avoids a
+    // Stop the tracker when the student moves to the assessment  avoids a
     // race where a stale save overwrites lessonProgress.isCompleted = true.
     if (!currentSlide || isAlreadyCompleted || phase === 'assessment') return;
     const interval = setInterval(() => {
@@ -239,7 +239,7 @@ export default function LessonViewer({
   const persistResult = useCallback(async (currentAnswers) => {
     if (!enrollment?._id) return;
     if (assessmentPassed) {
-      console.log('[LessonViewer] Quiz already passed — skipping server persist');
+      console.log('[LessonViewer] Quiz already passed  skipping server persist');
       return;
     }
     const questions = lesson?.assessmentQuiz || [];
@@ -273,7 +273,7 @@ export default function LessonViewer({
   // ── When all questions answered: compute score instantly, show modal ──────────
   useEffect(() => {
     if (phase !== 'assessment' || assessmentResult || hasComputedRef.current) return;
-    // Don't re-evaluate a quiz that was already passed — show answers in review mode only
+    // Don't re-evaluate a quiz that was already passed  show answers in review mode only
     if (assessmentPassed) {
       hasComputedRef.current = true;
       console.log('[LessonViewer] Skipping auto-compute: quiz already passed, showing review mode');
@@ -287,7 +287,7 @@ export default function LessonViewer({
 
     hasComputedRef.current = true;
 
-    // Compute score client-side immediately — no waiting for server
+    // Compute score client-side immediately  no waiting for server
     let correct = 0;
     questions.forEach((q, i) => {
       if (evaluateAnswer(q, answers[i])) correct++;
@@ -620,7 +620,7 @@ export default function LessonViewer({
           </div>
         </div>
 
-        {/* Quiz Results Modal — opens the instant all questions are answered */}
+        {/* Quiz Results Modal  opens the instant all questions are answered */}
         <QuizResultsModal
           isOpen={!!assessmentResult}
           result={assessmentResult}

@@ -21,7 +21,7 @@ function VerifyPaymentContent() {
   const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!reference) return; // wait silently — null on first SSR render
+    if (!reference) return; // wait silently  null on first SSR render
     verifyPayment();
   }, [reference]);
 
@@ -56,7 +56,7 @@ function VerifyPaymentContent() {
         try {
           await moduleEnrollmentService.enrollInModule(verificationResult.moduleId);
         } catch {
-          // Already enrolled or enrollment failed — still redirect to module
+          // Already enrolled or enrollment failed  still redirect to module
         }
       }
     } catch (err: any) {

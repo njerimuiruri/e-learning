@@ -1,0 +1,810 @@
+[
+  {
+    "id": 1,
+    "region": "East Africa",
+    "country": "Kenya",
+    "initiativeTitle": "AI for Climate Smart Agriculture (AI4CSA)",
+    "objectives": "Enhance crop yield prediction, pest detection, and drought early warning",
+    "institution": "Kenya Agricultural & Livestock Research Organization (KALRO)",
+    "location": "Nairobi & Machakos counties",
+    "thematicFocus": [
+      "Agriculture",
+      "Drought early warning"
+    ],
+    "donor": "World Bank \nMicrosoft (USD 297M cloud/AI investment)",
+    "collaborators": [
+      "Ministry of Agriculture",
+      "IBM Research Africa",
+      "JKUAT"
+    ],
+    "beneficiaries": "Smallholder farmers",
+    "challenges": [
+      "Lack of local training data",
+      "high cloud compute costs"
+    ],
+    "contactDetails": "info@kalro.org",
+    "source": "Kenya AI Strategy 2025-2030",
+    "collaborationOpportunities": "seeks private sector for edge-AI sensors",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 2,
+    "region": "East Africa",
+    "country": "Kenya",
+    "initiativeTitle": "Lake Victoria AI Flood Early Warning System",
+    "objectives": "Predict flooding around Lake Victoria using satellite & rainfall data",
+    "institution": "Kenya Red Cross Society",
+    "location": "Kisumu, Busia, Homa Bay",
+    "thematicFocus": [
+      "DRR (Flood early warning)"
+    ],
+    "donor": "UNDP \nGoogle",
+    "collaborators": [
+      "Kenya Meteorological Dept",
+      "Google Research",
+      "University of Nairobi"
+    ],
+    "beneficiaries": "Lakeside communities",
+    "challenges": [
+      "Unstable power for IoT sensors",
+      "low digital literacy"
+    ],
+    "contactDetails": "",
+    "source": "Kenya AI Strategy",
+    "collaborationOpportunities": "needs telecom partners for SMS alerts",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 3,
+    "region": "East Africa",
+    "country": "Kenya",
+    "initiativeTitle": "Sustainable AI Data Centre (E. Africa's largest)",
+    "objectives": "Develop sustainable AI infrastructure for East Africa",
+    "institution": "Airtel / Microsoft-G42 partnership",
+    "location": "Kenya",
+    "thematicFocus": [
+      "Digital infrastructure (cross-cutting)"
+    ],
+    "donor": "Airtel (44 MW), Microsoft + G42 (USD 1B)",
+    "collaborators": [
+      "Government of Kenya"
+    ],
+    "beneficiaries": "Regional AI ecosystem",
+    "challenges": [
+      "Energy demands",
+      "cooling requirements"
+    ],
+    "contactDetails": "info@airtel.co.ke",
+    "source": "Airtel announcement 2025",
+    "collaborationOpportunities": "seeks renewable energy partners",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 4,
+    "region": "East Africa",
+    "country": "Rwanda",
+    "initiativeTitle": "Rwanda Agri-AI Drone Network",
+    "objectives": "Use drones + AI for soil health mapping, irrigation optimization, crop disease detection",
+    "institution": "Rwanda Agriculture Board (RAB)",
+    "location": "Eastern Province (Bugesera)",
+    "thematicFocus": [
+      "Agriculture",
+      "Water management"
+    ],
+    "donor": "GIZ, Bill & Melinda Gates Foundation (USD 17.5M AI Scaling Hub)",
+    "collaborators": [
+      "Zipline",
+      "Carnegie Mellon University Africa",
+      "Minagri"
+    ],
+    "beneficiaries": "Smallholder cooperatives",
+    "challenges": [
+      "Regulatory hurdles for drone flights"
+    ],
+    "contactDetails": "contact@rab.rw",
+    "source": "Rwanda National AI Policy 2023",
+    "collaborationOpportunities": "seeks drone service providers",
+    "isRegional": false,
+    "lat": -1.9403,
+    "lng": 29.8739
+  },
+  {
+    "id": 5,
+    "region": "East Africa",
+    "country": "Rwanda",
+    "initiativeTitle": "AI for Judicial & Border Management",
+    "objectives": "AI-powered systems for court case management and border control",
+    "institution": "Government of Rwanda",
+    "location": "Kigali",
+    "thematicFocus": [
+      "Governance",
+      "Public service delivery"
+    ],
+    "donor": "Government of Rwanda",
+    "collaborators": [
+      "Rwanda Governance Board",
+      "Rwanda Border Police"
+    ],
+    "beneficiaries": "Citizens \ntravelers",
+    "challenges": [
+      "Dual-use potential (governance vs surveillance)"
+    ],
+    "contactDetails": "info@gov.rw",
+    "source": "Rwanda AI Policy 2023",
+    "collaborationOpportunities": "ethics oversight partners needed",
+    "isRegional": false,
+    "lat": -1.9403,
+    "lng": 29.8739
+  },
+  {
+    "id": 6,
+    "region": "East Africa",
+    "country": "Ethiopia",
+    "initiativeTitle": "AI for Multi-Hazard Early Warning (AMHEW)",
+    "objectives": "Integrate AI into Ethiopia's national DRR system for floods, drought, landslides",
+    "institution": "Ethiopian AI Institute (EAII)",
+    "location": "Addis Ababa & Afar region",
+    "thematicFocus": [
+      "DRR",
+      "Multi-hazard early warning"
+    ],
+    "donor": "World Bank (Digital Foundations Project)",
+    "collaborators": [
+      "UNDRR",
+      "Ethiopian Meteorological Institute",
+      "Addis Ababa University"
+    ],
+    "beneficiaries": "Pastoralist & farming communities",
+    "challenges": [
+      "Unstable power grid, limited broadband"
+    ],
+    "contactDetails": "info@aii.et",
+    "source": "Ethiopia AI Policy 2024",
+    "collaborationOpportunities": "needs energy storage solutions",
+    "isRegional": false,
+    "lat": 9.025,
+    "lng": 38.7469
+  },
+  {
+    "id": 7,
+    "region": "East Africa",
+    "country": "Tanzania",
+    "initiativeTitle": "AI-Powered Malaria Outbreak Prediction",
+    "objectives": "Predict malaria outbreaks using climate & health data",
+    "institution": "Ifakara Health Institute",
+    "location": "Dar es Salaam, Kigoma",
+    "thematicFocus": [
+      "Health",
+      "Climate-sensitive disease"
+    ],
+    "donor": "Bill & Melinda Gates Foundation",
+    "collaborators": [
+      "Ministry of Health,",
+      "Tanzania Meteorological Authority,",
+      "University of Oslo"
+    ],
+    "beneficiaries": "Rural communities",
+    "challenges": [
+      "Data fragmentation across districts"
+    ],
+    "contactDetails": "info@ihi.or.tz",
+    "source": "Tanzania Digital Economy Framework 2024-2034",
+    "collaborationOpportunities": "open to academic research partnerships",
+    "isRegional": false,
+    "lat": -6.163,
+    "lng": 35.7516
+  },
+  {
+    "id": 8,
+    "region": "East Africa",
+    "country": "Uganda",
+    "initiativeTitle": "AI for Climate-Resilient Agriculture (emerging)",
+    "objectives": "AI-powered pest detection and weather forecasting for smallholder farmers",
+    "institution": "Makerere University AI Lab",
+    "location": "Kampala, Gulu, Mbale",
+    "thematicFocus": [
+      "Agriculture",
+      "Climate adaptation"
+    ],
+    "donor": "UNDP (pending)",
+    "collaborators": [
+      "Ministry of ICT",
+      "Makerere University"
+    ],
+    "beneficiaries": "Smallholder farmers",
+    "challenges": [
+      "No formal AI strategy yet",
+      "donor-dependent"
+    ],
+    "contactDetails": "info@mak.ac.ug",
+    "source": "Uganda AI readiness assessments",
+    "collaborationOpportunities": "seeks strategy development partners",
+    "isRegional": false,
+    "lat": 0.3476,
+    "lng": 32.5825
+  },
+  {
+    "id": 9,
+    "region": "East Africa",
+    "country": "Mauritius",
+    "initiativeTitle": "AI for Coastal & Marine Conservation",
+    "objectives": "AI-powered monitoring of coral reefs and marine protected areas",
+    "institution": "Mauritius Research and Innovation Council",
+    "location": "Port Louis, coastal zones",
+    "thematicFocus": [
+      "Biodiversity & conservation",
+      "Coastal management"
+    ],
+    "donor": "Government of Mauritius",
+    "collaborators": [
+      "University of Mauritius",
+      "Indian Ocean Commission"
+    ],
+    "beneficiaries": "Coastal communities",
+    "challenges": [
+      "One of Africa's earliest AI strategies (2018)"
+    ],
+    "contactDetails": "contact@mric.gov.mu",
+    "source": "Mauritius AI Strategy 2018",
+    "collaborationOpportunities": "seeks marine biology AI experts",
+    "isRegional": false,
+    "lat": -20.3484,
+    "lng": 57.5522
+  },
+  {
+    "id": 10,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "initiativeTitle": "NAIS Climate Disaster Early Warning System",
+    "objectives": "AI-powered early warnings for floods, extreme heat, and drought",
+    "institution": "National Centre for AI & Robotics (NCAIR)",
+    "location": "Lagos, Kano, Maiduguri",
+    "thematicFocus": [
+      "DRR",
+      "Climate early warning"
+    ],
+    "donor": "Federal Ministry of Communications",
+    "collaborators": [
+      "NIMET",
+      "NITDA",
+      "UNDP"
+    ],
+    "beneficiaries": "Urban poor & rural communities",
+    "challenges": [
+      "Unreliable power, thin data center capacity"
+    ],
+    "contactDetails": "ncair@nitda.gov.ng",
+    "source": "Nigeria AI Strategy 2024",
+    "collaborationOpportunities": "needs off-grid compute solutions",
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 11,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "initiativeTitle": "AI-Powered Forest Monitoring for Carbon Credits",
+    "objectives": "Use AI + satellite to detect deforestation & illegal logging",
+    "institution": "NESREA",
+    "location": "Cross River State",
+    "thematicFocus": [
+      "Biodiversity",
+      "Carbon markets"
+    ],
+    "donor": "World Bank (REDD+)",
+    "collaborators": [
+      "University of Ibadan",
+      "AfriClimate AI",
+      "Nigerian Space Agency"
+    ],
+    "beneficiaries": "Forest communities",
+    "challenges": [
+      "Data breaches risk, ethical concerns"
+    ],
+    "contactDetails": "info@nesrea.gov.ng",
+    "source": "Nigeria AI Strategy 2024",
+    "collaborationOpportunities": "open to carbon credit buyers",
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 12,
+    "region": "West Africa",
+    "country": "Ghana",
+    "initiativeTitle": "Smart Agriculture AI Platform (AgriAI-GH)",
+    "objectives": "AI-powered pest detection, yield forecasting, soil moisture monitoring",
+    "institution": "Ministry of Food & Agriculture",
+    "location": "Ashanti & Northern Regions",
+    "thematicFocus": [
+      "Agriculture",
+      "Food security"
+    ],
+    "donor": "IFAD",
+    "collaborators": [
+      "Ghana Meteorological Agency",
+      "KNUST",
+      "Farmerline"
+    ],
+    "beneficiaries": "Smallholder farmers",
+    "challenges": [
+      "Low trust in e-services, low awareness"
+    ],
+    "contactDetails": "info@mofa.gov.gh",
+    "source": "Ghana AI Strategy 2023-2033",
+    "collaborationOpportunities": "Needs last-mile digital training",
+    "isRegional": false,
+    "lat": 5.6037,
+    "lng": -0.187
+  },
+  {
+    "id": 13,
+    "region": "West Africa",
+    "country": "Ghana",
+    "initiativeTitle": "Khaya AI Language Translator",
+    "objectives": "Open-source AI translator supporting local Ghanaian languages",
+    "institution": "National Information Technology Agency (NITA)",
+    "location": "Accra, nationwide",
+    "thematicFocus": [
+      "Digital inclusion",
+      "Education"
+    ],
+    "donor": "Government of Ghana",
+    "collaborators": [
+      "Ministry of Communications"
+    ],
+    "beneficiaries": "Local language speakers",
+    "challenges": [
+      "Limited training data for local languages"
+    ],
+    "contactDetails": "info@nita.gov.gh",
+    "source": "Ghana AI Strategy",
+    "collaborationOpportunities": "Seeks linguists & data contributors",
+    "isRegional": false,
+    "lat": 5.6037,
+    "lng": -0.187
+  },
+  {
+    "id": 14,
+    "region": "West Africa",
+    "country": "Senegal",
+    "initiativeTitle": "Climate-AI for Coastal Erosion Monitoring",
+    "objectives": "Predict coastal erosion & sea-level rise impacts",
+    "institution": "Centre de Suivi Écologique (CSE)",
+    "location": "Saint-Louis, Dakar",
+    "thematicFocus": [
+      "Coastal zone management",
+      "DRR"
+    ],
+    "donor": "French Development Agency (AFD)",
+    "collaborators": [
+      "Université Cheikh Anta Diop",
+      "IRD,",
+      "OSIRIS"
+    ],
+    "beneficiaries": "Coastal communities",
+    "challenges": [
+      "Rural-urban digital divide, gender gap"
+    ],
+    "contactDetails": "contact@cse.sn",
+    "source": "Senegal AI Policy Framework 2023",
+    "collaborationOpportunities": "Seeks gender-inclusive digital literacy NGOs",
+    "isRegional": false,
+    "lat": 14.7167,
+    "lng": -17.4677
+  },
+  {
+    "id": 15,
+    "region": "West Africa",
+    "country": "Benin",
+    "initiativeTitle": "AI for Agricultural Risk Management",
+    "objectives": "AI-powered crop insurance and weather risk assessment",
+    "institution": "Ministry of Digital Economy",
+    "location": "Cotonou, nationwide",
+    "thematicFocus": [
+      "Agriculture",
+      "Financial inclusion"
+    ],
+    "donor": "World Bank",
+    "collaborators": [
+      "Benin Agence des Systèmes d'Information"
+    ],
+    "beneficiaries": "Farmers",
+    "challenges": [
+      "Early-stage AI strategy (2023)"
+    ],
+    "contactDetails": "info@numerique.gouv.bj",
+    "source": "Benin AI & Big Data Strategy 2023",
+    "collaborationOpportunities": "Seeks insurtech partners",
+    "isRegional": false,
+    "lat": 6.4969,
+    "lng": 2.6289
+  },
+  {
+    "id": 16,
+    "region": "West Africa",
+    "country": "Côte d'Ivoire",
+    "initiativeTitle": "AI for Cocoa Sustainability (emerging)",
+    "objectives": "AI-powered monitoring of cocoa farms for deforestation and disease detection",
+    "institution": "Ministry of Digital Economy",
+    "location": "Abidjan, rural cocoa regions",
+    "thematicFocus": [
+      "Agriculture,",
+      "Biodiversity"
+    ],
+    "donor": "Emerging  seeking donors",
+    "collaborators": [
+      "Centre Suisse de Recherches Scientifiques"
+    ],
+    "beneficiaries": "Cocoa farmers",
+    "challenges": [
+      "No formal strategy yet",
+      "pilot stage"
+    ],
+    "contactDetails": "info@numerique.gouv.ci",
+    "source": "Côte d'Ivoire digital roadmap",
+    "collaborationOpportunities": "Seeks impact investors",
+    "isRegional": false,
+    "lat": 6.8276,
+    "lng": -5.2893
+  },
+  {
+    "id": 17,
+    "region": "North Africa",
+    "country": "Egypt",
+    "initiativeTitle": "Nile Delta AI Water Management System",
+    "objectives": "Optimize irrigation & reduce water waste using AI & satellite data",
+    "institution": "Ministry of Water Resources & Irrigation",
+    "location": "Nile Delta region",
+    "thematicFocus": [
+      "Water management,",
+      "Agriculture"
+    ],
+    "donor": "AFD",
+    "collaborators": [
+      "National Water Research Center",
+      "ITU",
+      "Cairo University"
+    ],
+    "beneficiaries": "Farmers in Nile Delta",
+    "challenges": [
+      "Declining open data availability"
+    ],
+    "contactDetails": "info@mwri.gov.eg",
+    "source": "Egypt AI Strategy 2021",
+    "collaborationOpportunities": "Seeks IoT sensor manufacturers",
+    "isRegional": false,
+    "lat": 30.0444,
+    "lng": 31.2357
+  },
+  {
+    "id": 18,
+    "region": "North Africa",
+    "country": "Egypt",
+    "initiativeTitle": "AI for Government Service Delivery",
+    "objectives": "AI-powered public service automation and citizen engagement",
+    "institution": "Ministry of Communications & IT (MCIT)",
+    "location": "Cairo, nationwide",
+    "thematicFocus": [
+      "Governance,",
+      "Public services"
+    ],
+    "donor": "Government of Egypt",
+    "collaborators": [
+      "Applied Innovation Centre (AIC)"
+    ],
+    "beneficiaries": "Egyptian citizens",
+    "challenges": [
+      "Workforce impact concerns"
+    ],
+    "contactDetails": "info@mcit.gov.eg",
+    "source": "Egypt AI Strategy",
+    "collaborationOpportunities": "Seeks public-sector innovation partners",
+    "isRegional": false,
+    "lat": 30.0444,
+    "lng": 31.2357
+  },
+  {
+    "id": 19,
+    "region": "North Africa",
+    "country": "Tunisia",
+    "initiativeTitle": "Tunisia Energy-AI Grid Optimizer",
+    "objectives": "Balance renewable energy supply (solar/wind) using AI demand forecasting",
+    "institution": "STEG (Tunisian Electricity & Gas Co.)",
+    "location": "Tunis, Sfax, Tozeur",
+    "thematicFocus": [
+      "Energy, Just energy transition"
+    ],
+    "donor": "EU (Horizon Europe)",
+    "collaborators": [
+      "National Institute of Statistics,",
+      "University of Tunis El Manar"
+    ],
+    "beneficiaries": "National grid & rural areas",
+    "challenges": [
+      "Restrictive data access, no national cloud"
+    ],
+    "contactDetails": "contact@steg.com.tn",
+    "source": "Tunisia AI Strategy (Draft 2026)",
+    "collaborationOpportunities": "Open to AI startups for sandbox testing",
+    "isRegional": false,
+    "lat": 36.8065,
+    "lng": 10.1815
+  },
+  {
+    "id": 20,
+    "region": "North Africa",
+    "country": "Algeria",
+    "initiativeTitle": "AI for Precision Agriculture in Sahara",
+    "objectives": "Optimize drip irrigation & crop selection for oases using AI & climate models",
+    "institution": "CDER (Renewable Energy Development Centre)",
+    "location": "Biskra & Ouargla regions",
+    "thematicFocus": [
+      "Agriculture, Water management"
+    ],
+    "donor": "Algerian government (1.5B dinar fund)",
+    "collaborators": [
+      "Mohammed VI Polytechnic University (UM6P),",
+      "OCP Group"
+    ],
+    "beneficiaries": "Oasis farmers",
+    "challenges": [
+      "Uneven internet connectivity, draft strategy only"
+    ],
+    "contactDetails": "info@cder.dz",
+    "source": "Algeria AI Council (2026 draft)",
+    "collaborationOpportunities": "Seeks satellite data providers",
+    "isRegional": false,
+    "lat": 36.7538,
+    "lng": 3.0588
+  },
+  {
+    "id": 21,
+    "region": "North Africa",
+    "country": "Morocco",
+    "initiativeTitle": "AI for Water Scarcity Management",
+    "objectives": "AI-powered groundwater monitoring and irrigation optimization",
+    "institution": "Ministry of Equipment & Water",
+    "location": "Marrakech-Safi, Draa-Tafilalet",
+    "thematicFocus": [
+      "Water management, Agriculture"
+    ],
+    "donor": "EU, \nWorld Bank",
+    "collaborators": [],
+    "beneficiaries": "Farmers, water authorities",
+    "challenges": [
+      "Strategy exists but less documented"
+    ],
+    "contactDetails": "contact@equipement.gov.ma",
+    "source": "Morocco digital strategy",
+    "collaborationOpportunities": "Seeks water tech partners",
+    "isRegional": false,
+    "lat": 34.0209,
+    "lng": -6.8416
+  },
+  {
+    "id": 22,
+    "region": "Southern Africa",
+    "country": "South Africa",
+    "initiativeTitle": "Lwazi AI Tax Assistant",
+    "objectives": "AI-powered tax assessment and citizen query system",
+    "institution": "South African Revenue Service (SARS)",
+    "location": "Pretoria, nationwide",
+    "thematicFocus": [
+      "Governance, Public finance"
+    ],
+    "donor": "Government of South Africa",
+    "collaborators": [
+      "SARS,",
+      "Department of Finance"
+    ],
+    "beneficiaries": "Taxpayers",
+    "challenges": [
+      "AI ethics and inclusion challenges"
+    ],
+    "contactDetails": "info@sars.gov.za",
+    "source": "South Africa AI Framework 2025",
+    "collaborationOpportunities": "Seeks UX research partners",
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 23,
+    "region": "Southern Africa",
+    "country": "South Africa",
+    "initiativeTitle": "CAIR AI Research Infrastructure",
+    "objectives": "National AI research network with Google funding",
+    "institution": "Centre for Artificial Intelligence Research (CAIR)",
+    "location": "Johannesburg, Cape Town, Durban",
+    "thematicFocus": [
+      "Cross-cutting (research capacity)"
+    ],
+    "donor": "Google",
+    "collaborators": [
+      "Multiple universities,",
+      "CSIR"
+    ],
+    "beneficiaries": "AI researchers & students",
+    "challenges": [
+      "Brain drain to international tech firms"
+    ],
+    "contactDetails": "info@cair.org.za",
+    "source": "South Africa AI Framework",
+    "collaborationOpportunities": "Seeks industry-academia collaboration",
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 24,
+    "region": "Southern Africa",
+    "country": "Zambia",
+    "initiativeTitle": "AI for Drought Early Warning & Food Security",
+    "objectives": "Predict drought conditions & issue early warnings to farmers",
+    "institution": "Zambia Meteorological Department",
+    "location": "Lusaka, \nSouthern Province (Zambezi basin)",
+    "thematicFocus": [
+      "Drought early warning,",
+      "Agriculture"
+    ],
+    "donor": "UNDP",
+    "collaborators": [
+      "University of Zambia, Zambia Red Cross,",
+      "WFP"
+    ],
+    "beneficiaries": "Smallholder farmers",
+    "challenges": [
+      "Inadequate funding, lack of local AI talent"
+    ],
+    "contactDetails": "info@meteo.gov.zm",
+    "source": "Zambia AI Strategy 2024-2026",
+    "collaborationOpportunities": "Seeks satellite data & weather API partners",
+    "isRegional": false,
+    "lat": -15.3875,
+    "lng": 28.3228
+  },
+  {
+    "id": 25,
+    "region": "Southern Africa",
+    "country": "Namibia",
+    "initiativeTitle": "AI for Wildlife Conservation (emerging)",
+    "objectives": "AI-powered poacher detection and wildlife tracking",
+    "institution": "Ministry of Environment & Tourism",
+    "location": "Etosha National Park, \nZambezi Region",
+    "thematicFocus": [
+      "Biodiversity & conservation"
+    ],
+    "donor": "German Development Cooperation (GIZ)",
+    "collaborators": [
+      "Namibia University of Science & Technology"
+    ],
+    "beneficiaries": "Wildlife, conservation rangers",
+    "challenges": [
+      "No formal AI strategy yet"
+    ],
+    "contactDetails": "info@met.gov.na",
+    "source": "Namibia digital strategy (emerging)",
+    "collaborationOpportunities": "Seeks conservation tech partners",
+    "isRegional": false,
+    "lat": -22.5609,
+    "lng": 17.0658
+  },
+  {
+    "id": 26,
+    "region": "Southern Africa",
+    "country": "Botswana",
+    "initiativeTitle": "AI for Mining & Environmental Monitoring (emerging)",
+    "objectives": "AI-powered tailings dam monitoring and environmental compliance",
+    "institution": "Botswana International University of Science & Technology",
+    "location": "Palapye, mining regions",
+    "thematicFocus": [
+      "Environmental monitoring,",
+      "Mining safety"
+    ],
+    "donor": "Government of Botswana (emerging)",
+    "collaborators": [
+      "Ministry of Mineral Resources"
+    ],
+    "beneficiaries": "Mining communities, regulators",
+    "challenges": [
+      "Strategy in development"
+    ],
+    "contactDetails": "info@biust.ac.bw",
+    "source": "Botswana AI readiness (emerging)",
+    "collaborationOpportunities": "Seeks mining AI experts",
+    "isRegional": false,
+    "lat": -24.6282,
+    "lng": 25.9231
+  },
+  {
+    "id": 27,
+    "region": "Southern Africa",
+    "country": "Zimbabwe",
+    "initiativeTitle": "AI for Agricultural Resilience (emerging)",
+    "objectives": "AI-powered crop disease detection and weather forecasting",
+    "institution": "Ministry of ICT & Courier Services",
+    "location": "Harare, Mashonaland regions",
+    "thematicFocus": [
+      "Agriculture,",
+      "Climate adaptation"
+    ],
+    "donor": "UNDP (exploratory)",
+    "collaborators": [
+      "University of Zimbabwe"
+    ],
+    "beneficiaries": "Smallholder farmers",
+    "challenges": [
+      "No formal strategy",
+      "economic constraints"
+    ],
+    "contactDetails": "info@ict.gov.zw",
+    "source": "Zimbabwe digital economy roadmap",
+    "collaborationOpportunities": "Seeks low-cost AI solutions",
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 28,
+    "region": "Pan-African",
+    "country": "Multiple",
+    "initiativeTitle": "Continental AI Strategy Implementation",
+    "objectives": "Coordinate national AI strategies with AU Agenda 2063",
+    "institution": "African Union Commission",
+    "location": "Addis Ababa, Ethiopia",
+    "thematicFocus": [
+      "Cross-cutting (all sectors)"
+    ],
+    "donor": "African Union, multiple bilateral donors",
+    "collaborators": [
+      "OECD, AU member states,",
+      "private sector"
+    ],
+    "beneficiaries": "All African citizens",
+    "challenges": [
+      "Implementation gaps, funding shortages"
+    ],
+    "contactDetails": "info@au.int",
+    "source": "AU Continental AI Strategy (2024)",
+    "collaborationOpportunities": "Open to all member states & partners",
+    "isRegional": true,
+    "lat": null,
+    "lng": null
+  },
+  {
+    "id": 29,
+    "region": "Pan-African",
+    "country": "Multiple",
+    "initiativeTitle": "African Charter on Trustworthy AI (in development)",
+    "objectives": "Establish ethical and regulatory framework for responsible AI across Africa",
+    "institution": "African Union Commission",
+    "location": "Pan-African",
+    "thematicFocus": [
+      "Governance, Ethics, Regulation"
+    ],
+    "donor": "African Union, OECD",
+    "collaborators": [
+      "Member states,",
+      "civil society,",
+      "academia"
+    ],
+    "beneficiaries": "All African citizens",
+    "challenges": [
+      "Multiple governance frameworks to harmonize"
+    ],
+    "contactDetails": "info@au.int",
+    "source": "AU High-Level Dialogue 2025",
+    "collaborationOpportunities": "Multi-stakeholder participation open",
+    "isRegional": true,
+    "lat": null,
+    "lng": null
+  }
+]

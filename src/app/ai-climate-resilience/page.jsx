@@ -172,7 +172,7 @@ export default function AIClimateResiliencePage() {
   }, []);
 
   const loadModules = async (loggedIn) => {
-    // Modules require auth — skip the fetch entirely for unauthenticated visitors
+    // Modules require auth  skip the fetch entirely for unauthenticated visitors
     if (!loggedIn) {
       setLoading(false);
       return;

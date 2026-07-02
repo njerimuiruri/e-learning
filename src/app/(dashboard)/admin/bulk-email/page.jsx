@@ -86,7 +86,7 @@ const QUILL_MODULES = {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function formatDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return '';
   return new Date(iso).toLocaleString('en-KE', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -443,7 +443,7 @@ function ComposePanel() {
               </div>
             )}
 
-            {/* Manual selection — search fellows by email */}
+            {/* Manual selection  search fellows by email */}
             {filterType === 'manual' && (
               <ManualRecipientSelector
                 manualUsers={manualUsers}
@@ -524,7 +524,7 @@ function ComposePanel() {
                   onKeyDown={(e) =>
                     e.key === 'Enter' && addEmail(ccInput, setCcInput, setCcList)
                   }
-                  placeholder="email@example.com — press Enter to add"
+                  placeholder="email@example.com  press Enter to add"
                 />
                 <Button
                   variant="outline"
@@ -565,7 +565,7 @@ function ComposePanel() {
                       onKeyDown={(e) =>
                         e.key === 'Enter' && addEmail(bccInput, setBccInput, setBccList)
                       }
-                      placeholder="email@example.com — press Enter to add"
+                      placeholder="email@example.com  press Enter to add"
                     />
                     <Button
                       variant="outline"
@@ -759,7 +759,7 @@ function ManualRecipientSelector({ manualUsers, setManualUsers, onChange }) {
       debounceRef.current = setTimeout(async () => {
         setSearching(true);
         try {
-          // Use preview with manual filter to search — or just allow email entry
+          // Use preview with manual filter to search  or just allow email entry
           // For now, allow direct email entry
           setResults([]);
         } finally {
@@ -797,7 +797,7 @@ function ManualRecipientSelector({ manualUsers, setManualUsers, onChange }) {
           value={search}
           onChange={(e) => handleSearch(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && addManual()}
-          placeholder="fellow@example.com — press Enter to add"
+          placeholder="fellow@example.com  press Enter to add"
         />
         <Button variant="outline" size="sm" onClick={addManual}>
           <Plus className="h-4 w-4" />
@@ -872,7 +872,7 @@ function SummaryRow({ label, value }) {
   return (
     <div className="flex gap-3">
       <span className="w-28 font-medium text-gray-500 flex-shrink-0">{label}</span>
-      <span className="text-gray-800">{value || '—'}</span>
+      <span className="text-gray-800">{value || ''}</span>
     </div>
   );
 }

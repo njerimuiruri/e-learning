@@ -41,7 +41,7 @@ const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov
 const fmt  = (n, d = 1) => Number(n ?? 0).toFixed(d);
 const pct  = (n) => `${fmt(n)}%`;
 const num  = (n) => Number(n ?? 0).toLocaleString();
-const trunc = (s, max = 28) => s?.length > max ? s.slice(0, max - 1) + '…' : (s ?? '—');
+const trunc = (s, max = 28) => s?.length > max ? s.slice(0, max - 1) + '…' : (s ?? '');
 
 function buildMonthlyBase() {
   const now = new Date();
@@ -343,15 +343,15 @@ function CapstoneStatusBadge({ status }) {
 function CapstoneDataTable({ capstones }) {
   const data = useMemo(() => capstones.map(c => ({
     id:        c._id,
-    name:      c.studentName || '—',
-    email:     c.studentEmail || '—',
-    title:     c.title || '—',
+    name:      c.studentName || '',
+    email:     c.studentEmail || '',
+    title:     c.title || '',
     status:    c.status,
     grade:     c.grade ?? null,
     passed:    c.passed,
     revisions: c.revisionCount ?? 0,
     files:     (c.files ?? []).length + (c.implementationFiles ?? []).length,
-    submitted: c.submittedAt ? new Date(c.submittedAt).toLocaleDateString() : '—',
+    submitted: c.submittedAt ? new Date(c.submittedAt).toLocaleDateString() : '',
   })), [capstones]);
 
   const columns = useMemo(() => [
@@ -382,7 +382,7 @@ function CapstoneDataTable({ capstones }) {
       size: 80,
       cell: ({ getValue, row }) => {
         const g = getValue();
-        if (g === null || g === undefined) return <span className="text-gray-400 text-xs">—</span>;
+        if (g === null || g === undefined) return <span className="text-gray-400 text-xs"></span>;
         return (
           <span className={`font-bold text-xs ${g >= 50 ? 'text-green-600' : 'text-red-500'}`}>
             {g}% {row.original.passed ? '✓' : '✗'}
@@ -419,15 +419,15 @@ function CapstoneDataTable({ capstones }) {
 function CaseStudyDataTable({ projects }) {
   const data = useMemo(() => projects.map(p => ({
     id:       p._id,
-    name:     p.studentName || p.authorName || '—',
-    email:    p.studentEmail || p.authorEmail || '—',
-    title:    p.title || '—',
+    name:     p.studentName || p.authorName || '',
+    email:    p.studentEmail || p.authorEmail || '',
+    title:    p.title || '',
     status:   p.status,
-    tags:     (p.tags ?? []).slice(0, 3).join(', ') || '—',
-    file:     p.fileName || '—',
+    tags:     (p.tags ?? []).slice(0, 3).join(', ') || '',
+    file:     p.fileName || '',
     fileUrl:  p.fileUrl || null,
-    feedback: p.adminFeedback || p.feedback || '—',
-    created:  p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '—',
+    feedback: p.adminFeedback || p.feedback || '',
+    created:  p.createdAt ? new Date(p.createdAt).toLocaleDateString() : '',
   })), [projects]);
 
   const columns = useMemo(() => [
@@ -567,7 +567,7 @@ export default function AnalyticsDashboard() {
   const [caseStudies, setCaseStudies]         = useState([]);
   const [subsLoading, setSubsLoading]         = useState(false);
 
-  // Export refs — one per exportable section
+  // Export refs  one per exportable section
   const refMostAccessed      = useRef(null);
   const refHighestCompletion = useRef(null);
   const refModuleProgress    = useRef(null);
@@ -613,7 +613,7 @@ export default function AnalyticsDashboard() {
       if (cs.status === 'fulfilled') setCertSummary(cs.value);
       setLastUpdated(new Date());
 
-      // ── DEBUG LOGS — open browser console (F12) to inspect ──────────────
+      // ── DEBUG LOGS  open browser console (F12) to inspect ──────────────
       // Raw DB counts to verify which collection has data
       analyticsService.getDebugCounts().then(dbg => {
         console.group('%c🔍 DB Raw Counts', 'color:#ef4444;font-weight:bold;font-size:14px');
@@ -834,7 +834,7 @@ export default function AnalyticsDashboard() {
           <KPICard icon={Activity}      label="Active (7d)"     value={num(engSummary.activeStudents)}         color="green"  />
           <KPICard icon={AlertTriangle} label="At Risk"         value={num(engSummary.atRiskStudents)}         color="amber"  />
           <KPICard icon={UserX}         label="Dormant"         value={num(engSummary.dormantStudents)}        color="red"    />
-          <KPICard icon={Award}         label="Completion Rate" value={ov?.enrollments?.completionRate ?? '—'} color="teal"   />
+          <KPICard icon={Award}         label="Completion Rate" value={ov?.enrollments?.completionRate ?? ''} color="teal"   />
           <KPICard icon={BookOpen}      label="Total Modules"   value={num(ov?.courses?.total)}                color="violet" />
         </div>
 
@@ -890,10 +890,10 @@ export default function AnalyticsDashboard() {
             {/* ═══════════════ OVERVIEW ═══════════════════════════════════════ */}
             <TabsContent value="overview" className="p-5 space-y-6">
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                {/* Enrollment trend — interactive area */}
+                {/* Enrollment trend  interactive area */}
                 <Card className="lg:col-span-2 border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Enrollment Trend — Last 6 Months</CardTitle>
+                    <CardTitle className="text-sm font-bold text-gray-900">Enrollment Trend  Last 6 Months</CardTitle>
                     <CardDescription className="text-xs">Enrollments, completions and active learners</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
@@ -1026,7 +1026,7 @@ export default function AnalyticsDashboard() {
             <TabsContent value="modules" className="p-5 space-y-6">
               <SectionHeader icon={BookOpen} title="Module Performance Analytics" description="Identify popular modules, difficult modules, and where students stop progressing" />
 
-              {/* Most accessed + highest completion — interactive bar */}
+              {/* Most accessed + highest completion  interactive bar */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
                 <Card ref={refMostAccessed} className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
@@ -1122,7 +1122,7 @@ export default function AnalyticsDashboard() {
                               <TableRow key={m.courseId ?? i} className="border-gray-50">
                                 <TableCell className="text-xs text-gray-400 font-medium">{i + 1}</TableCell>
                                 <TableCell className="text-xs font-medium text-gray-800 max-w-[260px]">
-                                  {m.courseName || '—'}
+                                  {m.courseName || ''}
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <div className="flex flex-col items-center gap-1">
@@ -1198,7 +1198,7 @@ export default function AnalyticsDashboard() {
                             </TableCell>
                             <TableCell className="text-xs text-center text-gray-600">{pct(m.avgProgress)}</TableCell>
                             <TableCell className="text-center">
-                              {m.totalRatings > 0 ? <StarRating rating={m.avgRating} /> : <span className="text-xs text-gray-400">—</span>}
+                              {m.totalRatings > 0 ? <StarRating rating={m.avgRating} /> : <span className="text-xs text-gray-400"></span>}
                             </TableCell>
                             <TableCell className="text-xs text-center">
                               {m.repeatCount > 0 ? <span className="text-amber-600 font-semibold">{m.repeatCount}</span> : <span className="text-gray-400">0</span>}
@@ -1217,7 +1217,7 @@ export default function AnalyticsDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-sm font-bold text-gray-900">Drop-Off Risk Modules</CardTitle>
-                      <CardDescription className="text-xs">High enrollments but low completion — students may be struggling</CardDescription>
+                      <CardDescription className="text-xs">High enrollments but low completion  students may be struggling</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
                       <Chip type="danger"><AlertTriangle className="w-3 h-3" /> Needs Attention</Chip>
@@ -1306,7 +1306,7 @@ export default function AnalyticsDashboard() {
               {radialData.length > 0 && (
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Students by Level — Radial View</CardTitle>
+                    <CardTitle className="text-sm font-bold text-gray-900">Students by Level  Radial View</CardTitle>
                     <CardDescription className="text-xs">How many students are enrolled in each difficulty level</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4 flex flex-col items-center">
@@ -1325,7 +1325,7 @@ export default function AnalyticsDashboard() {
             {/* ═══════════════ ACTIVITY ═══════════════════════════════════════ */}
             <TabsContent value="activity" className="p-5 space-y-6">
               <div className="flex items-start justify-between flex-wrap gap-3">
-                <SectionHeader icon={Clock} title="Learning Activity Analytics" description="When students are most active — peak hours, active days, and learning trends" />
+                <SectionHeader icon={Clock} title="Learning Activity Analytics" description="When students are most active  peak hours, active days, and learning trends" />
                 <div className="flex items-center gap-1.5 flex-wrap">
                   {['daily','weekly','monthly','quarterly','yearly'].map(p => (
                     <Button key={p} size="sm" variant={behaviorPeriod === p ? 'default' : 'outline'}
@@ -1336,15 +1336,15 @@ export default function AnalyticsDashboard() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <KPICard icon={Zap}      label="Peak Hour"         value={behaviorData?.peakHour ?? '—'}          color="amber"  />
-                <KPICard icon={Calendar} label="Peak Day"          value={behaviorData?.peakDay ?? '—'}           color="indigo" />
+                <KPICard icon={Zap}      label="Peak Hour"         value={behaviorData?.peakHour ?? ''}          color="amber"  />
+                <KPICard icon={Calendar} label="Peak Day"          value={behaviorData?.peakDay ?? ''}           color="indigo" />
                 <KPICard icon={Activity} label="Total Completions" value={num(behaviorData?.totalCompletions)}    color="green"  />
                 <KPICard icon={Users}    label="Active Students"   value={num(engSummary.activeStudents)}         color="sky"    />
               </div>
 
               <Card className="border-0 shadow-none bg-gray-50">
                 <CardHeader className="pb-2 pt-4 px-4">
-                  <CardTitle className="text-sm font-bold text-gray-900">Activity Heatmap — Peak Hours (24h)</CardTitle>
+                  <CardTitle className="text-sm font-bold text-gray-900">Activity Heatmap  Peak Hours (24h)</CardTitle>
                   <CardDescription className="text-xs">Darker = more completions</CardDescription>
                 </CardHeader>
                 <CardContent className="px-4 pb-4"><HourHeatmap data={peakHours} /></CardContent>
@@ -1640,7 +1640,7 @@ export default function AnalyticsDashboard() {
                           {topStudents.slice(0, 8).map((s, i) => (
                             <TableRow key={s.email ?? i} className="border-gray-50">
                               <TableCell className="text-xs text-gray-400 font-medium">{i + 1}</TableCell>
-                              <TableCell><div><p className="text-xs font-medium text-gray-800">{s.name || '—'}</p><p className="text-xs text-gray-400">{s.email}</p></div></TableCell>
+                              <TableCell><div><p className="text-xs font-medium text-gray-800">{s.name || ''}</p><p className="text-xs text-gray-400">{s.email}</p></div></TableCell>
                               <TableCell className="text-xs text-center">
                                 <div className="flex items-center gap-1.5 justify-center">
                                   <div className="w-12 h-1.5 bg-gray-200 rounded-full overflow-hidden"><div className="h-full rounded-full bg-indigo-500" style={{ width: `${Math.min(s.avgProgress, 100)}%` }} /></div>
@@ -1649,7 +1649,7 @@ export default function AnalyticsDashboard() {
                               </TableCell>
                               <TableCell className="text-xs text-center text-gray-600">{s.completedCourses}/{s.totalEnrollments}</TableCell>
                               <TableCell className="text-xs text-center"><span className="font-bold text-indigo-600">{fmt(s.engagementScore)}</span></TableCell>
-                              <TableCell className="text-xs text-gray-500">{s.lastActive ? new Date(s.lastActive).toLocaleDateString() : '—'}</TableCell>
+                              <TableCell className="text-xs text-gray-500">{s.lastActive ? new Date(s.lastActive).toLocaleDateString() : ''}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
@@ -1665,7 +1665,7 @@ export default function AnalyticsDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-sm font-bold text-gray-900">Students Needing Intervention</CardTitle>
-                      <CardDescription className="text-xs">Inactive or at-risk students — consider reaching out to re-engage</CardDescription>
+                      <CardDescription className="text-xs">Inactive or at-risk students  consider reaching out to re-engage</CardDescription>
                     </div>
                     <Chip type="danger"><AlertTriangle className="w-3 h-3" /> Action Required</Chip>
                   </div>
@@ -1688,8 +1688,8 @@ export default function AnalyticsDashboard() {
                         {atRiskStudents.map((s, i) => (
                           <TableRow key={s.email ?? i} className="border-gray-50">
                             <TableCell className="text-xs text-gray-400 font-medium">{i + 1}</TableCell>
-                            <TableCell><div><p className="text-xs font-medium text-gray-800">{s.name || '—'}</p><p className="text-xs text-gray-400">{s.email}</p></div></TableCell>
-                            <TableCell className="text-xs text-gray-600"><span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-gray-400" />{s.country || '—'}</span></TableCell>
+                            <TableCell><div><p className="text-xs font-medium text-gray-800">{s.name || ''}</p><p className="text-xs text-gray-400">{s.email}</p></div></TableCell>
+                            <TableCell className="text-xs text-gray-600"><span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-gray-400" />{s.country || ''}</span></TableCell>
                             <TableCell className="text-xs text-center"><span className="font-semibold text-amber-600">{pct(s.avgProgress)}</span></TableCell>
                             <TableCell className="text-xs text-center text-gray-600">{s.coursesAtRisk}</TableCell>
                             <TableCell className="text-xs text-center"><span className={`font-bold ${s.daysInactive >= 30 ? 'text-red-600' : s.daysInactive >= 14 ? 'text-amber-600' : 'text-orange-500'}`}>{s.daysInactive}d</span></TableCell>
@@ -1711,7 +1711,7 @@ export default function AnalyticsDashboard() {
             {/* ═══════════════ CERTIFICATES ════════════════════════════════════ */}
             <TabsContent value="certificates" className="p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <SectionHeader icon={ScrollText} title="Certificate Analytics" description="Beginner level achievement — export for your report" />
+                <SectionHeader icon={ScrollText} title="Certificate Analytics" description="Beginner level achievement  export for your report" />
                 <ExportBtn targetRef={refCertInfographic} filename="arin-beginner-certificate-report" />
               </div>
 
@@ -1734,7 +1734,7 @@ export default function AnalyticsDashboard() {
                 {/* ② Main body */}
                 <div className="grid grid-cols-5 gap-0">
 
-                  {/* Left — donut + big number */}
+                  {/* Left  donut + big number */}
                   <div className="col-span-2 flex flex-col items-center justify-center py-10 px-6 border-r border-gray-100">
                     <div className="relative">
                       <ResponsiveContainer width={180} height={180}>
@@ -1764,7 +1764,7 @@ export default function AnalyticsDashboard() {
                     <p className="text-xs text-gray-400 text-center mt-0.5">out of {certData.byLevel?.beginner?.total ?? 0} completions</p>
                   </div>
 
-                  {/* Right — stat grid + bars */}
+                  {/* Right  stat grid + bars */}
                   <div className="col-span-3 py-8 px-8 space-y-6">
 
                     {/* KPI row */}
@@ -1858,7 +1858,7 @@ export default function AnalyticsDashboard() {
 
             {/* ═══════════════ RATINGS ════════════════════════════════════════ */}
             <TabsContent value="ratings" className="p-5 space-y-6">
-              <SectionHeader icon={Star} title="Module Ratings & Feedback" description="Student satisfaction scores — only students who complete a module can rate it" />
+              <SectionHeader icon={Star} title="Module Ratings & Feedback" description="Student satisfaction scores  only students who complete a module can rate it" />
 
               {/* Summary banner */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1929,7 +1929,7 @@ export default function AnalyticsDashboard() {
                   {ratingsData.bottomRated?.length > 0 && (
                     <div>
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-bold text-gray-900">Lowest Rated — Needs Review</h3>
+                        <h3 className="text-sm font-bold text-gray-900">Lowest Rated  Needs Review</h3>
                         <Chip type="danger"><AlertTriangle className="w-3 h-3" /> Action</Chip>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1979,7 +1979,7 @@ export default function AnalyticsDashboard() {
               {gradingData.instructorLeaderboard?.length > 0 && (
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Instructor Leaderboard — Students Taught</CardTitle>
+                    <CardTitle className="text-sm font-bold text-gray-900">Instructor Leaderboard  Students Taught</CardTitle>
                     <CardDescription className="text-xs">Ranked by total students enrolled in their published modules</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
@@ -2032,7 +2032,7 @@ export default function AnalyticsDashboard() {
                                 {pct(inst.avgCompletionRate)}
                               </span>
                             </TableCell>
-                            <TableCell className="text-xs text-gray-500">{inst.lastLogin ? new Date(inst.lastLogin).toLocaleDateString() : '—'}</TableCell>
+                            <TableCell className="text-xs text-gray-500">{inst.lastLogin ? new Date(inst.lastLogin).toLocaleDateString() : ''}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -2050,7 +2050,7 @@ export default function AnalyticsDashboard() {
                 <div className="p-2.5 bg-indigo-50 rounded-xl mt-0.5"><Globe className="w-5 h-5 text-indigo-600" /></div>
                 <div>
                   <h3 className="text-lg font-bold text-gray-900">Demographic Analytics</h3>
-                  <p className="text-sm text-gray-500 mt-0.5">Understand who your students are — where they come from, gender balance, cohort spread, and growth trends</p>
+                  <p className="text-sm text-gray-500 mt-0.5">Understand who your students are  where they come from, gender balance, cohort spread, and growth trends</p>
                 </div>
               </div>
 
@@ -2063,9 +2063,9 @@ export default function AnalyticsDashboard() {
                 return (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <KPICard icon={Globe}     label="Countries Represented" value={num(countryDist.length)}                                                       color="indigo" />
-                    <KPICard icon={MapPin}    label="Top Country"           value={topCountry?.country || '—'} sub={topCountry ? `${num(topCountry.count)} students` : ''} color="teal" />
-                    <KPICard icon={Users}     label="Male Students"         value={male   ? `${pct((male.count   / totalStudents) * 100)}` : '—'} sub={male   ? `${num(male.count)} students`   : ''} color="sky"   />
-                    <KPICard icon={Users}     label="Female Students"       value={female ? `${pct((female.count / totalStudents) * 100)}` : '—'} sub={female ? `${num(female.count)} students` : ''} color="violet"/>
+                    <KPICard icon={MapPin}    label="Top Country"           value={topCountry?.country || ''} sub={topCountry ? `${num(topCountry.count)} students` : ''} color="teal" />
+                    <KPICard icon={Users}     label="Male Students"         value={male   ? `${pct((male.count   / totalStudents) * 100)}` : ''} sub={male   ? `${num(male.count)} students`   : ''} color="sky"   />
+                    <KPICard icon={Users}     label="Female Students"       value={female ? `${pct((female.count / totalStudents) * 100)}` : ''} sub={female ? `${num(female.count)} students` : ''} color="violet"/>
                   </div>
                 );
               })()}
@@ -2073,7 +2073,7 @@ export default function AnalyticsDashboard() {
               {/* ── Map + Top Countries side by side ── */}
               <div ref={refGeoSection} className="grid grid-cols-1 lg:grid-cols-5 gap-5">
 
-                {/* Map — wider (3/5) */}
+                {/* Map  wider (3/5) */}
                 <Card className="lg:col-span-3 border border-gray-100 shadow-sm">
                   <CardHeader className="pb-3 pt-4 px-5">
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -2131,7 +2131,7 @@ export default function AnalyticsDashboard() {
                           })}
                           {countryDist.length > 10 && (
                             <p className="text-xs text-gray-400 pt-3 border-t border-gray-100">
-                              +{countryDist.length - 10} more countries — see full table below
+                              +{countryDist.length - 10} more countries  see full table below
                             </p>
                           )}
                         </div>
@@ -2144,7 +2144,7 @@ export default function AnalyticsDashboard() {
               {/* ── Gender + Cohort side by side ── */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-                {/* Gender distribution — visual cards */}
+                {/* Gender distribution  visual cards */}
                 <Card ref={refGenderDist} className="border border-gray-100 shadow-sm">
                   <CardHeader className="pb-3 pt-4 px-5">
                     <div className="flex items-center justify-between">
@@ -2290,7 +2290,7 @@ export default function AnalyticsDashboard() {
                 <CardHeader className="pb-3 pt-4 px-5">
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-base font-bold text-gray-900">All Countries — Enrollment Breakdown</CardTitle>
+                      <CardTitle className="text-base font-bold text-gray-900">All Countries  Enrollment Breakdown</CardTitle>
                       <CardDescription className="text-xs mt-0.5">Search, sort and browse the full country list · click any column header to sort</CardDescription>
                     </div>
                     <div className="flex items-center gap-2">
@@ -2438,7 +2438,7 @@ export default function AnalyticsDashboard() {
                 {/* Daily activity trend */}
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Daily Activity — Last 30 Days</CardTitle>
+                    <CardTitle className="text-sm font-bold text-gray-900">Daily Activity  Last 30 Days</CardTitle>
                     <CardDescription className="text-xs">Learning sessions per day</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
@@ -2524,7 +2524,7 @@ export default function AnalyticsDashboard() {
                       <CardDescription className="text-xs">
                         {fellowRiskFilter === 'all'
                           ? `All ${fellowsData?.fellows?.length ?? 0} fellows`
-                          : `Filtered by: ${fellowRiskFilter} — ${(fellowsData?.fellows ?? []).filter(f => f.riskLevel === fellowRiskFilter).length} fellows`}
+                          : `Filtered by: ${fellowRiskFilter}  ${(fellowsData?.fellows ?? []).filter(f => f.riskLevel === fellowRiskFilter).length} fellows`}
                       </CardDescription>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-500">
@@ -2584,7 +2584,7 @@ export default function AnalyticsDashboard() {
                                     </div>
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-xs text-center text-gray-600">{f.fellowData?.cohort || '—'}</TableCell>
+                                <TableCell className="text-xs text-center text-gray-600">{f.fellowData?.cohort || ''}</TableCell>
                                 <TableCell className="text-xs text-center">
                                   <div className="flex items-center gap-1.5 justify-center">
                                     <div className="w-14 h-1.5 bg-gray-200 rounded-full overflow-hidden">
@@ -2603,10 +2603,10 @@ export default function AnalyticsDashboard() {
                                     <span className={`font-bold ${daysLeftNum <= 14 ? 'text-red-600' : daysLeftNum <= 30 ? 'text-amber-600' : 'text-gray-700'}`}>
                                       {daysLeftNum < 0 ? `${Math.abs(daysLeftNum)}d overdue` : `${daysLeftNum}d`}
                                     </span>
-                                  ) : <span className="text-gray-400">—</span>}
+                                  ) : <span className="text-gray-400"></span>}
                                 </TableCell>
                                 <TableCell className="text-xs text-gray-500 text-center">
-                                  {f.lastAccessedAt ? new Date(f.lastAccessedAt).toLocaleDateString() : '—'}
+                                  {f.lastAccessedAt ? new Date(f.lastAccessedAt).toLocaleDateString() : ''}
                                 </TableCell>
                                 <TableCell className="text-center">
                                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${rc.badge}`}>
@@ -2806,7 +2806,7 @@ export default function AnalyticsDashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Recent Stars — active last 7 days */}
+                {/* Recent Stars  active last 7 days */}
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
                     <div className="flex items-center justify-between">
@@ -2844,11 +2844,11 @@ export default function AnalyticsDashboard() {
                 </Card>
               </div>
 
-              {/* Full leaderboard bar chart — top 10 by completions */}
+              {/* Full leaderboard bar chart  top 10 by completions */}
               {topPerformers?.byCompletions?.length > 0 && (
                 <Card className="border-0 shadow-none bg-gray-50">
                   <CardHeader className="pb-2 pt-4 px-4">
-                    <CardTitle className="text-sm font-bold text-gray-900">Leaderboard — Modules Completed</CardTitle>
+                    <CardTitle className="text-sm font-bold text-gray-900">Leaderboard  Modules Completed</CardTitle>
                     <CardDescription className="text-xs">Top 10 students ranked by total module completions</CardDescription>
                   </CardHeader>
                   <CardContent className="px-2 pb-4">
@@ -2915,7 +2915,7 @@ export default function AnalyticsDashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="text-sm font-bold text-gray-900">Capstone Project Submissions</CardTitle>
-                      <CardDescription className="text-xs">All student capstone proposals and implementations — searchable and sortable</CardDescription>
+                      <CardDescription className="text-xs">All student capstone proposals and implementations  searchable and sortable</CardDescription>
                     </div>
                     <Chip type="info"><FileText className="w-3 h-3" /> {capstones.length} Total</Chip>
                   </div>

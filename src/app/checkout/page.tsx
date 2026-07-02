@@ -252,7 +252,7 @@ function CheckoutContent() {
                       ) : (
                         <>
                           <Smartphone className="w-4 h-4" />
-                          Pay Locally — ${price?.toLocaleString()}
+                          Pay Locally  ${price?.toLocaleString()}
                         </>
                       )}
                     </button>
@@ -285,7 +285,7 @@ function CheckoutContent() {
                       ) : (
                         <>
                           <CreditCard className="w-4 h-4" />
-                          Pay Internationally — ${price?.toLocaleString()}
+                          Pay Internationally  ${price?.toLocaleString()}
                         </>
                       )}
                     </button>

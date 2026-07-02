@@ -266,7 +266,7 @@ export default function AdminModulesPage() {
                                 </div>
                                 <div>
                                     <h2 className="text-sm font-bold text-gray-900">Instructors' Auto-saved Form Drafts</h2>
-                                    <p className="text-xs text-gray-500">In-progress module forms saved to DB — visible here even if the instructor never clicked "Save Draft"</p>
+                                    <p className="text-xs text-gray-500">In-progress module forms saved to DB  visible here even if the instructor never clicked "Save Draft"</p>
                                 </div>
                             </div>
                             <button onClick={fetchAllFormDrafts} className="p-2 hover:bg-amber-100 rounded-lg transition-colors" title="Refresh">
@@ -290,7 +290,7 @@ export default function AdminModulesPage() {
                                 {allFormDrafts.map((fd) => {
                                     const lastSaved = fd.lastSavedAt
                                         ? new Date(fd.lastSavedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                        : '—';
+                                        : '';
                                     const hasModule = !!fd.entityId;
                                     return (
                                         <div key={fd._id} className="px-6 py-4 flex items-center gap-4 hover:bg-gray-50">
@@ -305,7 +305,7 @@ export default function AdminModulesPage() {
                                                     {hasModule ? (
                                                         <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px] font-semibold">Module saved</span>
                                                     ) : (
-                                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-semibold">Form only — not yet a module</span>
+                                                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-semibold">Form only  not yet a module</span>
                                                     )}
                                                 </div>
                                                 <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-3 flex-wrap">
@@ -405,7 +405,7 @@ export default function AdminModulesPage() {
                     </div>
                 )}
 
-                {/* Filters, module list, modals — only shown in modules view */}
+                {/* Filters, module list, modals  only shown in modules view */}
                 {adminView === 'modules' && <>
 
                 {/* Filters & Search */}
@@ -601,7 +601,7 @@ export default function AdminModulesPage() {
                                                 </button>
                                             </div>
                                         )}
-                                        {/* Delete — always visible */}
+                                        {/* Delete  always visible */}
                                         <div className={`${['draft','submitted','approved','published'].includes(mod.status) ? 'mt-2' : 'mt-3 pt-3 border-t border-gray-100'}`}>
                                             <button
                                                 onClick={(e) => handleDelete(mod, e)}
@@ -673,7 +673,7 @@ export default function AdminModulesPage() {
                                                             <span className="text-xs text-gray-400">({mod.totalRatings})</span>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-xs text-gray-400">—</span>
+                                                        <span className="text-xs text-gray-400"></span>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-500">{formatDate(mod.createdAt)}</td>

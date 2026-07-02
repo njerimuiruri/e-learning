@@ -257,7 +257,7 @@ const adminService = {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Bulk Email API — routed through /api/bulk-messaging (not /api/admin)
+// Bulk Email API  routed through /api/bulk-messaging (not /api/admin)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const bulkEmailApi = axios.create({
@@ -332,6 +332,29 @@ export const bulkEmailService = {
     const { data } = await bulkEmailApi.post('/admin/bulk-email/upload', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
+    return data;
+  },
+};
+
+export const bankPaymentService = {
+  getAll: async (params?: { categoryId?: string; status?: string; search?: string; page?: number; limit?: number }) => {
+    const { data } = await api.get('/bank-payments', { params });
+    return data;
+  },
+  create: async (dto: any) => {
+    const { data } = await api.post('/bank-payments', dto);
+    return data;
+  },
+  createBulk: async (dto: { categoryId: string; records: any[]; sendEmail?: boolean }) => {
+    const { data } = await api.post('/bank-payments/bulk', dto);
+    return data;
+  },
+  update: async (id: string, dto: any) => {
+    const { data } = await api.put(`/bank-payments/${id}`, dto);
+    return data;
+  },
+  remove: async (id: string) => {
+    const { data } = await api.delete(`/bank-payments/${id}`);
     return data;
   },
 };

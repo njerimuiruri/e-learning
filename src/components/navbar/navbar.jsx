@@ -153,13 +153,13 @@ const Navbar = () => {
     };
     const handleContinueLearning = async () => {
         try {
-            console.log('[ContinueLearning] Navbar button clicked — fetching enrollments...');
+            console.log('[ContinueLearning] Navbar button clicked  fetching enrollments...');
             const enrollments = await moduleEnrollmentService.getMyEnrollments();
             const list = Array.isArray(enrollments) ? enrollments : enrollments?.enrollments || [];
 
             const inProgress = list.find(e => !e.isCompleted);
             if (!inProgress) {
-                console.log('[ContinueLearning] No in-progress module found — redirecting to modules list');
+                console.log('[ContinueLearning] No in-progress module found  redirecting to modules list');
                 router.push('/student/modules');
                 return;
             }
@@ -171,7 +171,7 @@ const Navbar = () => {
 
             // Fetch exact resume position from backend (lesson + slide).
             // currentLessonIndex can be null when the next lesson is locked or all
-            // lessons are done — in that case walk lessonStates to find the last
+            // lessons are done  in that case walk lessonStates to find the last
             // accessible/completed lesson rather than falling back to 0 (Lesson 1).
             const progress = await moduleEnrollmentService.getProgress(enrollmentId);
 

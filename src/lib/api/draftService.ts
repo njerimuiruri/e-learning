@@ -38,7 +38,7 @@ const draftService = {
     return data;
   },
 
-  /** Admin only — returns every user's drafts */
+  /** Admin only  returns every user's drafts */
   listAll: async () => {
     const { data } = await api.get('/admin/all');
     return data;

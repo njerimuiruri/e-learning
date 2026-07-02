@@ -72,7 +72,7 @@ function BulletList({ label, hint, values, onChange, placeholder }) {
           </div>
         ))}
         {safeValues.length === 0 && (
-          <p className="text-sm text-gray-400 italic pl-7">No items yet — click below to add one.</p>
+          <p className="text-sm text-gray-400 italic pl-7">No items yet  click below to add one.</p>
         )}
       </div>
       <Button type="button" variant="outline" size="sm" onClick={add} className="gap-1 ml-7">
@@ -294,7 +294,7 @@ export default function AdminModuleEditPage() {
       setFinalizing(true);
       await adminService.finalizeModuleContent(id);
       setIsContentFinalized(true);
-      toast.success('Content finalized — students have been notified.');
+      toast.success('Content finalized  students have been notified.');
     } catch (err) {
       toast.error('Failed to finalize content. Please try again.');
     } finally {
@@ -339,7 +339,7 @@ export default function AdminModuleEditPage() {
       console.log('moduleId:', id);
       cleanLessons.forEach((lesson) => {
         if (!lesson.assessmentQuiz?.length) return;
-        console.group(`📚 Lesson: "${lesson.title}" — ${lesson.assessmentQuiz.length} quiz questions`);
+        console.group(`📚 Lesson: "${lesson.title}"  ${lesson.assessmentQuiz.length} quiz questions`);
         lesson.assessmentQuiz.forEach((q, i) => {
           console.log(
             `Q${i + 1} | type="${q.type}" | answer="${q.answer}" | options:`,
@@ -350,7 +350,7 @@ export default function AdminModuleEditPage() {
       });
       console.groupEnd();
 
-      // Send everything in a single updateModule call — lessons are included in UpdateModuleDto
+      // Send everything in a single updateModule call  lessons are included in UpdateModuleDto
       const { lessons: _lessons, ...metaPayload } = form;
       await adminService.updateModule(id, {
         ...metaPayload,
@@ -416,7 +416,7 @@ export default function AdminModuleEditPage() {
 
             {/* Intro Video */}
             <section className="space-y-4">
-              <SectionHeading number={2} title="Module Intro Video" subtitle="Optional — shown to students before they start the first lesson" />
+              <SectionHeading number={2} title="Module Intro Video" subtitle="Optional  shown to students before they start the first lesson" />
               <VideoUploader value={form.introVideoUrl} onChange={(v) => updateForm('introVideoUrl', v)} />
             </section>
 
@@ -508,7 +508,7 @@ export default function AdminModuleEditPage() {
 
             {/* Capstone */}
             <section className="space-y-4">
-              <SectionHeading number={4} title="Capstone Project" subtitle="Optional — describe the final project learners will complete." />
+              <SectionHeading number={4} title="Capstone Project" subtitle="Optional  describe the final project learners will complete." />
               <RichTextEditor
                 value={form.capstone}
                 onChange={(v) => updateForm('capstone', v)}
@@ -636,8 +636,8 @@ export default function AdminModuleEditPage() {
               {[
                 {
                   label: 'Module',
-                  value: form.title || '—',
-                  sub: `${form.level || '—'} · ${form.duration || '—'}`,
+                  value: form.title || '',
+                  sub: `${form.level || ''} · ${form.duration || ''}`,
                   Icon: Icons.BookMarked,
                   color: 'blue',
                 },
@@ -764,7 +764,7 @@ export default function AdminModuleEditPage() {
                 )}
               </div>
               <p className="text-sm text-gray-500">
-                Step {step + 1} of {STEPS.length} —{' '}
+                Step {step + 1} of {STEPS.length} {' '}
                 <span className="font-medium text-gray-700">{STEPS[step].label}</span>
               </p>
             </div>

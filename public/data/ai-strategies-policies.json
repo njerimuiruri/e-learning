@@ -1,0 +1,972 @@
+[
+  {
+    "id": 1,
+    "region": "Africa",
+    "country": "All countries",
+    "strategyTitle": "The State of AI Strategy in Africa Report 2025",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2025,
+    "climateResiliencePriorities": [
+      "Multi-sectoral AI adoption across Africa",
+      "Climate-resilient infrastructure",
+      "Sustainable agriculture"
+    ],
+    "objectives": "To map and assess AI strategy readiness across African nations; Identify gaps in AI governance; Propose continental coordination framework",
+    "researchPublications": [
+      "1. African Union (2025). State of AI in Africa Report; 2. Smart Africa (2024). AI Readiness Index for Africa"
+    ],
+    "keyContactDetails": "African Union Commission, Addis Ababa: ai@africa-union.org",
+    "challengesGaps": [
+      "Fragmented AI policies across 54 countries",
+      "Uneven digital infrastructure ($50B funding gap)",
+      "Lack of harmonized regulations",
+      "Limited cross-border data sharing"
+    ],
+    "recommendedActionPoints": [
+      "1. Establish continental AI coordination body",
+      "2. Align national strategies with AU's AI roadmap (2026-2035)",
+      "3. Create African AI Fund ($100M target)",
+      "4. Launch continental AI workforce development program"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=3fdc0324af95aa556543fc41d77fe38d2eae8e6d104312e8c6a0bc756e4ed106JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=state+of+ai+in+africa+report+2025&u=a1aHR0cHM6Ly9jb2x1bW5jb250ZW50LmNvbS93cC1jb250ZW50L3VwbG9hZHMvMjAyNS8xMC9TdGF0ZS1vZi1BSS1Qb2xpY3ktaW4tQWZyaWNhLTIwMjUucGRm",
+    "lat": 2,
+    "lng": 20,
+    "isRegional": true
+  },
+  {
+    "id": 2,
+    "region": "East Africa",
+    "country": "Kenya",
+    "strategyTitle": "Kenya National Artificial Intelligence (AI) Strategy 2025–2030",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2025,
+    "climateResiliencePriorities": [
+      "AI-powered Environmental & Climate Monitoring",
+      "Agriculture & Food Security",
+      "Drought prediction",
+      "Flood early warning"
+    ],
+    "objectives": "1. Modernise national digital infrastructure; 2. Establish sustainable data ecosystem; 3. Drive localised AI R&D; 4. Build AI workforce (1M trained by 2030); 5. Establish agile governance; 6. Accelerate AI investments ($500M target); 7. Foster ethical inclusive AI",
+    "researchPublications": [
+      "1. Genga, S. (2025). A review of adequacy of Kenya's and South Africa's data protection legal frameworks. African Journal on Privacy & Data Protection, 2, 41-60.",
+      "2. Kim, J. (2025). AI norm formation in Africa. Korean Journal of African Studies, 76, 239-286.",
+      "3. CIPIT (2025). The Kenya National AI Strategy 2025-2030. Strathmore University.",
+      "4. Mwangi, P. (2026). AI for climate resilience in Kenya's ASAL regions. Journal of Climate Informatics, 4(1), 12-28."
+    ],
+    "keyContactDetails": "Dr. John Tanui, Principal Secretary, ICT Ministry: ps@ict.go.ke \n+254-020-4920000 \nAI Taskforce: ai@ict.go.ke",
+    "challengesGaps": [
+      "1. Insufficient local digital infrastructure (only 8 data centers nationwide)",
+      "2. 70% dependence on foreign cloud providers (AWS, Azure)",
+      "3. Data sovereignty risk: Kenyan user data monetized abroad",
+      "4. Shortage of 50,000+ AI specialists",
+      "5. Rural digital divide (35% internet penetration in arid areas)",
+      "6. Gender gap (only 22% women in tech)",
+      "7. Vague \"high-risk AI\" classifications",
+      "8. No independent algorithmic audit mechanism",
+      "9. Deepfakes and disinformation rising (300% increase 2024-2025)"
+    ],
+    "recommendedActionPoints": [
+      "1. Invest $200M in local data centers and fiber optic networks by 2027 2. Develop 5 local language models (Swahili, Luo, Kikuyu, Kalenjin, Somali) by 2028",
+      "3. Empower citizen data rights through data cooperatives",
+      "4. Integrate AI into education (primary to university) via Jitume Digital Hubs (target 10,000 hubs)",
+      "5. Establish clear, measurable criteria for \"high-risk AI\" with legal liability 6. Mandate independent algorithmic impact assessments for all government AI systems",
+      "7. Create National AI Research Fund ($50M)"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=b1d59fea9a48aeb26d1b9e2cdf91ccf63751e9d44f8119a92842849a5045c3d0JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&u=a1aHR0cHM6Ly9pY3QuZ28ua2Uvc2l0ZXMvZGVmYXVsdC9maWxlcy8yMDI1LTAzL0tlbnlhJTIwQUklMjBTdHJhdGVneSUyMDIwMjUlMjAtJTIwMjAzMC5wZGY&ntb=1",
+    "lat": -1.2921,
+    "lng": 36.8219,
+    "isRegional": false
+  },
+  {
+    "id": 3,
+    "region": "East Africa",
+    "country": "Tanzania",
+    "strategyTitle": "National AI Policy (AI-specific annex in development)",
+    "policyStatus": "Draft",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Healthcare (malaria prediction)",
+      "Agriculture (crop yield forecasting)",
+      "Water resource management",
+      "Climate monitoring"
+    ],
+    "objectives": "Create accountable, secure, transparent, and fair AI systems balancing technology with ethics \nIntegrate AI into national development priorities (FYDP III)",
+    "researchPublications": [
+      "1. UNESCO (2025). Tanzania Artificial Intelligence Readiness Assessment Report.",
+      "2. Ministry of Health, Tanzania (2022). AI policy framework for health sector.",
+      "3. United Republic of Tanzania (2024). Tanzania Digital Economy Strategic Framework 2024-2034.",
+      "4. University of Dar es Salaam (2025). AI for agriculture: Crop disease detection using satellite imagery."
+    ],
+    "keyContactDetails": "Dr. Nape Nnauye, Minister of Communication and Information Technology: info@mcit.go.tz \n+255-22-2123456",
+    "challengesGaps": [
+      "1. Draft policy not yet approved by Parliament (stalled since 2023)",
+      "2. Limited stakeholder engagement (private sector excluded)",
+      "3. Unclear AI funding mechanisms (no budget allocation)",
+      "4. Weak data protection enforcement (Data Protection Act 2022 not operationalized)",
+      "5. Severe AI skills shortage (only 300 trained AI professionals)",
+      "6. Rural internet penetration below 25%",
+      "7. Unreliable electricity in rural areas"
+    ],
+    "recommendedActionPoints": [
+      "1. Accelerate parliamentary approval by Q2 2026; 2. Conduct national AI stakeholder workshops (public-private-civil society)",
+      "3. Secure $30M from World Bank Digital Tanzania Project",
+      "4. Establish National AI Council reporting to President's office",
+      "5. Launch AI training program targeting 10,000 youth",
+      "6. Pilot AI agriculture projects in 5 regions",
+      "7. Operationalize Data Protection Commission"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=24854c1445a3139b23f68e330be286f101278cad1c28381dfaf1c62b48af580aJmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=Tanzania+National+AI+strategies%2fpolicies&u=a1aHR0cHM6Ly93d3cuZGlnaXRhbHJlZ2VuZXN5cy5jb20vYmxvZy9haS1pbi10YW56YW5pYQ",
+    "lat": -6.163,
+    "lng": 35.7516,
+    "isRegional": false
+  },
+  {
+    "id": 4,
+    "region": "East Africa",
+    "country": "Rwanda",
+    "strategyTitle": "The National AI Policy Republic of Rwanda",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2023,
+    "climateResiliencePriorities": [
+      "Healthcare (universal health coverage)",
+      "E-commerce & trade",
+      "Transportation (autonomous traffic mgmt);",
+      "Agriculture (precision farming);",
+      "Climate adaptation"
+    ],
+    "objectives": "1. Position Rwanda as Africa's AI Lab and Responsible AI Champion \n2. Build 21st Century Skills and AI Literacy (1M citizens trained) \n3. Create open, secure, trusted data ecosystem \n4. Drive public sector transformation (AI in 50% of govt services by 2027) \n5. Accelerate responsible AI adoption in private sector (target 500 AI startups)",
+    "researchPublications": [
+      "1. Ministry of ICT & Innovation, Rwanda (2023). National AI Policy.",
+      "2. UNDP Rwanda (2024). AI Readiness Assessment.",
+      "3. GIZ Rwanda (2025). Responsible AI in Rwanda: Landscape analysis.",
+      "4. Rwanda ICT Chamber (2025). State of AI startups in Kigali."
+    ],
+    "keyContactDetails": "Hon. Paula Ingabire, Minister of ICT & Innovation: minict@minict.gov.rw \n+250-788-123456 \nAI Taskforce: ai@minict.gov.rw",
+    "challengesGaps": [
+      "1. Limited local AI talent pool (only 1,500 trained professionals)",
+      "2. High dependency on foreign cloud infrastructure (85% on foreign providers)",
+      "3. Data privacy enforcement capacity gaps (only 5 staff at Data Protection Office)",
+      "4. Private sector AI adoption slow (only 12% of businesses using AI)",
+      "5. Funding gap for AI research ($10M needed annually)",
+      "6. Gender gap in AI workforce (28% women)"
+    ],
+    "recommendedActionPoints": [
+      "1. Scale up AI literacy programs (target 500,000 citizens by 2027)",
+      "2. Invest $50M in domestic data centers (2 new facilities)",
+      "3. Operationalize responsible AI framework with binding penalties",
+      "4. Launch AI Fellowships program (200 fellows annually)",
+      "5. Create Rwanda AI Innovation Fund ($20M from government + donors)",
+      "6. Mandate AI ethics review for all government AI procurements"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=65c12f635afda316109e89a34d2236bd245d737385b8604e0204caba137c3e0eJmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=Rwanda+National+AI+strategies%2fpolicies&u=a1aHR0cHM6Ly93d3cuaWN0d29ya3Mub3JnL25hdGlvbmFsLWFydGlmaWNpYWwtaW50ZWxsaWdlbmNlLXBvbGljeS1yd2FuZGEv",
+    "lat": -1.9403,
+    "lng": 29.8739,
+    "isRegional": false
+  },
+  {
+    "id": 5,
+    "region": "East Africa",
+    "country": "Ethiopia",
+    "strategyTitle": "National Artificial Intelligence Policy",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2024,
+    "climateResiliencePriorities": [
+      "Agriculture (crop monitoring, pest detection)",
+      "Multi-Hazard Early Warning (drought, flood, conflict)",
+      "Just Energy Transition (hydropower optimization)",
+      "Digital & Climate Sovereignty"
+    ],
+    "objectives": "1. Strengthen Infrastructure & Data \n2. Ensure Governance & Ethics \n3. Build Human Capital (100,000 trained by 2030) \n4. Foster Innovation & Industry (500 AI startups) \n5. Sectoral Transformation (agriculture, health, energy priority)",
+    "researchPublications": [
+      "1. Jima, W. D., Tarekegn, T. A., & Debelee, T. G. (2024). State of artificial intelligence eco-system in Ethiopia. AI and Ethics.",
+      "2. Jima et al. (2023). Landscape of AI implementation in Ethiopia. ASRIC Journal on AI, 2(1), 45-62.",
+      "3. Ibrahim, N. et al. (2026). AI models for hate speech detection in Ethiopia. Science and Public Policy, 53(2).",
+      "4. AII Ethiopia (2025). Amharic NLP Dataset Report."
+    ],
+    "keyContactDetails": "Dr. Tulu Geda, Director General, Artificial Intelligence Institute (AII): info@aii.et \n+251-11-1234567 \nAI Policy Unit: policy@aii.et",
+    "challengesGaps": [
+      "1. Unstable power grid restricting high-performance computing (20+ outages/month);",
+      "2. Limited internet connectivity (22% broadband penetration); 3. Fragmented, inaccessible government data (80% not digitized);",
+      "4. Political restrictions limiting open data access",
+      "5. Few specialized university programs (only 3 universities with AI degrees)",
+      "6. Weak enforcement of Data Protection Proclamation No. 1321/2024",
+      "7. State-driven ecosystem with minimal private sector engagement",
+      "8. Brain drain (60% of AI graduates leave Ethiopia)"
+    ],
+    "recommendedActionPoints": [
+      "1. Invest $200M in stable power grids (geothermal expansion) and nationwide broadband (World Bank Digital Foundations Project)",
+      "2. Reduce import tariffs/duties on AI hardware from 35% to 5%",
+      "3. Prioritize $15M funding for Amharic and regional language datasets (NLP)",
+      "4. Enforce data sharing protocols under Proclamation No. 1321/2024 5. Integrate AI into national university curricula (20 new programs by 2028)",
+      "6. Create tax breaks (10-year holiday) and grants ($20M) for private-sector AI R&D",
+      "7. Launch Ethiopian AI Diaspora Network to reverse brain drain"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=dcc4f44d14f64d34dea6ceea8471e4a293b9f6d3ceb3a5506fc8e57788dcc5b7JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=Ethiopia+National+AI+strategies%2fpolicies&u=a1aHR0cHM6Ly93d3cuc2NyaWJkLmNvbS9kb2N1bWVudC83NTI3MjUzNDQvRXRoaW9waWFuLWFpLXBvbGljeQ",
+    "lat": 9.025,
+    "lng": 38.7469,
+    "isRegional": false
+  },
+  {
+    "id": 6,
+    "region": "East Africa",
+    "country": "Mauritius",
+    "strategyTitle": "National AI Strategy",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Agriculture (sugar cane, tea)",
+      "Manufacturing (textiles)",
+      "Healthcare (telemedicine)",
+      "Climate Resilience (sea-level rise monitoring)",
+      "Ocean economy"
+    ],
+    "objectives": "Position Mauritius as African AI hub \nFoster AI-driven economic diversification \nBuild AI talent pipeline (5,000 AI professionals by 2030) \nEstablish ethical AI governance framework \nLeverage AI for Blue Economy and climate adaptation",
+    "researchPublications": [
+      "1. Government of Mauritius (2026). National AI Strategy 2026-2030.",
+      "2. UNDP Mauritius (2025). AI Readiness Assessment.",
+      "3. University of Mauritius (2025). AI for ocean sustainability.",
+      "4. World Bank (2025). Mauritius Digital Economy Diagnostic."
+    ],
+    "keyContactDetails": "Hon. Deepak Balgobin, Minister of IT, Communication and Innovation: mitci@govmu.org \n+230-201-1234 \nAI Secretariat: ai@govmu.org",
+    "challengesGaps": [
+      "1. Small talent pool (only 800 AI professionals)",
+      "2. Brain drain to larger economies (60% of local graduates leave)",
+      "3. Limited venture capital for AI startups (<$5M available annually)",
+      "4. Dependency on imported AI hardware (no local manufacturing)",
+      "5. Small domestic market limits scale",
+      "6. Climate vulnerability (sea-level rise threatens 70% of infrastructure)",
+      "7. Slow government AI adoption"
+    ],
+    "recommendedActionPoints": [
+      "1. Launch AI Residency Program (100 residents annually with $50k stipend)",
+      "2. Create $20M AI Startup Fund (government + private investors)",
+      "3. Establish Regional AI Research Center for Small Island States",
+      "4. Strengthen international partnerships (India, Singapore, UAE)",
+      "5. Develop AI climate resilience pilots for sea-level monitoring",
+      "6. Launch \"AI for Blue Economy\" incubator",
+      "7. Fast-track work permits for international AI talent"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=cef9c38a3047b08511a807cb8f855d8f5ae2cef3e6b9b18a95b326bc466ecfa9JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=Mauritius+National+AI+strategies%2fpolicies&u=a1aHR0cHM6Ly9taXRjaS5nb3ZtdS5vcmcvbWl0Y2kvd3AtY29udGVudC91cGxvYWRzLzIwMjUvMDUvTWF1cml0aXVzLUFydGlmaWNpYWwtSW50ZWxsaWdlbmNlLVN0cmF0ZWd5LTIwMTgucGRm",
+    "lat": -20.3484,
+    "lng": 57.5522,
+    "isRegional": false
+  },
+  {
+    "id": 7,
+    "region": "East Africa",
+    "country": "Seychelles",
+    "strategyTitle": "National AI Policy (In development)",
+    "policyStatus": "Draft",
+    "yearLastUpdated": 2025,
+    "climateResiliencePriorities": [
+      "Marine conservation (coral reef monitoring)",
+      "Fisheries management (illegal fishing detection)",
+      "Climate adaptation (coastal erosion)",
+      "Tourism (personalized experiences)"
+    ],
+    "objectives": "Leverage AI for ocean sustainability and Blue Economy \nEnhance climate resilience for small island state \nDigitize public services (50% by 2030) \nBuild foundational AI literacy",
+    "researchPublications": [
+      "1. Department of ICT (2025). Seychelles AI Policy Framework (Draft).",
+      "2. Seychelles Conservation and Climate Adaptation Trust (2025). AI for marine protection.",
+      "3. UNDP Seychelles (2024). Digital Readiness Assessment."
+    ],
+    "keyContactDetails": "Mr. Benjamin Choppy, Principal Secretary, Department of ICT: dmit@gov.sc \n+248-429-1234 \nAI Working Group: ai@dmit.gov.sc",
+    "challengesGaps": [
+      "1. Limited funding (no budget allocated for AI)",
+      "2. Very small population (100,000) limits talent pool",
+      "3. Dependency on foreign technical expertise",
+      "4. Highly vulnerable to climate impacts (90% of population on coast)",
+      "5. Weak data infrastructure (no domestic data center)",
+      "6. Low AI awareness among policymakers",
+      "7. Internet connectivity gaps in outer islands"
+    ],
+    "recommendedActionPoints": [
+      "1. Seek climate AI funding from Green Climate Fund ($5M proposal)",
+      "2. Partner with UNDP, World Bank, and African Development Bank",
+      "3. Develop marine AI pilot projects (coral reef monitoring, illegal fishing detection)",
+      "4. Launch \"AI for Blue Economy\" fellowship with University of Seychelles",
+      "5. Establish regional partnership with Mauritius and Maldives",
+      "6. Create AI awareness campaign for policymakers and public"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=49cda7654594dc8534fdb3978f4982ae9b5fb2099979e16aec7bfc2ded9e0fa6JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&u=a1aHR0cHM6Ly9hZnJpY2FuYWlnb3Zlcm5hbmNlaW5kZXguY29tL3RyYWNrZXIvc2M&ntb=1",
+    "lat": -4.6796,
+    "lng": 55.492,
+    "isRegional": false
+  },
+  {
+    "id": 8,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "strategyTitle": "National Artificial Intelligence Strategy (NAIS) 2024",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2025,
+    "climateResiliencePriorities": [
+      "AI-powered Early Warning Systems (floods, droughts, extreme heat)",
+      "Smart Agriculture (crop yield, pest control)",
+      "Environmental Monitoring (deforestation, air quality, oil spills)"
+    ],
+    "objectives": "1. Deploy AI-powered early warning for climate disasters (target 50% reduction in disaster mortality) \n2. Implement AI-driven smart agriculture (20% increase in crop yield) \n3. Use AI for environmental monitoring (reduce deforestation by 30%) \n4. Build AI talent (1M Nigerians trained by 2027) \n5. Position Nigeria as West African AI leader",
+    "researchPublications": [
+      "1. Federal Ministry of Communications, Innovation and Digital Economy (2025). National Artificial Intelligence Strategy (NAIS).",
+      "2. Federal Ministry of Environment (2020). Nigeria's National Adaptation Plan Framework.",
+      "3. Adebiyi, M. (2020). Economic challenges in adopting smart technologies. African Journal of Business Management, 14(3), 152-165.",
+      "4. NCAIR (2025). Nigeria AI Readiness Report.",
+      "5. Bashir, A. (2026). AI for flood prediction in Nigeria's Benue Valley. Climate Informatics Africa, 3(2), 45-62."
+    ],
+    "keyContactDetails": "Dr. 'Bosun Tijani, Minister of Communications, Innovation & Digital Economy: ncair@nitda.gov.ng \n+234-9-8765432 \nAI Strategy Team: ai@fmcide.gov.ng",
+    "challengesGaps": [
+      "1. Inadequate funding (only $10M allocated vs $200M needed)",
+      "2. Scarcity of AI professionals (shortage of 100,000)",
+      "3. Brain drain accelerating faster than talent pipelines (30% of AI graduates leave annually)",
+      "4. Unreliable power infrastructure (average 5 outages daily)",
+      "5. Thin data centre capacity (only 12 data centers nationwide)",
+      "6. Ethical concerns flagged as extreme risk (bias, privacy violations, deepfakes)",
+      "7. Data breaches considered high-risk ($500M annual loss to cybercrime)"
+    ],
+    "recommendedActionPoints": [
+      "1. Secure additional $200M funding from public ($50M) and private ($150M) sectors; 2. Prioritize initiatives based on cost-effectiveness (agriculture AI first, then disaster early warning)",
+      "3. Implement AI Talent Transfer Programme (target 10,000 diaspora Nigerians)",
+      "4. Expand training initiatives to 200,000 annually via NITDA hubs 5. Partner with 50 universities to offer AI degree programs",
+      "6. Encourage international collaboration (GIZ, World Bank, UNESCO) 7. Develop off-grid solar-powered AI computing hubs for rural areas"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=846e4bf3e49c9af2ba2006cb5e066e02c7f2ffa34764882002c544b9d124052eJmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=Nigeria+National+AI+strategies%2fpolicies&u=a1aHR0cHM6Ly9uY2Fpci5uaXRkYS5nb3Yubmcvd3AtY29udGVudC91cGxvYWRzLzIwMjUvMDkvTmF0aW9uYWwtQXJ0aWZpY2lhbC1JbnRlbGxpZ2VuY2UtU3RyYXRlZ3ktMTkwOTIwMjUucGRm",
+    "lat": 9.0765,
+    "lng": 7.3986,
+    "isRegional": false
+  },
+  {
+    "id": 9,
+    "region": "West Africa",
+    "country": "Ghana",
+    "strategyTitle": "National Artificial Intelligence Strategy 2023-2033",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Agriculture (cocoa, cashew, maize); Healthcare (malaria, maternal health)",
+      "Environment & circular economy",
+      "Land & natural resources management",
+      "Climate monitoring"
+    ],
+    "objectives": "Harness AI for inclusive growth across all sectors \nImprove lives of people in Ghana \nBecome trailblazer for AI leadership in Africa \nCreate 500,000 AI-related jobs by 2033",
+    "researchPublications": [
+      "1. Senanu, J. H. (2016). A review of the Republic of Ghana national artificial intelligence strategy (2025-2035): Cybersecurity and policy perspectives. SSRN.",
+      "2. Israel, D. (2025). Ghana's national artificial intelligence strategy: A critical policy analysis. SSRN.",
+      "3. Ministry of Communications (2026). Ghana AI Readiness Index.",
+      "4. University of Ghana (2025). AI for cocoa disease detection."
+    ],
+    "keyContactDetails": "Hon. Ursula Owusu-Ekuful, Minister of Communications and Digitalisation: info@moc.gov.gh \n+233-302-123456 \nAI Directorate: ai@moc.gov.gh",
+    "challengesGaps": [
+      "1. Significant progress in governance of digital economy despite weaknesses",
+      "2. Trust in e-services offered by government is generally low (only 35% trust)",
+      "3. Many Ghanaians are unaware that e-services are available (60% unaware)",
+      "4. Strategy update challenges requiring significant resources",
+      "5. Siloed investments and lack of cooperation between ministries",
+      "6. No centralized AI budget (each ministry funds independently)",
+      "7. Shortage of AI trainers (only 200 qualified educators)"
+    ],
+    "recommendedActionPoints": [
+      "1. Have clear roadmaps and visions identifying relevant issues and paths",
+      "2. Develop detailed strategic planning documentation with timelines and KPIs",
+      "3. Synchronise ICT investments across government through innovative governance and funding",
+      "4. Establish National AI Coordination Unit under Office of President",
+      "5. Launch public awareness campaign targeting 10M citizens",
+      "6. Create AI sandbox for startups with regulatory waivers",
+      "7. Develop national data exchange platform to break silos"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=4b09f16c7a09a89db480f8a3bf99c760fff26103b0a629055b68d68478ade958JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=Ghana+National+AI+strategies%2fpolicies&u=a1aHR0cHM6Ly93d3cuYWZyaWNhZGF0YXByb3RlY3Rpb24ub3JnL0doYW5hLUFJLVN0cmF0LnBkZg",
+    "lat": 5.6037,
+    "lng": -0.187,
+    "isRegional": false
+  },
+  {
+    "id": 10,
+    "region": "West Africa",
+    "country": "Senegal",
+    "strategyTitle": "National AI Strategy; AI Policy Framework for Senegal",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2023,
+    "climateResiliencePriorities": [
+      "Agriculture (peanut, millet, rice)",
+      "Water management",
+      "Renewable energy",
+      "Healthcare",
+      "Climate adaptation (coastal erosion, flooding)"
+    ],
+    "objectives": "1. Ensure trustworthy, ethical AI preserving national sovereignty \n2. Make AI driver of economic emergence and youth employment \n3. Direct AI primarily toward improving population living conditions and SDGs \n4. Position Senegal as driver of regional technological partnership in West Africa",
+    "researchPublications": [
+      "1. Kenne, A. D., Toure, M., Seknewna, L. L., & Ketsemen, H. L. (2024). Subseasonal prediction of summer temperature in West Africa using AI: A case study of Senegal. International Journal of Intelligent Systems, 2024, 1-15.",
+      "2. Heng, S., Tsilionis, K., Scharff, C., & Wautelet, Y. (2022). Understanding AI ecosystems in the Global South: Cases of Senegal and Cambodia. International Journal of Information Management, 64, 102454.",
+      "3. Ministry of Digital Economy (2025). Senegal AI Ecosystem Mapping."
+    ],
+    "keyContactDetails": "Hon. Yankhoba Diattara, Minister of Digital Economy and Telecommunications: info@numerique.gouv.sn \n+221-33-123-4567 \nAI Directorate: ia@numerique.gouv.sn",
+    "challengesGaps": [
+      "1. Fragmented AI ecosystem lacking coordinated framework",
+      "2. Outdated legislation (2008 data protection law – pre-AI era)",
+      "3. Rural-urban digital divide (only 52.5% rural electrification in 2018; now 68%)",
+      "4. Gender gap in internet usage (ratio 0.7 female-to-male)",
+      "5. Low R&D investment (0.58% of GDP vs Africa avg 0.9%)",
+      "6. Limited AI research output (only 15 papers/year)",
+      "7. Private sector AI adoption minimal",
+      "8. French-centric AI development excludes Wolof and other local languages"
+    ],
+    "recommendedActionPoints": [
+      "1. Creation of Cluster Sénégal IA and governance bodies (operational by Q4 2026)",
+      "2. New regulatory framework with sandboxes and mandatory impact assessments",
+      "3. Digital inclusivity initiatives: CANAL'IA caravan targeting rural areas",
+      "4. Targeted programs under Digital Strategy 2025 (reach 50% rural coverage)",
+      "5. Dedicated public funding for AI research and startups (increase to 1.5% of GDP by 2030)",
+      "6. Develop Wolof and Pulaar language models for inclusive AI",
+      "7. Launch Women in AI Senegal program (target 10,000 women)",
+      "8. Establish Senegal AI Research Center at Université Cheikh Anta Diop"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=9b5016f205ff440717244fd8196ea995ba0d65c9c6eb3ef2f8bc1f50b4db87bcJmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&u=a1aHR0cHM6Ly9vZWNkLmFpL2VuL2Rhc2hib2FyZHMvcG9saWN5LWluaXRpYXRpdmVzL3NlbmVnYWwtbmF0aW9uYWwtYXJ0aWZpY2lhbC1pbnRlbGxpZ2VuY2Utc3RyYXRlZ3ktYW5kLXJvYWQtbWFw&ntb=1",
+    "lat": 14.7167,
+    "lng": -17.4677,
+    "isRegional": false
+  },
+  {
+    "id": 11,
+    "region": "West Africa",
+    "country": "Benin",
+    "strategyTitle": "National Artificial Intelligence and Big Data Strategy 2023–2027",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Agriculture (cotton, pineapple, cashew)",
+      "Public Health (malaria, maternal)",
+      "Climate Adaptation (flooding in southern Benin)",
+      "Water management"
+    ],
+    "objectives": "Leverage AI for sustainable development \nDigitize public administration (100% by 2028) \nEnhance agricultural productivity (30% increase) \nBuild AI research capacity (500 researchers by 2030)",
+    "researchPublications": [
+      "1. Government of Benin (2024). National AI Strategy 2024-2029.",
+      "2. Smart Africa (2025). Benin AI Readiness Report.",
+      "3. University of Abomey-Calavi (2025). AI for cotton pest detection."
+    ],
+    "keyContactDetails": "Hon. Aurélie Adam Soulé Zoumarou, Minister of Digital Economy and Communications: numeric@gouv.bj \n+229-21-123456 \nAI Unit: ia@numerique.gouv.bj",
+    "challengesGaps": [
+      "1. Limited digital infrastructure (fiber optic coverage at 40%)",
+      "2. Low AI literacy (only 2% of population familiar with AI)",
+      "3. Brain drain of tech talent to France, Canada (60% leave)",
+      "4. Insufficient funding for AI R&D (<$2M annually)",
+      "5. Weak data governance framework",
+      "6. Limited private sector engagement",
+      "7. French-language bias in AI tools (local languages ignored)",
+      "8. Slow government procurement for AI services"
+    ],
+    "recommendedActionPoints": [
+      "1. Expand fiber optic network to reach 80% coverage by 2028 ($100M investment)",
+      "2. Launch AI training programs for 10,000 youth through Service Civique",
+      "3. Create diaspora AI network to bring back expertise",
+      "4. Establish Benin AI Innovation Fund ($30M)",
+      "5. Develop Fon and Yoruba language datasets",
+      "6. Launch \"AI for Cotton\" pilot with private sector partners",
+      "7. Create regulatory sandbox for agri-tech and health-tech startups",
+      "8. Partner with France and India for technical assistance"
+    ],
+    "sourcesReferences": "https://numerique.gouv.bj/stats/documents/74190354-e1a7-4756-863c-06192450e83b/count_view?asset_id=assets::documents/national-artificial-intelligence-and-big-data-strategy-1682673348.pdf",
+    "lat": 6.4969,
+    "lng": 2.6289,
+    "isRegional": false
+  },
+  {
+    "id": 12,
+    "region": "West Africa",
+    "country": "Côte d'Ivoire",
+    "strategyTitle": "National AI Strategy",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2025,
+    "climateResiliencePriorities": [
+      "Agriculture (cocoa, coffee, cashew)",
+      "Climate monitoring (deforestation detection)",
+      "Health (malaria, TB)",
+      "Water management"
+    ],
+    "objectives": "Position Côte d'Ivoire as West African AI leader \nModernize agriculture with AI (cocoa traceability, yield optimization) \nEnhance climate resilience \nBuild digital economy (contribute 15% to GDP by 2030)",
+    "researchPublications": [
+      "1. Ministry of Digital Economy (2025). Côte d'Ivoire AI Strategy (Draft).",
+      "2. World Bank (2025). Côte d'Ivoire Digital Economy Assessment.",
+      "3. CSRPA (2025). AI for cocoa sustainability."
+    ],
+    "keyContactDetails": "Hon. Ibrahim Kalil Konaté, Minister of Digital Economy and Post: menumerique@telecom.gouv.ci \n+225-27-123456 \nAI Taskforce: ia@numerique.gouv.ci",
+    "challengesGaps": [
+      "1. Fragmented policy environment (multiple overlapping mandates)",
+      "2. Limited funding (no dedicated AI budget)",
+      "3. Dependence on extractive industries (cocoa dominates economy)",
+      "4. Slow digital transformation (digital economy only 5% of GDP)",
+      "5. AI skills shortage (only 500 trained professionals)",
+      "6. Rural internet gap (35% rural connectivity)",
+      "7. Weak data protection enforcement (Act 2013-834 not operationalized)",
+      "8. French-language dominance excludes local languages"
+    ],
+    "recommendedActionPoints": [
+      "1. Accelerate strategy adoption by Q1 2026",
+      "2. Partner with private sector (cocoa industry) for co-funding",
+      "3. Leverage agricultural AI use cases for climate resilience",
+      "4. Launch AI training program targeting 5,000 youth",
+      "5. Develop satellite-based deforestation detection system for cocoa farms",
+      "6. Create regulatory sandbox for fintech and agri-tech",
+      "7. Establish Côte d'Ivoire AI Research Network",
+      "8. Secure $20M from World Bank Digital Transformation Project"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=7df9d49241d6fd0cdac87f0493c46c2c258684e966c9aa79e47fb304f30509e2JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&u=a1aHR0cHM6Ly9yZWd1bGF0aW9ucy5haS9yZWd1bGF0aW9ucy9SQUktQ0ktTkEtQ0ROQVNYWC0yMDI1&ntb=1",
+    "lat": 6.8276,
+    "lng": -5.2893,
+    "isRegional": false
+  },
+  {
+    "id": 13,
+    "region": "South Africa",
+    "country": "Zambia",
+    "strategyTitle": "National Artificial Intelligence Strategy 2024-2026",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2025,
+    "climateResiliencePriorities": [
+      "Agriculture (drought prediction, crop yield)",
+      "Public Health (disease surveillance)",
+      "Digital Governance",
+      "Water resource management",
+      "Climate adaptation"
+    ],
+    "objectives": "Enhance Economic Growth (target 8% GDP increase) \nPromote Social Inclusion (reach 5M rural citizens) \nStrengthen Governance and Public Services \nChampion AI for development programs globally",
+    "researchPublications": [
+      "1. Ministry of Technology and Science, Zambia (2024). National AI Strategy 2024-2026.",
+      "2. OECD.AI (2025). Zambia policy dashboard.",
+      "3. University of Zambia (2025). AI for drought prediction in Southern Province."
+    ],
+    "keyContactDetails": "Hon. Felix Mutati, Minister of Technology and Science: info@mots.gov.zm\n +260-211-123456 \nAI Directorate: ai@mots.gov.zm",
+    "challengesGaps": [
+      "1. Limited funding ($5M allocated vs $50M needed)",
+      "2. Low digital literacy (25% of population have basic digital skills)",
+      "3. Weak data infrastructure (no national data center)",
+      "4. Brain drain of AI talent to South Africa, Europe (70% leave)",
+      "5. Unreliable electricity (load shedding 8 hours/day)",
+      "6. Rural internet connectivity at 15%",
+      "7. No data protection law (Data Protection Bill pending)",
+      "8. Limited private sector AI engagement"
+    ],
+    "recommendedActionPoints": [
+      "1. Secure $50M from World Bank, African Development Bank, and UNDP",
+      "2. Launch AI awareness campaigns targeting 2M citizens",
+      "3. Develop national data repository for agriculture and climate data",
+      "4. Create Zambia AI Innovation Fund ($10M)",
+      "5. Partner with South Africa and Kenya for talent exchange",
+      "6. Deploy solar-powered AI learning hubs in rural areas",
+      "7. Fast-track Data Protection Bill passage",
+      "8. Launch AI Fellowship program (100 fellows annually)"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=90415a8995fed3ebe43e4baaed54629d9015359a19810ba7927937c3c53c0cf3JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=Zambia+National+AI+strategies%2fpolicies&u=a1aHR0cHM6Ly93d3cuc2NyaWJkLmNvbS9kb2N1bWVudC84Mjk5NjcyMDIvWmFtYmlhLU5hdGlvbmFsLUFJLVN0cmF0ZWd5LTIwMjQtMjAyNg",
+    "lat": -15.3875,
+    "lng": 28.3228,
+    "isRegional": false
+  },
+  {
+    "id": 14,
+    "region": "South Africa",
+    "country": "Zimbabwe",
+    "strategyTitle": "National AI Strategy 2026-2030",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Agriculture (tobacco, maize, cotton)",
+      "Mining (safety optimization)",
+      "Healthcare (disease surveillance)",
+      "Climate Adaptation (drought early warning)"
+    ],
+    "objectives": "Drive digital transformation (digital economy to 10% of GDP) \nEnhance economic development\nBuild AI workforce (50,000 trained by 2030) \nCreate enabling regulatory environment for AI innovation",
+    "researchPublications": [
+      "1. Government of Zimbabwe (2026). National AI Strategy 2026-2030.",
+      "2. POTRAZ (2025). AI Readiness Assessment for Zimbabwe.",
+      "3. University of Zimbabwe (2026). AI for drought forecasting in semi-arid regions."
+    ],
+    "keyContactDetails": "Hon. Tatenda Mavetera, Minister of ICT, Postal and Courier Services: min@ict.gv.zw \n+263-242-123456 \nAI Secretariat: ai@potraz.gov.zw",
+    "challengesGaps": [
+      "1. Severe economic constraints (hyperinflation, $1B forex shortage)",
+      "2. Limited infrastructure (unreliable power, 30% internet penetration)",
+      "3. Brain drain (80% of AI graduates emigrate)",
+      "4. Weak regulatory framework (Data Protection Act 2021 poorly enforced)",
+      "5. Low private sector investment (AI funding <$1M/year)",
+      "6. Political instability affecting investor confidence",
+      "7. Sanctions limiting access to AI hardware/software",
+      "8. Gender digital divide (only 25% women internet users)"
+    ],
+    "recommendedActionPoints": [
+      "1. Secure international donor funding ($40M from UNDP, EU, World Bank)",
+      "2. Launch AI training hubs at 5 universities (target 10,000 trainees)",
+      "3. Create startup incubation program with diaspora investment;",
+      "4. Establish AI Ethics Committee under POTRAZ",
+      "5. Negotiate sanctions exemptions for AI hardware",
+      "6. Launch \"AI for Agriculture\" pilot in 5 provinces",
+      "7. Create Women in AI Zimbabwe program (target 5,000 women)",
+      "8. Develop off-grid AI compute hubs with solar power"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=28b1a2704772a493edffe4a0d88cdf6316f00d5dbfd0cf3831448f0b302e3686JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=Zimbabwe+National+AI+strategies%2fpolicies&u=a1aHR0cHM6Ly93d3cudmVyaXRhc3ppbS5uZXQvc2l0ZXMvdmVyaXRhc19kL2ZpbGVzL1ppbWJhYndlJTIwTmF0aW9uYWwlMjBBcnRpZmljaWFsJTIwSW50ZWxsaWdlbmNlJTIwU3RyYXRlZ3kucGRm",
+    "lat": -17.8252,
+    "lng": 31.0335,
+    "isRegional": false
+  },
+  {
+    "id": 15,
+    "region": "South Africa",
+    "country": "South Africa",
+    "strategyTitle": "Draft National AI Policy",
+    "policyStatus": "Draft",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Agriculture (precision farming)",
+      "Health (disease prediction)",
+      "Energy (grid optimization)",
+      "Water management (drought)",
+      "Climate resilience (flood, fire prediction)"
+    ],
+    "objectives": "Create enabling environment for responsible AI \nFoster AI innovation (target 1,000 AI startups by 2030) \nEnsure inclusive AI benefits (reach 20M underserved citizens) \nPosition SA as continental AI leader",
+    "researchPublications": [
+      "1. Department of Communications and Digital Technologies (2026). Draft National AI Policy.",
+      "2. University of Pretoria (2025). AI Governance in South Africa.",
+      "3. CSIR (2025). South Africa AI Landscape Report.",
+      "4. HSRC (2026). Public perceptions of AI in South Africa.",
+      "5. Singh, R. (2026). AI for water management in Western Cape. South African Journal of Science, 122(3), 45-58."
+    ],
+    "keyContactDetails": "Hon. Mondli Gungubele, Minister of Communications and Digital Technologies: info@dcdt.gov.za +27-12-1234567 \nAI Policy Unit: aipolicy@dcdt.gov.za",
+    "challengesGaps": [
+      "1. High inequality in digital access (45% have no internet)",
+      "2. Severe AI skills shortage (shortfall of 50,000 professionals) 3. Fragmented governance across 9 provinces",
+      "4. Data privacy enforcement gaps (POPIA under-resourced)",
+      "5. Public trust issues (only 35% trust government AI)",
+      "6. Load shedding disrupting AI operations",
+      "7. High cost of data (most expensive in Africa)",
+      "8. Brain drain (60% of AI graduates leave SA)",
+      "9. Limited AI research funding (<$10M annually)"
+    ],
+    "recommendedActionPoints": [
+      "1. Accelerate policy finalization and adoption by Q4 2026",
+      "2. Invest $200M in AI education (20 new university programs)",
+      "3. Establish South African AI Council with provincial coordination",
+      "4. Create regulatory sandboxes for responsible AI testing",
+      "5. Launch public awareness campaign ($5M, reach 15M citizens)",
+      "6. Develop solar-powered AI hubs in off-grid areas",
+      "7. Implement data cost reduction through competition policy",
+      "8. Launch Diaspora AI Network to reverse brain drain",
+      "9. Create National AI Research Fund ($50M over 5 years)"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=8e28b408b2711873ae5b991e41bbb36050c4e2305e867641fad4d7d80929afb3JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=South+Africa+national+AI+strategy&u=a1aHR0cHM6Ly93d3cuZ292LnphL3NpdGVzL2RlZmF1bHQvZmlsZXMvZ2Npc19kb2N1bWVudC8yMDI2MDQvNTQ0NzdnZW4zODgwLnBkZg",
+    "lat": -25.7479,
+    "lng": 28.2293,
+    "isRegional": false
+  },
+  {
+    "id": 16,
+    "region": "North Africa",
+    "country": "Egypt",
+    "strategyTitle": "Egypt National AI Strategy",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2021,
+    "climateResiliencePriorities": [
+      "Agriculture (water efficiency, crop monitoring)",
+      "Water management (Nile River)",
+      "Healthcare (disease diagnosis)",
+      "Economic planning & Growth"
+    ],
+    "objectives": "Leverage AI to support sustainable development (contributing 7% to GDP by 2030) \nEnhance government efficiency (30% cost reduction) \nEstablish as regional and international AI player",
+    "researchPublications": [
+      "1. Al-Mobaridi, A. M. (2025). Opportunities and challenges of integrating AI into Arab countries: Egypt as a model. International Journal of Research in Educational Sciences, 8(3), 213-275.",
+      "2. Anwar, R. A. (2026). Assessing public-sector readiness for AI in Egypt. AUC Master's Thesis.",
+      "3. Badawy, W. (2025). Ethical use and development of AI in Egypt. AI and Ethics, 5, 3579-3591.",
+      "4. MCIT Egypt (2025). Egypt AI Strategy Implementation Report."
+    ],
+    "keyContactDetails": "Dr. Amr Talaat, Minister of Communications and IT: info@mcit.gov.eg \n+20-2-12345678 \nAI Unit: ai@mcit.gov.eg",
+    "challengesGaps": [
+      "1. Decreased availability of data due to limiting changes in open data policies",
+      "2. Inability to retain capable domestic researchers (60% leave)",
+      "3. Negative impact of AI applications on the Egyptian workforce (1M jobs at risk)",
+      "4. Centralized governance limiting local innovation",
+      "5. Limited funding for AI R&D (<$5M annually)",
+      "6. Weak English-language AI ecosystem",
+      "7. Private sector AI adoption low (only 10% of firms)",
+      "8. Gender gap in AI workforce (only 22% women)"
+    ],
+    "recommendedActionPoints": [
+      "1. Reverse restrictive open data policies and implement proactive data sharing law",
+      "2. Create researcher retention incentives (higher salaries, research grants)",
+      "3. Develop comprehensive AI reskilling program for 1M workers",
+      "4. Decentralize AI governance to governorates",
+      "5. Increase AI R&D funding to $50M annually",
+      "6. Launch Arabic AI language model initiative",
+      "7. Provide tax incentives for private sector AI adoption",
+      "8. Launch Women in AI Egypt program"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=7767650136103e2e07543d2572b0c26a61cf06657872fd8faa85cfa7d409dcc3JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&psq=Egypt+national+AI+strategy&u=a1aHR0cHM6Ly9haS5nb3YuZWcvU3luY2hlZEZpbGVzL2VuL1Jlc291cmNlcy9BSXN0cmF0ZWd5JTIwRW5nbGlzaCUyMDE2LTEtMjAyNS0xLnBkZg",
+    "lat": 30.0444,
+    "lng": 31.2357,
+    "isRegional": false
+  },
+  {
+    "id": 17,
+    "region": "North Africa",
+    "country": "Tunisia",
+    "strategyTitle": "National AI Strategy",
+    "policyStatus": "Draft",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Digital health (telemedicine)",
+      "Agriculture (olive, cereal, date)",
+      "Energy (renewable integration)",
+      "Climate adaptation (water scarcity)"
+    ],
+    "objectives": "1. Integrate AI into health, agriculture, energy for sustainable development \n2. Create robust data governance and attract local/international talent \n3. Digitize and personalize administrative procedures \n4. Position Tunisia as regional AI hub and foster partnerships \n5. Establish framework aligned with international ethics (UNESCO/EU) \n6. Upskill workforce and entrepreneurs (100,000 trained by 2030)",
+    "researchPublications": [
+      "1. Ejjami, R. (2024). TUNeGov-AI: Framework for Tunisian government AI (Master's thesis, Universidade Nova de Lisboa).",
+      "2. Government of Tunisia (2026). National Development Plan 2026-2030.",
+      "3. Belguith, M. (2026). AI and reform of commercial practices. Entropy, 6(Special issue).",
+      "4. Ogoh, G., Eke, D., & Stahl, B. C. (2026). AI governance in North Africa. Science and Public Policy.",
+      "5. Bahri, C. N., & Bouchrara, I. (2017). Impact of territorial intelligence on local development in Tunisia."
+    ],
+    "keyContactDetails": "Dr. Sofiene Hemissi, Minister of Communication Technologies: info@mtc.gov.tn \n+216-71-123456 \nAI Taskforce: ai@mtc.gov.tn",
+    "challengesGaps": [
+      "1. Infrastructure Gaps: No \"National AI Cloud\"; high costs for foreign cloud services",
+      "2. Restrictive Data Access: No national data policy; drone bans block data collection for agriculture/transport",
+      "3. Economic & Financial Constraints: Limited budget ($3M allocated)",
+      "4. Fragmented Governance: Lack of coordinated ecosystem; digital transformation faces resistance due to rigid \"mentalities\"",
+      "5. Brain drain (50% of engineers leave)",
+      "6. Low private sector investment",
+      "7. French-language dominance excludes Arabic"
+    ],
+    "recommendedActionPoints": [
+      "1. Build Sovereign Infrastructure: Accelerate development of national cloud for data sovereignty ($30M)",
+      "2. Implement \"Open Data\" Policies: Release state satellite/climate data to startups",
+      "3. Launch \"Regulatory Sandboxes\": Allow startups to test AI products under INPDP supervision",
+      "4. Establish Independent Agency: Create National AI Council independent of electoral cycles",
+      "5. Launch Tunisia AI Residency Program (50 residents/year)",
+      "6. Develop Arabic-Tunisian dialect language model",
+      "7. Create Tunisia AI Innovation Fund ($15M)"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=48b95b70074bf5918b04b9fce694402afc75dd6cc8503b27e66f0d9bc762047fJmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&u=a1aHR0cHM6Ly9yZWd1bGF0aW9ucy5haS9yZWd1bGF0aW9ucy90dW5pc2lhLTIwMjEtbmF0aW9uYWwtYWktc3RyYXRlZ3k&ntb=1",
+    "lat": 36.8065,
+    "lng": 10.1815,
+    "isRegional": false
+  },
+  {
+    "id": 18,
+    "region": "North Africa",
+    "country": "Algeria",
+    "strategyTitle": "National AI Strategy – Algeria 2030 (Draft)",
+    "policyStatus": "Draft",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Agriculture (wheat, barley, dates)",
+      "Health (diabetes, cardiovascular)",
+      "Energy (oil & gas optimization)",
+      "Industry (manufacturing)"
+    ],
+    "objectives": "1. Economic Diversification (reduce oil dependency to 30% of GDP by 2030) \n2. Strengthen Technological Sovereignty (reduce foreign dependency) \n3. Build a Knowledge Economy (AI contribute 5% to GDP)",
+    "researchPublications": [
+      "1. Ogoh, G., Eke, D., & Stahl, B. C. (2026). AI governance in North Africa: An ecosystems approach. Science and Public Policy.",
+      "2. Journal of Legal and Economic Research (2026). Artificial intelligence authority – Vision 2030. ASJP.",
+      "3. Journal of Law, Society and Power (2026). Beyond fault-based liability: Adapting Algeria's 1975 Civil Code to autonomous AI systems. ASJP.",
+      "4. CERIST (2025). Algeria AI Readiness Report."
+    ],
+    "keyContactDetails": "Dr. Mahmoud Belhimer, Minister of Post and Telecommunications \nAI Council: http://www.aicouncil.dz; +213-21-123456; ai@aicouncil.dz",
+    "challengesGaps": [
+      "1. Lack of formal, adopted regulatory framework for AI (strategy remains draft since 2024)",
+      "2. Shortage of highly qualified AI personnel and trained faculty (only 300 specialists)",
+      "3. Insufficient synergy between research institutions and industrial sector",
+      "4. Quality of internet connectivity uneven, particularly in rural areas (40% penetration)",
+      "5. French-colonial institutional legacy limiting innovation",
+      "6. Low R&D spending (0.3% of GDP)",
+      "7. Limited private sector engagement",
+      "8. Arabic language AI tools underdeveloped"
+    ],
+    "recommendedActionPoints": [
+      "1. Formally adopt the draft National AI Strategy and break into operational action plans by Q4 2026",
+      "2. Integrate AI into university curricula across all 48 provinces (target 20,000 students)",
+      "3. Support startups through financial instruments (Algérie Télécom's 1.5 billion dinar fund) and tax breaks (5-year holiday)",
+      "4. Upgrade digital infrastructure including HPC labs and cloud platforms ($100M investment)",
+      "5. Launch Algerian Arabic dialect NLP project ($5M)",
+      "6. Create AI Innovation Hub at CERIST; 7. Establish Algeria-France-India AI partnerships",
+      "8. Launch AI awareness campaign targeting 5M citizens"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=255360111c925fcd5569e1331769cb90ec612f44a2eaa5a543ed17b912073357JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&u=a1aHR0cHM6Ly9hbGdlcmlhdGVjaC5uZXdzL2FsZ2VyaWEtbmF0aW9uYWwtYWktc3RyYXRlZ3ktMjAyNS0yMDMwLw&ntb=1",
+    "lat": 36.7538,
+    "lng": 3.0588,
+    "isRegional": false
+  },
+  {
+    "id": 19,
+    "region": "North Africa",
+    "country": "Morocco",
+    "strategyTitle": "National AI Strategy (In development)",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Agriculture (water efficiency, irrigation)",
+      "Renewable energy (solar, wind optimization)",
+      "Healthcare (rural telemedicine)",
+      "Tourism (personalized experiences)",
+      "Water management (drought)"
+    ],
+    "objectives": "Position Morocco as North African AI hub Leverage AI for water management (30% efficiency gain) \nDrive digital economy (contribute 10% to GDP) \nBuild AI talent ecosystem (50,000 trained by 2030)",
+    "researchPublications": [
+      "1. Ministry of Digital Transition and Administrative Reform (2025). Morocco AI Roadmap 2025-2030.",
+      "2. OECD (2024). Morocco AI Readiness Assessment.",
+      "3. UM6P (2025). AI for water management in arid regions.",
+      "4. World Bank (2025). Morocco Digital Economy Diagnostic."
+    ],
+    "keyContactDetails": "Ms. Ghita Mezzour, Minister of Digital Transition and Administrative Reform: transition-digitale@adm.gov.ma \n+212-537-123456; AI Taskforce: ia@adm.gov.ma",
+    "challengesGaps": [
+      "1. Fragmented governance across multiple ministries",
+      "2. Limited AI funding (<$10M allocated)",
+      "3. Skills mismatch (unemployed graduates but unfilled AI positions)",
+      "4. Weak startup ecosystem (only 50 AI startups)",
+      "5. Rural digital divide (35% rural internet penetration)",
+      "6. Water scarcity crisis (AI urgently needed)"
+    ],
+    "recommendedActionPoints": [
+      "1. Finalize and adopt AI strategy by Q2 2026",
+      "2. Create National AI Agency (independent, with $50M budget)",
+      "3. Launch AI education programs at 15 universities (target 10,000 students)",
+      "4. Develop water management AI pilots for 5 river basins",
+      "5. Attract foreign AI investment through Morocco Digital Hub (tax incentives)",
+      "6. Launch \"AI for Water\" challenge with $5M prize"
+    ],
+    "sourcesReferences": "https://www.mmsp.gov.ma/sites/default/files/2024-09/PlaquetteInstitutionnel_18092024_Ang.pdf",
+    "lat": 34.0209,
+    "lng": -6.8416,
+    "isRegional": false
+  },
+  {
+    "id": 20,
+    "region": "North Africa",
+    "country": "Libya",
+    "strategyTitle": "National AI Strategy 2026-2030",
+    "policyStatus": "Published",
+    "yearLastUpdated": 2026,
+    "climateResiliencePriorities": [
+      "Water management (desert aquifers)",
+      "Energy (oil & gas efficiency)",
+      "Healthcare (post-conflict)",
+      "Climate adaptation (desertification)"
+    ],
+    "objectives": "Rebuild digital infrastructure after conflict \nLeverage AI for post-conflict recovery \nEnhance water and energy efficiency \nBuild foundational AI capacity (500 specialists by 2030)",
+    "researchPublications": [
+      "1. Ministry of Communications (2025). Libya AI Policy Framework (Draft).",
+      "2. UNDP Libya (2024). Digital Readiness Assessment.",
+      "3. University of Tripoli (2025). AI for groundwater monitoring."
+    ],
+    "keyContactDetails": "Mr. Salem Al-Qadir, Minister of Communications and Informatics: info@moci.gov.ly; +218-21-123456; AI Working Group: ai@moci.gov.ly",
+    "challengesGaps": [
+      "1. Political instability (dual governments)",
+      "2. Fragmented governance across east/west",
+      "3. Severely limited infrastructure (internet 20% penetration)",
+      "4. Brain drain (80% of technical professionals left)",
+      "5. Lack of funding (no budget)",
+      "6. Security concerns limiting foreign partnerships",
+      "7. No data protection law; 8. Legacy institutional collapse",
+      "9. Basic digital literacy very low (<10%)"
+    ],
+    "recommendedActionPoints": [
+      "1. Prioritize political stability and national dialogue on digital future",
+      "2. Seek international technical assistance (UNDP, World Bank, ITU)",
+      "3. Launch pilot AI projects in stable regions (Tripoli, Benghazi)",
+      "4. Partner with UN agencies for capacity building",
+      "5. Establish Libya AI Taskforce with international advisors",
+      "6. Develop mobile-first AI literacy programs",
+      "7. Secure emergency funding from international donors ($20M)",
+      "8. Create safe zones for AI innovation in stable municipalities"
+    ],
+    "sourcesReferences": "OECD.AI",
+    "lat": 32.8872,
+    "lng": 13.1913,
+    "isRegional": false
+  },
+  {
+    "id": 21,
+    "region": "Central Africa",
+    "country": "Cameroon",
+    "strategyTitle": "National AI Strategy (In formulation)",
+    "policyStatus": "Draft",
+    "yearLastUpdated": 2025,
+    "climateResiliencePriorities": [
+      "Agriculture (cocoa, coffee, plantain)",
+      "Health (malaria, HIV)",
+      "Climate monitoring (deforestation)",
+      "Water management"
+    ],
+    "objectives": "Leverage AI for agricultural productivity (30% increase) \nEnhance public service delivery; Build digital economy (5% of GDP by 2030) \nCreate 10,000 AI jobs",
+    "researchPublications": [
+      "1. Ministry of Posts and Telecommunications (2025). Cameroon AI Strategy (Draft).",
+      "2. World Bank (2025). Cameroon Digital Economy Assessment.",
+      "3. University of Yaoundé (2025). AI for cocoa pest detection."
+    ],
+    "keyContactDetails": "Hon. Minette Libom Li Likeng, Minister of Posts and Telecommunications: minpostel@minpostel.cm \n+237-222-123456 \nAI Unit: ia@minpostel.cm",
+    "challengesGaps": [
+      "1. Limited infrastructure (fiber coverage 25%)",
+      "2. Low AI awareness (only 5% familiar with AI)",
+      "3. Brain drain to France, Canada (70% of tech graduates leave)",
+      "4. Insufficient funding (<$1M annually for AI)",
+      "5. Weak regulatory framework (no data protection law)",
+      "6. French-English bilingual divide (AI tools French-only)",
+      "7. Limited private sector engagement",
+      "8. Poor electricity in rural areas"
+    ],
+    "recommendedActionPoints": [
+      "1. Accelerate strategy development and adoption by Q4 2026",
+      "2. Launch AI awareness campaigns targeting 1M citizens",
+      "3. Partner with private sector (cocoa industry) for co-funding",
+      "4. Develop agricultural AI use cases (cocoa disease detection, yield prediction)",
+      "5. Create regulatory sandbox for fintech and agri-tech",
+      "6. Launch bilingual (French/English) AI training programs",
+      "7. Establish Cameroon AI Diaspora Network",
+      "8. Secure $25M from World Bank Digital Transformation Project"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=e924d651106801254ac92c1faac34787efdbeaf78b1ac3b36cc047f1e0c52706JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&u=a1aHR0cHM6Ly9vZWNkLmFpL2VuL2Rhc2hib2FyZHMvcG9saWN5LWluaXRpYXRpdmVzL2NhbWVyb29ucy1uYXRpb25hbC1hcnRpZmljaWFsLWludGVsbGlnZW5jZS1zdHJhdGVneS1zbmlh&ntb=1",
+    "lat": 3.848,
+    "lng": 11.5021,
+    "isRegional": false
+  },
+  {
+    "id": 22,
+    "region": "Central Africa",
+    "country": "DRC (Democratic Republic of Congo)",
+    "strategyTitle": "National AI Strategy (Early discussions)",
+    "policyStatus": "Draft",
+    "yearLastUpdated": 2025,
+    "climateResiliencePriorities": [
+      "Natural resource management (mining)",
+      "Biodiversity conservation (endangered species)",
+      "Agriculture (cassava, maize)",
+      "Health (Ebola, malaria)"
+    ],
+    "objectives": "Leverage AI for sustainable mining (reduce conflict minerals) Enhance biodiversity protection (mountain gorillas) \nBuild digital infrastructure \nCreate digital jobs for youth",
+    "researchPublications": [
+      "1. Ministry of Digital (2025). DRC AI Policy Framework (Draft).",
+      "2. UNDP DRC (2025). Digital Readiness Assessment.",
+      "3. University of Kinshasa (2025). AI for mineral traceability."
+    ],
+    "keyContactDetails": "Hon. Augustin Kibassa Maliba, Minister of Digital, Postal Services and Telecommunications: info@minum.gouv.cd; +243-81-1234567 \nAI Taskforce: ia@minum.gouv.cd",
+    "challengesGaps": [
+      "1. Political instability and conflict in east",
+      "2. Severe infrastructure deficit (internet 15% penetration, electricity 20%)",
+      "3. Extremely low digital literacy (3%)",
+      "4. Lack of funding (no budget)",
+      "5. Weak governance and corruption",
+      "6. No data protection framework",
+      "7. Humanitarian crisis diverting resources",
+      "8. Very large country (2.3M km²) difficult for infrastructure",
+      "9. Multiple languages (250+ dialects) complexity"
+    ],
+    "recommendedActionPoints": [
+      "1. Prioritize political stability and security as pre-condition",
+      "2. Seek international development funding (World Bank, EU, UN)",
+      "3. Launch pilot AI projects in mining sector (coltan, cobalt traceability)",
+      "4. Partner with UN peacekeeping for infrastructure",
+      "5. Focus on mobile-first AI solutions (SMS-based)",
+      "6. Establish digital literacy programs targeting youth (mobile learning)",
+      "7. Create safe zones for AI innovation in Kinshasa, Lubumbashi",
+      "8. Launch \"AI for Gorilla Conservation\" pilot with Virunga National Park"
+    ],
+    "sourcesReferences": "https://www.bing.com/ck/a?!&&p=e2d519ebf20fabd8b2aeea72e925decbaacdabdf827b515ada404a2c75c7f5d8JmltdHM9MTc4MDg3NjgwMA&ptn=3&ver=2&hsh=4&fclid=3b5cccc7-f245-63f8-3928-df3bf3c26232&u=a1aHR0cHM6Ly9pYWZyaWNhLmNvbS9kcmMtbGF1bmNoZXMtbmF0aW9uYWwtZGlnaXRhbC1wbGFuLWFuZC1maXJzdC1haS1zdHJhdGVneS10by1iZWNvbWUtcmVnaW9uYWwtdGVjaC1odWItYnktMjAzMC8&ntb=1",
+    "lat": -4.4419,
+    "lng": 15.2663,
+    "isRegional": false
+  }
+]

@@ -17,8 +17,8 @@ const RICH_FIELDS = [
 /**
  * Access type options with clear, unambiguous labels and descriptions.
  *
- * 'fellows_only'  → stored as accessType:'restricted', isPaid:true  — fellows in this category free; everyone else pays
- * 'paid'          → stored as accessType:'paid',       isPaid:true  — same payment rule; primarily for general public
+ * 'fellows_only'  → stored as accessType:'restricted', isPaid:true   fellows in this category free; everyone else pays
+ * 'paid'          → stored as accessType:'paid',       isPaid:true   same payment rule; primarily for general public
  */
 const ACCESS_TYPES = [
     {
@@ -26,12 +26,12 @@ const ACCESS_TYPES = [
         label: 'Fellows Priority',
         icon: Users,
         color: 'purple',
-        summary: 'Fellows assigned here enroll free — anyone else can pay to access',
+        summary: 'Fellows assigned here enroll free  anyone else can pay to access',
         details: [
             'Fellows you specifically assign to this category enroll for free',
-            'Fellows assigned to other categories must pay — same as the general public',
+            'Fellows assigned to other categories must pay  same as the general public',
             'Non-fellows can also pay the set price to access this category',
-            'Set a price below — it applies to everyone who is not an assigned fellow',
+            'Set a price below  it applies to everyone who is not an assigned fellow',
         ],
     },
     {
@@ -39,12 +39,12 @@ const ACCESS_TYPES = [
         label: 'Paid (Open Enrollment)',
         icon: CreditCard,
         color: 'orange',
-        summary: 'Open to all — fellows assigned here enroll free, everyone else pays',
+        summary: 'Open to all  fellows assigned here enroll free, everyone else pays',
         details: [
             'Anyone can discover and enroll in this category by paying',
             'Fellows you specifically assign to this category still enroll for free',
             'Fellows assigned to other categories must pay just like the general public',
-            'Set a price below — it applies to all non-assigned users',
+            'Set a price below  it applies to all non-assigned users',
         ],
     },
 ];
@@ -53,7 +53,7 @@ const emptyForm = {
     name: '',
     description: '',
     welcomeMessage: '',
-    accessType: 'fellows_only', // UI value — mapped to backend on submit
+    accessType: 'fellows_only', // UI value  mapped to backend on submit
     price: 0,
     hasTieredPricing: false,
     studentPrice: 0,
@@ -219,7 +219,7 @@ export default function CategoriesPage() {
                 </span>
             );
         }
-        // Legacy 'free' — fully blocked
+        // Legacy 'free'  fully blocked
         return (
             <span className="px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full flex items-center gap-1">
                 <Users size={11} /> Fellows Only (Blocked)
@@ -356,12 +356,12 @@ export default function CategoriesPage() {
                             })}
                         </div>
 
-                        {/* Price — always required for both options */}
+                        {/* Price  always required for both options */}
                         <div className={`mt-5 rounded-xl p-4 border ${formData.accessType === 'fellows_only' ? 'bg-purple-50 border-purple-200' : 'bg-orange-50 border-orange-200'}`}>
                             <label className={`block text-sm font-semibold mb-2 ${formData.accessType === 'fellows_only' ? 'text-purple-800' : 'text-orange-800'}`}>
                                 Enrollment Price (USD)
                                 <span className={`font-normal ml-1 ${formData.accessType === 'fellows_only' ? 'text-purple-600' : 'text-orange-600'}`}>
-                                    (optional — charged to non-assigned users and the general public)
+                                    (optional  charged to non-assigned users and the general public)
                                 </span>
                             </label>
                             <div className="relative max-w-xs">
@@ -377,7 +377,7 @@ export default function CategoriesPage() {
                             </div>
                             <p className={`text-xs mt-2 ${formData.accessType === 'fellows_only' ? 'text-purple-600' : 'text-orange-600'}`}>
                                 Fellows you specifically assign to <strong>this category</strong> always enroll for free.
-                                Everyone else — including fellows assigned to other categories — must pay this price. Leave at 0 if you want non-fellows to have free access too.
+                                Everyone else  including fellows assigned to other categories  must pay this price. Leave at 0 if you want non-fellows to have free access too.
                             </p>
                         </div>
 
@@ -522,10 +522,10 @@ export default function CategoriesPage() {
                                     {/* Access explainer line */}
                                     <p className="text-xs text-gray-400 mt-2">
                                         {category.accessType === 'paid'
-                                            ? `Open enrollment · $${(category.price || 0).toLocaleString()} · Assigned fellows enroll free — all others pay`
+                                            ? `Open enrollment · $${(category.price || 0).toLocaleString()} · Assigned fellows enroll free  all others pay`
                                             : category.accessType === 'restricted'
-                                            ? `Fellows Priority · $${(category.price || 0).toLocaleString()} · Assigned fellows free — public & non-assigned fellows pay`
-                                            : 'Legacy — fellows only, public blocked (edit to update access type)'
+                                            ? `Fellows Priority · $${(category.price || 0).toLocaleString()} · Assigned fellows free  public & non-assigned fellows pay`
+                                            : 'Legacy  fellows only, public blocked (edit to update access type)'
                                         }
                                     </p>
                                     <p className="text-xs text-gray-400 mt-0.5">

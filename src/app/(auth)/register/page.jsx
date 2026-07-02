@@ -159,7 +159,7 @@ export default function RegisterPage() {
                 if (response.token) {
                     localStorage.setItem('token', response.token);
                     localStorage.setItem('user', JSON.stringify(response.user));
-                    // Set the cookie that getCurrentUser() reads — needed so the
+                    // Set the cookie that getCurrentUser() reads  needed so the
                     // redirect destination sees the user as logged in immediately
                     authService.setCookie('user', JSON.stringify(response.user), 1);
                 }
@@ -375,10 +375,10 @@ export default function RegisterPage() {
                 </div>
             )}
 
-            {/* 40 / 60 split — consistent with login */}
+            {/* 40 / 60 split  consistent with login */}
             <div className="w-full flex flex-col lg:flex-row">
 
-                {/* ══ LEFT PANEL — 40% ══ */}
+                {/* ══ LEFT PANEL  40% ══ */}
                 <div className="hidden lg:flex lg:w-2/5 relative flex-col lg:sticky lg:top-0 lg:h-screen flex-shrink-0">
                     <img src="/image/1.png" alt="" aria-hidden="true"
                         className="absolute inset-0 w-full h-full object-cover object-center" />
@@ -443,7 +443,7 @@ export default function RegisterPage() {
                     </div>
                 </div>
 
-                {/* ══ RIGHT PANEL — 60%, scrollable ══ */}
+                {/* ══ RIGHT PANEL  60%, scrollable ══ */}
                 <div className="w-full lg:w-3/5 bg-gray-50 flex flex-col">
 
                     {/* Mobile top bar */}

@@ -56,7 +56,7 @@ export default function InteractiveCodeEditor({
     loadPyodide();
   }, [language]);
 
-  // Load WebR for R — runs entirely in the browser, no API needed
+  // Load WebR for R  runs entirely in the browser, no API needed
   useEffect(() => {
     if (language !== 'r') return;
 
@@ -145,7 +145,7 @@ sys.stdout = io.StringIO()
         setOutput(
           '⚠️ This code downloads external data (e.g. WorldClim, GADM) which cannot be fetched from within the browser sandbox.\n\n' +
           'To run this code, please use a local R environment such as RStudio or the R console on your computer.\n\n' +
-          'The code structure is correct — it just requires internet access from R, which is not available in browser-based R.'
+          'The code structure is correct  it just requires internet access from R, which is not available in browser-based R.'
         );
         setIsRunning(false);
         return;
@@ -158,7 +158,7 @@ sys.stdout = io.StringIO()
         await webRRef.current.installPackages(packages);
       }
 
-      // Strip install.packages() lines — already handled above
+      // Strip install.packages() lines  already handled above
       const cleanCode = code
         .split('\n')
         .filter((line) => !line.trim().startsWith('install.packages'))

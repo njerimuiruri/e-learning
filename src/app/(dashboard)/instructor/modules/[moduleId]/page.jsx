@@ -248,7 +248,7 @@ export default function ModuleDetailPage() {
                                     <Icons.AlertTriangle className="w-6 h-6 text-amber-600" />
                                 </div>
                                 <div className="flex-1">
-                                    <p className="font-bold text-amber-900 text-sm">This module is a Draft — not yet visible to students</p>
+                                    <p className="font-bold text-amber-900 text-sm">This module is a Draft  not yet visible to students</p>
                                     <p className="text-sm text-amber-800 mt-1 leading-relaxed">
                                         Review your lessons and content, then click <strong>"Submit for Approval"</strong> to send it to an administrator for review.
                                         Once approved, an admin can publish it for students to enrol.
@@ -287,7 +287,7 @@ export default function ModuleDetailPage() {
                             <div className="flex items-start gap-3">
                                 <Icons.Globe className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-emerald-900 text-sm">Module is Live — You Can Still Edit</p>
+                                    <p className="font-semibold text-emerald-900 text-sm">Module is Live  You Can Still Edit</p>
                                     <p className="text-sm text-emerald-700 mt-1">This module is published and visible to students. You can edit its content, add new lessons, or update details. Changes are applied immediately.</p>
                                 </div>
                             </div>
@@ -644,7 +644,7 @@ export default function ModuleDetailPage() {
                                             <Icons.ListOrdered className="w-4 h-4" />
                                             <span>Module Order</span>
                                         </div>
-                                        <span className="font-semibold text-gray-900">{module.order > 0 ? `Module ${module.order}` : '—'}</span>
+                                        <span className="font-semibold text-gray-900">{module.order > 0 ? `Module ${module.order}` : ''}</span>
                                     </div>
                                     {module.createdAt && (
                                         <div className="flex items-center justify-between">
@@ -1021,7 +1021,7 @@ export default function ModuleDetailPage() {
                                             </div>
                                         )}
                                         <div className="space-y-1">
-                                            <p className="text-xs text-gray-400">Explanation (optional — shown after submission)</p>
+                                            <p className="text-xs text-gray-400">Explanation (optional  shown after submission)</p>
                                             <input
                                                 value={q.explanation || ''}
                                                 onChange={e => setAssessmentDraft(d => { const qs = [...d.questions]; qs[qi] = { ...qs[qi], explanation: e.target.value }; return { ...d, questions: qs }; })}

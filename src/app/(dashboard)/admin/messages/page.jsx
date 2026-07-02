@@ -191,7 +191,7 @@ function MyConvRow({ conv, isActive, onClick }) {
   );
 }
 
-// ── conversation row (oversight — between two other users) ────────────────────
+// ── conversation row (oversight  between two other users) ────────────────────
 
 function OversightConvRow({ conv, isActive, onClick }) {
   const p1 = conv.users?.[0] || conv.participants?.[0] || conv.user1 || {};

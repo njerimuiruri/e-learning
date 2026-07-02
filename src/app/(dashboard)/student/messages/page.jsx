@@ -660,7 +660,7 @@ export default function StudentMessagesPage() {
                     Receive and reply to messages from your <strong>instructors</strong> and <strong>admin support</strong>.
                   </p>
                   <p className="text-xs text-gray-400 mb-6 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 leading-relaxed">
-                    When an instructor messages you about a module, lesson, or essay — it will appear here automatically.
+                    When an instructor messages you about a module, lesson, or essay  it will appear here automatically.
                   </p>
                   {adminContact && (
                     <button

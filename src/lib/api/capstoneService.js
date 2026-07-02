@@ -29,10 +29,14 @@ const capstoneService = {
 
   /** Upload implementation files once the proposal is approved (multipart) */
   submitImplementation: async (id, formData) => {
-    const { data } = await api.put(`/api/capstone/${id}/implementation`, formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-      timeout: 120000,
-    });
+    const { data } = await api.put(
+      `/api/capstone/${id}/implementation`,
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
+      },
+    );
     return data;
   },
 
@@ -56,7 +60,7 @@ const capstoneService = {
     return data;
   },
 
-  /** Request revision — student must resubmit (counts against their 2 attempts) */
+  /** Request revision  student must resubmit (counts against their 2 attempts) */
   requestRevision: async (id, comment) => {
     const { data } = await api.put(`/api/capstone/${id}/revision`, { comment });
     return data;
@@ -84,7 +88,7 @@ const capstoneService = {
     return data;
   },
 
-  /** Student withdraws (deletes) their own submission — only allowed when pending/revision */
+  /** Student withdraws (deletes) their own submission  only allowed when pending/revision */
   withdrawCapstone: async (id) => {
     const { data } = await api.delete(`/api/capstone/${id}`);
     return data;

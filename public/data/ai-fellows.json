@@ -1,0 +1,972 @@
+[
+  {
+    "id": 1,
+    "region": "East Africa",
+    "country": "Kenya",
+    "name": "Geoffrey Kimotho",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "Climate adaptation research",
+      "Community-based climate projects",
+      "AU-funded project management"
+    ],
+    "policiesFrameworks": [
+      "Kenya National AI Strategy 2025-2030",
+      "Climate adaptation governance frameworks"
+    ],
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 2,
+    "region": "East Africa",
+    "country": "Kenya",
+    "name": "Emmanuel Gichuru",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "Founder, BMB Eco-Group",
+      "Environmental Research & Impact Assessment",
+      "AI for ecosystem restoration"
+    ],
+    "policiesFrameworks": [
+      "Kenya National AI Strategy",
+      "Environmental Impact Assessment regulations",
+      "Regreening Africa policy framework"
+    ],
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 3,
+    "region": "East Africa",
+    "country": "Kenya",
+    "name": "Dr. Pamela R.N. Kaithuru",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "Psychological climate resilience",
+      "Early warning systems",
+      "Mental health and climate adaptation"
+    ],
+    "policiesFrameworks": [
+      "Kenya Meteorological Department policies",
+      "EA Anticipatory Action Working Group framework",
+      "ICCAPS climate action protocols"
+    ],
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 4,
+    "region": "East Africa",
+    "country": "Kenya",
+    "name": "Herbert Misiani",
+    "activities": [
+      "AI climate researcher (ARUA-CD)",
+      "Deep learning for East African climate prediction",
+      "Long rains forecasting using AI models"
+    ],
+    "policiesFrameworks": [
+      "Kenya National AI Strategy",
+      "Climate action frameworks",
+      "Meteorological data governance"
+    ],
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 5,
+    "region": "East Africa",
+    "country": "Ethiopia",
+    "name": "Kindineh Sisay Melaku",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "Lecturer, Haramaya University",
+      "Agricultural economics",
+      "Climate adaptation",
+      "Advanced econometric modeling"
+    ],
+    "policiesFrameworks": [
+      "Ethiopia National AI Policy",
+      "Agricultural policy frameworks",
+      "Food and nutrition security policies"
+    ],
+    "isRegional": false,
+    "lat": 9.025,
+    "lng": 38.7469
+  },
+  {
+    "id": 6,
+    "region": "East Africa",
+    "country": "Ethiopia",
+    "name": "Selected fellow (Yango 2026)",
+    "activities": [
+      "Yango Fellowship 2026 Cohort (1 of 4 from Ethiopia)",
+      "Applied AI for health literacy, energy monitoring, traffic optimization, or personalized learning"
+    ],
+    "policiesFrameworks": [
+      "Ethiopia National AI Policy",
+      "Digital transformation strategy"
+    ],
+    "isRegional": false,
+    "lat": 9.025,
+    "lng": 38.7469
+  },
+  {
+    "id": 7,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "name": "Adamu Sulaiman Bawa",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "Humanitarian AI applications",
+      "Community-based climate action",
+      "Author on resilience"
+    ],
+    "policiesFrameworks": [
+      "Nigeria National AI Strategy 2024",
+      "Climate adaptation policies",
+      "Institute for Economics and Peace frameworks"
+    ],
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 8,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "name": "Dr. Yoksa Salmamza Mshelia",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "GeoAI; Remote sensing; Land cover change modeling",
+      "Urban heat island analysis"
+    ],
+    "policiesFrameworks": [
+      "Nigeria National AI Strategy",
+      "Urban planning policies",
+      "Environmental impact frameworks"
+    ],
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 9,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "name": "Chukwu Emmanuel Ogwu",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "Environmental AI",
+      "Zebrafish embryo model for chemical analysis",
+      "Effect-based environmental monitoring"
+    ],
+    "policiesFrameworks": [
+      "Nigeria environmental regulations",
+      "ISO/IEC 17025:2017",
+      "ISO 14001:2015",
+      "Water quality frameworks"
+    ],
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 10,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "name": "Haris Aliyu Hardo",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "Social accountability AI",
+      "Climate action advocacy",
+      "Community-led climate solutions"
+    ],
+    "policiesFrameworks": [
+      "Nigeria National AI Strategy",
+      "Environmental governance policies",
+      "Energy transition frameworks"
+    ],
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 11,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "name": "Franklin Pyokpung Zaure",
+    "activities": [
+      "ARIN Accountable Adaptation Fellow",
+      "Lecturer, Ahmadu Bahllo University",
+      "Performance design and environmental sustainability"
+    ],
+    "policiesFrameworks": [
+      "Nigeria climate adaptation policies",
+      "Sustainable development frameworks"
+    ],
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 12,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "name": "Selected fellow (Yango 2026)",
+    "activities": [
+      "Yango Fellowship 2026 Cohort (4 of 24 from Nigeria)",
+      "Applied AI across multiple domains"
+    ],
+    "policiesFrameworks": [
+      "Nigeria National AI Strategy 2024"
+    ],
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 13,
+    "region": "West Africa",
+    "country": "Ghana",
+    "name": "Selected fellow (Yango 2026)",
+    "activities": [
+      "Yango Fellowship 2026 Cohort (4 of 24 from Ghana)",
+      "Applied AI projects"
+    ],
+    "policiesFrameworks": [
+      "Ghana National AI Strategy 2023-2033"
+    ],
+    "isRegional": false,
+    "lat": 5.6037,
+    "lng": -0.187
+  },
+  {
+    "id": 14,
+    "region": "West Africa",
+    "country": "Ghana",
+    "name": "Dr. Danley Colecraft Aidoo",
+    "activities": [
+      "ARIN Accountable Adaptation Fellow",
+      "Lecturer, University of Ghana",
+      "Climate change adaptation",
+      "Food systems; Entrepreneurship",
+      "Rural development"
+    ],
+    "policiesFrameworks": [
+      "Ghana National AI Strategy",
+      "Agricultural extension policies",
+      "Climate adaptation frameworks"
+    ],
+    "isRegional": false,
+    "lat": 5.6037,
+    "lng": -0.187
+  },
+  {
+    "id": 15,
+    "region": "West Africa",
+    "country": "Ghana",
+    "name": "Ezekiel Acquaah",
+    "activities": [
+      "Research Fellow, University of Ghana (ARUA-CD)",
+      "AI tools for climate research",
+      "Mentoring in AI research"
+    ],
+    "policiesFrameworks": [
+      "Ghana AI policy frameworks",
+      "Climate research governance"
+    ],
+    "isRegional": false,
+    "lat": 5.6037,
+    "lng": -0.187
+  },
+  {
+    "id": 16,
+    "region": "West Africa",
+    "country": "Senegal",
+    "name": "Selected fellow (Yango 2026)",
+    "activities": [
+      "Yango Fellowship 2026 Cohort (4 of 24 from Senegal)",
+      "Applied AI projects"
+    ],
+    "policiesFrameworks": [
+      "Senegal National AI Strategy",
+      "Digital Economy framework"
+    ],
+    "isRegional": false,
+    "lat": 14.7167,
+    "lng": -17.4677
+  },
+  {
+    "id": 17,
+    "region": "West Africa",
+    "country": "Côte d'Ivoire",
+    "name": "Selected fellow (Yango 2026)",
+    "activities": [
+      "Yango Fellowship 2026 Cohort (4 of 24 from Côte d'Ivoire)",
+      "Applied AI projects",
+      "Final Demo Day in Abidjan"
+    ],
+    "policiesFrameworks": [
+      "Côte d'Ivoire AI Strategy (draft)",
+      "Digital economy policies"
+    ],
+    "isRegional": false,
+    "lat": 6.8276,
+    "lng": -5.2893
+  },
+  {
+    "id": 18,
+    "region": "West Africa",
+    "country": "Côte d'Ivoire",
+    "name": "Vayanga Donzo",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "Guinea Focal Point",
+      "Master's in Migration Cooperation",
+      "MOCK COP National Coordinator",
+      "Green Initiative for Climate (IVC) Coordinator"
+    ],
+    "policiesFrameworks": [
+      "Guinea climate policies",
+      "International youth climate frameworks",
+      "UN1FY water and climate protocols"
+    ],
+    "isRegional": false,
+    "lat": 6.8276,
+    "lng": -5.2893
+  },
+  {
+    "id": 19,
+    "region": "West Africa",
+    "country": "Guinea",
+    "name": "Vayanga Donzo",
+    "activities": [
+      "ARIN AI for Climate Resilience Fellow",
+      "ARIN Guinea Focal Point",
+      "MOCK COP National Coordinator (2023)",
+      "Green Initiative for Climate (IVC) National Coordinator",
+      "UN1FY Guinea Co-Coordinator"
+    ],
+    "policiesFrameworks": [
+      "Guinea national climate policies",
+      "International youth climate frameworks",
+      "COP engagement strategies"
+    ],
+    "isRegional": false,
+    "lat": 9.6412,
+    "lng": -13.5784
+  },
+  {
+    "id": 20,
+    "region": "West Africa",
+    "country": "Togo",
+    "name": "Mazignada Sika LIMAZIE",
+    "activities": [
+      "ARIN Accountable Adaptation Fellow",
+      "PhD in Economics, University of Lomé",
+      "Economic impact of climate change",
+      "Digital technologies",
+      "Rural entrepreneurship"
+    ],
+    "policiesFrameworks": [
+      "Togo climate adaptation policies",
+      "Digital economy frameworks",
+      "Rural development strategies"
+    ],
+    "isRegional": false,
+    "lat": 6.1319,
+    "lng": 1.2228
+  },
+  {
+    "id": 21,
+    "region": "West Africa",
+    "country": "Benin",
+    "name": "Prof. Adande Belarmain Fandohan",
+    "activities": [
+      "ARIN-affiliated researcher",
+      "AI for mangrove ecosystem vulnerability assessment",
+      "Climate resilience research"
+    ],
+    "policiesFrameworks": [
+      "Benin National AI Strategy",
+      "Biodiversity conservation frameworks"
+    ],
+    "isRegional": false,
+    "lat": 6.4969,
+    "lng": 2.6289
+  },
+  {
+    "id": 22,
+    "region": "Southern Africa",
+    "country": "Zambia",
+    "name": "Selected fellow (Yango 2026)",
+    "activities": [
+      "Yango Fellowship 2026 Cohort (4 of 24 from Zambia)",
+      "Applied AI projects"
+    ],
+    "policiesFrameworks": [
+      "Zambia National AI Strategy 2024-2026"
+    ],
+    "isRegional": false,
+    "lat": -15.3875,
+    "lng": 28.3228
+  },
+  {
+    "id": 23,
+    "region": "Southern Africa",
+    "country": "Mozambique",
+    "name": "Selected fellow (Yango 2026)",
+    "activities": [
+      "Yango Fellowship 2026 Cohort (4 of 24 from Mozambique)",
+      "Applied AI projects"
+    ],
+    "policiesFrameworks": [
+      "Mozambique digital economy framework"
+    ],
+    "isRegional": false,
+    "lat": -25.9692,
+    "lng": 32.5732
+  },
+  {
+    "id": 24,
+    "region": "Southern Africa",
+    "country": "South Africa",
+    "name": "Nicholas Simpson",
+    "activities": [
+      "ARUA-CD researcher",
+      "University of Cape Town",
+      "Machine learning for evidence synthesis",
+      "Climate action research"
+    ],
+    "policiesFrameworks": [
+      "South Africa Draft National AI Policy",
+      "Climate research ethics frameworks"
+    ],
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 25,
+    "region": "Southern Africa",
+    "country": "South Africa",
+    "name": "Timothy Downing",
+    "activities": [
+      "ARUA-CD event organizer",
+      "AI in climate research",
+      "Early career researcher support",
+      "Cross-institutional collaboration"
+    ],
+    "policiesFrameworks": [
+      "South Africa AI governance frameworks",
+      "Research capacity policies"
+    ],
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 26,
+    "region": "Southern Africa",
+    "country": "South Africa",
+    "name": "Simbarashe Crispen Kanyimo",
+    "activities": [
+      "ARIN Accountable Adaptation Fellow",
+      "Child protection",
+      "Education",
+      "Health program management",
+      "Humanitarian AI applications"
+    ],
+    "policiesFrameworks": [
+      "South Africa child protection policies",
+      "Humanitarian frameworks",
+      "Climate adaptation in humanitarian contexts"
+    ],
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 27,
+    "region": "Southern Africa",
+    "country": "Namibia",
+    "name": "Dr. Attlee M. Gamundani",
+    "activities": [
+      "RAIN-Africa representative for Namibia",
+      "AI governance and ethics",
+      "Health sector AI",
+      "Participatory AI governance"
+    ],
+    "policiesFrameworks": [
+      "UNU AI governance frameworks",
+      "RAIN-Africa protocols",
+      "Health data protection policies"
+    ],
+    "isRegional": false,
+    "lat": -22.5609,
+    "lng": 17.0658
+  },
+  {
+    "id": 28,
+    "region": "Southern Africa",
+    "country": "Botswana",
+    "name": "Selected fellow (AWC 2026)",
+    "activities": [
+      "African Women Conference Digital Tech Hub Fellow (Cohort 1)",
+      "AI and Data Science program",
+      "DataCamp certification"
+    ],
+    "policiesFrameworks": [
+      "Botswana digital transformation policies",
+      "Gender-inclusive tech frameworks"
+    ],
+    "isRegional": false,
+    "lat": -24.6282,
+    "lng": 25.9231
+  },
+  {
+    "id": 29,
+    "region": "Southern Africa",
+    "country": "Angola",
+    "name": "Dr. Maria de Fátima Monteiro",
+    "activities": [
+      "AI researcher",
+      "Portuguese-language AI",
+      "AI for climate resilience"
+    ],
+    "policiesFrameworks": [
+      "Angola digital economy policies"
+    ],
+    "isRegional": false,
+    "lat": -8.839,
+    "lng": 13.2894
+  },
+  {
+    "id": 30,
+    "region": "Southern Africa",
+    "country": "Zimbabwe",
+    "name": "Dr. Johannes Bhanye",
+    "activities": [
+      "ARIN Accountable Adaptation Fellow",
+      "Interdisciplinary researcher",
+      "Urban informality",
+      "Urban inclusion/exclusion",
+      "Urban transformation"
+    ],
+    "policiesFrameworks": [
+      "Zimbabwe National AI Strategy 2026-2030",
+      "Urban planning policies",
+      "Climate adaptation frameworks"
+    ],
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 31,
+    "region": "Southern Africa",
+    "country": "Zimbabwe",
+    "name": "Lameck Kachena",
+    "activities": [
+      "ARIN Accountable Adaptation Fellow",
+      "Environmental anthropologist",
+      "Socio-environmental interactions",
+      "Climate change impacts"
+    ],
+    "policiesFrameworks": [
+      "Zimbabwe climate adaptation policies",
+      "Social ecology frameworks"
+    ],
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 32,
+    "region": "North Africa",
+    "country": "Egypt",
+    "name": "Merham M. Keleg",
+    "activities": [
+      "ARIN Accountable Adaptation Fellow",
+      "Assistant Professor, Ain Shams University",
+      "Urban Design and Planning",
+      "PhD fellow, Oxford Brookes University"
+    ],
+    "policiesFrameworks": [
+      "Egypt National AI Strategy",
+      "Urban planning policies",
+      "Climate adaptation in urban contexts"
+    ],
+    "isRegional": false,
+    "lat": 30.0444,
+    "lng": 31.2357
+  },
+  {
+    "id": 33,
+    "region": "North Africa",
+    "country": "Algeria",
+    "name": "Selected fellow (AWC 2026)",
+    "activities": [
+      "African Women Conference Digital Tech Hub Fellow (Cohort 1)",
+      "AI and Data Science program",
+      "DataCamp certification"
+    ],
+    "policiesFrameworks": [
+      "Algeria National AI Strategy (draft)",
+      "Gender and tech policies"
+    ],
+    "isRegional": false,
+    "lat": 36.7538,
+    "lng": 3.0588
+  },
+  {
+    "id": 34,
+    "region": "North Africa",
+    "country": "Tunisia",
+    "name": "Prof. Henda Ben Ghezala",
+    "activities": [
+      "AI researcher",
+      "Dean, Faculty of Sciences, Université de Tunis El Manar",
+      "Data science education",
+      "AI research"
+    ],
+    "policiesFrameworks": [
+      "Tunisia National AI Strategy (draft)",
+      "Higher education AI frameworks"
+    ],
+    "isRegional": false,
+    "lat": 36.8065,
+    "lng": 10.1815
+  },
+  {
+    "id": 35,
+    "region": "North Africa",
+    "country": "Morocco",
+    "name": "Prof. Youssef Tamaazousti",
+    "activities": [
+      "Dean, College of Computing, UM6P",
+      "AI for water management",
+      "Machine learning research"
+    ],
+    "policiesFrameworks": [
+      "Morocco National AI Strategy (in progress)",
+      "Water management AI policies"
+    ],
+    "isRegional": false,
+    "lat": 34.0209,
+    "lng": -6.8416
+  },
+  {
+    "id": 36,
+    "region": "Central Africa",
+    "country": "Cameroon",
+    "name": "Dr. Derek Ajesam Asoh",
+    "activities": [
+      "Senior Lecturer, NAHIP",
+      "AI for climate change",
+      "Landscape dynamics",
+      "Renewable energy"
+    ],
+    "policiesFrameworks": [
+      "Cameroon AI Strategy (draft)",
+      "Renewable energy policies",
+      "Climate adaptation frameworks"
+    ],
+    "isRegional": false,
+    "lat": 3.848,
+    "lng": 11.5021
+  },
+  {
+    "id": 37,
+    "region": "Central Africa",
+    "country": "Cameroon",
+    "name": "Dr. Jacques Bonjawo",
+    "activities": [
+      "AI expert",
+      "Francophone AI ecosystem",
+      "AI for Africa digital transformation"
+    ],
+    "policiesFrameworks": [
+      "Cameroon AI policy",
+      "Francophone AI frameworks"
+    ],
+    "isRegional": false,
+    "lat": 3.848,
+    "lng": 11.5021
+  },
+  {
+    "id": 38,
+    "region": "Central Africa",
+    "country": "DRC",
+    "name": "Prof. Jean-Pierre Bongila",
+    "activities": [
+      "Dean, Faculty of Sciences, UNIKIN",
+      "AI education",
+      "Computer science"
+    ],
+    "policiesFrameworks": [
+      "DRC AI strategy (draft)",
+      "Digital education policies"
+    ],
+    "isRegional": false,
+    "lat": -4.4419,
+    "lng": 15.2663
+  },
+  {
+    "id": 39,
+    "region": "Central Africa",
+    "country": "Chad",
+    "name": "Dr. Mahamat Saleh Daoussa Haggar",
+    "activities": [
+      "AI researcher",
+      "University of N'Djamena",
+      "AI for Sahel climate resilience"
+    ],
+    "policiesFrameworks": [
+      "Chad climate adaptation policies",
+      "Sahel regional frameworks"
+    ],
+    "isRegional": false,
+    "lat": 12.1348,
+    "lng": 15.0557
+  },
+  {
+    "id": 40,
+    "region": "Pan-African",
+    "country": "Multiple",
+    "name": "100 ARIN AI Fellows (2025-2026)",
+    "activities": [
+      "AI for Climate Resilience Fellowship (IDRC-funded)",
+      "12-month blended learning",
+      "Technical AI training",
+      "Mentorship",
+      "Capstone projects",
+      "Policy engagement"
+    ],
+    "policiesFrameworks": [
+      "AU AI continental framework",
+      "National AI strategies across Africa",
+      "Climate adaptation policies"
+    ],
+    "isRegional": true,
+    "lat": null,
+    "lng": null
+  },
+  {
+    "id": 41,
+    "region": "Pan-African",
+    "country": "Multiple",
+    "name": "70% Early Career Researchers (ARIN)",
+    "activities": [
+      "ARIN AI Fellowship cohort",
+      "AI for climate action",
+      "Research and innovation",
+      "Interdisciplinary collaboration"
+    ],
+    "policiesFrameworks": [
+      "Multiple national AI policies",
+      "Climate resilience frameworks"
+    ],
+    "isRegional": true,
+    "lat": null,
+    "lng": null
+  },
+  {
+    "id": 42,
+    "region": "Pan-African",
+    "country": "Multiple",
+    "name": "30% Policymakers (ARIN)",
+    "activities": [
+      "ARIN AI Fellowship cohort",
+      "AI policy integration",
+      "Science-policy interface",
+      "Climate governance"
+    ],
+    "policiesFrameworks": [
+      "National and sub-national climate policies",
+      "AI governance frameworks"
+    ],
+    "isRegional": true,
+    "lat": null,
+    "lng": null
+  },
+  {
+    "id": 43,
+    "region": "Pan-African",
+    "country": "Multiple",
+    "name": "24 Yango Fellows (2026)",
+    "activities": [
+      "12-week applied AI program",
+      "Health literacy tools",
+      "Energy monitoring",
+      "Traffic optimization",
+      "Personalized learning platforms"
+    ],
+    "policiesFrameworks": [
+      "Multiple national digital economy policies"
+    ],
+    "isRegional": true,
+    "lat": null,
+    "lng": null
+  },
+  {
+    "id": 44,
+    "region": "Pan-African",
+    "country": "Multiple",
+    "name": "9 AWC Digital Tech Hub Fellows (2026)",
+    "activities": [
+      "6-month virtual AI & Data Science program",
+      "DataCamp certifications; Associate AI Engineer",
+      "Data Scientist",
+      "Data Analyst tracks"
+    ],
+    "policiesFrameworks": [
+      "Gender-inclusive tech policies",
+      "Digital skills frameworks"
+    ],
+    "isRegional": true,
+    "lat": null,
+    "lng": null
+  },
+  {
+    "id": 45,
+    "region": "Pan-African",
+    "country": "Multiple",
+    "name": "40-50 AWC Phase 2 participants (2026)",
+    "activities": [
+      "Advanced AI and Data Science training",
+      "Progressed to second phase of AWC program"
+    ],
+    "policiesFrameworks": [
+      "Digital inclusion policies",
+      "Women in tech frameworks"
+    ],
+    "isRegional": true,
+    "lat": null,
+    "lng": null
+  },
+  {
+    "id": 46,
+    "region": "Pan-African",
+    "country": "Multiple",
+    "name": "ARUA-CD AI researchers",
+    "activities": [
+      "AI in climate research",
+      "Early career researcher network",
+      "Cross-institutional collaboration",
+      "Ethics and equity in AI"
+    ],
+    "policiesFrameworks": [
+      "Research capacity policies",
+      "AI ethics frameworks",
+      "Climate data governance"
+    ],
+    "isRegional": true,
+    "lat": null,
+    "lng": null
+  },
+  {
+    "id": 47,
+    "region": "Southern Africa",
+    "country": "Zimbabwe",
+    "name": "Dr. Kennedy Chengeta",
+    "activities": [
+      "IndabaX Zimbabwe 2026 Speaker",
+      "KaribuTech AI"
+    ],
+    "policiesFrameworks": [
+      "AI for business",
+      "Tech entrepreneurship frameworks"
+    ],
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 48,
+    "region": "Southern Africa",
+    "country": "Zimbabwe",
+    "name": "Tariro Munzwa & Dr. Tafadzwa Munzwa",
+    "activities": [
+      "IndabaX Zimbabwe 2026 Speakers",
+      "Dawa Health"
+    ],
+    "policiesFrameworks": [
+      "AI for healthcare",
+      "Digital health policies"
+    ],
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 49,
+    "region": "Southern Africa",
+    "country": "Zimbabwe",
+    "name": "Isheanesu Misi",
+    "activities": [
+      "IndabaX Zimbabwe 2026 Speaker",
+      "Vambo AI"
+    ],
+    "policiesFrameworks": [
+      "AI for African languages",
+      "NLP frameworks"
+    ],
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 50,
+    "region": "Southern Africa",
+    "country": "Zimbabwe",
+    "name": "Musa Mbedzi",
+    "activities": [
+      "IndabaX Zimbabwe 2026 Tutorial Facilitator",
+      "Croco Holdings"
+    ],
+    "policiesFrameworks": [
+      "AI technical training"
+    ],
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 51,
+    "region": "Southern Africa",
+    "country": "Zimbabwe",
+    "name": "Walter Nyamutamba",
+    "activities": [
+      "IndabaX Zimbabwe 2026 Tutorial Facilitator",
+      "AIMS-Rwanda"
+    ],
+    "policiesFrameworks": [
+      "Machine learning education"
+    ],
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 52,
+    "region": "Southern Africa",
+    "country": "Zimbabwe",
+    "name": "Kudzai Nyakwima",
+    "activities": [
+      "IndabaX Zimbabwe 2026 Tutorial Facilitator",
+      "CIMAS"
+    ],
+    "policiesFrameworks": [
+      "AI applications"
+    ],
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  }
+]

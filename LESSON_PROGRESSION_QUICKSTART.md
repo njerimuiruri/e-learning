@@ -265,7 +265,7 @@ A: Check browser console for hook logs, and backend logs for API errors.
 
 ---
 
-## ⚡ Performance Tips
+## Performance Tips
 
 1. Use `useMemo` for lesson status calculations
 2. Don't recalculate progress > once per minute

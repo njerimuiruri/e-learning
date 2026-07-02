@@ -202,28 +202,28 @@ export default function CertificateManagementPage() {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <StatCard
                     label="Beginner Completions"
-                    value={loading ? '—' : summary.beginnerTotal}
+                    value={loading ? '' : summary.beginnerTotal}
                     helper={loading ? '' : `${summary.beginnerPending} pending certificate${summary.beginnerPending !== 1 ? 's' : ''}`}
                     icon={BookOpen}
                     tone="bg-blue-50 text-blue-700"
                 />
                 <StatCard
                     label="Intermediate Completions"
-                    value={loading ? '—' : summary.intermediateTotal}
+                    value={loading ? '' : summary.intermediateTotal}
                     helper={loading ? '' : `${summary.intermediatePending} pending certificate${summary.intermediatePending !== 1 ? 's' : ''}`}
                     icon={TrendingUp}
                     tone="bg-amber-50 text-amber-700"
                 />
                 <StatCard
                     label="Advanced Completions"
-                    value={loading ? '—' : summary.advancedTotal}
+                    value={loading ? '' : summary.advancedTotal}
                     helper={loading ? '' : `${summary.advancedPending} pending certificate${summary.advancedPending !== 1 ? 's' : ''}`}
                     icon={Star}
                     tone="bg-rose-50 text-rose-700"
                 />
                 <StatCard
                     label="Certificates Issued"
-                    value={loading ? '—' : summary.totalIssued}
+                    value={loading ? '' : summary.totalIssued}
                     helper={loading ? '' : `${summary.totalPending} still pending`}
                     icon={CheckCircle}
                     tone="bg-green-50 text-green-700"
@@ -325,7 +325,7 @@ export default function CertificateManagementPage() {
                                 <CertificatesDataTable
                                     columns={colMap[level]}
                                     data={levelData}
-                                    title={`${levelLabel} — ${levelData.length} fellow${levelData.length !== 1 ? 's' : ''} completed all modules`}
+                                    title={`${levelLabel}  ${levelData.length} fellow${levelData.length !== 1 ? 's' : ''} completed all modules`}
                                     level={level}
                                 />
                             </TabsContent>
@@ -364,7 +364,7 @@ export default function CertificateManagementPage() {
                             <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${selectedStudent.status === 'issued' ? 'text-green-600' : 'text-yellow-600'}`}>
                                 {selectedStudent.status === 'issued'
                                     ? <><CheckCircle className="h-4 w-4" /> Certificate already issued</>
-                                    : <><Clock className="h-4 w-4" /> Pending — review and confirm</>
+                                    : <><Clock className="h-4 w-4" /> Pending  review and confirm</>
                                 }
                             </span>
                             <div className="flex gap-3">

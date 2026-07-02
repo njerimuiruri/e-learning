@@ -369,7 +369,7 @@ export default function ModuleDiscussionsPage() {
                         </button>
                         <div className="flex-1 min-w-0">
                             <h1 className="font-bold text-gray-900 text-lg truncate">
-                                {moduleData?.title || 'Module'} — Discussions
+                                {moduleData?.title || 'Module'}  Discussions
                             </h1>
                             <p className="text-xs text-gray-500">{discussions.length} thread{discussions.length !== 1 ? 's' : ''}</p>
                         </div>

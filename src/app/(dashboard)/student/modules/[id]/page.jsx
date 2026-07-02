@@ -198,12 +198,12 @@ function ModuleLearningContent() {
             try {
                 payStatus = await paymentService.checkModulePaymentStatus(moduleId);
             } catch {
-                // Cannot verify access — block by default
+                // Cannot verify access  block by default
                 setError('Unable to verify access. Please try again.');
                 return;
             }
 
-            // ── Step 2: Gate — block if not paid ──
+            // ── Step 2: Gate  block if not paid ──
             if (payStatus && !payStatus.paid) {
                 if (payStatus.reason === 'verification_pending') {
                     setAccessStatus('verification_pending');
@@ -213,7 +213,7 @@ function ModuleLearningContent() {
                     setAccessStatus({ type: 'verification_rejected', reason: payStatus.rejectionReason });
                     return;
                 }
-                // Requires payment — redirect to correct checkout
+                // Requires payment  redirect to correct checkout
                 if (payStatus.hasTieredPricing) {
                     router.replace(`/checkout/module?moduleId=${moduleId}&categoryId=${payStatus.categoryId}&categoryName=${encodeURIComponent(payStatus.categoryName || '')}`);
                 } else if (payStatus.requiresPayment) {
@@ -225,7 +225,7 @@ function ModuleLearningContent() {
                 return;
             }
 
-            // ── Step 3: Access granted — load module content ──
+            // ── Step 3: Access granted  load module content ──
             const [mod, enrollmentData] = await Promise.all([
                 moduleService.getModuleById(moduleId),
                 moduleEnrollmentService.getMyEnrollmentForModule(moduleId).catch(() => null),
@@ -281,13 +281,13 @@ function ModuleLearningContent() {
 
         // ── Best-position resolver ─────────────────────────────────────────────
         // Priority order (most reliable first):
-        //  1. serverLessonIndex (currentLessonIndex from GET /progress) — the
+        //  1. serverLessonIndex (currentLessonIndex from GET /progress)  the
         //     backend already applies the correct priority logic: it returns
         //     lastAccessedLesson when still accessible, else nextLessonIndex.
         //     This is ALWAYS the authoritative resume point.
-        //  2. nextLessonIndex — fallback for fresh enrollments with no saved position.
+        //  2. nextLessonIndex  fallback for fresh enrollments with no saved position.
         //  3. Highest lesson in lessonStates with any access history.
-        //  4. Lesson 0, slide 0 — absolute fallback for brand-new enrollments.
+        //  4. Lesson 0, slide 0  absolute fallback for brand-new enrollments.
         const bestPosition = (() => {
             // 1. Backend's authoritative currentLessonIndex/currentSlideIndex
             if (Number.isInteger(serverLessonIndex) && lessonStates?.[serverLessonIndex]) {
@@ -318,7 +318,7 @@ function ModuleLearningContent() {
                     }
                 }
             }
-            // 4. Absolute fallback — fresh enrollment with zero progress
+            // 4. Absolute fallback  fresh enrollment with zero progress
             console.log('[ModuleLearning] bestPosition ← fallback lesson=0 slide=0');
             return { lesson: 0, slide: 0 };
         })();
@@ -334,7 +334,7 @@ function ModuleLearningContent() {
         if (lessonParam !== null && !isNaN(lessonParam)) {
             // Cross-check the ?lesson URL hint against authoritative server progress.
             // The dashboard may generate a STALE ?lesson= link when the enrollment
-            // list data hasn't refreshed — never let a stale param send the student
+            // list data hasn't refreshed  never let a stale param send the student
             // BACKWARD past where the server says they currently are.
             const paramState = lessonStates?.[lessonParam];
             const paramIsCompleted = !!paramState?.isCompleted;
@@ -357,7 +357,7 @@ function ModuleLearningContent() {
                 );
             } else if (paramIsAccessible || paramHasHistory) {
                 if (lessonParam < bestPosition.lesson) {
-                    // STALE backward link — the student is further ahead; use server position
+                    // STALE backward link  the student is further ahead; use server position
                     resolvedLesson = bestPosition.lesson;
                     resolvedSlide = bestPosition.slide;
                     console.warn(
@@ -384,7 +384,7 @@ function ModuleLearningContent() {
             setCurrentLessonIndex(resolvedLesson);
             setLiveSlideIndex(resolvedSlide);
         } else {
-            // No URL param — restore directly from server progress.
+            // No URL param  restore directly from server progress.
             const { lesson: restoredLessonIndex, slide: restoredSlideIndex } = bestPosition;
 
             // Skip the module overview whenever the student has a saved position
@@ -392,7 +392,7 @@ function ModuleLearningContent() {
             if (restoredLessonIndex > 0 || restoredSlideIndex > 0) {
                 setShowModuleOverview(false);
                 console.log(
-                    `[ModuleLearning] Auto-resuming — hiding overview | lessonIndex=${restoredLessonIndex} | slideIndex=${restoredSlideIndex}`,
+                    `[ModuleLearning] Auto-resuming  hiding overview | lessonIndex=${restoredLessonIndex} | slideIndex=${restoredSlideIndex}`,
                 );
             }
 
@@ -452,7 +452,7 @@ function ModuleLearningContent() {
             Math.max(0, (currentLesson?.slides?.length || 1) - 1),
         ),
     );
-    // This log fires on every render — useful to confirm what slide LessonViewer opens with
+    // This log fires on every render  useful to confirm what slide LessonViewer opens with
     if (typeof window !== 'undefined' && currentLesson) {
         console.log(
             `[ModuleLearning] LessonViewer will open | lesson=${currentLessonIndex} (Lesson ${currentLessonIndex + 1}) | initialSlide=${initialSlideForCurrentLesson} (Slide ${initialSlideForCurrentLesson + 1}) | liveSlideIndex=${liveSlideIndex} | lastAccessedSlide(server)=${getLessonProgress(currentLessonIndex)?.lastAccessedSlide ?? 'none'} | assessmentPassed=${getLessonProgress(currentLessonIndex)?.assessmentPassed ?? false} | hasLastAnswers=${!!(getLessonProgress(currentLessonIndex)?.lastAnswers)}`,
@@ -500,7 +500,7 @@ function ModuleLearningContent() {
         }
     }, [currentLessonIndex, lessons.length, moduleData?.finalAssessment, enrollment?._id]);
 
-    // Progress numbers — always from the server snapshot, never derived locally.
+    // Progress numbers  always from the server snapshot, never derived locally.
     const completedCount = enrollmentProgress?.completedLessons ?? 0;
     const allLessonsCompleted = enrollmentProgress?.allLessonsCompleted ?? false;
     const safeProgress = enrollmentProgress?.progress ?? 0;
@@ -542,10 +542,10 @@ function ModuleLearningContent() {
     // ── Lesson / assessment handlers ────────────────────────────────────────────
     // Pattern for every mutation:
     //  1. Call the API
-    //  2. Call refreshProgress() — re-fetches the authoritative state from the DB
+    //  2. Call refreshProgress()  re-fetches the authoritative state from the DB
     //  3. Derive navigation from the fresh server response
     // NEVER use the stale enrollment object from the mutation's response to update
-    // completion state — that document snapshot may be out of date.
+    // completion state  that document snapshot may be out of date.
 
     const handleCompleteLesson = async () => {
         if (!enrollment) return;
@@ -596,7 +596,7 @@ function ModuleLearningContent() {
         } finally { setSubmittingAssessment(false); }
     };
 
-    // Fisher-Yates shuffle — returns a new shuffled array, does not mutate
+    // Fisher-Yates shuffle  returns a new shuffled array, does not mutate
     const shuffleArray = (arr) => {
         const a = [...arr];
         for (let i = a.length - 1; i > 0; i--) {
@@ -624,7 +624,7 @@ function ModuleLearningContent() {
     useEffect(() => {
         if (showFinalAssessment && !finalAssessmentResult) {
             initAssessmentOrder(moduleData?.finalAssessment?.questions);
-            // Refresh enrollment — the backend's submitFinalAssessment checks
+            // Refresh enrollment  the backend's submitFinalAssessment checks
             // enrollment.allLessonsCompleted; if this field wasn't synced yet the
             // submission returns 400. A fresh fetch ensures we have the latest state.
             if (moduleId) {
@@ -699,9 +699,9 @@ function ModuleLearningContent() {
                 // Backend says lessons are incomplete. With the backend now recomputing
                 // from lessonProgress, this should only fire if lessons are genuinely not
                 // done. Answers are preserved so the student can retry via the Submit button.
-                console.warn('[FinalAssessment] "Complete all lessons" error received — answers preserved, student must retry manually.');
+                console.warn('[FinalAssessment] "Complete all lessons" error received  answers preserved, student must retry manually.');
             } else {
-                // Generic error — clear answers and re-randomize for a clean retry.
+                // Generic error  clear answers and re-randomize for a clean retry.
                 setFinalAnswers({});
                 initAssessmentOrder(moduleData?.finalAssessment?.questions);
                 alert(msg || 'Failed to submit assessment. Please try again.');
@@ -947,7 +947,7 @@ function ModuleLearningContent() {
                                 </div>
                             )}
 
-                            {/* Final Assessment — only shown when the module has questions */}
+                            {/* Final Assessment  only shown when the module has questions */}
                             {hasFinalAssessment && (
                             <div className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
                                 <button
@@ -1307,7 +1307,7 @@ function ModuleLearningContent() {
                                 You've completed all available lessons in this module.
                             </p>
                             <p className={`text-sm font-semibold max-w-sm ${darkMode ? 'text-blue-400' : 'text-[#021d49]'}`}>
-                                Content coming soon — check back later for new lessons.
+                                Content coming soon  check back later for new lessons.
                             </p>
                             <button
                                 onClick={() => { setShowContentComingSoon(false); setCurrentLessonIndex(0); }}
@@ -1330,7 +1330,7 @@ function ModuleLearningContent() {
                                         <Icons.Trophy className="w-6 h-6 text-white" />
                                     </div>
                                     <div className="flex-1 text-left">
-                                        <p className="font-bold text-base">All lessons complete — Take your Final Assessment!</p>
+                                        <p className="font-bold text-base">All lessons complete  Take your Final Assessment!</p>
                                         <p className="text-green-100 text-sm mt-0.5">Click here to start. You have up to {moduleData.finalAssessment.maxAttempts || 3} attempts.</p>
                                     </div>
                                     <Icons.ChevronRight className="w-6 h-6 text-white/70 group-hover:translate-x-1 transition-transform flex-shrink-0" />
@@ -1397,7 +1397,7 @@ function ModuleLearningContent() {
                                             await refreshProgress();
                                         }}
                                         onLessonReset={async () => {
-                                            // Quiz attempts exhausted — re-sync progress from server
+                                            // Quiz attempts exhausted  re-sync progress from server
                                             await refreshProgress();
                                         }}
                                     />
@@ -1689,7 +1689,7 @@ function ModuleOverviewPanel({ module: mod, lessons, completedLessonIndices, pro
                                 className="flex-1 gap-2 bg-[#021d49] hover:bg-[#032a66] text-white font-semibold"
                             >
                                 <Icons.Play className="w-4 h-4" />
-                                {allDone ? 'Review Module' : hasAnyProgress ? `Continue — Lesson ${nextLessonIndex + 1}` : 'Begin Learning'}
+                                {allDone ? 'Review Module' : hasAnyProgress ? `Continue  Lesson ${nextLessonIndex + 1}` : 'Begin Learning'}
                             </Button>
                             {mod?.introVideoUrl && (
                                 <Button
@@ -1892,14 +1892,14 @@ function AutoSubmitIndicator({ answered, total, submitting }) {
                 <>
                     <Icons.Loader2 className="w-4 h-4 animate-spin text-green-600 flex-shrink-0" />
                     <span className="text-sm font-medium text-green-700">
-                        {submitting ? 'Evaluating your answers…' : 'All answered — submitting automatically…'}
+                        {submitting ? 'Evaluating your answers…' : 'All answered  submitting automatically…'}
                     </span>
                 </>
             ) : (
                 <>
                     <Icons.HelpCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <span className="text-sm text-gray-500">
-                        {answered} of {total} answered — submits automatically when complete
+                        {answered} of {total} answered  submits automatically when complete
                     </span>
                 </>
             )}
@@ -1965,8 +1965,8 @@ function LessonAssessmentPanel({ assessment, lessonAnswers, setLessonAnswers, re
                         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 flex items-start gap-3">
                             <Icons.AlertTriangle className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
                             <div>
-                                <p className="font-semibold text-orange-800">Attempt {attemptJustMade} of {maxAttempts} — Score: {result.score?.toFixed(1)}%</p>
-                                {displayRemaining > 0 && <p className="text-sm text-orange-700 mt-0.5">{displayRemaining} attempt{displayRemaining !== 1 ? 's' : ''} remaining — answer all questions to retry automatically</p>}
+                                <p className="font-semibold text-orange-800">Attempt {attemptJustMade} of {maxAttempts}  Score: {result.score?.toFixed(1)}%</p>
+                                {displayRemaining > 0 && <p className="text-sm text-orange-700 mt-0.5">{displayRemaining} attempt{displayRemaining !== 1 ? 's' : ''} remaining  answer all questions to retry automatically</p>}
                             </div>
                         </div>
                         <div className="space-y-4">
@@ -2076,7 +2076,7 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
         ? questionOrder
         : allQuestions.map((_, i) => i);
 
-    // Result counts — derived from server response (authoritative)
+    // Result counts  derived from server response (authoritative)
     const resultItems = finalAssessmentResult?.results || [];
     const correctCount = resultItems.filter(r => r.isCorrect).length;
     const incorrectCount = resultItems.length - correctCount;
@@ -2133,7 +2133,7 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
                         <span className="flex items-center gap-1.5"><Icons.CheckCircle className="w-3.5 h-3.5" />Pass: {assessment.passingScore || 70}%</span>
                         {hasResult ? (
                             <span className={`flex items-center gap-1.5 font-bold text-base px-3 py-1 rounded-full ${passed ? 'bg-white text-green-700' : 'bg-red-500 text-white'}`}>
-                                {passed ? '✓ PASSED' : '✗ FAILED'} — {(finalAssessmentResult?.score || 0).toFixed(1)}%
+                                {passed ? '✓ PASSED' : '✗ FAILED'}  {(finalAssessmentResult?.score || 0).toFixed(1)}%
                             </span>
                         ) : (
                             <span className={`flex items-center gap-1.5 font-semibold ${attempts >= maxAttempts ? 'text-red-300' : 'text-white'}`}>
@@ -2194,7 +2194,7 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
                                     </div>
                                 );
                             })}
-                            {/* Manual submit fallback — visible once at least one answer is recorded */}
+                            {/* Manual submit fallback  visible once at least one answer is recorded */}
                             {Object.keys(finalAnswers).some(k => String(finalAnswers[k]).trim() !== '') && (
                                 <div className="border-t border-gray-200 pt-4 space-y-2">
                                     <Button
@@ -2225,7 +2225,7 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
                         </div>
                     )}
 
-                    {/* ── Unified result summary (always shown after submit — pass OR fail) ── */}
+                    {/* ── Unified result summary (always shown after submit  pass OR fail) ── */}
                     {hasResult && (
                         <div className="space-y-5">
                             {/* Score card */}
@@ -2308,7 +2308,7 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
                             <div className="space-y-3">
                                 <p className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                                     <Icons.ClipboardList className="w-4 h-4" />
-                                    {passed ? 'Answer review — see what you got right:' : 'Your answers this attempt:'}
+                                    {passed ? 'Answer review  see what you got right:' : 'Your answers this attempt:'}
                                 </p>
                                 {orderedIndices.map((origIdx, displayPos) => {
                                     const q = allQuestions[origIdx];
@@ -2361,27 +2361,27 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
 // When options are shuffled we pre-resolve and store _resolvedCorrectText on the
 // question object so that index-based formats still point to the right option.
 function resolveCorrectOptionText(question) {
-    // Pre-resolved text wins — set before shuffling so indices still make sense.
+    // Pre-resolved text wins  set before shuffling so indices still make sense.
     if (question._resolvedCorrectText !== undefined) return question._resolvedCorrectText;
 
     const ca = String(question.correctAnswer ?? '').trim();
     if (!ca) return '';
     const options = question.options || [];
 
-    // "Option X" (1-indexed) — e.g. "Option 3" → options[2]
+    // "Option X" (1-indexed)  e.g. "Option 3" → options[2]
     const optionLabelMatch = ca.match(/^[Oo]ption\s*(\d+)$/);
     if (optionLabelMatch) {
         const idx = parseInt(optionLabelMatch[1], 10) - 1;
         if (idx >= 0 && idx < options.length) return options[idx];
     }
 
-    // Pure numeric string (0-indexed) — e.g. "0", "1", "2"
+    // Pure numeric string (0-indexed)  e.g. "0", "1", "2"
     const numIdx = Number(ca);
     if (!isNaN(numIdx) && Number.isInteger(numIdx) && numIdx >= 0 && numIdx < options.length) {
         return options[numIdx];
     }
 
-    // Single uppercase letter — e.g. "A", "B", "C"
+    // Single uppercase letter  e.g. "A", "B", "C"
     const letterIdx = ca.length === 1 && ca >= 'A' && ca <= 'Z' ? ca.charCodeAt(0) - 65 : -1;
     if (letterIdx >= 0 && letterIdx < options.length) {
         return options[letterIdx];
@@ -2592,7 +2592,7 @@ function CompletionScreen({ enrollment, moduleId, module: completedModule, route
         try {
             setEnrollingNext(true);
             await moduleEnrollmentService.enrollInModule(nextModule._id);
-        } catch { /* already enrolled or other error — proceed anyway */ }
+        } catch { /* already enrolled or other error  proceed anyway */ }
         finally { setEnrollingNext(false); }
         router.push(`/student/modules/${nextModule._id}`);
     };
@@ -2623,7 +2623,7 @@ function CompletionScreen({ enrollment, moduleId, module: completedModule, route
                     </div>
                 )}
 
-                {/* Next module CTA — or "more content coming soon" if none exists */}
+                {/* Next module CTA  or "more content coming soon" if none exists */}
                 {loadingNext ? (
                     <div className="flex items-center justify-center gap-2 mb-6 text-gray-400 text-sm">
                         <Icons.Loader2 className="w-4 h-4 animate-spin" /> Checking for next module…
@@ -2651,7 +2651,7 @@ function CompletionScreen({ enrollment, moduleId, module: completedModule, route
                 ) : (
                     <div className="flex items-center gap-2 justify-center bg-blue-50 border border-blue-100 rounded-xl px-5 py-3 mb-6 mx-auto max-w-sm">
                         <Icons.Clock className="w-4 h-4 text-[#021d49] flex-shrink-0" />
-                        <p className="text-sm text-[#021d49] font-medium">More content coming soon — check back for new modules!</p>
+                        <p className="text-sm text-[#021d49] font-medium">More content coming soon  check back for new modules!</p>
                     </div>
                 )}
 

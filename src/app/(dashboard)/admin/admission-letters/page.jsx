@@ -151,7 +151,7 @@ function PdfStep({ selected, onSelect, templates, onUpload, onDelete, loading })
         body: formData,
       });
       const uploadResult = await res.json();
-      if (!uploadResult.url) throw new Error('Upload failed — no URL returned');
+      if (!uploadResult.url) throw new Error('Upload failed  no URL returned');
 
       await onUpload({
         name: nameInput.trim(),
@@ -537,7 +537,7 @@ function ComposeStep({ form, onChange, fromEmails, onAddFromEmail }) {
           }}
           className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
-          <option value="">— Select sender email —</option>
+          <option value=""> Select sender email </option>
           {fromEmails.map((f) => (
             <option key={f._id} value={f.email}>
               {f.displayName} &lt;{f.email}&gt;{f.isDefault ? ' (default)' : ''}
@@ -571,7 +571,7 @@ function ComposeStep({ form, onChange, fromEmails, onAddFromEmail }) {
           type="text"
           value={form.subject}
           onChange={(e) => onChange('subject', e.target.value)}
-          placeholder="e.g. Arin Fellowship — Your Admission Letter"
+          placeholder="e.g. Arin Fellowship  Your Admission Letter"
           className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -590,7 +590,7 @@ function ComposeStep({ form, onChange, fromEmails, onAddFromEmail }) {
         />
         <p className="text-xs text-gray-400 mt-1 flex items-center gap-1">
           <AlertCircle size={11} />
-          Use <code className="bg-gray-100 px-1 rounded text-gray-600">{'{{name}}'}</code> or <code className="bg-gray-100 px-1 rounded text-gray-600">{'{{firstName}}'}</code> — replaced with each fellow&apos;s name when sent.
+          Use <code className="bg-gray-100 px-1 rounded text-gray-600">{'{{name}}'}</code> or <code className="bg-gray-100 px-1 rounded text-gray-600">{'{{firstName}}'}</code>  replaced with each fellow&apos;s name when sent.
         </p>
       </div>
 
@@ -624,8 +624,8 @@ function ComposeStep({ form, onChange, fromEmails, onAddFromEmail }) {
         </div>
         {(form.signOffName || form.signOffTitle) && (
           <div className="mt-3 pl-3 border-l-2 border-blue-300">
-            <p className="text-sm font-semibold text-gray-800">{form.signOffName || '—'}</p>
-            <p className="text-xs text-gray-500">{form.signOffTitle || '—'}</p>
+            <p className="text-sm font-semibold text-gray-800">{form.signOffName || ''}</p>
+            <p className="text-xs text-gray-500">{form.signOffTitle || ''}</p>
           </div>
         )}
       </div>
@@ -694,10 +694,10 @@ function ReviewStep({ template, selectedCount, ccEmails, form, onSend, sending }
   const rows = [
     { label: 'PDF', value: template?.name },
     { label: 'Recipients', value: `${selectedCount} fellow${selectedCount !== 1 ? 's' : ''}` },
-    { label: 'From', value: form.fromEmail ? `${form.fromName} <${form.fromEmail}>` : '—' },
+    { label: 'From', value: form.fromEmail ? `${form.fromName} <${form.fromEmail}>` : '' },
     { label: 'CC', value: ccEmails.length ? ccEmails.join(', ') : 'None' },
-    { label: 'Subject', value: form.subject || '—' },
-    { label: 'Sign-off', value: form.signOffName ? `${form.signOffName} · ${form.signOffTitle}` : '—' },
+    { label: 'Subject', value: form.subject || '' },
+    { label: 'Sign-off', value: form.signOffName ? `${form.signOffName} · ${form.signOffTitle}` : '' },
   ];
 
   return (
@@ -972,8 +972,8 @@ function LogsTab() {
               {[
                 ['Subject', detail.subject],
                 ['From', `${detail.fromName} <${detail.fromEmail}>`],
-                ['Sign-off', detail.signOffName ? `${detail.signOffName} · ${detail.signOffTitle}` : '—'],
-                ['Sent by', detail.sentBy ? `${detail.sentBy.firstName} ${detail.sentBy.lastName}` : '—'],
+                ['Sign-off', detail.signOffName ? `${detail.signOffName} · ${detail.signOffTitle}` : ''],
+                ['Sent by', detail.sentBy ? `${detail.sentBy.firstName} ${detail.sentBy.lastName}` : ''],
               ].map(([l, v]) => (
                 <div key={l}>
                   <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-0.5">{l}</p>
@@ -1084,7 +1084,7 @@ export default function AdmissionLettersPage() {
         setForm((f) => ({ ...f, fromEmail: def.email, fromName: def.displayName }));
       }
     } catch {
-      // silent — not critical
+      // silent  not critical
     }
   }, []);
 
@@ -1142,7 +1142,7 @@ export default function AdmissionLettersPage() {
         signOffTitle: form.signOffTitle,
       });
       setSentResult(res);
-      toast.success(`Sending ${res.totalRecipients} letters — in progress`);
+      toast.success(`Sending ${res.totalRecipients} letters  in progress`);
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Failed to send letters');
     } finally {

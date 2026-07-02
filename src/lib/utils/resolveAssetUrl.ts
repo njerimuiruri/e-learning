@@ -16,7 +16,7 @@ export function resolveAssetUrl(url: string): string {
       return `${API_URL}${pathname}${search}`;
     }
   } catch {
-    // not a valid absolute URL — return as-is
+    // not a valid absolute URL  return as-is
   }
   return url;
 }

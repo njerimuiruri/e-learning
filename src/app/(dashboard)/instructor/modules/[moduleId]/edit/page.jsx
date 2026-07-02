@@ -446,7 +446,7 @@ export default function EditModulePage() {
                 }));
 
                 if (normalizedQuiz.length > 0) {
-                    console.group(`💾 [InstructorSave] Lesson: "${rest.title}" — ${normalizedQuiz.length} quiz questions`);
+                    console.group(`💾 [InstructorSave] Lesson: "${rest.title}"  ${normalizedQuiz.length} quiz questions`);
                     normalizedQuiz.forEach((q, i) => {
                         console.log(
                             `Q${i + 1} | type="${q.type}" | answer="${q.answer}" | options:`,
@@ -577,10 +577,10 @@ export default function EditModulePage() {
                             {draftStatus === 'error' && (
                                 <span
                                     className="text-xs text-red-500 flex items-center gap-1 cursor-help"
-                                    title={draftDbError || 'Draft could not be saved — click Save Draft to retry.'}
+                                    title={draftDbError || 'Draft could not be saved  click Save Draft to retry.'}
                                 >
                                     <Icons.AlertTriangle className="w-3 h-3" />
-                                    {draftDbError || 'Save failed — retry'}
+                                    {draftDbError || 'Save failed  retry'}
                                 </span>
                             )}
                             <button
@@ -596,7 +596,7 @@ export default function EditModulePage() {
                         <p className="mt-1 text-sm text-gray-600">
                             Editing: <strong>{originalModule?.title}</strong>
                             {originalModule?.status === 'published' && (
-                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full">Published — changes apply immediately</span>
+                                <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-700 rounded-full">Published  changes apply immediately</span>
                             )}
                             {originalModule?.status === 'rejected' && (
                                 <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 rounded-full">Rejected</span>
@@ -736,7 +736,7 @@ export default function EditModulePage() {
                             <div className="space-y-6">
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900 mb-1">Module Lessons</h2>
-                                    <p className="text-gray-600 text-sm">Add lessons with slides — text, images, videos, diagrams, and interactive code editors. Each lesson can also have a quiz.</p>
+                                    <p className="text-gray-600 text-sm">Add lessons with slides  text, images, videos, diagrams, and interactive code editors. Each lesson can also have a quiz.</p>
                                 </div>
                                 <LessonBuilder
                                     lessons={lessons}

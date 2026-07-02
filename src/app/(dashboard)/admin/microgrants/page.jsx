@@ -18,7 +18,7 @@ import Navbar from '@/components/navbar/navbar';
 // ─── helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n) => Number(n ?? 0).toFixed(1);
 const num = (n) => Number(n ?? 0).toLocaleString();
-const date = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+const date = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 
 function ScoreBadge({ score }) {
   const color =
@@ -114,7 +114,7 @@ export default function MicrograntsPage() {
       const data = await analyticsService.getMicrograntHistory();
       setHistory(data);
     } catch {
-      // silently fail — show empty state
+      // silently fail  show empty state
     } finally {
       setLoadingHistory(false);
     }
@@ -214,7 +214,7 @@ export default function MicrograntsPage() {
             Mini-Grant Management
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            AI for Climate Resilience — issue financial grants to fellows based on activeness, scores, and engagement.
+            AI for Climate Resilience  issue financial grants to fellows based on activeness, scores, and engagement.
           </p>
         </div>
 
@@ -383,7 +383,7 @@ export default function MicrograntsPage() {
                               {f.completedModules}/{f.totalModules}
                             </TableCell>
                             <TableCell className="text-gray-500">
-                              {f.lastLogin ? date(f.lastLogin) : '—'}
+                              {f.lastLogin ? date(f.lastLogin) : ''}
                             </TableCell>
                             <TableCell>
                               {f.alreadyGranted ? (
@@ -406,9 +406,9 @@ export default function MicrograntsPage() {
 
             {/* score legend */}
             <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> ≥75 — High performer</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> 50–74 — Moderate</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> &lt;50 — Low</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-400 inline-block" /> ≥75  High performer</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> 50–74  Moderate</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-400 inline-block" /> &lt;50  Low</span>
               <span className="text-gray-300">|</span>
               <span>★ Recommended for grant</span>
             </div>
@@ -422,7 +422,7 @@ export default function MicrograntsPage() {
                   <div>
                     <CardTitle className="text-base">Grant Disbursement History</CardTitle>
                     <CardDescription className="text-xs mt-0.5">
-                      All mini-grants issued — {historyGrants.length} record{historyGrants.length !== 1 ? 's' : ''} · Total: KES {num(totalDisbursed)}
+                      All mini-grants issued  {historyGrants.length} record{historyGrants.length !== 1 ? 's' : ''} · Total: KES {num(totalDisbursed)}
                     </CardDescription>
                   </div>
                   <Button size="sm" variant="outline" onClick={fetchHistory} disabled={loadingHistory} className="text-xs h-7">
@@ -459,15 +459,15 @@ export default function MicrograntsPage() {
                       <TableBody>
                         {historyGrants.map((g, i) => (
                           <TableRow key={g._id} className={`text-xs ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}>
-                            <TableCell className="font-medium text-gray-900">{g.student?.name || '—'}</TableCell>
-                            <TableCell className="text-gray-500">{g.student?.email || '—'}</TableCell>
-                            <TableCell>{g.student?.cohort || '—'}</TableCell>
+                            <TableCell className="font-medium text-gray-900">{g.student?.name || ''}</TableCell>
+                            <TableCell className="text-gray-500">{g.student?.email || ''}</TableCell>
+                            <TableCell>{g.student?.cohort || ''}</TableCell>
                             <TableCell className="font-semibold text-green-700">
                               {g.currency} {num(g.amount)}
                             </TableCell>
                             <TableCell><ScoreBadge score={g.criteriaSnapshot?.assessmentScore ?? 0} /></TableCell>
                             <TableCell><ScoreBadge score={g.criteriaSnapshot?.engagementScore ?? 0} /></TableCell>
-                            <TableCell><span className="font-bold">{g.criteriaSnapshot?.compositeScore ?? '—'}</span></TableCell>
+                            <TableCell><span className="font-bold">{g.criteriaSnapshot?.compositeScore ?? ''}</span></TableCell>
                             <TableCell><StatusBadge status={g.status} /></TableCell>
                             <TableCell className="text-gray-500">{g.issuedBy}</TableCell>
                             <TableCell className="text-gray-500">{date(g.issuedAt || g.createdAt)}</TableCell>
@@ -519,7 +519,7 @@ export default function MicrograntsPage() {
                             ? <CheckCircle className="w-3 h-3 text-green-500" />
                             : <X className="w-3 h-3 text-red-400" />}
                           <span className={r.success ? 'text-gray-700' : 'text-red-500'}>
-                            {r.name} {r.error ? `— ${r.error}` : ''}
+                            {r.name} {r.error ? ` ${r.error}` : ''}
                           </span>
                         </div>
                       ))}

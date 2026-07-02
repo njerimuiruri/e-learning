@@ -65,7 +65,7 @@ const stripHtml = (html) => {
 };
 
 const formatDate = (d) =>
-    d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
 
 // ─── Status pill ──────────────────────────────────────────────────────────────
 function StatusPill({ status }) {
@@ -270,7 +270,7 @@ export default function InstructorModulesPage() {
         try {
             const res = await draftService.list();
             setFormDrafts(res?.data || []);
-        } catch { /* silently ignore — form drafts are supplementary */ }
+        } catch { /* silently ignore  form drafts are supplementary */ }
         finally { setFormDraftsLoading(false); }
     };
 
@@ -608,7 +608,7 @@ export default function InstructorModulesPage() {
                         <div className="flex items-center gap-2 mb-3">
                             <Icons.CloudUpload className="w-4 h-4 text-amber-500" />
                             <h3 className="text-sm font-semibold text-gray-700">Auto-saved In Progress</h3>
-                            <span className="text-xs text-gray-400">— saved to server, accessible from any device</span>
+                            <span className="text-xs text-gray-400"> saved to server, accessible from any device</span>
                         </div>
 
                         {formDraftsLoading ? (
@@ -633,7 +633,7 @@ export default function InstructorModulesPage() {
                                         : `/instructor/modules/${editModuleId}/edit`;
                                     const lastSaved = fd.lastSavedAt
                                         ? new Date(fd.lastSavedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-                                        : '—';
+                                        : '';
 
                                     return (
                                         <div key={fd._id} className="flex items-center gap-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">

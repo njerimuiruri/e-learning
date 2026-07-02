@@ -520,7 +520,7 @@ export default function AdminDashboardPage() {
                                                     onClick={() => setReminderDialog({
                                                         open: true,
                                                         fellow,
-                                                        message: `Hi ${fellow.firstName}, we noticed you're at ${fellow.progress}% progress with ${fellow.daysLeft} days remaining. Keep going — you're almost there!`,
+                                                        message: `Hi ${fellow.firstName}, we noticed you're at ${fellow.progress}% progress with ${fellow.daysLeft} days remaining. Keep going  you're almost there!`,
                                                     })}>
                                                     <Icons.Send className="w-3 h-3 mr-1" /> Send Reminder
                                                 </Button>
@@ -572,7 +572,7 @@ export default function AdminDashboardPage() {
                         </DialogTitle>
                         <DialogDescription>
                             Reject <strong>{rejectDialog.instructor?.firstName} {rejectDialog.instructor?.lastName}</strong>?
-                            Please provide a reason — it will be sent to the applicant.
+                            Please provide a reason  it will be sent to the applicant.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="py-2">

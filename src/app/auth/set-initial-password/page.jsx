@@ -21,7 +21,7 @@ export default function SetInitialPasswordPage() {
       return;
     }
     if (!user.mustSetPassword) {
-      // Already set password — redirect to their dashboard
+      // Already set password  redirect to their dashboard
       if (user.role === 'admin') router.replace('/admin/dashboard');
       else if (user.role === 'instructor') router.replace('/instructor/dashboard');
       else router.replace('/student/dashboard');

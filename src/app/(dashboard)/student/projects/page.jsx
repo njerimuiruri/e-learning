@@ -142,7 +142,7 @@ function FileDropzone({ file, onFile, onClear, error }) {
               <Upload className="w-5 h-5 text-gray-400" />
             </div>
             <p className="text-sm font-medium text-gray-700 mb-0.5">Drop file here or click to browse</p>
-            <p className="text-xs text-gray-400">PDF, DOC, DOCX, CSV, XLS, XLSX — max 10 MB</p>
+            <p className="text-xs text-gray-400">PDF, DOC, DOCX, CSV, XLS, XLSX  max 10 MB</p>
           </div>
         )}
       </div>
@@ -342,7 +342,7 @@ function DocumentForm({ form, setForm, file, setFile, fileError, setFileError, i
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="doc-desc">Description <span className="text-red-500">*</span></Label>
-        <Textarea id="doc-desc" placeholder="Briefly describe your document — purpose, findings, methodology…"
+        <Textarea id="doc-desc" placeholder="Briefly describe your document  purpose, findings, methodology…"
           value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} rows={4} maxLength={1000} />
         <p className="text-xs text-gray-400 text-right">{form.description.length}/1000</p>
       </div>
@@ -586,7 +586,7 @@ export default function ResourceHubPage() {
               </Button>
             </div>
 
-            {/* Stat tiles — flush to bottom of hero */}
+            {/* Stat tiles  flush to bottom of hero */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pb-0">
               {[
                 { label: "Total Resources", value: counts.all,     Icon: Layers,     bg: "bg-white/10",          border: "border-white/15" },
@@ -701,7 +701,7 @@ export default function ResourceHubPage() {
                   </div>
                   <p className="text-sm text-gray-700 flex-1">
                     <span className="font-semibold text-violet-700">{counts.admin} resource{counts.admin !== 1 ? "s" : ""}</span>
-                    {" "}curated by the admin team are included in this list — look for the{" "}
+                    {" "}curated by the admin team are included in this list  look for the{" "}
                     <span className="inline-flex items-center gap-0.5 bg-violet-100 text-violet-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">
                       <Shield className="w-2.5 h-2.5" /> Admin
                     </span>
@@ -769,7 +769,7 @@ export default function ResourceHubPage() {
                 <p className="text-xs font-medium flex-1">
                   {slotsLeft === 0
                     ? `Limit reached (${MAX_DOCS}/${MAX_DOCS}). Delete a pending submission to free a slot.`
-                    : `${mine.length} of ${MAX_DOCS} slots used — ${slotsLeft} remaining`}
+                    : `${mine.length} of ${MAX_DOCS} slots used  ${slotsLeft} remaining`}
                 </p>
                 {slotsLeft > 0 && (
                   <Button size="sm" onClick={openSubmitSheet} className="bg-[#021d49] text-white h-8 text-xs gap-1.5 shrink-0 rounded-lg">

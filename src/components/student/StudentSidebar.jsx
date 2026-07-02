@@ -38,7 +38,7 @@ export default function StudentSidebar() {
             const result = await messageService.getUnreadCount();
             setUnreadMessages(result?.count ?? 0);
         } catch {
-            // silently fail — don't break the sidebar
+            // silently fail  don't break the sidebar
         }
     };
 
@@ -148,13 +148,13 @@ export default function StudentSidebar() {
 
     const handleContinueLearning = async () => {
         try {
-            console.log('[ContinueLearning] Sidebar button clicked — fetching enrollments...');
+            console.log('[ContinueLearning] Sidebar button clicked  fetching enrollments...');
             const enrollments = await moduleEnrollmentService.getMyEnrollments();
             const list = Array.isArray(enrollments) ? enrollments : enrollments?.enrollments || [];
             const inProgress = list.find(e => !e.isCompleted);
 
             if (!inProgress) {
-                console.log('[ContinueLearning] No in-progress module — redirecting to modules list');
+                console.log('[ContinueLearning] No in-progress module  redirecting to modules list');
                 router.push('/student/modules');
                 return;
             }

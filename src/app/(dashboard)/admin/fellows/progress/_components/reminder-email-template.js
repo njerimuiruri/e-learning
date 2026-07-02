@@ -2,17 +2,22 @@
  * Builds a beautiful HTML reminder email for a fellow.
  * Degrades gracefully in email clients that don't support CSS animations.
  */
-export function buildReminderEmail({ name, modules = [], overallProgress = 0, personalNote = '' }) {
+export function buildReminderEmail({
+  name,
+  modules = [],
+  overallProgress = 0,
+  personalNote = "",
+}) {
   const incomplete = modules.filter((m) => m.progress < 100);
   const current = incomplete[0];
-  const firstName = name?.split(' ')[0] || name || 'Fellow';
+  const firstName = name?.split(" ")[0] || name || "Fellow";
 
   const progressGradient =
     overallProgress >= 75
-      ? 'linear-gradient(90deg,#10b981,#059669)'
+      ? "linear-gradient(90deg,#10b981,#059669)"
       : overallProgress >= 40
-      ? 'linear-gradient(90deg,#f59e0b,#d97706)'
-      : 'linear-gradient(90deg,#6366f1,#8b5cf6)';
+        ? "linear-gradient(90deg,#f59e0b,#d97706)"
+        : "linear-gradient(90deg,#6366f1,#8b5cf6)";
 
   const moduleRows = incomplete
     .map(
@@ -23,7 +28,7 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
             <tr>
               <td>
                 <p style="margin:0 0 2px;font-size:14px;font-weight:600;color:#1e293b;">
-                  ${m.order ? `Module ${m.order}: ` : ''}${m.title}
+                  ${m.order ? `Module ${m.order}: ` : ""}${m.title}
                 </p>
                 <p style="margin:0;font-size:12px;color:#94a3b8;">
                   ${m.completedLessons} / ${m.totalLessons} lessons &nbsp;·&nbsp; ${m.progress}% done
@@ -44,7 +49,7 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
         </td>
       </tr>`,
     )
-    .join('');
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -55,7 +60,7 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-    /* Animations — supported by Gmail, Apple Mail, Outlook.com */
+    /* Animations  supported by Gmail, Apple Mail, Outlook.com */
     @keyframes fadeDown {
       from { opacity: 0; transform: translateY(-24px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -143,7 +148,7 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
             </h1>
             <p class="header-sub"
                style="color:rgba(255,255,255,0.88);margin:0;font-size:16px;font-weight:400;">
-              Your learning journey is waiting — you're closer than you think.
+              Your learning journey is waiting  you're closer than you think.
             </p>
           </td>
         </tr>
@@ -186,14 +191,15 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
               Dear ${name},
             </p>
             <p style="margin:0 0 28px;font-size:15px;color:#475569;line-height:1.75;">
-              We wanted to reach out and let you know that your progress has been noticed —
+              We wanted to reach out and let you know that your progress has been noticed 
               and we believe in your ability to finish strong!
               You're <strong style="color:#6366f1;">${overallProgress}%</strong> of the way through
               the programme. Don't stop now. 💪
             </p>
 
-            ${personalNote
-              ? `<div style="background:#fefce8;border-left:4px solid #eab308;
+            ${
+              personalNote
+                ? `<div style="background:#fefce8;border-left:4px solid #eab308;
                             border-radius:0 12px 12px 0;padding:16px 20px;margin:0 0 28px;">
                    <p style="margin:0 0 4px;font-size:12px;font-weight:700;
                               text-transform:uppercase;letter-spacing:1px;color:#a16207;">
@@ -202,11 +208,13 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
                    <p style="margin:0;font-size:14px;color:#713f12;line-height:1.65;
                               font-style:italic;">"${personalNote}"</p>
                  </div>`
-              : ''}
+                : ""
+            }
 
             <!-- Current module highlight -->
-            ${current
-              ? `<div style="background:linear-gradient(135deg,#eef2ff,#f5f3ff);
+            ${
+              current
+                ? `<div style="background:linear-gradient(135deg,#eef2ff,#f5f3ff);
                             border:1px solid #c7d2fe;border-radius:20px;padding:28px;
                             margin:0 0 28px;">
                    <p style="margin:0 0 6px;font-size:11px;font-weight:700;
@@ -215,7 +223,7 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
                    </p>
                    <p style="margin:0 0 16px;font-size:19px;font-weight:800;color:#1e1b4b;
                               line-height:1.3;">
-                     ${current.order ? `Module ${current.order}: ` : ''}${current.title}
+                     ${current.order ? `Module ${current.order}: ` : ""}${current.title}
                    </p>
                    <table width="100%" cellpadding="0" cellspacing="0">
                      <tr>
@@ -235,11 +243,13 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
                      ${current.completedLessons} of ${current.totalLessons} lessons completed
                    </p>
                  </div>`
-              : ''}
+                : ""
+            }
 
             <!-- All incomplete modules -->
-            ${incomplete.length > 1
-              ? `<p style="margin:0 0 10px;font-size:12px;font-weight:700;
+            ${
+              incomplete.length > 1
+                ? `<p style="margin:0 0 10px;font-size:12px;font-weight:700;
                            text-transform:uppercase;letter-spacing:1px;color:#94a3b8;">
                    Modules still in progress
                  </p>
@@ -250,7 +260,8 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
                      ${moduleRows}
                    </tbody>
                  </table>`
-              : '<div style="height:8px;"></div>'}
+                : '<div style="height:8px;"></div>'
+            }
 
             <!-- CTA -->
             <table width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 36px;">
@@ -325,57 +336,72 @@ export function buildReminderEmail({ name, modules = [], overallProgress = 0, pe
  * IMPORTANT: The backend template already adds:
  *   - "Arin Publishing Academy" branded header
  *   - "Dear Fellow," greeting line
- * So we start directly with the body content — no duplicate greeting, no HTML.
+ * So we start directly with the body content  no duplicate greeting, no HTML.
  */
-export function buildReminderMessage({ name, modules = [], overallProgress = 0, personalNote = '' }) {
-  const firstName = name?.split(' ')[0] || name || 'there';
+export function buildReminderMessage({
+  name,
+  modules = [],
+  overallProgress = 0,
+  personalNote = "",
+}) {
+  const firstName = name?.split(" ")[0] || name || "there";
   const incomplete = modules.filter((m) => m.progress < 100);
   const current = incomplete[0];
 
   const lines = [];
 
-  // Opening — flows naturally after the backend's "Dear Fellow," line
+  // Opening  flows naturally after the backend's "Dear Fellow," line
   lines.push(
     personalNote.trim() ||
-      `We noticed you've been making great progress on your learning journey, ${firstName} — and we want to make sure you finish strong! 💪`,
+      `We noticed you've been making great progress on your learning journey, ${firstName}  and we want to make sure you finish strong! 💪`,
   );
-  lines.push('');
-  lines.push(`You're currently at ${overallProgress}% overall progress. Here's a quick snapshot:`);
-  lines.push('');
+  lines.push("");
+  lines.push(
+    `You're currently at ${overallProgress}% overall progress. Here's a quick snapshot:`,
+  );
+  lines.push("");
   lines.push(`YOUR PROGRESS: ${buildTextProgressBar(overallProgress)}`);
-  lines.push('');
+  lines.push("");
 
   if (current) {
     lines.push(`▶  CONTINUE WHERE YOU LEFT OFF`);
-    lines.push(`   ${current.order ? `Module ${current.order}: ` : ''}${current.title}`);
-    lines.push(`   ${current.progress}% complete — ${current.completedLessons} of ${current.totalLessons} lessons done`);
-    lines.push('');
+    lines.push(
+      `   ${current.order ? `Module ${current.order}: ` : ""}${current.title}`,
+    );
+    lines.push(
+      `   ${current.progress}% complete  ${current.completedLessons} of ${current.totalLessons} lessons done`,
+    );
+    lines.push("");
   }
 
   if (incomplete.length > 1) {
     lines.push(`📋 ALL MODULES IN PROGRESS`);
     incomplete.forEach((m) => {
-      lines.push(`   • ${m.order ? `Module ${m.order}: ` : ''}${m.title}  —  ${m.progress}%`);
+      lines.push(
+        `   • ${m.order ? `Module ${m.order}: ` : ""}${m.title}    ${m.progress}%`,
+      );
       lines.push(`     ${buildTextProgressBar(m.progress, 15)}`);
     });
-    lines.push('');
+    lines.push("");
   }
 
-  lines.push(`Every lesson brings you one step closer to your Certificate of Completion. 🏆`);
+  lines.push(
+    `Every lesson brings you one step closer to your Certificate of Completion. 🏆`,
+  );
   lines.push(`Log in to your learning portal to pick up where you left off.`);
-  lines.push('');
+  lines.push("");
   lines.push(`We're rooting for you!`);
-  lines.push('');
+  lines.push("");
   lines.push(`Warm regards,`);
   lines.push(`Africa Research & Impact Network (ARIN)`);
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 function buildTextProgressBar(percent, width = 20) {
   const filled = Math.round((percent / 100) * width);
   const empty = width - filled;
-  return `[${'█'.repeat(filled)}${'░'.repeat(empty)}] ${percent}%`;
+  return `[${"█".repeat(filled)}${"░".repeat(empty)}] ${percent}%`;
 }
 
 /** Plain-text fallback (kept for backwards compat) */

@@ -103,7 +103,7 @@ export default function ForgotPasswordPage() {
                         </div>
                     )}
 
-                    {/* Step 1 — Email */}
+                    {/* Step 1  Email */}
                     {step === STEPS.EMAIL && (
                         <>
                             <div className="text-center mb-6">
@@ -142,7 +142,7 @@ export default function ForgotPasswordPage() {
                         </>
                     )}
 
-                    {/* Step 2 — OTP */}
+                    {/* Step 2  OTP */}
                     {step === STEPS.OTP && (
                         <>
                             <div className="text-center mb-6">
@@ -192,7 +192,7 @@ export default function ForgotPasswordPage() {
                         </>
                     )}
 
-                    {/* Step 3 — New Password */}
+                    {/* Step 3  New Password */}
                     {step === STEPS.PASSWORD && (
                         <>
                             <div className="text-center mb-6">
@@ -254,7 +254,7 @@ export default function ForgotPasswordPage() {
                         </>
                     )}
 
-                    {/* Step 4 — Done */}
+                    {/* Step 4  Done */}
                     {step === STEPS.DONE && (
                         <div className="text-center py-4">
                             <div className="inline-flex items-center justify-center w-16 h-16 bg-green-50 rounded-2xl mb-4">

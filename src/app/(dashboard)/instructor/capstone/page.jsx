@@ -17,7 +17,7 @@ import capstoneService from "@/lib/api/capstoneService";
 const PAGE_SIZE = 9;
 
 function fmtDate(d) {
-  if (!d) return "—";
+  if (!d) return "";
   return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -118,7 +118,7 @@ function ProjectCard({ item, onClick }) {
           <div className="flex items-center gap-2 bg-emerald-50 rounded-xl px-3 py-2">
             <Trophy className="w-4 h-4 text-emerald-600 shrink-0" />
             <p className="text-sm font-bold text-emerald-800">
-              {item.grade}/100 — {item.passed ? "Pass" : "Fail"}
+              {item.grade}/100  {item.passed ? "Pass" : "Fail"}
             </p>
           </div>
         )}

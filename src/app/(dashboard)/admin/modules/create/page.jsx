@@ -60,7 +60,7 @@ function BulletList({ label, hint, values, onChange, placeholder, required }) {
           </div>
         ))}
         {values.length === 0 && (
-          <p className="text-sm text-gray-400 italic pl-7">No items yet — click below to add one.</p>
+          <p className="text-sm text-gray-400 italic pl-7">No items yet  click below to add one.</p>
         )}
       </div>
       <Button type="button" variant="outline" size="sm" onClick={add} className="gap-1 ml-7">
@@ -197,7 +197,7 @@ function FinalAssessmentStep({ assessment, onChange }) {
         <Icons.Lock className="w-4 h-4 text-purple-600" />
         <AlertDescription className="text-purple-700 text-sm">
           This is the <strong>module-level final assessment</strong>. It is separate from individual lesson quizzes.
-          <strong> This step is optional</strong> — you can skip it now and add or edit the final assessment later from the module detail page.
+          <strong> This step is optional</strong>  you can skip it now and add or edit the final assessment later from the module detail page.
         </AlertDescription>
       </Alert>
 
@@ -304,7 +304,7 @@ function FinalAssessmentStep({ assessment, onChange }) {
               </div>
             )}
             <div className="space-y-1.5">
-              <Label className="text-xs text-gray-500">Explanation <span className="text-gray-400 font-normal">(optional — shown after submission)</span></Label>
+              <Label className="text-xs text-gray-500">Explanation <span className="text-gray-400 font-normal">(optional  shown after submission)</span></Label>
               <Input value={q.explanation || ''} onChange={(e) => updateQ(i, 'explanation', e.target.value)} placeholder="Shown to learner after submission" />
             </div>
           </div>
@@ -664,7 +664,7 @@ export default function AdminCreateModulePage() {
         return (
           <div className="space-y-8">
 
-            {/* Assign Instructor — admin-only */}
+            {/* Assign Instructor  admin-only */}
             <section className="space-y-5">
               <SectionHeading number={1} title="Assign Instructor" subtitle="Assign this module to an instructor." />
               <Alert className="border-blue-200 bg-blue-50">
@@ -844,7 +844,7 @@ export default function AdminCreateModulePage() {
 
             {/* Capstone */}
             <section className="space-y-4">
-              <SectionHeading number={4} title="Capstone Project" subtitle="Optional — describe the final project learners will design and submit." />
+              <SectionHeading number={4} title="Capstone Project" subtitle="Optional  describe the final project learners will design and submit." />
               <RichTextEditor
                 value={form.capstone}
                 onChange={(v) => updateForm('capstone', v)}
@@ -922,7 +922,7 @@ export default function AdminCreateModulePage() {
 
             {/* Intro Video */}
             <section className="space-y-4">
-              <SectionHeading number={9} title="Module Intro Video" subtitle="Optional — shown to students before they start the first lesson" />
+              <SectionHeading number={9} title="Module Intro Video" subtitle="Optional  shown to students before they start the first lesson" />
               <VideoUploader value={form.introVideoUrl} onChange={(v) => updateForm('introVideoUrl', v)} />
             </section>
           </div>
@@ -1013,7 +1013,7 @@ export default function AdminCreateModulePage() {
                 })()
               ) : assignMode === 'pending' && form.pendingInstructorEmail ? (
                 <p className="text-sm text-gray-600">
-                  Pending instructor: <strong>{form.pendingInstructorName || 'Unknown'}</strong> ({form.pendingInstructorEmail}) — will be linked upon registration.
+                  Pending instructor: <strong>{form.pendingInstructorName || 'Unknown'}</strong> ({form.pendingInstructorEmail})  will be linked upon registration.
                 </p>
               ) : (
                 <p className="text-sm text-gray-400 italic">No instructor assigned. You can assign one later.</p>
@@ -1025,8 +1025,8 @@ export default function AdminCreateModulePage() {
               {[
                 {
                   label: 'Module',
-                  value: form.title || '—',
-                  sub: `${form.level || '—'} · ${form.duration || '—'}`,
+                  value: form.title || '',
+                  sub: `${form.level || ''} · ${form.duration || ''}`,
                   icon: Icons.BookMarked,
                   color: 'blue',
                 },
@@ -1130,7 +1130,7 @@ export default function AdminCreateModulePage() {
               <Badge className="bg-orange-100 text-orange-700 border-orange-200 text-xs">Admin</Badge>
             </div>
             <p className="text-sm text-gray-500">
-              Step {step + 1} of {STEPS.length} —{' '}
+              Step {step + 1} of {STEPS.length} {' '}
               <span className="font-medium text-gray-700">{STEPS[step].label}</span>
             </p>
           </div>
@@ -1165,10 +1165,10 @@ export default function AdminCreateModulePage() {
           {draftStatus === 'error' && (
             <span
               className="text-xs text-red-500 hidden sm:flex items-center gap-1 cursor-help"
-              title={draftDbError || 'Draft could not be saved — click Save Draft to retry.'}
+              title={draftDbError || 'Draft could not be saved  click Save Draft to retry.'}
             >
               <Icons.AlertTriangle className="w-3 h-3" />
-              {draftDbError || 'Save failed — retry'}
+              {draftDbError || 'Save failed  retry'}
             </span>
           )}
           <Button

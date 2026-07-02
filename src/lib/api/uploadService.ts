@@ -36,7 +36,7 @@ const uploadService = {
     const response = await api.post('/upload/video', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    // Videos go to Cloudinary — already a full URL
+    // Videos go to Cloudinary  already a full URL
     return response.data.url;
   },
 

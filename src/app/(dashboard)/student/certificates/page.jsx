@@ -78,7 +78,7 @@ function CertificateCard({ cert }) {
 
     const issued = cert.issuedDate
         ? new Date(cert.issuedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
-        : '—';
+        : '';
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
@@ -117,7 +117,7 @@ function CertificateCard({ cert }) {
                     <div className="flex items-center gap-2 text-sm">
                         <Hash className="w-3.5 h-3.5 text-gray-300 shrink-0" />
                         <span className="text-gray-400 text-xs w-20 shrink-0">Certificate ID</span>
-                        <span className="font-mono text-gray-600 text-xs truncate">{cert.certificateNumber || '—'}</span>
+                        <span className="font-mono text-gray-600 text-xs truncate">{cert.certificateNumber || ''}</span>
                     </div>
                 </div>
 
@@ -182,7 +182,7 @@ export default function CertificatesPage() {
                             {loading
                                 ? 'Loading your certificates…'
                                 : certificates.length > 0
-                                    ? `${certificates.length} certificate${certificates.length !== 1 ? 's' : ''} earned — download your certificate & transcript below`
+                                    ? `${certificates.length} certificate${certificates.length !== 1 ? 's' : ''} earned  download your certificate & transcript below`
                                     : 'Your certificates will appear here once issued'}
                         </p>
                     </div>

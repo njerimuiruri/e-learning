@@ -84,7 +84,7 @@ function InfoItem({ label, value }) {
   return (
     <div className="rounded-lg border bg-gray-50 p-3">
       <p className="text-xs font-medium uppercase tracking-wide text-gray-500">{label}</p>
-      <p className="mt-1 font-semibold text-gray-900">{value || '—'}</p>
+      <p className="mt-1 font-semibold text-gray-900">{value || ''}</p>
     </div>
   );
 }
@@ -121,7 +121,7 @@ export default function FellowProgressDetailPage() {
       }
     } catch {}
 
-    // Fall back to API — only works when _id is a real MongoDB ObjectId
+    // Fall back to API  only works when _id is a real MongoDB ObjectId
     try {
       const decodedId = decodeURIComponent(id);
       const res = await adminService.getFellowProgressDetail(decodedId);
@@ -141,11 +141,11 @@ export default function FellowProgressDetailPage() {
         _id: mongoId || raw?.email || decodedId,
         mongoId,
         fullName: raw?.fullName || [raw?.firstName, raw?.lastName].filter(Boolean).join(' ') || 'Unnamed fellow',
-        email: raw?.email || '—',
-        fellowId: raw?.fellowId || raw?.fellowData?.fellowId || '—',
-        cohort: raw?.cohort || raw?.fellowData?.cohort || '—',
-        region: raw?.region || raw?.fellowData?.region || '—',
-        track: raw?.track || raw?.fellowData?.track || '—',
+        email: raw?.email || '',
+        fellowId: raw?.fellowId || raw?.fellowData?.fellowId || '',
+        cohort: raw?.cohort || raw?.fellowData?.cohort || '',
+        region: raw?.region || raw?.fellowData?.region || '',
+        track: raw?.track || raw?.fellowData?.track || '',
         modules,
         totalModules,
         completedModules,
@@ -168,7 +168,7 @@ export default function FellowProgressDetailPage() {
   const resolveApiId = useCallback(async () => {
     if (fellow?.mongoId) return fellow.mongoId;
     const email = fellow?.email;
-    if (!email || email === '—') return null;
+    if (!email || email === '') return null;
     try {
       const res = await adminService.getAllFellows({ search: email, limit: 10 });
       const list = Array.isArray(res) ? res : (res?.fellows ?? res?.data ?? []);
@@ -190,7 +190,7 @@ export default function FellowProgressDetailPage() {
     try {
       const apiId = await resolveApiId();
       if (!apiId) {
-        toast.error('Could not resolve fellow ID — please try again or contact support.');
+        toast.error('Could not resolve fellow ID  please try again or contact support.');
         return;
       }
       const htmlBody = buildReminderEmail({
@@ -220,12 +220,12 @@ export default function FellowProgressDetailPage() {
     try {
       const apiId = await resolveApiId();
       if (!apiId) {
-        toast.error('Could not resolve fellow ID — please try again or contact support.');
+        toast.error('Could not resolve fellow ID  please try again or contact support.');
         return;
       }
       await adminService.sendBulkEmail(
         [apiId],
-        'Congratulations — Your Certificate of Completion',
+        'Congratulations  Your Certificate of Completion',
         `Dear ${fellow?.fullName},\n\nCongratulations on completing the programme! Please find your certificate of completion attached.\n\nBest regards,\nARIN Team`,
       );
       toast.success('Certificate email sent successfully');
@@ -281,7 +281,7 @@ export default function FellowProgressDetailPage() {
           <Button variant="outline" size="sm" onClick={fetchFellow}>
             <RefreshCw className="h-4 w-4" />
           </Button>
-          {/* Reminder button — only for in-progress fellows */}
+          {/* Reminder button  only for in-progress fellows */}
           {isInProgress && (
             <Button
               size="sm"
@@ -293,7 +293,7 @@ export default function FellowProgressDetailPage() {
               Send Reminder
             </Button>
           )}
-          {/* Certificate button — only for completed fellows */}
+          {/* Certificate button  only for completed fellows */}
           {isCompleted && (
             <Button
               size="sm"
@@ -359,7 +359,7 @@ export default function FellowProgressDetailPage() {
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-gray-950">
-                        Module {module.order || '—'}: {module.title}
+                        Module {module.order || ''}: {module.title}
                       </p>
                       <p className="mt-0.5 text-sm text-gray-500">
                         {module.completedLessons}/{module.totalLessons} lessons completed
@@ -399,7 +399,7 @@ export default function FellowProgressDetailPage() {
           <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
             <DialogTitle className="flex items-center gap-2">
               <Bell className="h-5 w-5 text-yellow-600" />
-              Send Reminder — {fellow.fullName}
+              Send Reminder  {fellow.fullName}
             </DialogTitle>
             <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
               <Mail className="h-3.5 w-3.5" /> {fellow.email}

@@ -54,7 +54,7 @@ const STATUS_ORDER = [
 function statusIndex(s) { return STATUS_ORDER.indexOf(s); }
 
 function fmtDate(d) {
-  if (!d) return "—";
+  if (!d) return "";
   return new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 }
 
@@ -359,7 +359,7 @@ export default function CapstoneDetailPage() {
         await capstoneService.gradeCapstone(item._id, { grade: g, feedback: gradeFeedback.trim(), passed: gradePassed });
       }
       const msgs = {
-        approve:  "Proposal approved — student can proceed to implementation.",
+        approve:  "Proposal approved  student can proceed to implementation.",
         revision: "Revision requested. Student has been notified.",
         reject:   "Submission rejected.",
         grade:    "Grade submitted! Student has been notified.",
@@ -480,7 +480,7 @@ export default function CapstoneDetailPage() {
       <div className="max-w-6xl mx-auto px-4 sm:px-8 py-8">
         <div className="grid lg:grid-cols-3 gap-6">
 
-          {/* Left — project content */}
+          {/* Left  project content */}
           <div className="lg:col-span-2 space-y-5">
 
             {item.description && item.description !== "<p><br></p>" && (
@@ -534,7 +534,7 @@ export default function CapstoneDetailPage() {
             )}
           </div>
 
-          {/* Right — actions */}
+          {/* Right  actions */}
           <div className="space-y-4">
 
             {/* Proposal stage */}
@@ -542,7 +542,7 @@ export default function CapstoneDetailPage() {
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 px-5 py-4">
                   <p className="font-bold text-gray-900 text-sm">Proposal Review</p>
-                  <p className="text-xs text-gray-500 mt-0.5">No grade at this stage — approve to let the student proceed.</p>
+                  <p className="text-xs text-gray-500 mt-0.5">No grade at this stage  approve to let the student proceed.</p>
                 </div>
                 <div className="p-5 space-y-4">
                   <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-100 rounded-xl">
@@ -638,7 +638,7 @@ export default function CapstoneDetailPage() {
                   <div className="space-y-1.5">
                     <Label className="text-xs">Final Feedback <span className="text-red-500">*</span></Label>
                     <Textarea
-                      placeholder="Write constructive feedback — strengths, areas to improve, overall impressions…"
+                      placeholder="Write constructive feedback  strengths, areas to improve, overall impressions…"
                       value={gradeFeedback}
                       onChange={(e) => setGradeFeedback(e.target.value)}
                       rows={5}
@@ -673,7 +673,7 @@ export default function CapstoneDetailPage() {
                 <div className="p-5">
                   <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl p-5 text-center border border-emerald-100">
                     <p className="text-4xl font-extrabold text-emerald-900 leading-none">
-                      {item.grade ?? "—"}
+                      {item.grade ?? ""}
                       <span className="text-xl text-emerald-500">/100</span>
                     </p>
                     <span className={`inline-block mt-3 px-4 py-1 rounded-full text-sm font-bold ${item.passed ? "bg-emerald-600 text-white" : "bg-red-500 text-white"}`}>

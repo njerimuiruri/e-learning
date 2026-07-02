@@ -104,7 +104,7 @@ export function buildCertificateColumns({ onIssue, level = "beginner" }) {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Completed" />,
       cell: ({ row }) => {
         const date = row.getValue("completedDate");
-        if (!date) return <span className="text-gray-400 text-xs">—</span>;
+        if (!date) return <span className="text-gray-400 text-xs"></span>;
         return (
           <p className="text-sm text-gray-700">
             {new Date(date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
@@ -117,7 +117,7 @@ export function buildCertificateColumns({ onIssue, level = "beginner" }) {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Issued On" />,
       cell: ({ row }) => {
         const date = row.getValue("issuedDate");
-        if (!date) return <span className="text-gray-400 text-xs">—</span>;
+        if (!date) return <span className="text-gray-400 text-xs"></span>;
         return (
           <p className="text-sm text-green-700">
             {new Date(date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}

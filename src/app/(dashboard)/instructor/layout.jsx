@@ -44,7 +44,7 @@ export default function InstructorLayout({ children }) {
                 const freshUser = await authService.fetchUserProfile();
                 if (freshUser) user = { ...user, ...freshUser };
             } catch {
-                // Network error — fall back to cached data only
+                // Network error  fall back to cached data only
             }
 
             setInstructorData(user);

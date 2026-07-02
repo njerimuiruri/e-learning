@@ -394,7 +394,7 @@ export default function AchievementsPage() {
                                             <div className="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 py-10 text-center">
                                                 <BookCheck className="w-10 h-10 text-gray-200 mx-auto mb-3" />
                                                 <p className="text-sm font-semibold text-gray-500">No completed modules yet</p>
-                                                <p className="text-xs text-gray-400 mt-1">Keep learning — you're on your way!</p>
+                                                <p className="text-xs text-gray-400 mt-1">Keep learning  you're on your way!</p>
                                             </div>
                                         ) : (
                                             <div className="space-y-3">

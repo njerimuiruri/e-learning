@@ -183,12 +183,12 @@ function ModuleBrowsingContent() {
     const isSequentiallyLocked = (mod) => {
         // Optional modules are never sequentially locked.
         if (mod.isOptional) return false;
-        // Intermediate-level modules are self-paced — no sequential gating.
+        // Intermediate-level modules are self-paced  no sequential gating.
         if (mod.level === 'intermediate') return false;
         if (!mod.order || mod.order <= 1) return false;
         const catId = (mod.categoryId?._id || mod.categoryId)?.toString();
         // Find the nearest lower-order compulsory module in the same category.
-        // Optional modules in between are skipped — they don't gate progression.
+        // Optional modules in between are skipped  they don't gate progression.
         const prevCompulsory = modules
             .filter(m => {
                 const mCatId = (m.categoryId?._id || m.categoryId)?.toString();
@@ -246,11 +246,11 @@ function ModuleBrowsingContent() {
                     alert('This module is not part of your enrolled programme. You can only access modules from your enrolled category.');
                     return;
                 }
-                // Paid category — fall through to normal payment flow
+                // Paid category  fall through to normal payment flow
             }
         }
 
-        // Intermediate modules are self-paced — skip sequential lock check entirely.
+        // Intermediate modules are self-paced  skip sequential lock check entirely.
         const isIntermediate = module.level === 'intermediate';
         if (!module.isOptional && !isIntermediate && isSequentiallyLocked(module)) {
             const prevTitle = getPrevModuleTitle(module);
@@ -731,7 +731,7 @@ function ModuleBrowsingContent() {
                                     <div className="border-t border-gray-100 bg-gray-50 px-6 py-3 flex items-center justify-between">
                                         <p className="text-gray-400 text-xs flex items-center gap-2">
                                             <Icons.ChevronDown className="w-3.5 h-3.5" />
-                                            {totalModules} module{totalModules !== 1 ? 's' : ''} available below — click any to view details
+                                            {totalModules} module{totalModules !== 1 ? 's' : ''} available below  click any to view details
                                         </p>
                                     </div>
                                 )}
@@ -744,7 +744,7 @@ function ModuleBrowsingContent() {
                     <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
                         <Icons.ListOrdered className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <p className="text-xs text-amber-800 leading-relaxed">
-                            <span className="font-semibold">Sequential Learning:</span> Modules within each programme must be completed in order — you must finish Module 1 before you can access Module 2, and so on. Locked modules will become available once you complete the preceding one.
+                            <span className="font-semibold">Sequential Learning:</span> Modules within each programme must be completed in order  you must finish Module 1 before you can access Module 2, and so on. Locked modules will become available once you complete the preceding one.
                         </p>
                     </div>
                     )}

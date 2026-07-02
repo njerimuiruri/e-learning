@@ -1,0 +1,1225 @@
+[
+  {
+    "id": 1,
+    "region": "East Africa",
+    "country": "Kenya",
+    "institution": "University of Nairobi",
+    "institutionType": "University",
+    "department": "School of Computing and Informatics",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI specialisation)",
+      "MSc in AI",
+      "PhD in Machine Learning"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate"
+    ],
+    "contactDetails": "Dr. Kamau Gichane, HOD: computing@uonbi.ac.ke \n+254-20-4910000",
+    "collaborationOpportunities": "Partner for research collaborations \nguest lectures, student internships \nIndustry-sponsored projects; \nJoint grant applications",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 2,
+    "region": "East Africa",
+    "country": "Kenya",
+    "institution": "Strathmore University",
+    "institutionType": "University",
+    "department": "Centre for Intellectual Property and Information Technology Law (CIPIT)",
+    "levelOfStudy": [
+      "Postgraduate Diploma in AI Law & Policy",
+      "MSc in Data Science & AI",
+      "Executive short courses"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Diploma",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Melissa Omino, Director: cipit@strathmore.edu \n+254-703-034000",
+    "collaborationOpportunities": "Research partnerships on AI governance \nPolicy advisory; Curriculum development \nJoint conferences",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 3,
+    "region": "East Africa",
+    "country": "Kenya",
+    "institution": "Dedan Kimathi University of Technology (DeKUT)",
+    "institutionType": "University",
+    "department": "School of Computing and Information Technology",
+    "levelOfStudy": [
+      "BSc in Artificial Intelligence",
+      "MSc in Machine Learning",
+      "AI for Agriculture short course"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Peter Waweru, Dean: cs@dkut.ac.ke \n+254-61-2050000",
+    "collaborationOpportunities": "Agritech AI collaborations \nStudent innovation challenges \nIndustry linkage programs",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 4,
+    "region": "East Africa",
+    "country": "Kenya",
+    "institution": "Jomo Kenyatta University of Agriculture & Technology (JKUAT)",
+    "institutionType": "University",
+    "department": "Institute of Computer Science and Information Technology",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI track)",
+      "MSc in Data Science",
+      "Professional certifications"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Michael Kimwele, Director: icsit@jkuat.ac.ke \n+254-67-52711",
+    "collaborationOpportunities": "AI for agriculture research \nStudent exchange programs \nIndustry-sponsored capstone projects",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 5,
+    "region": "East Africa",
+    "country": "Kenya",
+    "institution": "Africa Research and Impact Network (ARIN)",
+    "institutionType": "Think Tank / Research Network",
+    "department": "AI for Climate Resilience Program",
+    "levelOfStudy": [
+      "AI for Climate Action Fellowships (100+ fellows)",
+      "Early career researcher training",
+      "Policymaker training",
+      "Capacity building workshops"
+    ],
+    "courseType": [
+      "Fellowship",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Joanes Atela, Executive Director: info@arin-africa.org \n+254",
+    "collaborationOpportunities": "High-value opportunities \nDonor-funded project partnerships (IDRC) \nResearch collaborations on AI for climate adaptation \nPolicy advisory \nFellow recruitment \nMulti-sectoral stakeholder engagement \nJoint conference organizing \nScience-policy interface facilitation",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 6,
+    "region": "East Africa",
+    "country": "Kenya",
+    "institution": "Moringa School",
+    "institutionType": "Vocational / Bootcamp",
+    "department": "Data Science & AI Program",
+    "levelOfStudy": [
+      "6-month full-time Data Science & AI bootcamp",
+      "Part-time evening classes"
+    ],
+    "courseType": [
+      "Bootcamp",
+      "Short courses"
+    ],
+    "contactDetails": "info@moringaschool.com \n+254-20-4406865",
+    "collaborationOpportunities": "Employer partnerships for graduate placement \nCurriculum co-development \nScholarship sponsorships",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 7,
+    "region": "East Africa",
+    "country": "Kenya",
+    "institution": "African Institute for Research and Training in AI (AIRTAI)",
+    "institutionType": "Research Institute",
+    "department": "AI Research & Training",
+    "levelOfStudy": [
+      "Fellowship programs (6-12 months)",
+      "Short courses in NLP, Computer Vision, AI Ethics"
+    ],
+    "courseType": [
+      "Fellowship",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Ciira Maina, Director: info@airtai.africa \n+254-700-123456",
+    "collaborationOpportunities": "Research collaborations \nDonor partnerships \nStudent internships \nJoint proposal development",
+    "isRegional": false,
+    "lat": -1.2921,
+    "lng": 36.8219
+  },
+  {
+    "id": 8,
+    "region": "East Africa",
+    "country": "Tanzania",
+    "institution": "University of Dar es Salaam",
+    "institutionType": "University",
+    "department": "College of Information and Communication Technologies (CoICT)",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI/ML)",
+      "MSc in Data Science",
+      "AI short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Mussa M. Kissaka, Principal: principal@coict.udsm.ac.tz \n+255-22-2410777",
+    "collaborationOpportunities": "Industry research partnerships \nCurriculum development support \nFaculty exchange programs",
+    "isRegional": false,
+    "lat": -6.163,
+    "lng": 35.7516
+  },
+  {
+    "id": 9,
+    "region": "East Africa",
+    "country": "Tanzania",
+    "institution": "Nelson Mandela African Institute of Science and Technology (NM-AIST)",
+    "institutionType": "University",
+    "department": "School of Computational and Communication Science and Engineering",
+    "levelOfStudy": [
+      "MSc in Data Science & AI; PhD in AI",
+      "Professional certificates"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Devotha Nyambo, HOD: dss@nm-aist.ac.tz \n+255-27-2544000",
+    "collaborationOpportunities": "Research collaborations in AI for health and agriculture \nJoint supervision of graduate students",
+    "isRegional": false,
+    "lat": -6.163,
+    "lng": 35.7516
+  },
+  {
+    "id": 10,
+    "region": "East Africa",
+    "country": "Rwanda",
+    "institution": "African Institute for Mathematical Sciences (AIMS) Rwanda",
+    "institutionType": "Research Institute",
+    "department": "Machine Learning & AI Research Group",
+    "levelOfStudy": [
+      "Master's in Machine Intelligence (2 years)",
+      "PhD fellowships",
+      "Summer schools"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Fellowship",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Guy-Bertrand Kamga, Academic Director: info@aims.ac.rw \n+250-788-308888",
+    "collaborationOpportunities": "Research partnerships \nIndustry placements \nInternational faculty exchange \nDonor funding collaborations",
+    "isRegional": false,
+    "lat": -1.9403,
+    "lng": 29.8739
+  },
+  {
+    "id": 11,
+    "region": "East Africa",
+    "country": "Rwanda",
+    "institution": "Carnegie Mellon University Africa (CMU-Africa)",
+    "institutionType": "University (International)",
+    "department": "Electrical and Computer Engineering",
+    "levelOfStudy": [
+      "MSc in Artificial Intelligence & Engineering",
+      "Professional AI certificates"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Conrad Tucker, Director: cmu-africa@andrew.cmu.edu \n+250-788-308888",
+    "collaborationOpportunities": "Industry-sponsored research \nCorporate training partnerships \nFaculty exchange \nStudent recruitment",
+    "isRegional": false,
+    "lat": -1.9403,
+    "lng": 29.8739
+  },
+  {
+    "id": 12,
+    "region": "East Africa",
+    "country": "Rwanda",
+    "institution": "University of Rwanda",
+    "institutionType": "University",
+    "department": "College of Science and Technology (CST)",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI track)",
+      "MSc in Data Science",
+      "AI for Development short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Ignace Gatare, Dean: cst@ur.ac.rw \n+250-788-903000",
+    "collaborationOpportunities": "Government-partnered AI training programs \nInternational research collaborations \nStudent exchange",
+    "isRegional": false,
+    "lat": -1.9403,
+    "lng": 29.8739
+  },
+  {
+    "id": 13,
+    "region": "East Africa",
+    "country": "Ethiopia",
+    "institution": "Addis Ababa University",
+    "institutionType": "University",
+    "department": "School of Information Science",
+    "levelOfStudy": [
+      "BSc in Information Science (AI track)",
+      "MSc in Artificial Intelligence",
+      "PhD in AI"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate"
+    ],
+    "contactDetails": "Dr. Solomon Teferra, Dean: sis@aau.edu.et \n+251-11-1234567",
+    "collaborationOpportunities": "Research partnerships in Amharic NLP \nDonor-funded capacity building \nFaculty exchange",
+    "isRegional": false,
+    "lat": 9.025,
+    "lng": 38.7469
+  },
+  {
+    "id": 14,
+    "region": "East Africa",
+    "country": "Ethiopia",
+    "institution": "Ethiopian Artificial Intelligence Institute (AII)",
+    "institutionType": "Government Research Institute",
+    "department": "AI Research & Training Directorate",
+    "levelOfStudy": [
+      "Graduate fellowships (12 months)",
+      "Short courses in NLP, Computer Vision",
+      "Industry certifications"
+    ],
+    "courseType": [
+      "Fellowship",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Tulu Geda, Director General: training@aii.et \n+251-11-1234567",
+    "collaborationOpportunities": "Public-private training partnerships \nInternational research collaboration \nCurriculum co-design",
+    "isRegional": false,
+    "lat": 9.025,
+    "lng": 38.7469
+  },
+  {
+    "id": 15,
+    "region": "East Africa",
+    "country": "Ethiopia",
+    "institution": "Bahir Dar University",
+    "institutionType": "University",
+    "department": "Faculty of Computing",
+    "levelOfStudy": [
+      "BSc in Artificial Intelligence",
+      "MSc in Machine Learning",
+      "AI summer schools"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Fekade Getahun, Dean: computing@bdu.edu.et \n+251-582-123456",
+    "collaborationOpportunities": "Agricultural AI research partnerships \nStudent exchange programs \nIndustry linkage",
+    "isRegional": false,
+    "lat": 9.025,
+    "lng": 38.7469
+  },
+  {
+    "id": 16,
+    "region": "East Africa",
+    "country": "Mauritius",
+    "institution": "University of Mauritius",
+    "institutionType": "University",
+    "department": "Faculty of Information, Communication and Digital Technologies",
+    "levelOfStudy": [
+      "BSc in AI & Data Science",
+      "MSc in AI",
+      "PhD in Machine Learning",
+      "Professional certificates"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Dinesh Hurreeram, Dean: ficit@uom.ac.mu \n+230-403-1234",
+    "collaborationOpportunities": "Blue Economy AI research \nInternational partnerships (India, Singapore) \nStudent internships",
+    "isRegional": false,
+    "lat": -20.3484,
+    "lng": 57.5522
+  },
+  {
+    "id": 17,
+    "region": "East Africa",
+    "country": "Mauritius",
+    "institution": "Middlesex University Mauritius",
+    "institutionType": "University (International)",
+    "department": "Department of Computer Science and Information Systems",
+    "levelOfStudy": [
+      "BSc (Hons) Artificial Intelligence",
+      "MSc Data Science",
+      "Short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Kaviraj Sukon, Academic Lead: admissions@middlesex.mu \n+230-403-6400",
+    "collaborationOpportunities": "International research collaboration \nCorporate training \nStudent exchange",
+    "isRegional": false,
+    "lat": -20.3484,
+    "lng": 57.5522
+  },
+  {
+    "id": 18,
+    "region": "East Africa",
+    "country": "Seychelles",
+    "institution": "University of Seychelles",
+    "institutionType": "University",
+    "department": "Faculty of Computing, Engineering and Technology",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI modules)",
+      "Short courses in AI fundamentals",
+      "Marine AI workshops"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Justin Valentin, Dean: unisey@unisey.ac.sc \n+248-438-1234",
+    "collaborationOpportunities": "Marine conservation AI research \nPartnership with Blue Economy institutions \nStudent projects",
+    "isRegional": false,
+    "lat": -4.6796,
+    "lng": 55.492
+  },
+  {
+    "id": 19,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "institution": "University of Lagos (UNILAG)",
+    "institutionType": "University",
+    "department": "Department of Computer Sciences",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI/ML)",
+      "MSc in Artificial Intelligence",
+      "PhD in AI"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate"
+    ],
+    "contactDetails": "Prof. Olumide Longe, HOD: cs@unilag.edu.ng \n+234-1-2933433",
+    "collaborationOpportunities": "Industry research partnerships (fintech, agritech) \nStudent internships \nFaculty exchange",
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 20,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "institution": "African University of Science and Technology (AUST)",
+    "institutionType": "University (Pan-African)",
+    "department": "Department of Computer Science",
+    "levelOfStudy": [
+      "MSc in Artificial Intelligence",
+      "PhD in Machine Learning",
+      "AI for Development short courses"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. John A. O. Iyaniwura, Dean: admissions@aust.edu.ng \n+234-9-7809340",
+    "collaborationOpportunities": "Pan-African research collaborations \nInternational donor partnerships \nPhD supervision",
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 21,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "institution": "National Centre for Artificial Intelligence and Robotics (NCAIR)",
+    "institutionType": "Government Research Institute",
+    "department": "AI Training & Research",
+    "levelOfStudy": [
+      "AI Fellowship Program (6 months)",
+      "Short courses in AI applications",
+      "Policy training"
+    ],
+    "courseType": [
+      "Fellowship",
+      "Short courses"
+    ],
+    "contactDetails": "Director General: ncair@nitda.gov.ng \n+234-9-8765432",
+    "collaborationOpportunities": "Public-private training partnerships \nInternational technical assistance \nCurriculum development",
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 22,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "institution": "Decagon",
+    "institutionType": "Vocational / Bootcamp",
+    "department": "Software Engineering & AI",
+    "levelOfStudy": [
+      "6-month full-stack AI engineering bootcamp",
+      "AI for Finance specialization"
+    ],
+    "courseType": [
+      "Bootcamp"
+    ],
+    "contactDetails": "info@decagonhq.com \n+234-1-3425678",
+    "collaborationOpportunities": "Employer partnerships for graduate placement \nScholarship sponsorships \nCorporate training",
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 23,
+    "region": "West Africa",
+    "country": "Nigeria",
+    "institution": "Data Science Nigeria",
+    "institutionType": "Non-profit Training Institute",
+    "department": "AI & Data Science Academy",
+    "levelOfStudy": [
+      "AI Scholars Program (1 year)",
+      "Masterclass series",
+      "Women in AI fellowship"
+    ],
+    "courseType": [
+      "Fellowship",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Bayo Adekanmbi, Founder: hello@datasciencenigeria.org \n+234-802-1234567",
+    "collaborationOpportunities": "Corporate partnerships \nInternational donor funding \nVolunteer mentorship opportunities",
+    "isRegional": false,
+    "lat": 9.0765,
+    "lng": 7.3986
+  },
+  {
+    "id": 24,
+    "region": "West Africa",
+    "country": "Ghana",
+    "institution": "University of Ghana",
+    "institutionType": "University",
+    "department": "Department of Computer Science",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI track)",
+      "MSc in Data Science & AI",
+      "PhD in AI"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate"
+    ],
+    "contactDetails": "Prof. Nana K. Gyamfi, HOD: cs@ug.edu.gh \n+233-302-123456",
+    "collaborationOpportunities": "Research collaborations in AI for agriculture \nStudent exchange \nIndustry-sponsored projects",
+    "isRegional": false,
+    "lat": 5.6037,
+    "lng": -0.187
+  },
+  {
+    "id": 25,
+    "region": "West Africa",
+    "country": "Ghana",
+    "institution": "Ashesi University",
+    "institutionType": "University",
+    "department": "Department of Computer Science and Information Systems",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI/ML)",
+      "AI for Development minor",
+      "Summer AI bootcamps"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Ayorkor Korsah, Head: cs@ashesi.edu.gh \n+233-302-123456",
+    "collaborationOpportunities": "Industry research partnerships \nCurriculum co-design \nStudent entrepreneurship support",
+    "isRegional": false,
+    "lat": 5.6037,
+    "lng": -0.187
+  },
+  {
+    "id": 26,
+    "region": "West Africa",
+    "country": "Ghana",
+    "institution": "Ghana-India Kofi Annan Centre of Excellence in ICT",
+    "institutionType": "Research Institute",
+    "department": "AI & Data Science Training",
+    "levelOfStudy": [
+      "Master's in AI (2 years)",
+      "Professional certificates",
+      "Short courses"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Collins L. Adjei, Director: info@ai-centre.com.gh \n+233-302-123456",
+    "collaborationOpportunities": "International research partnerships (India) \nCorporate training\nGovernment capacity building",
+    "isRegional": false,
+    "lat": 5.6037,
+    "lng": -0.187
+  },
+  {
+    "id": 27,
+    "region": "West Africa",
+    "country": "Senegal",
+    "institution": "Université Cheikh Anta Diop de Dakar (UCAD)",
+    "institutionType": "University",
+    "department": "Ecole Supérieure Polytechnique (ESP)",
+    "levelOfStudy": [
+      "MSc in Data Science & AI",
+      "PhD in Machine Learning",
+      "Short courses in French"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Ibrahima Niang, Director: esp@ucad.sn \n+221-33-1234567",
+    "collaborationOpportunities": "Francophone AI research network \nInternational partnerships (France, Canada); \nStudent exchange",
+    "isRegional": false,
+    "lat": 14.7167,
+    "lng": -17.4677
+  },
+  {
+    "id": 28,
+    "region": "West Africa",
+    "country": "Senegal",
+    "institution": "Ecole Supérieure Multinationale des Télécommunications (ESMT)",
+    "institutionType": "University",
+    "department": "Telecommunications & AI Department",
+    "levelOfStudy": [
+      "MSc in AI for Telecommunications",
+      "Professional certificates",
+      "Executive education"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Amadou L. Sall, Director: info@esmt.sn \n+221-33-1234567",
+    "collaborationOpportunities": "Industry partnerships (Orange, Sonatel) \nResearch collaborations \nStudent internships",
+    "isRegional": false,
+    "lat": 14.7167,
+    "lng": -17.4677
+  },
+  {
+    "id": 29,
+    "region": "West Africa",
+    "country": "Benin",
+    "institution": "Université d'Abomey-Calavi",
+    "institutionType": "University",
+    "department": "Faculté des Sciences et Techniques (FAST)",
+    "levelOfStudy": [
+      "MSc in Data Science & AI",
+      "PhD in Computer Science",
+      "French-language AI courses"
+    ],
+    "courseType": [
+      "Postgraduate"
+    ],
+    "contactDetails": "Prof. Basile Kounouhewa, Dean: fast@uac.bj \n+229-21-123456",
+    "collaborationOpportunities": "Partnerships with French universities \nAgricultural AI research \nStudent exchange",
+    "isRegional": false,
+    "lat": 6.4969,
+    "lng": 2.6289
+  },
+  {
+    "id": 30,
+    "region": "West Africa",
+    "country": "Côte d'Ivoire",
+    "institution": "Institut National Polytechnique Félix Houphouët-Boigny (INP-HB)",
+    "institutionType": "University",
+    "department": "Département Informatique et Télécommunications",
+    "levelOfStudy": [
+      "MSc in AI & Data Science",
+      "PhD in AI",
+      "Professional certificates"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Aboubakar Cissé, Director: inp-hb@inphb.ci \n+225-27-123456",
+    "collaborationOpportunities": "Industry partnerships (cocoa tech) \nFrancophone research network \nStudent internships",
+    "isRegional": false,
+    "lat": 6.8276,
+    "lng": -5.2893
+  },
+  {
+    "id": 31,
+    "region": "South Africa",
+    "country": "South Africa",
+    "institution": "University of the Witwatersrand (Wits)",
+    "institutionType": "University",
+    "department": "School of Computer Science and Applied Mathematics",
+    "levelOfStudy": [
+      "BSc in AI & Data Science",
+      "MSc in Machine Learning",
+      "PhD in AI",
+      "Executive short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Benjamin Rosman, HOD: cs@wits.ac.za \n+27-11-7171234",
+    "collaborationOpportunities": "Industry research partnerships \nInternational collaborations \nStudent exchange programs",
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 32,
+    "region": "South Africa",
+    "country": "South Africa",
+    "institution": "University of Cape Town (UCT)",
+    "institutionType": "University",
+    "department": "Department of Computer Science",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI specialisation)",
+      "MSc in AI",
+      "PhD in AI",
+      "AI for Climate short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Anni Coden, HOD: cs-info@cs.uct.ac.za \n+27-21-6501234",
+    "collaborationOpportunities": "Climate AI research partnerships \nIndustry-sponsored projects \nFaculty exchange",
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 33,
+    "region": "South Africa",
+    "country": "South Africa",
+    "institution": "Stellenbosch University",
+    "institutionType": "University",
+    "department": "Department of Electrical and Electronic Engineering",
+    "levelOfStudy": [
+      "MEng in Artificial Intelligence",
+      "PhD in AI",
+      "Professional certificates in AI"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Herman Kamper, HOD: eee@sun.ac.za \n+27-21-8081234",
+    "collaborationOpportunities": "AI for energy and agriculture research \nIndustry partnerships \nStudent internships",
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 34,
+    "region": "South Africa",
+    "country": "South Africa",
+    "institution": "University of Pretoria",
+    "institutionType": "University",
+    "department": "Department of Computer Science",
+    "levelOfStudy": [
+      "BSc in Data Science",
+      "MSc in AI",
+      "PhD in AI",
+      "AI Governance short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Lynette van Zijl, HOD: cs@up.ac.za \n+27-12-4201234",
+    "collaborationOpportunities": "AI governance research \nPolicy advisory partnerships \nInternational collaborations",
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 35,
+    "region": "South Africa",
+    "country": "South Africa",
+    "institution": "Explore Data Science Academy (EDSA)",
+    "institutionType": "Vocational / Bootcamp",
+    "department": "Data Science & AI",
+    "levelOfStudy": [
+      "12-month Data Science bootcamp",
+      "AI for Business short courses",
+      "Corporate training"
+    ],
+    "courseType": [
+      "Bootcamp",
+      "Short courses"
+    ],
+    "contactDetails": "info@explore-datascience.net \n+27-21-1234567",
+    "collaborationOpportunities": "Employer partnerships for graduate placement \nScholarship sponsorships \nCorporate upskilling",
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 36,
+    "region": "South Africa",
+    "country": "South Africa",
+    "institution": "University of Johannesburg (UJ)",
+    "institutionType": "University",
+    "department": "Academy of Computer Science and Software Engineering",
+    "levelOfStudy": [
+      "BSc in AI",
+      "MSc in Machine Learning",
+      "PhD in AI",
+      "Short learning programs"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Serestina Viriri, HOD: acsse@uj.ac.za \n+27-11-5591234",
+    "collaborationOpportunities": "Industry partnerships (mining, finance) \nStudent innovation challenges \nResearch collaborations",
+    "isRegional": false,
+    "lat": -25.7479,
+    "lng": 28.2293
+  },
+  {
+    "id": 37,
+    "region": "South Africa",
+    "country": "Zambia",
+    "institution": "University of Zambia (UNZA)",
+    "institutionType": "University",
+    "department": "School of Natural Sciences, Department of Computer Studies",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI modules)",
+      "MSc in Data Science",
+      "Short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Jackson Phiri, HOD: cs@unza.zm \n+260-211-123456",
+    "collaborationOpportunities": "Partnerships with Southern African universities \nDonor-funded AI training \nStudent exchange",
+    "isRegional": false,
+    "lat": -15.3875,
+    "lng": 28.3228
+  },
+  {
+    "id": 38,
+    "region": "South Africa",
+    "country": "Zambia",
+    "institution": "Copperbelt University",
+    "institutionType": "University",
+    "department": "School of Mathematics and Natural Sciences",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI track)",
+      "MSc in Data Science & AI"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate"
+    ],
+    "contactDetails": "Prof. Chanda Mwape, Dean: smns@cbu.ac.zm \n+260-212-123456",
+    "collaborationOpportunities": "Mining industry AI partnerships \nResearch collaborations \nStudent internships",
+    "isRegional": false,
+    "lat": -15.3875,
+    "lng": 28.3228
+  },
+  {
+    "id": 39,
+    "region": "South Africa",
+    "country": "Zimbabwe",
+    "institution": "University of Zimbabwe",
+    "institutionType": "University",
+    "department": "Department of Computer Science",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI modules)",
+      "MSc in Data Science",
+      "AI short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Tinashe M. Chikwereti, HOD: cs@uz.ac.zw \n+263-242-123456",
+    "collaborationOpportunities": "Partnerships with international universities \nDonor-funded capacity building \nStudent exchange",
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 40,
+    "region": "South Africa",
+    "country": "Zimbabwe",
+    "institution": "Harare Institute of Technology (HIT)",
+    "institutionType": "University",
+    "department": "School of Information Science and Technology",
+    "levelOfStudy": [
+      "BSc in Artificial Intelligence & Robotics",
+      "MSc in AI",
+      "Professional certificates"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. G. S. V. M. Chikono, Dean: sit@hit.ac.zw\n+263-242-123456",
+    "collaborationOpportunities": "Industry partnerships (mining, agriculture) \nResearch collaborations \nStudent innovation labs",
+    "isRegional": false,
+    "lat": -17.8252,
+    "lng": 31.0335
+  },
+  {
+    "id": 41,
+    "region": "North Africa",
+    "country": "Egypt",
+    "institution": "Nile University",
+    "institutionType": "University",
+    "department": "School of Information Technology and Computer Science",
+    "levelOfStudy": [
+      "BSc in AI & Data Science",
+      "MSc in AI; PhD in ML",
+      "Executive AI short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Hesham Ahmed, Dean: itcs@nileu.edu.eg \n+20-2-12345678",
+    "collaborationOpportunities": "Industry partnerships (Siemens, IBM) \nInternational research collaborations \nStudent exchange",
+    "isRegional": false,
+    "lat": 30.0444,
+    "lng": 31.2357
+  },
+  {
+    "id": 42,
+    "region": "North Africa",
+    "country": "Egypt",
+    "institution": "American University in Cairo (AUC)",
+    "institutionType": "University",
+    "department": "Department of Computer Science and Engineering",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI track)",
+      "MSc in Data Science",
+      "AI Governance certificate"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Amr El-Kadi, HOD: cse@aucegypt.edu \n+20-2-26151234",
+    "collaborationOpportunities": "Policy research partnerships \nInternational academic collaborations \nCorporate training",
+    "isRegional": false,
+    "lat": 30.0444,
+    "lng": 31.2357
+  },
+  {
+    "id": 43,
+    "region": "North Africa",
+    "country": "Egypt",
+    "institution": "Information Technology Institute (ITI)",
+    "institutionType": "Government Training Institute",
+    "department": "AI & Data Science Department",
+    "levelOfStudy": [
+      "9-month AI Professional Diploma",
+      "AI for Government short courses",
+      "NLP specialization"
+    ],
+    "courseType": [
+      "Diploma",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Heba Saleh, Director: info@iti.gov.eg \n+20-2-12345678",
+    "collaborationOpportunities": "Public-private training partnerships \nInternational technical assistance \nCurriculum co-design",
+    "isRegional": false,
+    "lat": 30.0444,
+    "lng": 31.2357
+  },
+  {
+    "id": 44,
+    "region": "North Africa",
+    "country": "Tunisia",
+    "institution": "École Nationale des Sciences de l'Informatique (ENSI)",
+    "institutionType": "University (Grande École)",
+    "department": "Computer Science Department",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI track); MSc in AI",
+      "PhD in ML",
+      "Short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Moez Yeddes, Director: ensi@ensi.uma.tn \n+216-71-123456",
+    "collaborationOpportunities": "Industry partnerships (STMicroelectronics, Vermeg) \nInternational research \nStudent exchange",
+    "isRegional": false,
+    "lat": 36.8065,
+    "lng": 10.1815
+  },
+  {
+    "id": 45,
+    "region": "North Africa",
+    "country": "Tunisia",
+    "institution": "Université de Tunis El Manar",
+    "institutionType": "University",
+    "department": "Faculté des Sciences de Tunis",
+    "levelOfStudy": [
+      "MSc in Data Science & AI",
+      "PhD in AI",
+      "French/Arabic AI courses"
+    ],
+    "courseType": [
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Henda Ben Ghezala, Dean: fst@fst.utm.tn \n+216-71-123456",
+    "collaborationOpportunities": "Francophone research network \nInternational partnerships (France, Canada) \nStudent exchange",
+    "isRegional": false,
+    "lat": 36.8065,
+    "lng": 10.1815
+  },
+  {
+    "id": 46,
+    "region": "North Africa",
+    "country": "Algeria",
+    "institution": "École nationale Supérieure d'Informatique (ESI)",
+    "institutionType": "University (Grande École)",
+    "department": "Computer Science Department",
+    "levelOfStudy": [
+      "Ingénieur (5-year) in AI & Data Science",
+      "MSc in AI",
+      "PhD in ML"
+    ],
+    "courseType": [
+      "Undergraduate (5-year engineering)",
+      "Postgraduate"
+    ],
+    "contactDetails": "Prof. Ahmed Seffah, Director: esi@esi.dz \n+213-21-123456",
+    "collaborationOpportunities": "Industry partnerships (Sonelgaz, Algérie Télécom) \nInternational research \nStudent exchange",
+    "isRegional": false,
+    "lat": 36.7538,
+    "lng": 3.0588
+  },
+  {
+    "id": 47,
+    "region": "North Africa",
+    "country": "Algeria",
+    "institution": "Centre de Recherche sur l'Information Scientifique et Technique (CERIST)",
+    "institutionType": "Government Research Institute",
+    "department": "AI Research & Training",
+    "levelOfStudy": [
+      "AI Researcher Training",
+      "PhD fellowships",
+      "Short courses in NLP and Computer Vision"
+    ],
+    "courseType": [
+      "Fellowship",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Nadjib Badache, Director: cerist@cerist.dz\n+213-21-123456",
+    "collaborationOpportunities": "Research collaborations \nInternational partnerships \nGraduate student supervision",
+    "isRegional": false,
+    "lat": 36.7538,
+    "lng": 3.0588
+  },
+  {
+    "id": 48,
+    "region": "North Africa",
+    "country": "Morocco",
+    "institution": "Université Mohammed VI Polytechnique (UM6P)",
+    "institutionType": "University",
+    "department": "College of Computing",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI track)",
+      "MSc in AI",
+      "PhD in ML",
+      "AI for Water short courses"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Postgraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Youssef Tamaazousti, Dean: computing@um6p.ma \n+212-537-123456",
+    "collaborationOpportunities": "AI for Water research partnerships \nIndustry collaborations (OCP) \nInternational exchange",
+    "isRegional": false,
+    "lat": 34.0209,
+    "lng": -6.8416
+  },
+  {
+    "id": 49,
+    "region": "North Africa",
+    "country": "Morocco",
+    "institution": "École Nationale Supérieure d'Informatique et d'Analyse des Systèmes (ENSIAS)",
+    "institutionType": "University (Grande École)",
+    "department": "Computer Science & AI Department",
+    "levelOfStudy": [
+      "Ingénieur (5-year) in AI & Data Science",
+      "MSc in AI",
+      "Professional certificates"
+    ],
+    "courseType": [
+      "Undergraduate (5-year engineering)",
+      "Postgraduate; Short courses"
+    ],
+    "contactDetails": "Prof. Mohammed El Koutbi, Director: ensias@ensias.ma \n+212-537-123456",
+    "collaborationOpportunities": "Industry partnerships (banking, telecom) \nInternational research; Student exchange",
+    "isRegional": false,
+    "lat": 34.0209,
+    "lng": -6.8416
+  },
+  {
+    "id": 50,
+    "region": "North Africa",
+    "country": "Morocco",
+    "institution": "1337 School (Khouribga)",
+    "institutionType": "Vocational / Bootcamp",
+    "department": "AI & Data Science Track",
+    "levelOfStudy": [
+      "2-year peer-to-peer AI programming",
+      "Project-based learning",
+      "AI specializations"
+    ],
+    "courseType": [
+      "Bootcamp"
+    ],
+    "contactDetails": "admissions@1337.ma \n+212-523-123456",
+    "collaborationOpportunities": "Employer partnerships for graduate placement \nScholarship sponsorships; Corporate training",
+    "isRegional": false,
+    "lat": 34.0209,
+    "lng": -6.8416
+  },
+  {
+    "id": 51,
+    "region": "North Africa",
+    "country": "Libya",
+    "institution": "University of Tripoli",
+    "institutionType": "University",
+    "department": "Faculty of Engineering, Department of Computer Engineering",
+    "levelOfStudy": [
+      "BSc in Computer Engineering (AI modules)",
+      "Short courses (limited)"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Ali Mayouf, Dean: engineering@uot.edu.ly \n+218-21-123456",
+    "collaborationOpportunities": "International partnerships (restricted) \nDonor-funded capacity building (needs stability)",
+    "isRegional": false,
+    "lat": 32.8872,
+    "lng": 13.1913
+  },
+  {
+    "id": 52,
+    "region": "Central Africa",
+    "country": "Cameroon",
+    "institution": "Université de Yaoundé I",
+    "institutionType": "University",
+    "department": "Faculté des Sciences, Département d'Informatique",
+    "levelOfStudy": [
+      "MSc in Data Science & AI",
+      "PhD in Computer Science",
+      "French-language AI courses"
+    ],
+    "courseType": [
+      "Postgraduate"
+    ],
+    "contactDetails": "Prof. Jean-Claude Kamgang, Dean: fs@uy1.uninet.cm \n+237-222-123456",
+    "collaborationOpportunities": "Partnerships with French universities \nFrancophone research network \nStudent exchange",
+    "isRegional": false,
+    "lat": 3.848,
+    "lng": 11.5021
+  },
+  {
+    "id": 53,
+    "region": "Central Africa",
+    "country": "Cameroon",
+    "institution": "Institut Universitaire de Technologie (IUT) Douala",
+    "institutionType": "University",
+    "department": "Département Informatique",
+    "levelOfStudy": [
+      "BSc in Computer Science (AI modules)",
+      "Short courses in AI"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Emmanuel Tonye, Director: iutdouala@iutdouala.cm \n+237-233-123456",
+    "collaborationOpportunities": "Industry partnerships (mobile money) \nStudent internships \nVocational training collaborations",
+    "isRegional": false,
+    "lat": 3.848,
+    "lng": 11.5021
+  },
+  {
+    "id": 54,
+    "region": "Central Africa",
+    "country": "DRC",
+    "institution": "University of Kinshasa (UNIKIN)",
+    "institutionType": "University",
+    "department": "Faculty of Sciences, Department of Computer Science",
+    "levelOfStudy": [
+      "BSc in Computer Science (limited AI)",
+      "Short courses (basic)"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Prof. Jean-Pierre Bongila, Dean: sciences@unikin.ac.cd \n+243-81-1234567",
+    "collaborationOpportunities": "International partnerships (needs stabilization) \nDonor-funded capacity building \nBasic digital literacy programs",
+    "isRegional": false,
+    "lat": -4.4419,
+    "lng": 15.2663
+  },
+  {
+    "id": 55,
+    "region": "Central Africa",
+    "country": "DRC",
+    "institution": "Université Catholique de Bukavu",
+    "institutionType": "University",
+    "department": "Faculty of Sciences",
+    "levelOfStudy": [
+      "BSc in Computer Science",
+      "Basic AI short courses (NGO-supported)"
+    ],
+    "courseType": [
+      "Undergraduate",
+      "Short courses"
+    ],
+    "contactDetails": "Dr. Patient Murhabazi, Dean: sciences@ucbukavu.ac.cd \n+243-99-1234567",
+    "collaborationOpportunities": "Partnerships for conflict-sensitive AI \nResearch on AI for peacebuilding \nStudent projects",
+    "isRegional": false,
+    "lat": -4.4419,
+    "lng": 15.2663
+  }
+]

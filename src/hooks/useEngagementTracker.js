@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from "react";
 
 /**
- * useEngagementTracker — tracks slide viewing time + scroll depth.
+ * useEngagementTracker  tracks slide viewing time + scroll depth.
  *
  * Root cause of previous bug: resetTracker() called setIsActive(true) while
  * isActive was already true, so React skipped re-running the timer useEffect
@@ -38,8 +38,9 @@ export function useEngagementTracker({
   // ── Pause timer when the browser tab loses focus ──────────────────────────
   useEffect(() => {
     const handleVisibilityChange = () => setIsActive(!document.hidden);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
   // ── Scroll detection ───────────────────────────────────────────────────────
@@ -62,16 +63,17 @@ export function useEngagementTracker({
         checkWindowScroll();
         return;
       }
-      if ((scrollTop + clientHeight) / scrollHeight >= 0.9) setScrolledToBottom(true);
+      if ((scrollTop + clientHeight) / scrollHeight >= 0.9)
+        setScrolledToBottom(true);
     };
 
     // Check immediately (short content auto-satisfies scroll)
     handleScroll();
-    container.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('scroll', handleScroll, { passive: true });
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    window.addEventListener("scroll", handleScroll, { passive: true });
     return () => {
-      container.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('scroll', handleScroll);
+      container.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("scroll", handleScroll);
     };
   }, [scrollTrackingEnabled, scrolledToBottom]);
 
@@ -98,7 +100,7 @@ export function useEngagementTracker({
     }
   }, [canProceed, timeSpent, scrolledToBottom, onSlideComplete]);
 
-  // ── Reset — call when navigating to a new slide ───────────────────────────
+  // ── Reset  call when navigating to a new slide ───────────────────────────
   const resetTracker = useCallback(() => {
     setTimeSpent(0);
     setScrolledToBottom(false);
@@ -117,6 +119,9 @@ export function useEngagementTracker({
     canProceed,
     resetTracker,
     remainingTime: Math.max(0, minViewingTime - timeSpent),
-    progressPercent: Math.min(100, Math.round((timeSpent / minViewingTime) * 100)),
+    progressPercent: Math.min(
+      100,
+      Math.round((timeSpent / minViewingTime) * 100),
+    ),
   };
 }

@@ -124,7 +124,7 @@ function PreviewSlide({ slide }) {
 }
 
 // ─── ModuleStudentPreview ──────────────────────────────────────────────────────
-// Accepts `module` — works with both the create-form shape and the API module shape.
+// Accepts `module`  works with both the create-form shape and the API module shape.
 
 export default function ModuleStudentPreview({ module, onClose }) {
   const [selectedLesson, setSelectedLesson] = useState(0);
@@ -313,7 +313,7 @@ export default function ModuleStudentPreview({ module, onClose }) {
                       </Button>
                     </div>
 
-                    {/* Slide content — overflow-safe wrapper */}
+                    {/* Slide content  overflow-safe wrapper */}
                     <div className="px-6 py-6 min-h-[280px] overflow-hidden min-w-0">
                       <PreviewSlide slide={slides[selectedSlide] || slides[0]} />
                     </div>
@@ -374,7 +374,7 @@ export default function ModuleStudentPreview({ module, onClose }) {
                     <div className="flex items-center gap-2 px-4 py-3 bg-purple-50 border-b border-purple-100">
                       <Icons.HelpCircle className="w-4 h-4 text-purple-600 flex-shrink-0" />
                       <span className="text-sm font-semibold text-purple-800">
-                        Lesson Quiz — {lesson.assessmentQuiz.length} question{lesson.assessmentQuiz.length !== 1 ? 's' : ''}
+                        Lesson Quiz  {lesson.assessmentQuiz.length} question{lesson.assessmentQuiz.length !== 1 ? 's' : ''}
                       </span>
                       <Badge className="ml-auto bg-purple-100 text-purple-700 border-0 text-xs flex-shrink-0">
                         Pass: {lesson.quizPassingScore ?? 70}%

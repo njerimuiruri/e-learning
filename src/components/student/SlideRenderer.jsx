@@ -16,7 +16,7 @@ function sanitizeHtml(html) {
 }
 
 /**
- * SlideRenderer — renders a single slide.
+ * SlideRenderer  renders a single slide.
  * Supported types: text | image | video | diagram | codeSnippet
  * Accepts darkMode prop for full theme support.
  */

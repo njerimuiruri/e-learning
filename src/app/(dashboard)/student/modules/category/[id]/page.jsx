@@ -7,6 +7,7 @@ import categoryService from '@/lib/api/categoryService';
 import moduleService from '@/lib/api/moduleService';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import progressionService from '@/lib/api/progressionService';
+import paymentService from '@/lib/api/paymentService';
 import Navbar from '@/components/navbar/navbar';
 import ProtectedStudentRoute from '@/components/ProtectedStudentRoute';
 import { useToast } from '@/components/ui/ToastProvider';
@@ -63,6 +64,10 @@ function CategoryPageContent() {
     const [error, setError] = useState(false);
     const [fellowCategoryIds] = useState(() => getFellowCategoryIds());
     const [welcomeExpanded, setWelcomeExpanded] = useState(false);
+    const [categoryStatus, setCategoryStatus] = useState(null);
+    const [payModal, setPayModal] = useState(false);
+    const [payModalTier, setPayModalTier] = useState(null);
+    const [payModalProcessing, setPayModalProcessing] = useState(false);
     const { showToast } = useToast();
 
     const fetchAll = useCallback(async () => {
@@ -70,11 +75,12 @@ function CategoryPageContent() {
         try {
             setLoading(true);
             setError(false);
-            const [cat, modsResult, enrollResult, progResult] = await Promise.allSettled([
+            const [cat, modsResult, enrollResult, progResult, statusResult] = await Promise.allSettled([
                 categoryService.getCategoryById(categoryId),
                 moduleService.getAllModules({ category: categoryId, limit: 100 }),
                 moduleEnrollmentService.getMyEnrollments(),
                 progressionService.getMyProgressions(),
+                paymentService.checkCategoryStatus(categoryId),
             ]);
 
             if (cat.status === 'fulfilled' && cat.value) {
@@ -98,6 +104,9 @@ function CategoryPageContent() {
             if (progResult.status === 'fulfilled') {
                 const v = progResult.value;
                 setProgressions(Array.isArray(v) ? v : v?.progressions || []);
+            }
+            if (statusResult.status === 'fulfilled') {
+                setCategoryStatus(statusResult.value);
             }
         } catch {
             setError(true);
@@ -138,9 +147,38 @@ function CategoryPageContent() {
         if (!category) return 'open';
         const catId = category._id?.toString?.();
         const isFellow = catId ? fellowCategoryIds.includes(catId) : false;
+        // Fully paid via Paystack
+        if (categoryStatus?.hasAccess && !categoryStatus?.isPayLater) return 'paid_free';
+        // Pay-later enrollment (teaser: Module 1 only)
+        if (categoryStatus?.isPayLater) return 'pay_later';
         if (category.accessType === 'free') return isFellow ? 'fellow_free' : 'fellow_blocked';
         if (category.isPaid || category.accessType === 'paid') return isFellow ? 'paid_free' : 'paid';
         return 'open';
+    };
+
+    const isPayLaterLocked = (mod) => {
+        const accessState = getAccessState();
+        return accessState === 'pay_later' && (mod.order || 0) > 1;
+    };
+
+    const handlePayLaterModuleClick = (mod) => {
+        setPayModalTier(categoryStatus?.userTier || null);
+        setPayModal(true);
+    };
+
+    const handleModalPay = async (tier, paymentOption, paymentType) => {
+        if (!categoryId) return;
+        try {
+            setPayModalProcessing(true);
+            const d = await paymentService.initializeCategoryPayment(categoryId, tier, paymentOption, paymentType);
+            localStorage.setItem('pendingPaymentId', d.paymentId);
+            localStorage.setItem('pendingCategoryId', categoryId);
+            localStorage.setItem('pendingUserTier', tier);
+            paymentService.redirectToPaystack(d.authorizationUrl);
+        } catch (e) {
+            showToast(e?.response?.data?.message || 'Payment failed. Please try again.', { type: 'error' });
+            setPayModalProcessing(false);
+        }
     };
 
     const handleEnroll = async (mod) => {
@@ -297,7 +335,7 @@ function CategoryPageContent() {
                             <div className="flex items-start gap-2.5 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4">
                                 <Icons.ListOrdered className="w-4 h-4 text-[#1e40af] shrink-0 mt-0.5" />
                                 <p className="text-xs text-blue-700 leading-relaxed">
-                                    <span className="font-semibold">Sequential Learning:</span> Modules in this programme must be completed in order — you must finish each module before unlocking the next one.
+                                    <span className="font-semibold">Sequential Learning:</span> Modules in this programme must be completed in order  you must finish each module before unlocking the next one.
                                 </p>
                             </div>
                         )}
@@ -330,6 +368,7 @@ function CategoryPageContent() {
                                     const isFellowBlocked = accessState === 'fellow_blocked';
                                     const isPaid = accessState === 'paid';
                                     const isFree = accessState === 'open' || accessState === 'fellow_free' || accessState === 'paid_free';
+                                    const isPayLaterModule = isPayLaterLocked(mod);
                                     const price = category.price || 0;
                                     const desc = stripHtml(mod.description || '');
                                     const instructors = (mod.instructorIds || []).map(
@@ -388,6 +427,16 @@ function CategoryPageContent() {
                                                     {!isEnrolled && !seqLocked && !hasAccess && (
                                                         <Badge className="text-[10px] bg-gray-800 text-white border-0">
                                                             <Icons.Lock className="w-2.5 h-2.5 mr-1" /> Locked
+                                                        </Badge>
+                                                    )}
+                                                    {accessState === 'pay_later' && (mod.order || 0) === 1 && (
+                                                        <Badge className="text-[10px] bg-emerald-600 text-white border-0">
+                                                            <Icons.Unlock className="w-2.5 h-2.5 mr-1" /> Free Preview
+                                                        </Badge>
+                                                    )}
+                                                    {isPayLaterModule && (
+                                                        <Badge className="text-[10px] bg-amber-500 text-white border-0">
+                                                            <Icons.Lock className="w-2.5 h-2.5 mr-1" /> Pay to Unlock
                                                         </Badge>
                                                     )}
                                                     {!isEnrolled && isPaid && !seqLocked && (
@@ -461,7 +510,14 @@ function CategoryPageContent() {
                                                 )}
 
                                                 {/* Action */}
-                                                {isFellowBlocked ? (
+                                                {isPayLaterModule ? (
+                                                    <button
+                                                        onClick={() => handlePayLaterModuleClick(mod)}
+                                                        className="w-full h-8 text-xs rounded-lg bg-amber-50 border border-amber-200 text-amber-700 font-semibold hover:bg-amber-100 transition-colors flex items-center justify-center gap-1.5"
+                                                    >
+                                                        <Icons.Lock className="w-3.5 h-3.5" /> Unlock · Pay to Access
+                                                    </button>
+                                                ) : isFellowBlocked ? (
                                                     <div className="rounded-lg bg-purple-50 border border-purple-100 p-2.5 flex items-start gap-2">
                                                         <Icons.Award className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" />
                                                         <p className="text-[10px] text-purple-700 leading-snug">Fellows-only. Non-fellows must pay to access.</p>
@@ -512,6 +568,100 @@ function CategoryPageContent() {
                     </div>
                 </div>
             </div>
+
+            {/* ── Pay Later Payment Modal ── */}
+            {payModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+                        <div className="bg-[#021d49] px-6 py-4 flex items-center justify-between">
+                            <div>
+                                <p className="text-xs text-blue-200 font-medium">Unlock Full Access</p>
+                                <p className="text-white font-bold">{category?.name}</p>
+                            </div>
+                            <button onClick={() => setPayModal(false)} className="text-blue-200 hover:text-white">
+                                <Icons.X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                                You have <strong>Module 1 free access</strong>. Pay now to unlock all modules instantly.
+                            </p>
+
+                            {/* Student option */}
+                            <div className="space-y-2">
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Student Rate</p>
+                                <div className="flex items-center justify-between bg-sky-50 border border-sky-100 rounded-xl px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                        <Icons.GraduationCap className="w-4 h-4 text-sky-600" />
+                                        <div>
+                                            <p className="text-sm font-semibold text-sky-800">Student</p>
+                                            <p className="text-xs text-sky-600">ID verification required</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-lg font-extrabold text-sky-800">$100</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button disabled={payModalProcessing} onClick={() => handleModalPay('student', 'full', 'local')}
+                                        className="py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-40">
+                                        Full · M-Pesa
+                                    </button>
+                                    <button disabled={payModalProcessing} onClick={() => handleModalPay('student', 'full', 'international')}
+                                        className="py-2 rounded-lg text-xs font-semibold bg-sky-700 hover:bg-sky-800 text-white transition-colors disabled:opacity-40">
+                                        Full · Card
+                                    </button>
+                                    <button disabled={payModalProcessing} onClick={() => handleModalPay('student', 'installment1', 'local')}
+                                        className="py-2 rounded-lg text-xs font-semibold border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-40">
+                                        $50 now · M-Pesa
+                                    </button>
+                                    <button disabled={payModalProcessing} onClick={() => handleModalPay('student', 'installment1', 'international')}
+                                        className="py-2 rounded-lg text-xs font-semibold border border-sky-300 text-sky-700 hover:bg-sky-50 transition-colors disabled:opacity-40">
+                                        $50 now · Card
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Non-student option */}
+                            <div className="space-y-2">
+                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Non-Student Rate</p>
+                                <div className="flex items-center justify-between bg-orange-50 border border-orange-100 rounded-xl px-4 py-3">
+                                    <div className="flex items-center gap-2">
+                                        <Icons.Briefcase className="w-4 h-4 text-orange-600" />
+                                        <div>
+                                            <p className="text-sm font-semibold text-orange-800">Non-Student</p>
+                                            <p className="text-xs text-orange-600">No verification needed</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-lg font-extrabold text-orange-800">$200</p>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button disabled={payModalProcessing} onClick={() => handleModalPay('non-student', 'full', 'local')}
+                                        className="py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white transition-colors disabled:opacity-40">
+                                        Full · M-Pesa
+                                    </button>
+                                    <button disabled={payModalProcessing} onClick={() => handleModalPay('non-student', 'full', 'international')}
+                                        className="py-2 rounded-lg text-xs font-semibold bg-[#021d49] hover:bg-[#032a66] text-white transition-colors disabled:opacity-40">
+                                        Full · Card
+                                    </button>
+                                    <button disabled={payModalProcessing} onClick={() => handleModalPay('non-student', 'installment1', 'local')}
+                                        className="py-2 rounded-lg text-xs font-semibold border border-emerald-300 text-emerald-700 hover:bg-emerald-50 transition-colors disabled:opacity-40">
+                                        $100 now · M-Pesa
+                                    </button>
+                                    <button disabled={payModalProcessing} onClick={() => handleModalPay('non-student', 'installment1', 'international')}
+                                        className="py-2 rounded-lg text-xs font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-40">
+                                        $100 now · Card
+                                    </button>
+                                </div>
+                            </div>
+
+                            {payModalProcessing && (
+                                <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                                    <Icons.Loader2 className="w-4 h-4 animate-spin" /> Redirecting to payment…
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

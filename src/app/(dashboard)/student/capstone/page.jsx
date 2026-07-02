@@ -189,13 +189,13 @@ function MultiFileUpload({ files, onChange, disabled = false }) {
           <p className="text-sm font-medium text-gray-600">
             Add document {files.length + 1} of {MAX_FILES}
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">PDF, DOC, DOCX, CSV, XLS, XLSX, ZIP — max 50 MB</p>
+          <p className="text-xs text-gray-400 mt-0.5">PDF, DOC, DOCX, CSV, XLS, XLSX, ZIP  max 50 MB</p>
         </div>
       )}
 
       {files.length >= MAX_FILES && (
         <p className="text-xs text-emerald-600 font-medium text-center flex items-center justify-center gap-1">
-          <CheckCircle2 className="w-3.5 h-3.5" /> {MAX_FILES} files attached — limit reached
+          <CheckCircle2 className="w-3.5 h-3.5" /> {MAX_FILES} files attached  limit reached
         </p>
       )}
     </div>
@@ -311,7 +311,7 @@ function StatusCallout({ status, instructorComment, grade, gradeFeedback, revisi
       bg: "from-blue-50 to-indigo-50 border-blue-200",
       icon: <Clock className="w-5 h-5 text-blue-500" />,
       title: "Under Review",
-      body: "Your instructor is actively reviewing your submission. Hang tight — you're almost there!",
+      body: "Your instructor is actively reviewing your submission. Hang tight  you're almost there!",
     },
     revision_requested: {
       bg: "from-amber-50 to-orange-50 border-amber-200",
@@ -320,14 +320,14 @@ function StatusCallout({ status, instructorComment, grade, gradeFeedback, revisi
       body: instructorComment || "Your instructor has requested changes. Review the comments and resubmit your proposal.",
       extra: attemptsLeft > 0
         ? `You have ${attemptsLeft} revision attempt${attemptsLeft !== 1 ? "s" : ""} remaining.`
-        : "No more revision attempts remaining — please contact your instructor.",
+        : "No more revision attempts remaining  please contact your instructor.",
       extraCls: attemptsLeft > 0 ? "text-amber-700" : "text-red-600",
     },
     approved: {
       bg: "from-emerald-50 to-green-50 border-emerald-200",
       icon: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
       title: "Proposal Approved! 🎉",
-      body: "Congratulations — your proposal has been approved! You can now work on your project implementation below.",
+      body: "Congratulations  your proposal has been approved! You can now work on your project implementation below.",
     },
     implementation: {
       bg: "from-emerald-50 to-green-50 border-emerald-200",
@@ -339,7 +339,7 @@ function StatusCallout({ status, instructorComment, grade, gradeFeedback, revisi
       bg: "from-purple-50 to-indigo-50 border-purple-200",
       icon: <Clock className="w-5 h-5 text-purple-500" />,
       title: "Final Submission Received",
-      body: "Your implementation has been submitted. Your instructor will grade it soon — well done for making it this far!",
+      body: "Your implementation has been submitted. Your instructor will grade it soon  well done for making it this far!",
     },
     grading: {
       bg: "from-purple-50 to-indigo-50 border-purple-200",
@@ -350,7 +350,7 @@ function StatusCallout({ status, instructorComment, grade, gradeFeedback, revisi
     graded: {
       bg: "from-emerald-50 to-teal-50 border-emerald-200",
       icon: <Trophy className="w-5 h-5 text-emerald-600" />,
-      title: `Graded: ${grade ?? "—"} / 100`,
+      title: `Graded: ${grade ?? ""} / 100`,
       body: gradeFeedback || "Your capstone has been graded! Check your result below.",
     },
     completed: {
@@ -391,7 +391,7 @@ function ProposalPanel({ capstone, onSubmitted }) {
   const attemptsLeft     = MAX_REVISIONS - (capstone?.revisionCount || 0);
   const isBlocked        = isRevision && attemptsLeft <= 0;
 
-  // Quill image handler — insert as base64 preview
+  // Quill image handler  insert as base64 preview
   const imageHandler = useCallback(() => {
     const input = document.createElement("input");
     input.setAttribute("type", "file");
@@ -505,7 +505,7 @@ function ProposalPanel({ capstone, onSubmitted }) {
         <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
           <Clock className="w-5 h-5 text-blue-500 shrink-0" />
           <div>
-            <p className="font-semibold text-gray-900 text-sm">Proposal Submitted — Awaiting Review</p>
+            <p className="font-semibold text-gray-900 text-sm">Proposal Submitted  Awaiting Review</p>
             <p className="text-xs text-gray-500 mt-0.5">Your instructor will review this and get back to you.</p>
           </div>
         </div>
@@ -612,7 +612,7 @@ function ProposalPanel({ capstone, onSubmitted }) {
             </div>
           </div>
 
-          {/* Description — WYSIWYG */}
+          {/* Description  WYSIWYG */}
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Label className="text-sm font-semibold text-gray-800">
@@ -652,7 +652,7 @@ function ProposalPanel({ capstone, onSubmitted }) {
                 Supporting Documents <span className="text-red-500">*</span>
               </Label>
               <p className="text-xs text-gray-400 mt-0.5">
-                Upload up to {MAX_FILES} documents. PDF, DOC, DOCX, CSV, XLS, XLSX, or ZIP — max 50 MB each.
+                Upload up to {MAX_FILES} documents. PDF, DOC, DOCX, CSV, XLS, XLSX, or ZIP  max 50 MB each.
               </p>
             </div>
 
@@ -703,7 +703,7 @@ function ProposalPanel({ capstone, onSubmitted }) {
             </div>
           )}
 
-          {/* Withdraw option — available for submitted & revision_requested */}
+          {/* Withdraw option  available for submitted & revision_requested */}
           {capstone?._id && (
             <div className="pt-3 border-t border-gray-100 flex items-center gap-2">
               <Button
@@ -823,9 +823,9 @@ function ImplementationPanel({ capstone, onSubmitted }) {
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex gap-3">
           <Rocket className="w-5 h-5 text-emerald-600 mt-0.5 shrink-0" />
           <div>
-            <p className="text-sm font-semibold text-emerald-900">Build Phase — Upload Your Final Work</p>
+            <p className="text-sm font-semibold text-emerald-900">Build Phase  Upload Your Final Work</p>
             <p className="text-sm text-emerald-700 mt-0.5">
-              Upload your implementation files — code, reports, data, presentations, or any project deliverables.
+              Upload your implementation files  code, reports, data, presentations, or any project deliverables.
             </p>
           </div>
         </div>
@@ -1079,7 +1079,7 @@ export default function StudentCapstonePage() {
           </div>
         </div>
 
-        {/* ── Main content — only the active stage is shown ── */}
+        {/* ── Main content  only the active stage is shown ── */}
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-7 space-y-6">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -1088,7 +1088,7 @@ export default function StudentCapstonePage() {
             </div>
           ) : (
             <>
-              {/* Status callout — shown on every stage except draft */}
+              {/* Status callout  shown on every stage except draft */}
               {capstone && status !== "draft" && (
                 <StatusCallout
                   status={status}
@@ -1137,7 +1137,7 @@ export default function StudentCapstonePage() {
                     </div>
                     <div>
                       <h2 className="font-bold text-gray-900 text-lg">Project Implementation</h2>
-                      <p className="text-xs text-gray-500">Upload your final project work — code, reports, and deliverables.</p>
+                      <p className="text-xs text-gray-500">Upload your final project work  code, reports, and deliverables.</p>
                     </div>
                     <Badge className="ml-auto bg-emerald-100 text-emerald-700 border-emerald-200 border">
                       <Rocket className="w-3 h-3 mr-1" /> Unlocked

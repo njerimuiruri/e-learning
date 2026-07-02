@@ -294,11 +294,11 @@ const CoursesSection = () => {
                                                 <>
                                                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-3 py-1.5 rounded-full">
                                                         <GraduationCap className="w-3.5 h-3.5" />
-                                                        Student — ${cat.studentPrice}
+                                                        Student  ${cat.studentPrice}
                                                     </span>
                                                     <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full">
                                                         <Briefcase className="w-3.5 h-3.5" />
-                                                        Non-Student — ${cat.nonStudentPrice}
+                                                        Non-Student  ${cat.nonStudentPrice}
                                                     </span>
                                                 </>
                                             ) : (

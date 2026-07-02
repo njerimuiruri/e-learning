@@ -230,7 +230,7 @@ function ComposeDialog({ open, onClose, onSent, prefill }) {
   const searchStudents = async (q) => {
     setStudentsLoading(true);
     try {
-      // Try instructor-specific student list (uses module enrollment data — always accessible)
+      // Try instructor-specific student list (uses module enrollment data  always accessible)
       const data = await moduleEnrollmentService.getInstructorStudents({ search: q || undefined, limit: 50 });
       const list = Array.isArray(data) ? data : [];
       const normalized = list.map((s) => ({

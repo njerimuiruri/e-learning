@@ -27,7 +27,7 @@ import adminService from "@/lib/api/adminService";
 // ── helpers ────────────────────────────────────────────────────────────────
 
 function fmt(d) {
-  if (!d) return "—";
+  if (!d) return "";
   return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
@@ -384,7 +384,7 @@ export default function AdminProjectsPage() {
 
                         {/* Student */}
                         <td className="px-5 py-3.5 whitespace-nowrap">
-                          <p className="font-medium text-gray-900">{p.studentName || "—"}</p>
+                          <p className="font-medium text-gray-900">{p.studentName || ""}</p>
                           <p className="text-xs text-gray-400">{p.studentEmail || ""}</p>
                         </td>
 
@@ -509,10 +509,10 @@ export default function AdminProjectsPage() {
               <Separator />
               <div className="grid grid-cols-2 gap-3 text-sm">
                 {[
-                  { label: "Student",   value: viewing.studentName  || "—" },
-                  { label: "Email",     value: viewing.studentEmail || "—" },
+                  { label: "Student",   value: viewing.studentName  || "" },
+                  { label: "Email",     value: viewing.studentEmail || "" },
                   { label: "Submitted", value: fmt(viewing.createdAt) },
-                  { label: "File",      value: viewing.fileName || "—" },
+                  { label: "File",      value: viewing.fileName || "" },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <p className="text-xs text-gray-400 mb-0.5">{label}</p>
@@ -745,7 +745,7 @@ export default function AdminProjectsPage() {
                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
                     <ul className="max-h-48 overflow-y-auto divide-y divide-gray-50">
                       {authorResults.map(u => {
-                        const name = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.fullName || "—";
+                        const name = `${u.firstName || ""} ${u.lastName || ""}`.trim() || u.fullName || "";
                         return (
                           <li key={u._id || u.email}>
                             <button type="button"
@@ -812,7 +812,7 @@ export default function AdminProjectsPage() {
                   <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
                     <ul className="max-h-48 overflow-y-auto divide-y divide-gray-50">
                       {fellowResults.map(f => {
-                        const name = `${f.firstName || ""} ${f.lastName || ""}`.trim() || f.fullName || "—";
+                        const name = `${f.firstName || ""} ${f.lastName || ""}`.trim() || f.fullName || "";
                         return (
                           <li key={f._id || f.email}>
                             <button type="button"

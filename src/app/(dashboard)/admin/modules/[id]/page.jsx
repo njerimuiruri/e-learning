@@ -20,7 +20,7 @@ function resolveCorrectOptionText(q) {
     if (!ca) return null;
     const options = q.options || [];
 
-    // "Option X" (1-indexed) — e.g. "Option 3" → options[2]
+    // "Option X" (1-indexed)  e.g. "Option 3" → options[2]
     const optionLabelMatch = ca.match(/^[Oo]ption\s*(\d+)$/);
     if (optionLabelMatch) {
         const idx = parseInt(optionLabelMatch[1], 10) - 1;
@@ -320,19 +320,19 @@ export default function AdminModuleDetailPage() {
                         Back to Modules
                     </button>
                     <div className="flex gap-2 flex-wrap">
-                        {/* Approve — shown for draft, submitted, rejected */}
+                        {/* Approve  shown for draft, submitted, rejected */}
                         {['draft', 'submitted', 'rejected'].includes(mod.status) && (
                             <button onClick={() => { setActionType('approve'); setShowAction(true); }} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700">
                                 <Icons.CheckCircle className="w-4 h-4" /> Approve
                             </button>
                         )}
-                        {/* Reject — shown for submitted modules from instructors */}
+                        {/* Reject  shown for submitted modules from instructors */}
                         {mod.status === 'submitted' && (
                             <button onClick={() => { setActionType('reject'); setShowAction(true); }} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-semibold text-sm hover:bg-red-700">
                                 <Icons.XCircle className="w-4 h-4" /> Reject
                             </button>
                         )}
-                        {/* Publish — for approved modules, or directly from draft (admin override) */}
+                        {/* Publish  for approved modules, or directly from draft (admin override) */}
                         {['approved', 'draft', 'submitted'].includes(mod.status) && (
                             <button onClick={() => { setActionType('publish'); setShowAction(true); }} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl font-semibold text-sm hover:bg-emerald-700">
                                 <Icons.Globe className="w-4 h-4" /> Publish
@@ -1076,7 +1076,7 @@ export default function AdminModuleDetailPage() {
                                             <p className="text-xs text-gray-500">Max Attempts</p>
                                         </div>
                                         <div className="bg-blue-50 rounded-xl p-3 text-center">
-                                            <p className="text-xl font-bold text-blue-700">{finalAssessment.timeLimit || '—'}</p>
+                                            <p className="text-xl font-bold text-blue-700">{finalAssessment.timeLimit || ''}</p>
                                             <p className="text-xs text-gray-500">Time Limit (min)</p>
                                         </div>
                                     </div>
@@ -1098,7 +1098,7 @@ export default function AdminModuleDetailPage() {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="text-xs text-indigo-600 mb-2 capitalize">Type: {q.type} · {q.points || 1} pt{q.points !== 1 ? 's' : ''} · stored as: <code className="bg-indigo-100 px-1 rounded">{String(q.correctAnswer ?? '—')}</code></p>
+                                                    <p className="text-xs text-indigo-600 mb-2 capitalize">Type: {q.type} · {q.points || 1} pt{q.points !== 1 ? 's' : ''} · stored as: <code className="bg-indigo-100 px-1 rounded">{String(q.correctAnswer ?? '')}</code></p>
                                                     {q.options?.length > 0 && (
                                                         <ul className="space-y-1 mb-2">
                                                             {q.options.map((opt, oi) => {
@@ -1132,11 +1132,11 @@ export default function AdminModuleDetailPage() {
                             <h4 className="font-bold text-gray-900 mb-4 text-sm">Module Summary</h4>
                             <div className="space-y-3 text-sm">
                                 {[
-                                    { icon: Icons.ListOrdered, label: 'Module Order', value: mod.order > 0 ? `Module ${mod.order}` : '—' },
-                                    { icon: Icons.BookOpen, label: 'Lessons', value: allLessons.length || topics.reduce((acc, t) => acc + (t.lessons?.length || 0), 0) || '—' },
-                                    { icon: Icons.Layers, label: 'Total Slides', value: allLessons.reduce((acc, l) => acc + (l.slides?.length || 0), 0) || '—' },
-                                    { icon: Icons.FlaskConical, label: 'Case Studies', value: caseStudies.length || '—' },
-                                    { icon: Icons.FolderOpen, label: 'Module Resources', value: moduleResources.length || '—' },
+                                    { icon: Icons.ListOrdered, label: 'Module Order', value: mod.order > 0 ? `Module ${mod.order}` : '' },
+                                    { icon: Icons.BookOpen, label: 'Lessons', value: allLessons.length || topics.reduce((acc, t) => acc + (t.lessons?.length || 0), 0) || '' },
+                                    { icon: Icons.Layers, label: 'Total Slides', value: allLessons.reduce((acc, l) => acc + (l.slides?.length || 0), 0) || '' },
+                                    { icon: Icons.FlaskConical, label: 'Case Studies', value: caseStudies.length || '' },
+                                    { icon: Icons.FolderOpen, label: 'Module Resources', value: moduleResources.length || '' },
                                     { icon: Icons.Trophy, label: 'Final Assessment', value: finalAssessment ? 'Yes' : 'No' },
                                     { icon: Icons.Users, label: 'Enrollments', value: (mod.enrollmentCount || 0).toLocaleString() },
                                 ].map(({ icon: Icon, label, value }) => (
@@ -1223,7 +1223,7 @@ export default function AdminModuleDetailPage() {
                         {/* Admin Actions */}
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-3">
                             <h4 className="font-bold text-gray-900 text-sm">Admin Actions</h4>
-                            {/* Edit button — available for all statuses */}
+                            {/* Edit button  available for all statuses */}
                             <button onClick={() => router.push(`/admin/modules/${id}/edit`)} className="w-full flex items-center justify-center gap-2 py-3 bg-gray-100 text-gray-700 border border-gray-200 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors">
                                 <Icons.Edit2 className="w-4 h-4" /> Edit Module Content
                             </button>

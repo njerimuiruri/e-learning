@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
+import { useState, useEffect, useCallback, useRef } from "react";
+import moduleEnrollmentService from "@/lib/api/moduleEnrollmentService";
 
 /**
- * useEnrollmentProgress — single source of truth for lesson progression state.
+ * useEnrollmentProgress  single source of truth for lesson progression state.
  *
  * Fetches progress from the server on mount and after any mutation.
- * NEVER derives completion state from local React state — only from the DB response.
+ * NEVER derives completion state from local React state  only from the DB response.
  *
  * Shape returned by the server (GET /module-enrollments/:id/progress):
  * {
@@ -31,7 +31,9 @@ export function useEnrollmentProgress(enrollmentId) {
   const mountedRef = useRef(true);
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const fetch = useCallback(async () => {
@@ -43,23 +45,34 @@ export function useEnrollmentProgress(enrollmentId) {
       if (mountedRef.current) {
         setProgress(data);
         console.log(
-          '[useEnrollmentProgress] Progress fetched from backend | enrollmentId=', enrollmentId,
-          '| currentLessonIndex=', data?.currentLessonIndex,
-          '| currentSlideIndex=', data?.currentSlideIndex,
-          '| nextLessonIndex=', data?.nextLessonIndex,
-          '| completedLessons=', data?.completedLessons, '/', data?.totalLessons,
-          '| lessonStates=', (data?.lessonStates || []).map(ls => ({
+          "[useEnrollmentProgress] Progress fetched from backend | enrollmentId=",
+          enrollmentId,
+          "| currentLessonIndex=",
+          data?.currentLessonIndex,
+          "| currentSlideIndex=",
+          data?.currentSlideIndex,
+          "| nextLessonIndex=",
+          data?.nextLessonIndex,
+          "| completedLessons=",
+          data?.completedLessons,
+          "/",
+          data?.totalLessons,
+          "| lessonStates=",
+          (data?.lessonStates || []).map((ls) => ({
             idx: ls.lessonIndex,
             completed: ls.isCompleted,
             accessible: ls.isAccessible,
             slide: ls.lastAccessedSlide,
             quizPassed: ls.assessmentPassed,
-            hasAnswers: !!(ls.lastAnswers && Object.keys(ls.lastAnswers).length),
+            hasAnswers: !!(
+              ls.lastAnswers && Object.keys(ls.lastAnswers).length
+            ),
           })),
         );
       }
     } catch (err) {
-      if (mountedRef.current) setError(err?.response?.data?.message ?? 'Failed to load progress');
+      if (mountedRef.current)
+        setError(err?.response?.data?.message ?? "Failed to load progress");
     } finally {
       if (mountedRef.current) setLoading(false);
     }
@@ -70,27 +83,30 @@ export function useEnrollmentProgress(enrollmentId) {
     fetch();
   }, [fetch]);
 
-  // Derived helpers — all computed from server state, never from local mutations
+  // Derived helpers  all computed from server state, never from local mutations
   const isCompleted = useCallback(
-    (lessonIndex) => progress?.lessonStates?.[lessonIndex]?.isCompleted ?? false,
+    (lessonIndex) =>
+      progress?.lessonStates?.[lessonIndex]?.isCompleted ?? false,
     [progress],
   );
 
   const isAccessible = useCallback(
-    (lessonIndex) => progress?.lessonStates?.[lessonIndex]?.isAccessible ?? (lessonIndex === 0),
+    (lessonIndex) =>
+      progress?.lessonStates?.[lessonIndex]?.isAccessible ?? lessonIndex === 0,
     [progress],
   );
 
   const isLocked = useCallback(
-    (lessonIndex) => progress?.lessonStates?.[lessonIndex]?.isLocked ?? (lessonIndex > 0),
+    (lessonIndex) =>
+      progress?.lessonStates?.[lessonIndex]?.isLocked ?? lessonIndex > 0,
     [progress],
   );
 
   return {
-    progress,           // full server response
+    progress, // full server response
     loading,
     error,
-    refresh: fetch,     // call after any mutation to re-sync from DB
+    refresh: fetch, // call after any mutation to re-sync from DB
 
     // Convenience accessors
     isCompleted,

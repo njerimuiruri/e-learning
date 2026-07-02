@@ -390,11 +390,11 @@ const ModulesPage = () => {
                                                     <>
                                                         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-sky-700 bg-sky-50 border border-sky-200 px-3 py-1.5 rounded-full">
                                                             <GraduationCap className="w-3.5 h-3.5" />
-                                                            Student — KES {cat.studentPrice}
+                                                            Student  KES {cat.studentPrice}
                                                         </span>
                                                         <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-orange-700 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full">
                                                             <Briefcase className="w-3.5 h-3.5" />
-                                                            Non-Student — KES {cat.nonStudentPrice}
+                                                            Non-Student  KES {cat.nonStudentPrice}
                                                         </span>
                                                     </>
                                                 ) : (

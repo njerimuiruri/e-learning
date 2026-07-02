@@ -37,7 +37,7 @@ function UploadContent() {
       const status = await studentVerificationService.getMyStatus();
       setExistingStatus(status);
       if (status.status === 'approved') {
-        // Already verified — redirect to module
+        // Already verified  redirect to module
         if (moduleId) router.push(`/student/modules/${moduleId}`);
         else router.push('/student/modules');
       }
@@ -93,7 +93,7 @@ function UploadContent() {
     );
   }
 
-  // Upload done — show confirmation
+  // Upload done  show confirmation
   if (uploadDone || existingStatus?.status === 'pending') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
@@ -124,7 +124,7 @@ function UploadContent() {
     );
   }
 
-  // Rejected — re-upload
+  // Rejected  re-upload
   if (existingStatus?.status === 'rejected') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">

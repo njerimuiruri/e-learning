@@ -98,7 +98,7 @@ export default function ResourceDetailPage() {
     if (!id) return;
     setLoading(true); setError(null);
     try {
-      // Try sessionStorage first — avoids calling the non-existent /admin-resources/:id endpoint
+      // Try sessionStorage first  avoids calling the non-existent /admin-resources/:id endpoint
       try {
         const cached = sessionStorage.getItem(`resource_detail_${id}`);
         if (cached) {

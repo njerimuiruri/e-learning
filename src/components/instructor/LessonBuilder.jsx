@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import * as Icons from 'lucide-react';
 
-// Monaco editor — dynamic import avoids SSR issues
+// Monaco editor  dynamic import avoids SSR issues
 const MonacoEditor = dynamic(
   () => import('@monaco-editor/react').then((m) => m.default ?? m.Editor ?? m),
   {
@@ -35,7 +35,7 @@ const MonacoEditor = dynamic(
 );
 
 /**
- * CodeEditor — Monaco wrapper for writing code (starter code, expected output, quiz snippets).
+ * CodeEditor  Monaco wrapper for writing code (starter code, expected output, quiz snippets).
  * Gives instructors a proper code editor instead of plain textareas.
  */
 function CodeEditor({
@@ -138,7 +138,7 @@ function ImageSlideEditor({ slide, onUpdate, disabled }) {
             value={slide.imageUrl || ''}
             onChange={(e) => onUpdate('imageUrl', e.target.value)}
             disabled={disabled || uploading}
-            placeholder="Paste a URL — or upload a file →"
+            placeholder="Paste a URL  or upload a file →"
             className="text-sm flex-1"
           />
           <Button
@@ -334,7 +334,7 @@ const QUIZ_TYPES = [
 
 const CS_SECTIONS = [
   { key: 'introduction', label: 'Introduction', Icon: Icons.BookOpen, placeholder: 'Describe the case study background and why it matters...' },
-  { key: 'dataset', label: 'Dataset', Icon: Icons.Database, placeholder: 'Describe the datasets used — name, source, what it contains...' },
+  { key: 'dataset', label: 'Dataset', Icon: Icons.Database, placeholder: 'Describe the datasets used  name, source, what it contains...' },
   { key: 'aiTask', label: 'AI Task', Icon: Icons.BrainCircuit, placeholder: 'Describe the AI/ML approach, algorithms, and expected outputs...' },
   { key: 'keyReadings', label: 'Key Readings', Icon: Icons.ScrollText, placeholder: 'List key papers and reading materials with citations...' },
 ];
@@ -354,7 +354,7 @@ const emptySlide = (type) => ({
 const emptyQuestion = () => ({
   question: '', type: 'multiple-choice',
   options: ['', '', '', ''], answer: '', explanation: '', points: 1,
-  codeSnippet: null, // { language: 'python', code: '' } — optional code block shown with the question
+  codeSnippet: null, // { language: 'python', code: '' }  optional code block shown with the question
 });
 
 const emptyCaseStudy = () => ({
@@ -853,7 +853,7 @@ function SlideEditor({
         className="flex items-center gap-2 px-3 py-2 bg-gray-50 cursor-pointer hover:bg-gray-100 transition-colors"
         onClick={onToggle}
       >
-        {/* Drag handle — only this element is draggable */}
+        {/* Drag handle  only this element is draggable */}
         {!disabled && (
           <span
             draggable
@@ -867,7 +867,7 @@ function SlideEditor({
         )}
         <Icon className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
         <span className="text-xs font-medium text-gray-700 flex-1">
-          Slide {idx + 1} — {typeInfo.label}
+          Slide {idx + 1}  {typeInfo.label}
         </span>
         {slide.sectionTitle && (
           <span className="text-[10px] text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100 truncate max-w-[120px]">
@@ -916,7 +916,7 @@ function SlideEditor({
       {/* Expanded content */}
       {expanded && (
         <div className="p-4 space-y-4 border-t border-gray-100">
-          {/* Section title — optional, shown above this slide */}
+          {/* Section title  optional, shown above this slide */}
           <div className="space-y-1.5 py-2 px-3 bg-blue-50 rounded-lg border border-blue-100">
             <div className="flex items-center gap-2">
               <Icons.Bookmark className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
@@ -970,7 +970,7 @@ function SlideEditor({
               <RichTextEditor
                 value={slide.content || ''}
                 onChange={(v) => onUpdate('content', v)}
-                placeholder="Enter slide content — use headings, lists, bold text, and insert images directly..."
+                placeholder="Enter slide content  use headings, lists, bold text, and insert images directly..."
                 height={220}
               />
             </div>
@@ -1035,7 +1035,7 @@ function SlideEditor({
                 </Select>
               </div>
 
-              {/* Instructions — plain textarea is fine here */}
+              {/* Instructions  plain textarea is fine here */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-gray-600">Instructions</Label>
                 <p className="text-xs text-gray-400">Tell students what the exercise asks them to do.</p>
@@ -1049,7 +1049,7 @@ function SlideEditor({
                 />
               </div>
 
-              {/* Starter code — Monaco editor */}
+              {/* Starter code  Monaco editor */}
               <CodeEditor
                 label="Starter Code"
                 hint="The code students will see and edit. Can be as long as needed."
@@ -1061,10 +1061,10 @@ function SlideEditor({
                 placeholder={slide.codeLanguage === 'r' ? '# Write starter R code here…' : '# Write starter Python code here…'}
               />
 
-              {/* Expected output — smaller Monaco, plaintext mode */}
+              {/* Expected output  smaller Monaco, plaintext mode */}
               <CodeEditor
                 label="Expected Output"
-                hint="Optional — shown to students when their output doesn't match."
+                hint="Optional  shown to students when their output doesn't match."
                 value={slide.expectedOutput || ''}
                 onChange={(v) => onUpdate('expectedOutput', v)}
                 language="plaintext"
@@ -1077,7 +1077,7 @@ function SlideEditor({
               <div className="border border-green-200 rounded-xl overflow-hidden">
                 <div className="flex items-center gap-2 px-4 py-2.5 bg-green-50 border-b border-green-100">
                   <Icons.Play className="w-3.5 h-3.5 text-green-600" />
-                  <span className="text-xs font-semibold text-green-700">Live Preview — run & verify before publishing</span>
+                  <span className="text-xs font-semibold text-green-700">Live Preview  run & verify before publishing</span>
                 </div>
                 <div className="p-3">
                   <InteractiveCodeEditor
@@ -1118,7 +1118,7 @@ function CaseStudyTab({ caseStudy, onChange, disabled }) {
           <p className="text-sm font-semibold text-amber-900">Include Case Study</p>
           <p className="text-xs text-amber-600">
             Optional. Adds 4 sections: Introduction, Dataset, AI Task, and Key Readings.
-            Case studies are reading material — learners are not quizzed on them.
+            Case studies are reading material  learners are not quizzed on them.
           </p>
         </div>
         <Switch checked={enabled} onCheckedChange={toggle} disabled={disabled} />
@@ -1409,7 +1409,7 @@ function QuizTab({ quiz, passingScore, maxAttempts, onQuizChange, onPassingScore
         <div className="text-center py-10 border-2 border-dashed border-purple-100 rounded-xl">
           <Icons.HelpCircle className="w-10 h-10 text-purple-100 mx-auto mb-2" />
           <p className="text-sm text-gray-500">No quiz questions yet.</p>
-          <p className="text-xs text-gray-400 mt-1">Quiz is optional — learners won't be tested if left empty.</p>
+          <p className="text-xs text-gray-400 mt-1">Quiz is optional  learners won't be tested if left empty.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -1508,7 +1508,7 @@ function QuizQuestion({ question, idx, onUpdate, onUpdateOption, onAddOption, on
         </div>
       </div>
 
-      {/* Code snippet editor — shown when toggled on */}
+      {/* Code snippet editor  shown when toggled on */}
       {hasCode && (
         <div className="border-t border-purple-100 px-4 pb-4 pt-3 space-y-3 bg-[#1a1a2e]/[0.02]">
           <div className="flex items-center gap-3">
@@ -1544,7 +1544,7 @@ function QuizQuestion({ question, idx, onUpdate, onUpdateOption, onAddOption, on
       <div className="px-4 pb-4 space-y-3">
         {(isMC || isTF) && (
           <div className="ml-10 space-y-1.5">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Options — click the radio to mark correct:</p>
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Options  click the radio to mark correct:</p>
             {(isTF ? ['True', 'False'] : question.options || []).map((opt, oi) => (
               <div key={oi} className="flex items-center gap-2">
                 <input
@@ -1603,7 +1603,7 @@ function QuizQuestion({ question, idx, onUpdate, onUpdateOption, onAddOption, on
             value={question.explanation || ''}
             onChange={(e) => onUpdate('explanation', e.target.value)}
             disabled={disabled}
-            placeholder="Explanation (shown after answering — optional)"
+            placeholder="Explanation (shown after answering  optional)"
             className="h-7 text-xs text-gray-500"
           />
         </div>

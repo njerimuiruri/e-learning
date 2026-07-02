@@ -38,7 +38,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function formatDate(dateStr) {
-    if (!dateStr) return '—';
+    if (!dateStr) return '';
     const d = new Date(dateStr);
     return d.toLocaleDateString('en-GB', {
         day: '2-digit', month: 'short', year: 'numeric',
@@ -70,7 +70,7 @@ function downloadSubmissionPDF(sub) {
     const essayQs = (sub.finalAssessmentResults || []).filter(r => r.questionType === 'essay');
     const mcqQs = (sub.finalAssessmentResults || []).filter(r => r.questionType !== 'essay');
     const scoreText = sub.status === 'pending' ? 'Awaiting grade' : `${sub.score ?? 0}%`;
-    const statusLabel = sub.status === 'pending' ? 'Pending Review' : (sub.status || '—');
+    const statusLabel = sub.status === 'pending' ? 'Pending Review' : (sub.status || '');
 
     const mcqRows = mcqQs.map((r, i) => `
         <div class="question ${r.isCorrect ? 'correct' : 'wrong'}">
@@ -106,7 +106,7 @@ function downloadSubmissionPDF(sub) {
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<title>${sub.studentName} — ${sub.moduleName} Submission</title>
+<title>${sub.studentName}  ${sub.moduleName} Submission</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px; color: #1a1a1a; padding: 48px 56px; line-height: 1.5; }
@@ -147,13 +147,13 @@ function downloadSubmissionPDF(sub) {
 <div class="header">
   <div class="org">Arin Africa · E-Learning Platform</div>
   <div class="report-title">Submission Report</div>
-  <div class="report-subtitle">Final Assessment — ${sub.moduleName || '—'}</div>
+  <div class="report-subtitle">Final Assessment  ${sub.moduleName || ''}</div>
 </div>
 
 <div class="meta-grid">
   <div class="meta-card">
     <div class="meta-label">Student</div>
-    <div class="meta-value">${sub.studentName || '—'}</div>
+    <div class="meta-value">${sub.studentName || ''}</div>
     <div style="font-size:11px;color:#64748b;margin-top:2px;">${sub.studentEmail || ''}</div>
   </div>
   <div class="meta-card">
@@ -166,7 +166,7 @@ function downloadSubmissionPDF(sub) {
   </div>
   <div class="meta-card">
     <div class="meta-label">Submission Type</div>
-    <div class="meta-value" style="text-transform:capitalize;">${sub.submissionType || '—'}</div>
+    <div class="meta-value" style="text-transform:capitalize;">${sub.submissionType || ''}</div>
   </div>
   <div class="meta-card">
     <div class="meta-label">Attempts</div>
@@ -335,7 +335,7 @@ export default function StudentResponsesPage() {
             const body = { pass: gradePass, feedback: gradeFeedback.trim() };
             if (gradeScore !== '') body.score = Number(gradeScore);
             await moduleEnrollmentService.gradeEssay(gradeTarget.enrollmentId, body);
-            showToast(`Marked as ${gradePass ? 'Pass' : 'Fail'} — student notified.`);
+            showToast(`Marked as ${gradePass ? 'Pass' : 'Fail'}  student notified.`);
             setGradeTarget(null);
             fetchSubmissions();
         } catch (e) {
@@ -352,7 +352,7 @@ export default function StudentResponsesPage() {
                 studentName: sub.studentName,
                 studentEmail: sub.studentEmail,
                 contextType: 'essay',
-                contextTitle: `${sub.moduleName} — Final Assessment`,
+                contextTitle: `${sub.moduleName}  Final Assessment`,
                 contextDetails: `Submission status: ${sub.status}${sub.score != null ? `, score: ${sub.score}%` : ''}`,
             }));
         } catch {}
@@ -724,7 +724,7 @@ export default function StudentResponsesPage() {
                                                 </Badge>
                                             ),
                                         },
-                                        { label: 'Score', value: viewTarget.status === 'pending' ? '—' : `${viewTarget.score}%` },
+                                        { label: 'Score', value: viewTarget.status === 'pending' ? '' : `${viewTarget.score}%` },
                                         { label: 'Attempts', value: viewTarget.finalAssessmentAttempts ?? 1 },
                                     ].map(({ label, value }) => (
                                         <div key={label} className="bg-gray-50 rounded-xl p-3 text-center">

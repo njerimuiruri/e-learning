@@ -72,7 +72,7 @@ function WhiteboardViewer({ whiteboard, onClose }) {
         </button>
       </div>
 
-      {/* Canvas + text overlay — read-only */}
+      {/* Canvas + text overlay  read-only */}
       <div className="flex-1 bg-gray-100 relative overflow-hidden">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100 z-10">

@@ -204,11 +204,53 @@ const paymentService = {
   },
 
   /**
-   * Admin: look up a user by email — returns their category associations and
+   * Admin: look up a user by email  returns their category associations and
    * Publishing Academy payment status.
    */
   adminLookupUserCategories: async (email: string) => {
     const { data } = await api.get('/admin/user-lookup', { params: { email } });
+    return data;
+  },
+
+  /** Enroll user as pay-later (Module 1 teaser, no payment) */
+  enrollPayLater: async (categoryId: string, tier: 'student' | 'non-student') => {
+    const { data } = await api.post('/category/pay-later', { categoryId, tier });
+    return data;
+  },
+
+  /** Admin: get pay-later enrollments for a category */
+  adminGetPayLaterEnrollments: async (categoryId: string) => {
+    const { data } = await api.get(`/admin/publishing-academy/${categoryId}/pay-later`);
+    return data;
+  },
+
+  /** Admin: get unified fellows list (paid + pay-later) */
+  adminGetPublishingAcademyFellows: async (categoryId: string) => {
+    const { data } = await api.get(`/admin/publishing-academy/${categoryId}/fellows`);
+    return data;
+  },
+
+  /** Admin: lock user from category */
+  adminLockUser: async (categoryId: string, userId: string) => {
+    const { data } = await api.post(`/admin/publishing-academy/${categoryId}/lock/${userId}`);
+    return data;
+  },
+
+  /** Admin: unlock user from category */
+  adminUnlockUser: async (categoryId: string, userId: string) => {
+    const { data } = await api.post(`/admin/publishing-academy/${categoryId}/unlock/${userId}`);
+    return data;
+  },
+
+  /** Admin: send reminder to one pay-later user */
+  adminSendPayLaterReminder: async (categoryId: string, userId: string) => {
+    const { data } = await api.post(`/admin/publishing-academy/${categoryId}/send-reminder/${userId}`);
+    return data;
+  },
+
+  /** Admin: send bulk reminders to all pay-later users */
+  adminSendBulkPayLaterReminders: async (categoryId: string) => {
+    const { data } = await api.post(`/admin/publishing-academy/${categoryId}/send-reminders-bulk`);
     return data;
   },
 

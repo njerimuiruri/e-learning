@@ -105,7 +105,7 @@ function ModuleCheckoutContent() {
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Complete Your Purchase</h1>
           <p className="text-gray-500 mt-1 text-sm">
-            {categoryName} — one payment unlocks all modules
+            {categoryName}  one payment unlocks all modules
           </p>
         </div>
 
@@ -218,7 +218,7 @@ function ModuleCheckoutContent() {
             <div className="space-y-2">
               {[
                 'Access to all modules under ' + categoryName,
-                'Lifetime access — no recurring fees',
+                'Lifetime access  no recurring fees',
                 'Certificate upon module completion',
                 selectedTier === 'student'
                   ? 'Student price: requires student ID verification'

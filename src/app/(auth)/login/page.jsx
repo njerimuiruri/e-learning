@@ -118,8 +118,30 @@ function LoginContent() {
             }
 
             setTimeout(() => {
-                if (response.user.role === 'student') router.replace('/student');
-                else if (response.user.role === 'instructor') router.replace('/instructor');
+                if (response.user.role === 'student') {
+                    // Collect all category IDs the user can access, from every source
+                    const purchased    = (response.user.purchasedCategories || []).map(
+                        id => (typeof id === 'object' ? (id._id || id.id || id) : id)?.toString()
+                    ).filter(Boolean);
+                    const fellowCats   = (response.user.fellowData?.assignedCategories || []).map(
+                        id => (typeof id === 'object' ? (id._id || id.id || id) : id)?.toString()
+                    ).filter(Boolean);
+                    const payLaterCats = (response.user.payLaterEnrollments || []).map(
+                        e => (typeof e.categoryId === 'object'
+                            ? (e.categoryId._id || e.categoryId)
+                            : e.categoryId)?.toString()
+                    ).filter(Boolean);
+
+                    // Deduplicate across all sources
+                    const allCategoryIds = [...new Set([...purchased, ...fellowCats, ...payLaterCats])];
+
+                    if (allCategoryIds.length === 1) {
+                        // Exactly one category across all access types → go straight to it
+                        router.replace(`/student/modules/category/${allCategoryIds[0]}`);
+                        return;
+                    }
+                    router.replace('/student');
+                } else if (response.user.role === 'instructor') router.replace('/instructor');
                 else if (response.user.role === 'admin') router.replace('/admin');
                 else router.replace('/');
             }, 300);
@@ -186,7 +208,7 @@ function LoginContent() {
 
                         {/* Top row: logo + back btn */}
                         <div className="flex items-center justify-between">
-                            {/* LEFT panel logo — h-16 gives a tall, prominent logo */}
+                            {/* LEFT panel logo  h-16 gives a tall, prominent logo */}
                             <img
                                 src="/Arin.png"
                                 alt="ARIN Publishing Academy"
@@ -230,7 +252,7 @@ function LoginContent() {
                 {/* ══ RIGHT PANEL ══ */}
                 <div className="w-full lg:w-1/2 bg-gray-50 flex flex-col lg:h-screen">
 
-                    {/* Mobile top bar — sticky so always visible while scrolling */}
+                    {/* Mobile top bar  sticky so always visible while scrolling */}
                     <div className="lg:hidden sticky top-0 z-10 flex items-center justify-between px-5 py-4 bg-white border-b border-gray-100 shadow-sm">
                         <img
                             src="/Arin.png"
@@ -262,7 +284,7 @@ function LoginContent() {
                         <Card className="w-full max-w-[480px] mx-auto shadow-xl border-0 rounded-2xl bg-white">
 
                             <CardHeader className="px-7 pt-7 pb-3 space-y-0">
-                                {/* Card logo — h-14 makes it prominent inside the card */}
+                                {/* Card logo  h-14 makes it prominent inside the card */}
                                 <div className="mb-5">
                                     <img
                                         src="/Arin.png"

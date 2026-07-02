@@ -259,7 +259,7 @@ function AvailableModuleCard({ mod, onDetails, onEnroll }) {
                 <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 group-hover:text-[#021d49] transition-colors mb-1.5 break-words">
                     {mod.title}
                 </h3>
-                {/* Clean description — no HTML */}
+                {/* Clean description  no HTML */}
                 {clean && (
                     <p className="text-xs text-gray-500 line-clamp-3 mb-3 leading-relaxed flex-1 break-words overflow-hidden">{clean}</p>
                 )}
@@ -418,7 +418,7 @@ function Empty({ icon, title, sub, action, onAction }) {
 }
 
 
-/* Category tab switcher — shown only when student is enrolled in 2+ programmes */
+/* Category tab switcher  shown only when student is enrolled in 2+ programmes */
 function CategorySwitcher({ categories, active, onSelect }) {
     if (!categories || categories.length <= 1) return null;
     return (
@@ -460,7 +460,7 @@ function CategorySwitcher({ categories, active, onSelect }) {
     );
 }
 
-/* Publishing Academy dashboard — shows training modules, capstone, and deliverables */
+/* Publishing Academy dashboard  shows training modules, capstone, and deliverables */
 function PublishingAcademyView({ category, paymentStatus, router }) {
     const tier = paymentStatus?.userTier;
     const tierLabel = tier === 'student' ? 'Student' : tier === 'non-student' ? 'Non-Student' : null;
@@ -663,7 +663,7 @@ function getNextIncompleteLesson(enrollment) {
     const lessonProgress = enrollment.lessonProgress || [];
 
     // If the list endpoint returned no lessonProgress entries we cannot
-    // reliably compute the next lesson — signal that to the caller.
+    // reliably compute the next lesson  signal that to the caller.
     if (lessonProgress.length === 0) return null;
 
     const completed = new Set(
@@ -792,7 +792,7 @@ function StudentDashboardContent() {
         return () => document.removeEventListener('visibilitychange', handleVisibility);
     }, []);
 
-    // Fetch only enrollments + progressions — what the dashboard primarily shows
+    // Fetch only enrollments + progressions  what the dashboard primarily shows
     const fetchCritical = useCallback(async () => {
         try {
             const [enrollData, progData] = await Promise.all([
@@ -811,7 +811,7 @@ function StudentDashboardContent() {
             setLoading(true);
             setFetchError(false);
 
-            // Step 1 — fetch critical data first, show UI immediately
+            // Step 1  fetch critical data first, show UI immediately
             const [enrollData, progData] = await Promise.all([
                 moduleEnrollmentService.getMyEnrollments(),
                 progressionService.getMyProgressions(),
@@ -831,7 +831,7 @@ function StudentDashboardContent() {
                 if (sessionStorage.getItem('cert_banner_dismissed')) setCertBannerDismissed(true);
             } catch (_) {}
 
-            // Step 2 — fetch secondary data in background (non-blocking)
+            // Step 2  fetch secondary data in background (non-blocking)
             Promise.allSettled([
                 moduleService.getAllModules({ limit: 20 }),
                 notificationService.getMyNotifications(20),
@@ -903,7 +903,7 @@ function StudentDashboardContent() {
                         accessible.push({ ...cat, _paymentStatus: status });
                     }
                 } else {
-                    // Free/fellow category — check if user is assigned
+                    // Free/fellow category  check if user is assigned
                     const assignedCats = currentUser?.fellowData?.assignedCategories || [];
                     const isAssigned = assignedCats.some((ac) => {
                         const id = typeof ac === 'object' ? (ac._id || ac.id || ac) : ac;
@@ -976,7 +976,7 @@ function StudentDashboardContent() {
     const { totalLessons, completedLessons, overallProgress } = summarizeEnrollments(filteredEnrollments);
     const inProgress = filteredEnrollments.filter(e => {
         if (e.isCompleted) return false;
-        // Any enrollment where all lessons are done is no longer "in progress" —
+        // Any enrollment where all lessons are done is no longer "in progress" 
         // it's either pending assessment or completed.
         if (e.allLessonsCompleted) return false;
         return true;
@@ -1052,7 +1052,7 @@ function StudentDashboardContent() {
             <div className="min-h-screen bg-gray-50">
 
                 {/* ════════════════════════════════
-                    PAGE HEADER — clean white
+                    PAGE HEADER  clean white
                 ════════════════════════════════ */}
                 <div className="bg-white border-b border-gray-100 px-4 sm:px-6 lg:px-8 py-5">
                     <div className="max-w-7xl mx-auto">
@@ -1234,7 +1234,7 @@ function StudentDashboardContent() {
                                             <div className="min-w-0">
                                                 <p className="text-xs font-bold text-amber-700 uppercase tracking-wider">Balance Due</p>
                                                 <p className="text-sm font-semibold text-gray-900 mt-0.5">
-                                                    {activeCategory?.name} — Installment 2 of 2
+                                                    {activeCategory?.name}  Installment 2 of 2
                                                 </p>
                                             </div>
                                         </div>
@@ -1517,7 +1517,7 @@ function StudentDashboardContent() {
                                             <Icons.TrendingUp className="w-4 h-4 text-[#021d49]" />
                                             Level Progression
                                         </CardTitle>
-                                        <p className="text-xs text-gray-400 mt-0.5">Your journey through each category — complete a level to unlock the next</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">Your journey through each category  complete a level to unlock the next</p>
                                     </CardHeader>
                                     <CardContent className="px-5 pb-5 space-y-4">
                                         {filteredProgressions.map((prog) => {
@@ -1644,7 +1644,7 @@ function StudentDashboardContent() {
                                                         })}
                                                     </div>
 
-                                                    {/* Capstone optional note — shown when student is at intermediate */}
+                                                    {/* Capstone optional note  shown when student is at intermediate */}
                                                     {isAtIntermediate && (
                                                         <div className="mt-3 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
                                                             <Icons.Info className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
