@@ -27,6 +27,59 @@ const TRACK_OPTIONS  = ['AI & Machine Learning', 'Data Science', 'Climate Tech',
 const PARTICIPANT_CATEGORY_OPTIONS = ['Student', 'Working Professional'];
 const PAYMENT_STATUS_OPTIONS = ['paid', 'partial', 'pending', 'pay_later'];
 
+// Strips currency codes/symbols and thousands separators (e.g. "USD 500", "KES1,000") before parsing.
+const parseAmount = (val) => {
+  if (val == null) return '';
+  const cleaned = String(val).replace(/[^0-9.]/g, '');
+  return cleaned === '' ? '' : cleaned;
+};
+
+// Maps free-text category values (e.g. "Masters student", "Senior Program Officer") onto
+// the fixed dropdown options  anything mentioning "student" counts as Student pricing,
+// everything else is billed as a Working Professional.
+const normalizeParticipantCategory = (val) => {
+  const text = String(val || '').trim();
+  if (!text) return '';
+  return /student/i.test(text) ? 'Student' : 'Working Professional';
+};
+
+// Maps free-text status values (e.g. "Paid", "Pending") onto the exact lowercase
+// values the payment status dropdown/backend expects.
+const normalizePaymentStatus = (val) => {
+  const text = String(val || '').trim().toLowerCase();
+  if (!text) return 'pending';
+  if (text.includes('partial')) return 'partial';
+  if (text.includes('pay') && text.includes('later')) return 'pay_later';
+  if (text.includes('paid')) return 'paid';
+  if (text.includes('pending')) return 'pending';
+  return PAYMENT_STATUS_OPTIONS.includes(text) ? text : 'pending';
+};
+
+// Formats a Date using its LOCAL calendar fields (not toISOString, which converts to UTC
+// and can shift the date back a day depending on the server/browser timezone).
+const toLocalYMD = (d) => {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+// Converts a spreadsheet date cell (JS Date from cellDates:true, an Excel serial number,
+// or free text) into a clean "YYYY-MM-DD" string, or '' if it can't be parsed  never lets
+// an unparseable value through to the backend's Date field.
+const parseExcelDate = (val) => {
+  if (val == null || val === '') return '';
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? '' : toLocalYMD(val);
+  }
+  // Strip ordinal suffixes ("25th", "3rd", "22nd") that JS's Date parser can't handle,
+  // e.g. "25th May 2026" → "25 May 2026".
+  const text = String(val).trim().replace(/(\d+)(st|nd|rd|th)\b/i, '$1');
+  if (!text) return '';
+  const parsed = new Date(text);
+  return isNaN(parsed.getTime()) ? '' : toLocalYMD(parsed);
+};
+
 const BLANK_BP_ROW = () => ({
   id: Date.now() + Math.random(),
   fullName: '', email: '', gender: '', nationality: '', phoneNumber: '',
@@ -401,7 +454,7 @@ function BankPaymentBulkForm({ categoryId, onSuccess, onClose }) {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
-        const wb = XLSX.read(ev.target.result, { type: 'binary' });
+        const wb = XLSX.read(ev.target.result, { type: 'binary', cellDates: true });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const raw = XLSX.utils.sheet_to_json(ws, { header: 1 });
         if (raw.length < 2) return toast.error('File must have a header row and at least one data row');
@@ -433,12 +486,12 @@ function BankPaymentBulkForm({ categoryId, onSuccess, onClose }) {
             nationality: r(natIdx),
             phoneNumber: r(phoneIdx),
             institution: r(instIdx),
-            participantCategory: r(catIdx),
-            amountDue: r(dueIdx),
-            amountPaid: r(paidIdx),
-            paymentStatus: r(statusIdx) || 'pending',
+            participantCategory: normalizeParticipantCategory(r(catIdx)),
+            amountDue: parseAmount(r(dueIdx)),
+            amountPaid: parseAmount(r(paidIdx)),
+            paymentStatus: normalizePaymentStatus(r(statusIdx)),
             tranche: r(trancheIdx),
-            dateOfPayment: r(dateIdx),
+            dateOfPayment: parseExcelDate(dateIdx >= 0 ? row[dateIdx] : ''),
             comments: r(commIdx),
           };
         }).filter(r => r.email);
@@ -466,9 +519,9 @@ function BankPaymentBulkForm({ categoryId, onSuccess, onClose }) {
         id: Date.now() + Math.random(),
         fullName: cols[0] || '', email: cols[1] || '', gender: cols[2] || '',
         nationality: cols[3] || '', phoneNumber: cols[4] || '', institution: cols[5] || '',
-        participantCategory: cols[6] || '', amountDue: cols[7] || '', amountPaid: cols[8] || '',
-        paymentStatus: cols[9] || 'pending', tranche: cols[10] || '',
-        dateOfPayment: cols[11] || '', comments: cols[12] || '',
+        participantCategory: normalizeParticipantCategory(cols[6]), amountDue: parseAmount(cols[7]), amountPaid: parseAmount(cols[8]),
+        paymentStatus: normalizePaymentStatus(cols[9]), tranche: cols[10] || '',
+        dateOfPayment: parseExcelDate(cols[11]), comments: cols[12] || '',
       };
     });
     setRows(prev => [...prev.filter(r => r.email || r.fullName), ...parsed]);
