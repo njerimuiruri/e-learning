@@ -255,6 +255,8 @@ export default function AdminModuleEditPage() {
             : (Array.isArray(l.resources) ? l.resources : []),
           _caseStudy: null,
           order: l.order ?? idx,
+          mainPresentationUrl: l.mainPresentationUrl || '',
+          mainPresentationName: l.mainPresentationName || '',
         }));
 
         setForm({

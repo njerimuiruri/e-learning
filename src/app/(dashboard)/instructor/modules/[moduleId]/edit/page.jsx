@@ -295,6 +295,8 @@ export default function EditModulePage() {
                 exercise: lesson.exercise || '',
                 _caseStudy: null,
                 order: lesson.order ?? idx,
+                mainPresentationUrl: lesson.mainPresentationUrl || '',
+                mainPresentationName: lesson.mainPresentationName || '',
             }));
             setLessons(mappedLessons);
 

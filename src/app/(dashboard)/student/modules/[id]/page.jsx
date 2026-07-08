@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { resolveAssetUrl, toFileViewUrl, toFileDownloadUrl } from '@/lib/utils/resolveAssetUrl';
 import { isEmbeddableVideoUrl, getVideoEmbedUrl, getYouTubeId, getVimeoId } from '@/lib/utils/videoEmbed';
 
@@ -417,7 +418,12 @@ function ModuleLearningContent() {
         }
     }, [enrollmentProgress, moduleData, lessonParam, openFinalAssessmentOnLoad]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const handleDownload = async () => {
+    const handleDownloadSessionPdf = (lesson) => {
+        if (!lesson?.mainPresentationUrl) return;
+        window.open(toFileDownloadUrl(lesson.mainPresentationUrl), '_blank', 'noopener,noreferrer');
+    };
+
+    const handleDownloadZip = async () => {
         if (downloading) return;
         setDownloading(true); setDownloadProgress(0); setDownloadError('');
         try {
@@ -426,6 +432,15 @@ function ModuleLearningContent() {
             setDownloadError('Download failed. Please try again.');
             setTimeout(() => setDownloadError(''), 4000);
         } finally { setDownloading(false); setDownloadProgress(0); }
+    };
+
+    const handleDownload = async () => {
+        // Viewing a session with its own PDF: download that specific file, not the whole module.
+        if (currentLesson?.mainPresentationUrl) {
+            handleDownloadSessionPdf(currentLesson);
+            return;
+        }
+        await handleDownloadZip();
     };
 
     // ── Computed ────────────────────────────────────────────────────────────────
@@ -750,6 +765,8 @@ function ModuleLearningContent() {
         setShowLessonAssessment(false);
         setShowModuleOverview(false);
         setShowIntroVideo(false);
+        setShowModuleCompletionScreen(false);
+        setShowContentComingSoon(false);
         setLessonAssessmentResult(null);
         setLessonAnswers({});
         if (window.innerWidth < 1024) setSidebarCollapsed(true);
@@ -927,7 +944,7 @@ function ModuleLearningContent() {
                             {/* Module Overview entry */}
                             <div className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
                                 <button
-                                    onClick={() => { setShowModuleOverview(true); setShowFinalAssessment(false); setShowIntroVideo(false); if (window.innerWidth < 1024) setSidebarCollapsed(true); }}
+                                    onClick={() => { setShowModuleOverview(true); setShowFinalAssessment(false); setShowIntroVideo(false); setShowModuleCompletionScreen(false); if (window.innerWidth < 1024) setSidebarCollapsed(true); }}
                                     className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors
                                         ${showModuleOverview
                                             ? darkMode ? 'bg-blue-900/20 text-blue-300' : 'bg-blue-50 text-[#021d49]'
@@ -942,7 +959,7 @@ function ModuleLearningContent() {
                             {moduleData?.introVideoUrl && (
                                 <div className={`border-b ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
                                     <button
-                                        onClick={() => { setShowIntroVideo(true); setShowModuleOverview(false); setShowFinalAssessment(false); if (window.innerWidth < 1024) setSidebarCollapsed(true); }}
+                                        onClick={() => { setShowIntroVideo(true); setShowModuleOverview(false); setShowFinalAssessment(false); setShowModuleCompletionScreen(false); if (window.innerWidth < 1024) setSidebarCollapsed(true); }}
                                         className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors
                                             ${showIntroVideo
                                                 ? darkMode ? 'bg-blue-900/20 text-green-400' : 'bg-blue-50 text-green-700'
@@ -963,6 +980,7 @@ function ModuleLearningContent() {
                                         if (allLessonsCompleted) {
                                             setShowFinalAssessment(true);
                                             setShowLessonAssessment(false);
+                                            setShowModuleCompletionScreen(false);
                                             if (window.innerWidth < 1024) setSidebarCollapsed(true);
                                         }
                                     }}
@@ -1077,17 +1095,47 @@ function ModuleLearningContent() {
 
                             {/* Download module */}
                             <div className="p-3">
-                                <button
-                                    onClick={handleDownload}
-                                    disabled={downloading}
-                                    className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition-all disabled:opacity-50
-                                        ${darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
-                                >
-                                    {downloading
-                                        ? <><Icons.Loader2 className="w-3.5 h-3.5 animate-spin" /><span className="flex-1 text-left">{downloadProgress > 0 ? `${downloadProgress}%` : 'Preparing…'}</span></>
-                                        : <><Icons.Download className="w-3.5 h-3.5" />Download Module</>
-                                    }
-                                </button>
+                                {lessons.filter((l) => l.mainPresentationUrl).length > 1 ? (
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <button
+                                                disabled={downloading}
+                                                className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition-all disabled:opacity-50
+                                                    ${darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                            >
+                                                {downloading
+                                                    ? <><Icons.Loader2 className="w-3.5 h-3.5 animate-spin" /><span className="flex-1 text-left">{downloadProgress > 0 ? `${downloadProgress}%` : 'Preparing…'}</span></>
+                                                    : <><Icons.Download className="w-3.5 h-3.5" /><span className="flex-1 text-left">Download</span><Icons.ChevronDown className="w-3.5 h-3.5" /></>
+                                                }
+                                            </button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="start" className="w-56">
+                                            {lessons.map((lesson, idx) => lesson.mainPresentationUrl ? (
+                                                <DropdownMenuItem key={idx} onClick={() => handleDownloadSessionPdf(lesson)} className="gap-2">
+                                                    <Icons.Presentation className="w-3.5 h-3.5 text-rose-500" />
+                                                    Session {idx + 1}
+                                                </DropdownMenuItem>
+                                            ) : null)}
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={handleDownloadZip} className="gap-2">
+                                                <Icons.FolderDown className="w-3.5 h-3.5" />
+                                                Download All (ZIP)
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                ) : (
+                                    <button
+                                        onClick={handleDownload}
+                                        disabled={downloading}
+                                        className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-medium transition-all disabled:opacity-50
+                                            ${darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                    >
+                                        {downloading
+                                            ? <><Icons.Loader2 className="w-3.5 h-3.5 animate-spin" /><span className="flex-1 text-left">{downloadProgress > 0 ? `${downloadProgress}%` : 'Preparing…'}</span></>
+                                            : <><Icons.Download className="w-3.5 h-3.5" />Download Module</>
+                                        }
+                                    </button>
+                                )}
                                 {downloadError && <p className="text-xs text-red-500 mt-1.5 text-center">{downloadError}</p>}
                             </div>
                         </div>
@@ -1484,11 +1532,16 @@ function ModuleLearningContent() {
                                         {!showLessonAssessment && currentLesson.mainPresentationUrl && (
                                             <div className={`rounded-2xl border shadow-sm overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
                                                 <div className={`flex items-center justify-between gap-2 px-5 py-3 border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
-                                                    <div className="flex items-center gap-2">
-                                                        <Icons.Presentation className="w-4 h-4 text-rose-500" />
-                                                        <span className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <Icons.Presentation className="w-4 h-4 text-rose-500 flex-shrink-0" />
+                                                        <span className={`text-xs font-semibold uppercase tracking-wide truncate ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                                                             {currentLesson.mainPresentationName || 'Main Presentation'}
                                                         </span>
+                                                        {isLessonCompleted(currentLessonIndex) && (
+                                                            <span className="flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded-full flex-shrink-0">
+                                                                <Icons.CheckCircle className="w-3 h-3" /> Completed
+                                                            </span>
+                                                        )}
                                                     </div>
                                                     <a
                                                         href={toFileDownloadUrl(currentLesson.mainPresentationUrl)}
