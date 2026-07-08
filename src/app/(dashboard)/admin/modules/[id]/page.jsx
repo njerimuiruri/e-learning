@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import adminService from '@/lib/api/adminService';
+import moduleService from '@/lib/api/moduleService';
 import ModuleStudentPreview from '@/components/shared/ModuleStudentPreview';
-import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
+import { resolveAssetUrl, toFileViewUrl, toFileDownloadUrl } from '@/lib/utils/resolveAssetUrl';
 
 
 function stripHtml(html) {
@@ -88,6 +89,13 @@ export default function AdminModuleDetailPage() {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [showPreview, setShowPreview] = useState(false);
+    const [showReassign, setShowReassign] = useState(false);
+    const [reassignEmail, setReassignEmail] = useState('');
+    const [reassigning, setReassigning] = useState(false);
+    const [showCreditEdit, setShowCreditEdit] = useState(false);
+    const [creditName, setCreditName] = useState('');
+    const [creditSpecialization, setCreditSpecialization] = useState('');
+    const [savingCredit, setSavingCredit] = useState(false);
 
     // Assessment review state
     const [showAssessmentAction, setShowAssessmentAction] = useState(false);
@@ -155,6 +163,39 @@ export default function AdminModuleDetailPage() {
             showToast(err?.response?.data?.message || `Failed to ${assessmentActionType} assessment`, 'error');
         } finally {
             setActingAssessment(false);
+        }
+    };
+
+    const handleReassignInstructor = async () => {
+        if (!reassignEmail.trim()) {
+            showToast('Please enter an instructor email', 'error');
+            return;
+        }
+        setReassigning(true);
+        try {
+            await moduleService.assignInstructor(id, reassignEmail.trim());
+            showToast('Instructor assigned successfully!');
+            setShowReassign(false);
+            setReassignEmail('');
+            fetchModule();
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Failed to assign instructor', 'error');
+        } finally {
+            setReassigning(false);
+        }
+    };
+
+    const handleSaveInstructorCredit = async () => {
+        setSavingCredit(true);
+        try {
+            await moduleService.updateInstructorCredit(id, creditName.trim(), creditSpecialization.trim());
+            showToast('Instructor credit updated!');
+            setShowCreditEdit(false);
+            fetchModule();
+        } catch (err) {
+            showToast(err?.response?.data?.message || 'Failed to update instructor credit', 'error');
+        } finally {
+            setSavingCredit(false);
         }
     };
 
@@ -390,8 +431,10 @@ export default function AdminModuleDetailPage() {
                         {[
                             { key: 'capstoneProjectDescription', label: 'Capstone Project Description', icon: Icons.Target, color: 'indigo' },
                             { key: 'welcomeMessage', label: 'Welcome Message', icon: Icons.MessageSquare, color: 'blue' },
-                            { key: 'moduleAim', label: 'Module Aim', icon: Icons.Crosshair, color: 'purple' },
+                            { key: 'goal', label: 'Module Goal', icon: Icons.Crosshair, color: 'purple' },
                             { key: 'moduleObjectives', label: 'Module Objectives', icon: Icons.ListChecks, color: 'teal' },
+                            { key: 'assignment', label: 'Assignment', icon: Icons.ClipboardList, color: 'orange' },
+                            { key: 'expectedOutput', label: 'Expected Output', icon: Icons.FileOutput, color: 'teal' },
                         ].filter(s => stripHtml(mod[s.key])).map(section => (
                             <div key={section.key} className={`bg-white rounded-2xl border border-gray-100 p-6 shadow-sm`}>
                                 <div className="flex items-center gap-2 mb-3">
@@ -668,6 +711,7 @@ export default function AdminModuleDetailPage() {
                                         const quiz = lesson.assessmentQuiz || [];
                                         const resources = lesson.lessonResources || lesson.resources || [];
                                         const outcomes = lesson.learningOutcomes || [];
+                                        const lessonTopics = lesson.topics || [];
                                         return (
                                             <div key={li}>
                                                 {/* Lesson Header */}
@@ -727,6 +771,31 @@ export default function AdminModuleDetailPage() {
                                                                         </li>
                                                                     ))}
                                                                 </ul>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Topics */}
+                                                        {lessonTopics.length > 0 && (
+                                                            <div>
+                                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Topics</p>
+                                                                <ul className="space-y-1.5">
+                                                                    {lessonTopics.map((t, ti) => (
+                                                                        <li key={ti} className="flex items-start gap-2 text-sm text-gray-700 bg-violet-50 rounded-lg px-3 py-2">
+                                                                            <Icons.List className="w-4 h-4 text-violet-500 flex-shrink-0 mt-0.5" />
+                                                                            <span>{typeof t === 'string' ? t : t.text || t.value || JSON.stringify(t)}</span>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Exercise */}
+                                                        {stripHtml(lesson.exercise) && (
+                                                            <div>
+                                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Exercise</p>
+                                                                <div className="overflow-x-auto bg-white rounded-xl border border-gray-100">
+                                                                    <div className="text-sm text-gray-700 prose max-w-none leading-relaxed break-words p-4" dangerouslySetInnerHTML={{ __html: lesson.exercise }} />
+                                                                </div>
                                                             </div>
                                                         )}
 
@@ -884,6 +953,23 @@ export default function AdminModuleDetailPage() {
                                                                             {q.explanation && <p className="text-xs text-gray-500 italic mt-1">Explanation: {q.explanation}</p>}
                                                                         </div>
                                                                     ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Main Presentation */}
+                                                        {lesson.mainPresentationUrl && (
+                                                            <div>
+                                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Main Presentation</p>
+                                                                <div className="flex items-center gap-3 p-2.5 bg-rose-50 rounded-xl border border-rose-100">
+                                                                    <Icons.Presentation className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                                                                    <p className="text-sm font-medium text-rose-900 truncate flex-1">{lesson.mainPresentationName || 'Main Presentation.pdf'}</p>
+                                                                    <a href={toFileViewUrl(lesson.mainPresentationUrl)} target="_blank" rel="noopener noreferrer" className="text-rose-600 hover:text-rose-800 flex-shrink-0" title="View">
+                                                                        <Icons.Eye className="w-3.5 h-3.5" />
+                                                                    </a>
+                                                                    <a href={toFileDownloadUrl(lesson.mainPresentationUrl)} className="text-rose-600 hover:text-rose-800 flex-shrink-0" title="Download">
+                                                                        <Icons.Download className="w-3.5 h-3.5" />
+                                                                    </a>
                                                                 </div>
                                                             </div>
                                                         )}
@@ -1193,6 +1279,104 @@ export default function AdminModuleDetailPage() {
                                     </span>
                                 </div>
                             )}
+
+                            {/* Reassign instructor */}
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                {showReassign ? (
+                                    <div className="space-y-2">
+                                        <input
+                                            type="email"
+                                            value={reassignEmail}
+                                            onChange={(e) => setReassignEmail(e.target.value)}
+                                            placeholder="instructor@email.com"
+                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#021d49]/20"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleReassignInstructor}
+                                                disabled={reassigning}
+                                                className="flex-1 px-3 py-2 text-sm font-semibold text-white bg-[#021d49] rounded-lg hover:bg-[#021d49]/90 disabled:opacity-50"
+                                            >
+                                                {reassigning ? 'Assigning...' : 'Assign'}
+                                            </button>
+                                            <button
+                                                onClick={() => { setShowReassign(false); setReassignEmail(''); }}
+                                                disabled={reassigning}
+                                                className="px-3 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => setShowReassign(true)}
+                                        className="flex items-center gap-1.5 text-sm font-semibold text-[#021d49] hover:underline"
+                                    >
+                                        <Icons.RefreshCw className="w-3.5 h-3.5" />
+                                        {instructor ? 'Reassign Instructor' : 'Assign Instructor'}
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Credited instructor name + specialization (shown to students, independent of the account above) */}
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                                {showCreditEdit ? (
+                                    <div className="space-y-2">
+                                        <input
+                                            type="text"
+                                            value={creditName}
+                                            onChange={(e) => setCreditName(e.target.value)}
+                                            placeholder="Instructor name (e.g. Dr. Jane Doe)"
+                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#021d49]/20"
+                                        />
+                                        <input
+                                            type="text"
+                                            value={creditSpecialization}
+                                            onChange={(e) => setCreditSpecialization(e.target.value)}
+                                            placeholder="Specialization (e.g. Academic Writing Specialist)"
+                                            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#021d49]/20"
+                                        />
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={handleSaveInstructorCredit}
+                                                disabled={savingCredit}
+                                                className="flex-1 px-3 py-2 text-sm font-semibold text-white bg-[#021d49] rounded-lg hover:bg-[#021d49]/90 disabled:opacity-50"
+                                            >
+                                                {savingCredit ? 'Saving...' : 'Save'}
+                                            </button>
+                                            <button
+                                                onClick={() => setShowCreditEdit(false)}
+                                                disabled={savingCredit}
+                                                className="px-3 py-2 text-sm font-semibold text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {(mod.instructorDisplayName || mod.instructorSpecialization) && (
+                                            <div className="mb-2">
+                                                <p className="text-xs text-gray-400 mb-0.5">Credited as (shown to students)</p>
+                                                {mod.instructorDisplayName && <p className="text-sm font-semibold text-gray-900">{mod.instructorDisplayName}</p>}
+                                                {mod.instructorSpecialization && <p className="text-xs text-gray-500">{mod.instructorSpecialization}</p>}
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={() => {
+                                                setCreditName(mod.instructorDisplayName || '');
+                                                setCreditSpecialization(mod.instructorSpecialization || '');
+                                                setShowCreditEdit(true);
+                                            }}
+                                            className="flex items-center gap-1.5 text-sm font-semibold text-[#021d49] hover:underline"
+                                        >
+                                            <Icons.Pencil className="w-3.5 h-3.5" />
+                                            {(mod.instructorDisplayName || mod.instructorSpecialization) ? 'Edit Credit' : 'Add Instructor Name & Specialization'}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
 
                         {/* Dates */}

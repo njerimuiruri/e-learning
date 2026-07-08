@@ -1,8 +1,15 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import * as Icons from 'lucide-react';
-import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
+import { resolveAssetUrl, toFileViewUrl, toFileDownloadUrl } from '@/lib/utils/resolveAssetUrl';
+import { isEmbeddableVideoUrl, getVideoEmbedUrl } from '@/lib/utils/videoEmbed';
+
+const PdfViewer = dynamic(() => import('@/components/ui/PdfViewer'), {
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Loading presentation…</div>,
+});
 
 function resolveUrl(url) { return resolveAssetUrl(url); }
 
@@ -33,6 +40,8 @@ export default function LessonViewer({
   lesson,
   lessonIndex,
   totalLessons,
+  instructorName,
+  instructorSpecialization,
   enrollment,
   initialSlideIndex = 0,
   onLessonComplete,
@@ -340,6 +349,7 @@ export default function LessonViewer({
   // ═══════════════════════════════════════════════════════════════════════════
   if (phase === 'intro') {
     const outcomes = lesson?.learningOutcomes || [];
+    const topics = lesson?.topics || [];
     const resources = lesson?.lessonResources || lesson?.resources || [];
     return (
       <div className={`flex-1 overflow-y-auto overflow-x-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
@@ -356,9 +366,17 @@ export default function LessonViewer({
                 </span>
               )}
             </div>
-            <h2 className={`text-2xl md:text-3xl font-bold mb-4 leading-tight ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            <h2 className={`text-2xl md:text-3xl font-bold leading-tight ${darkMode ? 'text-white' : 'text-gray-900'} ${lesson?.slidesTitle || instructorName ? 'mb-1' : 'mb-4'}`}>
               {lesson?.title}
             </h2>
+            {(lesson?.slidesTitle || instructorName) && (
+              <p className={`text-sm mb-4 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                {lesson?.slidesTitle}
+                {lesson?.slidesTitle && instructorName && ' · '}
+                {instructorName && `Instructor: ${instructorName}`}
+                {instructorName && instructorSpecialization && ` — ${instructorSpecialization}`}
+              </p>
+            )}
             {/* Meta chips */}
             <div className="flex flex-wrap gap-2">
               {slides.length > 0 && (
@@ -423,6 +441,69 @@ export default function LessonViewer({
             </div>
           )}
 
+          {/* Topics covered */}
+          {topics.length > 0 && (
+            <div className={`border-t pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-7 h-7 rounded-lg bg-violet-100 flex items-center justify-center">
+                  <Icons.List className="w-4 h-4 text-violet-700" />
+                </div>
+                <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Topics covered</p>
+              </div>
+              <ul className="space-y-2">
+                {topics.map((topic, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <span className="w-1.5 h-1.5 rounded-full bg-violet-400 flex-shrink-0 mt-2" />
+                    <span className={`text-sm leading-relaxed ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+                      dangerouslySetInnerHTML={{ __html: topic }} />
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Exercise */}
+          {lesson?.exercise && (
+            <div className={`border-t pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center">
+                  <Icons.ClipboardList className="w-4 h-4 text-orange-700" />
+                </div>
+                <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>Exercise</p>
+              </div>
+              <div className={`prose prose-sm max-w-none leading-relaxed overflow-x-hidden break-words
+                prose-p:text-gray-600 prose-p:break-words prose-headings:font-bold
+                prose-li:text-gray-600 prose-a:text-[#1e40af] prose-strong:text-gray-900
+                ${darkMode ? 'prose-invert prose-p:text-gray-300' : ''}`}
+                dangerouslySetInnerHTML={{ __html: lesson.exercise }}
+              />
+            </div>
+          )}
+
+          {/* Main Presentation (Arin Publishing Academy lessons) */}
+          {lesson?.mainPresentationUrl && (
+            <div className={`border-t pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center">
+                    <Icons.Presentation className="w-4 h-4 text-rose-700" />
+                  </div>
+                  <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {lesson.mainPresentationName || 'Main Presentation'}
+                  </p>
+                </div>
+                <a
+                  href={toFileDownloadUrl(lesson.mainPresentationUrl)}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                >
+                  <Icons.Download className="w-3.5 h-3.5" />
+                  Download
+                </a>
+              </div>
+              <PdfViewer url={toFileViewUrl(lesson.mainPresentationUrl)} className="h-[85vh] rounded-xl border border-gray-200 overflow-hidden" />
+            </div>
+          )}
+
           {/* Resources */}
           {resources.length > 0 && (
             <div className={`border-t pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
@@ -440,7 +521,27 @@ export default function LessonViewer({
               <div className="space-y-2">
                 {resources.map((res, i) => {
                   const name = res.name || res.originalName || `Resource ${i + 1}`;
-                  const url = resolveUrl(res.url || res.fileUrl || '');
+                  const rawUrl = res.url || res.fileUrl || '';
+                  const url = resolveUrl(rawUrl);
+                  const isEmbeddedVideo = isEmbeddableVideoUrl(rawUrl);
+
+                  if (isEmbeddedVideo) {
+                    return (
+                      <div key={i} className="space-y-1.5">
+                        <p className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name}</p>
+                        <div className="relative w-full aspect-video rounded-xl overflow-hidden">
+                          <iframe
+                            src={getVideoEmbedUrl(rawUrl)}
+                            className="absolute inset-0 w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            title={name}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+
                   const nameExt = name.split('.').pop()?.toLowerCase() || '';
                   const urlExt = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
                   const ext = nameExt || urlExt;

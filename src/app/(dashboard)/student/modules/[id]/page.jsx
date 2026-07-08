@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import dynamic from 'next/dynamic';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
@@ -17,9 +18,17 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
+import { resolveAssetUrl, toFileViewUrl, toFileDownloadUrl } from '@/lib/utils/resolveAssetUrl';
+import { isEmbeddableVideoUrl, getVideoEmbedUrl, getYouTubeId, getVimeoId } from '@/lib/utils/videoEmbed';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
+
+const PdfViewer = dynamic(() => import('@/components/ui/PdfViewer'), {
+    ssr: false,
+    loading: () => (
+        <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Loading presentation…</div>
+    ),
+});
 
 function resolveUrl(url) { return resolveAssetUrl(url); }
 
@@ -42,11 +51,10 @@ async function openResource(url, fileName, isPdf) {
 // ── Smart video player (handles YouTube, Vimeo, and direct files) ─────────────
 function VideoPlayer({ url, className = '' }) {
     if (!url) return null;
-    const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
-    if (ytMatch) {
+    if (getYouTubeId(url)) {
         return (
             <iframe
-                src={`https://www.youtube.com/embed/${ytMatch[1]}`}
+                src={getVideoEmbedUrl(url)}
                 className={`w-full aspect-video rounded-xl ${className}`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
@@ -54,11 +62,10 @@ function VideoPlayer({ url, className = '' }) {
             />
         );
     }
-    const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
-    if (vimeoMatch) {
+    if (getVimeoId(url)) {
         return (
             <iframe
-                src={`https://player.vimeo.com/video/${vimeoMatch[1]}`}
+                src={getVideoEmbedUrl(url)}
                 className={`w-full aspect-video rounded-xl ${className}`}
                 allow="autoplay; fullscreen; picture-in-picture"
                 allowFullScreen
@@ -78,7 +85,8 @@ function resourceHref(res) {
     const ext = (res?.fileType || name || url || '').split('.').pop()?.toLowerCase() || '';
     const isPdf = ext === 'pdf';
     const isCloudinary = url?.includes('cloudinary.com');
-    return { url, name, ext, isPdf, isCloudinary };
+    const isVideo = isEmbeddableVideoUrl(raw);
+    return { url, name, ext, isPdf, isCloudinary, isVideo };
 }
 
 function fileIconColor(ext) {
@@ -1021,6 +1029,10 @@ function ModuleLearningContent() {
                                     ? totalSlides
                                     : isCurrent ? liveSlideIndex + 1 : completedSlideCount;
 
+                                const displayTitle = lesson.mainPresentationUrl
+                                    ? `Session ${idx + 1}`
+                                    : (lesson.title || `Lesson ${idx + 1}`);
+
                                 return (
                                     <button
                                         key={idx}
@@ -1044,7 +1056,7 @@ function ModuleLearningContent() {
                                                     : locked ? 'text-gray-400'
                                                         : darkMode ? 'font-medium text-gray-300' : 'font-medium text-gray-600'
                                                 }`}>
-                                                {lesson.title || `Lesson ${idx + 1}`}
+                                                {displayTitle}
                                             </p>
                                             {totalSlides > 0 && (
                                                 <p className={`text-[11px] mt-0.5 ${isCurrent ? 'text-[#1e40af]' : 'text-gray-400'}`}>
@@ -1101,11 +1113,12 @@ function ModuleLearningContent() {
                                     </div>
                                     <div className="space-y-1.5">
                                         {filteredResources.map(({ res, source }, i) => {
-                                            const { url, name, ext, isPdf, isCloudinary } = resourceHref(res);
+                                            const { url, name, ext, isPdf, isCloudinary, isVideo } = resourceHref(res);
                                             if (!url) return null;
-                                            const colors = fileIconColor(ext);
+                                            const colors = isVideo ? { bg: 'bg-red-100', text: 'text-red-600' } : fileIconColor(ext);
                                             const handleClick = async (e) => {
                                                 e.preventDefault();
+                                                if (isVideo) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
                                                 try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
                                             };
                                             return (
@@ -1115,7 +1128,7 @@ function ModuleLearningContent() {
                                                         ${darkMode ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
                                                 >
                                                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
-                                                        <Icons.FileText className={`w-4 h-4 ${colors.text}`} />
+                                                        {isVideo ? <Icons.PlayCircle className={`w-4 h-4 ${colors.text}`} /> : <Icons.FileText className={`w-4 h-4 ${colors.text}`} />}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className={`text-xs font-medium truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
@@ -1123,7 +1136,7 @@ function ModuleLearningContent() {
                                                         </p>
                                                         <p className={`text-[11px] truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{source}</p>
                                                     </div>
-                                                    {isPdf
+                                                    {isPdf || isVideo
                                                         ? <Icons.ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
                                                         : <Icons.Download className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
                                                     }
@@ -1167,7 +1180,7 @@ function ModuleLearningContent() {
                         </button>
                         <div className={`w-px h-5 flex-shrink-0 ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`} />
                         <p className={`flex-1 text-sm font-semibold truncate ${darkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-                            {showModuleOverview ? moduleData?.title || 'Module Overview' : showIntroVideo && moduleData?.introVideoUrl ? 'Module Introduction' : showFinalAssessment ? 'Final Assessment' : currentLesson?.title || `Lesson ${currentLessonIndex + 1}`}
+                            {showModuleOverview ? moduleData?.title || 'Module Overview' : showIntroVideo && moduleData?.introVideoUrl ? 'Module Introduction' : showFinalAssessment ? 'Final Assessment' : currentLesson?.mainPresentationUrl ? `Session ${currentLessonIndex + 1}` : currentLesson?.title || `Lesson ${currentLessonIndex + 1}`}
                         </p>
                         <div className="flex items-center gap-0.5 flex-shrink-0">
                             <button
@@ -1350,6 +1363,11 @@ function ModuleLearningContent() {
                                         lesson={currentLesson}
                                         lessonIndex={currentLessonIndex}
                                         totalLessons={totalLessons}
+                                        instructorName={moduleData?.instructorDisplayName || (moduleData?.instructorIds || [])
+                                            .map((i) => `${i.firstName || ''} ${i.lastName || ''}`.trim())
+                                            .filter(Boolean)
+                                            .join(', ')}
+                                        instructorSpecialization={moduleData?.instructorSpecialization}
                                         enrollment={enrollment}
                                         initialSlideIndex={initialSlideForCurrentLesson}
                                         isAlreadyCompleted={isLessonCompleted(currentLessonIndex)}
@@ -1407,9 +1425,10 @@ function ModuleLearningContent() {
                             {/* Non-slide lesson: scrollable content */}
                             {!hasSlides && (
                                 <div className={`flex-1 overflow-y-auto ${darkMode ? 'bg-gray-950' : 'bg-gray-50'}`}>
-                                    <div className="max-w-3xl mx-auto px-4 py-6 space-y-5">
+                                    <div className={`${currentLesson.mainPresentationUrl ? 'max-w-6xl' : 'max-w-3xl'} mx-auto px-4 py-6 space-y-5`}>
 
-                                        {/* Lesson header card */}
+                                        {/* Lesson header card  hidden for presentation-based lessons, whose title/status already show in the top bar */}
+                                        {!currentLesson.mainPresentationUrl && (
                                         <div className={`rounded-2xl border p-6 ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'} shadow-sm`}>
                                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                                                 <span className="text-xs font-semibold text-green-700 bg-green-100 px-2.5 py-1 rounded-full">
@@ -1446,6 +1465,7 @@ function ModuleLearningContent() {
                                                 )}
                                             </div>
                                         </div>
+                                        )}
 
                                         {/* Lesson Assessment */}
                                         {showLessonAssessment && currentLesson.assessment && (
@@ -1458,6 +1478,28 @@ function ModuleLearningContent() {
                                                 submitting={submittingAssessment}
                                                 onBackToLesson={() => { setShowLessonAssessment(false); setLessonAssessmentResult(null); setLessonAnswers({}); }}
                                             />
+                                        )}
+
+                                        {/* Main Presentation (Arin Publishing Academy lessons) */}
+                                        {!showLessonAssessment && currentLesson.mainPresentationUrl && (
+                                            <div className={`rounded-2xl border shadow-sm overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+                                                <div className={`flex items-center justify-between gap-2 px-5 py-3 border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+                                                    <div className="flex items-center gap-2">
+                                                        <Icons.Presentation className="w-4 h-4 text-rose-500" />
+                                                        <span className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                            {currentLesson.mainPresentationName || 'Main Presentation'}
+                                                        </span>
+                                                    </div>
+                                                    <a
+                                                        href={toFileDownloadUrl(currentLesson.mainPresentationUrl)}
+                                                        className="flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors flex-shrink-0"
+                                                    >
+                                                        <Icons.Download className="w-3.5 h-3.5" />
+                                                        Download
+                                                    </a>
+                                                </div>
+                                                <PdfViewer url={toFileViewUrl(currentLesson.mainPresentationUrl)} className="h-[85vh]" />
+                                            </div>
                                         )}
 
                                         {/* Video */}
@@ -1508,10 +1550,20 @@ function ModuleLearningContent() {
                                                     <Icons.FolderOpen className="w-4 h-4 text-gray-400" />
                                                     <span className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Resources</span>
                                                 </div>
-                                                <div className="p-4 space-y-2">
+                                                <div className="p-4 space-y-3">
                                                     {[...lessonRes, ...moduleRes].map((res, idx) => {
-                                                        const { url, name, ext, isPdf, isCloudinary } = resourceHref(res);
+                                                        const { url, name, ext, isPdf, isCloudinary, isVideo } = resourceHref(res);
                                                         if (!url) return null;
+
+                                                        if (isVideo) {
+                                                            return (
+                                                                <div key={idx} className="space-y-1.5">
+                                                                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name || `Resource ${idx + 1}`}</p>
+                                                                    <VideoPlayer url={url} />
+                                                                </div>
+                                                            );
+                                                        }
+
                                                         const colors = fileIconColor(ext);
                                                         const handleClick = async (e) => {
                                                             if (!isCloudinary) return;
@@ -1609,10 +1661,13 @@ function ModuleOverviewPanel({ module: mod, lessons, completedLessonIndices, pro
     })();
 
     const infoSections = [
+        { key: 'goal', label: 'Module Goal', icon: 'Flag', accent: 'text-indigo-600', dot: 'bg-indigo-500' },
         { key: 'learningObjectives', label: 'Learning Objectives', icon: 'Target', accent: 'text-blue-600', dot: 'bg-blue-500' },
         { key: 'learningOutcomes', label: 'Expected Outcomes', icon: 'GraduationCap', accent: 'text-emerald-600', dot: 'bg-emerald-500' },
         { key: 'moduleTopics', label: 'Module Content', icon: 'BookOpen', accent: 'text-violet-600', dot: 'bg-violet-500' },
         { key: 'coreReadingMaterials', label: 'Core Reading Materials', icon: 'BookMarked', accent: 'text-amber-600', dot: 'bg-amber-500' },
+        { key: 'assignment', label: 'Assignment', icon: 'ClipboardList', accent: 'text-orange-600', dot: 'bg-orange-500' },
+        { key: 'expectedOutput', label: 'Expected Output', icon: 'FileOutput', accent: 'text-teal-600', dot: 'bg-teal-500' },
         { key: 'capstone', label: 'Capstone Project', icon: 'Sparkles', accent: 'text-rose-600', dot: 'bg-rose-500' },
     ].filter(s => stripHtmlLocal(mod?.[s.key]));
 
@@ -2616,7 +2671,7 @@ function CompletionScreen({ enrollment, moduleId, module: completedModule, route
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-1">Module Completed!</h3>
                 <p className="text-gray-500 mb-6">Congratulations on finishing this module.</p>
-                {enrollment.finalAssessmentScore != null && (
+                {enrollment.finalAssessmentScore != null && (completedModule?.finalAssessment?.questions?.length ?? 0) > 0 && (
                     <div className="inline-flex items-center gap-2 bg-white border border-green-200 rounded-xl px-5 py-3 mb-6 shadow-sm">
                         <Icons.Trophy className="w-5 h-5 text-amber-500" />
                         <span className="text-sm font-semibold text-gray-700">Final Score: <span className="text-green-700 font-bold">{enrollment.finalAssessmentScore?.toFixed(1)}%</span></span>

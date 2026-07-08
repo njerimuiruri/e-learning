@@ -20,3 +20,30 @@ export function resolveAssetUrl(url: string): string {
   }
   return url;
 }
+
+/**
+ * Build a URL through the backend's `/api/files/download/*` route for a file
+ * stored under `/uploads/...` (e.g. lesson documents). That route sets
+ * `Content-Disposition: inline` or `attachment` correctly per file type.
+ * Non-`/uploads/` URLs (e.g. Cloudinary) are returned unchanged since that
+ * route can't serve them.
+ */
+function toFilesRouteUrl(url: string, inline: boolean): string {
+  if (!url) return url;
+  const absolute = resolveAssetUrl(url);
+  const marker = '/uploads/';
+  const idx = absolute.indexOf(marker);
+  if (idx === -1) return absolute;
+  const pathAfterUploads = absolute.slice(idx + marker.length);
+  return `${API_URL}/api/files/download/${pathAfterUploads}${inline ? '?inline=true' : ''}`;
+}
+
+/** URL for viewing a lesson document (e.g. a PDF) inline on the platform. */
+export function toFileViewUrl(url: string): string {
+  return toFilesRouteUrl(url, true);
+}
+
+/** URL that forces a full download of the original file. */
+export function toFileDownloadUrl(url: string): string {
+  return toFilesRouteUrl(url, false);
+}

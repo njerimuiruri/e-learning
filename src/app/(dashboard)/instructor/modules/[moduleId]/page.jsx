@@ -1,12 +1,18 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import moduleRatingService from '@/lib/api/moduleRatingService';
 import InstructorSidebar from '@/components/instructor/InstructorSidebar';
-import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
+import { resolveAssetUrl, toFileViewUrl, toFileDownloadUrl } from '@/lib/utils/resolveAssetUrl';
+
+const PdfViewer = dynamic(() => import('@/components/ui/PdfViewer'), {
+    ssr: false,
+    loading: () => <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Loading preview…</div>,
+});
 
 export default function ModuleDetailPage() {
     const router = useRouter();
@@ -438,6 +444,11 @@ export default function ModuleDetailPage() {
                                                                         <Icons.Video className="w-3 h-3" /> Video
                                                                     </span>
                                                                 )}
+                                                                {lesson.mainPresentationUrl && (
+                                                                    <span className="text-xs text-rose-600 flex items-center gap-1">
+                                                                        <Icons.Presentation className="w-3 h-3" /> Presentation
+                                                                    </span>
+                                                                )}
                                                                 {(lesson.lessonResources || lesson.resources || []).length > 0 && (
                                                                     <span className="text-xs text-purple-600 flex items-center gap-1">
                                                                         <Icons.Paperclip className="w-3 h-3" /> {(lesson.lessonResources || lesson.resources || []).length} resource(s)
@@ -465,6 +476,22 @@ export default function ModuleDetailPage() {
                                                             <div className="flex items-center gap-2 text-sm text-blue-600">
                                                                 <Icons.Video className="w-4 h-4" />
                                                                 <a href={lesson.videoUrl} target="_blank" rel="noopener noreferrer" className="hover:underline">View Video</a>
+                                                            </div>
+                                                        )}
+                                                        {lesson.mainPresentationUrl && (
+                                                            <div>
+                                                                <p className="text-sm font-medium text-gray-700 mb-2">Main Presentation:</p>
+                                                                <div className="flex items-center gap-3 p-3 bg-rose-50 border border-rose-100 rounded-lg mb-2">
+                                                                    <Icons.Presentation className="w-5 h-5 text-rose-600 flex-shrink-0" />
+                                                                    <span className="text-sm text-rose-900 flex-1 truncate">{lesson.mainPresentationName || 'Main Presentation.pdf'}</span>
+                                                                    <a href={toFileViewUrl(lesson.mainPresentationUrl)} target="_blank" rel="noopener noreferrer" className="text-rose-600 hover:text-rose-800 flex-shrink-0" title="View">
+                                                                        <Icons.Eye className="w-4 h-4" />
+                                                                    </a>
+                                                                    <a href={toFileDownloadUrl(lesson.mainPresentationUrl)} className="text-rose-600 hover:text-rose-800 flex-shrink-0" title="Download">
+                                                                        <Icons.Download className="w-4 h-4" />
+                                                                    </a>
+                                                                </div>
+                                                                <PdfViewer url={toFileViewUrl(lesson.mainPresentationUrl)} className="h-[80vh] rounded-lg border border-gray-200 overflow-hidden" />
                                                             </div>
                                                         )}
                                                         {(lesson.lessonResources || lesson.resources || []).length > 0 && (

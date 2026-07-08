@@ -21,6 +21,7 @@ const stripHtml = (html) => {
 };
 
 function getInstructorName(mod) {
+    if (mod.instructorDisplayName) return mod.instructorDisplayName;
     if (mod.instructorIds && mod.instructorIds.length > 0) {
         const instructor = mod.instructorIds[0];
         if (instructor && typeof instructor === 'object') {
@@ -685,6 +686,9 @@ const ModulesPage = () => {
                                                     <div className="min-w-0">
                                                         <p className="text-xs text-gray-400">Instructor</p>
                                                         <p className="text-xs font-semibold text-gray-700 truncate">{instructorName}</p>
+                                                        {mod.instructorSpecialization && (
+                                                            <p className="text-xs text-gray-400 truncate">{mod.instructorSpecialization}</p>
+                                                        )}
                                                     </div>
                                                 </div>
 

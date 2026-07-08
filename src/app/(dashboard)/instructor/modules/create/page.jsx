@@ -355,6 +355,9 @@ const defaultForm = {
   title: '',
   description: '',
   capstone: '',
+  goal: '',
+  assignment: '',
+  expectedOutput: '',
   categoryId: '',
   level: '',
   duration: '',
@@ -402,6 +405,9 @@ export default function CreateModulePage() {
     { contentType: 'module', entityId: savedModuleId, title: form.title || 'New Module' }
   );
   const [showDraftBanner, setShowDraftBanner] = useState(false);
+  // Bumped whenever `form` is replaced wholesale (draft restore) so the
+  // uncontrolled RichTextEditor fields remount and pick up the new content.
+  const [contentVersion, setContentVersion] = useState(0);
 
   // When the DB draft loads and it has an entityId (module ID), restore it
   useEffect(() => {
@@ -515,6 +521,7 @@ export default function CreateModulePage() {
     if (draft?.data) {
       setForm(draft.data);
       setShowDraftBanner(false);
+      setContentVersion((v) => v + 1);
       toast.success('Draft restored!');
     }
   };
@@ -598,6 +605,7 @@ export default function CreateModulePage() {
             <section className="space-y-4">
               <SectionHeading number={2} title="Module Description" subtitle="Explain what this module is about and why it matters." required />
               <RichTextEditor
+                key={`description-${contentVersion}`}
                 value={form.description}
                 onChange={(v) => updateForm('description', v)}
                 placeholder="This module teaches learners how to leverage AI and ML techniques..."
@@ -609,6 +617,7 @@ export default function CreateModulePage() {
             <section className="space-y-4">
               <SectionHeading number={3} title="Capstone Project" subtitle="Optional  describe the final project learners will design and submit." />
               <RichTextEditor
+                key={`capstone-${contentVersion}`}
                 value={form.capstone}
                 onChange={(v) => updateForm('capstone', v)}
                 placeholder="At the end of this module, learners will design an AI-driven solution..."
@@ -616,13 +625,49 @@ export default function CreateModulePage() {
               />
             </section>
 
+            {/* Module Goal / Assignment / Expected Output */}
+            <section className="space-y-6">
+              <SectionHeading number={4} title="Goal, Assignment & Expected Output" subtitle="Optional  the overarching goal, the assignment students complete, and what they should produce." />
+              <div className="space-y-2">
+                <Label className="font-semibold">Module Goal</Label>
+                <RichTextEditor
+                  key={`goal-${contentVersion}`}
+                  value={form.goal}
+                  onChange={(v) => updateForm('goal', v)}
+                  placeholder="e.g. To equip participants with the skills required to develop high-quality scholarly manuscripts..."
+                  height={120}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold">Assignment</Label>
+                <RichTextEditor
+                  key={`assignment-${contentVersion}`}
+                  value={form.assignment}
+                  onChange={(v) => updateForm('assignment', v)}
+                  placeholder="e.g. Develop a complete manuscript outline for a selected study."
+                  height={120}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold">Expected Output</Label>
+                <RichTextEditor
+                  key={`expectedOutput-${contentVersion}`}
+                  value={form.expectedOutput}
+                  onChange={(v) => updateForm('expectedOutput', v)}
+                  placeholder="e.g. Draft manuscript ready for mentorship review."
+                  height={120}
+                />
+              </div>
+            </section>
+
             {/* Objectives / Outcomes / Audience / Prerequisites */}
             <section className="space-y-6">
-              <SectionHeading number={4} title="Objectives, Outcomes, Audience & Prerequisites" />
+              <SectionHeading number={5} title="Objectives, Outcomes, Audience & Prerequisites" />
               <div className="space-y-2">
                 <Label className="font-semibold">Learning Objectives</Label>
                 <p className="text-xs text-gray-500">What does this module aim to teach? (The instructor's goals)</p>
                 <RichTextEditor
+                  key={`learningObjectives-${contentVersion}`}
                   value={form.learningObjectives}
                   onChange={(v) => updateForm('learningObjectives', v)}
                   placeholder="e.g. To introduce participants to the fundamental concepts of climate change..."
@@ -633,6 +678,7 @@ export default function CreateModulePage() {
                 <Label className="font-semibold">Expected Learning Outcomes</Label>
                 <p className="text-xs text-gray-500">What will learners be able to do by the end of this module?</p>
                 <RichTextEditor
+                  key={`learningOutcomes-${contentVersion}`}
                   value={form.learningOutcomes}
                   onChange={(v) => updateForm('learningOutcomes', v)}
                   placeholder="e.g. Define key concepts related to climate change..."
@@ -657,8 +703,9 @@ export default function CreateModulePage() {
 
             {/* Module Content / Topics */}
             <section className="space-y-4">
-              <SectionHeading number={5} title="Module Content" subtitle="List the topics and subject areas covered in this module." />
+              <SectionHeading number={6} title="Module Content" subtitle="List the topics and subject areas covered in this module." />
               <RichTextEditor
+                key={`moduleTopics-${contentVersion}`}
                 value={form.moduleTopics}
                 onChange={(v) => updateForm('moduleTopics', v)}
                 placeholder="e.g. 1. Overview of climate change science and fundamentals of climate&#10;2. Key concepts and terminologies..."
@@ -668,8 +715,9 @@ export default function CreateModulePage() {
 
             {/* Core Reading Materials */}
             <section className="space-y-4">
-              <SectionHeading number={6} title="Core Reading Materials" subtitle="Add required or recommended readings for this module." />
+              <SectionHeading number={7} title="Core Reading Materials" subtitle="Add required or recommended readings for this module." />
               <RichTextEditor
+                key={`coreReadingMaterials-${contentVersion}`}
                 value={form.coreReadingMaterials}
                 onChange={(v) => updateForm('coreReadingMaterials', v)}
                 placeholder="e.g. Houghton, D. D. (2002). Introduction to Climate Change. World Meteorological Organization, Geneva."
@@ -679,13 +727,13 @@ export default function CreateModulePage() {
 
             {/* Banner */}
             <section className="space-y-4">
-              <SectionHeading number={7} title="Banner Image" />
+              <SectionHeading number={8} title="Banner Image" />
               <BannerUploader value={form.bannerUrl} onChange={(v) => updateForm('bannerUrl', v)} />
             </section>
 
             {/* Intro Video */}
             <section className="space-y-4">
-              <SectionHeading number={8} title="Module Intro Video" subtitle="Optional  shown to students before they start the first lesson" />
+              <SectionHeading number={9} title="Module Intro Video" subtitle="Optional  shown to students before they start the first lesson" />
               <VideoUploader value={form.introVideoUrl} onChange={(v) => updateForm('introVideoUrl', v)} />
             </section>
           </div>
@@ -703,10 +751,12 @@ export default function CreateModulePage() {
               </AlertDescription>
             </Alert>
             <LessonBuilder
+              key={`lessons-${contentVersion}`}
               lessons={form.lessons || []}
               onChange={(v) => updateForm('lessons', v)}
               onSaveDraft={handleSaveDraft}
               draftStatus={savingModuleDraft ? 'saving' : draftStatus}
+              categoryName={categories.find((c) => c._id === form.categoryId)?.name}
             />
           </div>
         );
@@ -734,7 +784,7 @@ export default function CreateModulePage() {
 
       // ── Final Assessment ───────────────────────────────────────────────────
       case 'assessment':
-        return <FinalAssessmentStep assessment={form.finalAssessment} onChange={(v) => updateForm('finalAssessment', v)} />;
+        return <FinalAssessmentStep key={`assessment-${contentVersion}`} assessment={form.finalAssessment} onChange={(v) => updateForm('finalAssessment', v)} />;
 
       // ── Review & Preview ───────────────────────────────────────────────────
       case 'review':

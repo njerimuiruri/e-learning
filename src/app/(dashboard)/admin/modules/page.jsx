@@ -639,6 +639,7 @@ export default function AdminModulesPage() {
                                     {filteredModules.map((mod) => {
                                         const statusCfg = STATUS_CONFIG[mod.status] || STATUS_CONFIG.draft;
                                         const levelCfg = LEVEL_CONFIG[mod.level] || LEVEL_CONFIG.beginner;
+                                        const isPublishingAcademy = /publishing academy/i.test(mod.categoryId?.name || '');
 
                                         return (
                                             <tr
@@ -651,9 +652,13 @@ export default function AdminModulesPage() {
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-gray-600">{mod.categoryId?.name || '-'}</td>
                                                 <td className="px-4 py-3">
-                                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${levelCfg.color}`}>
-                                                        {levelCfg.label}
-                                                    </span>
+                                                    {isPublishingAcademy ? (
+                                                        <span className="text-gray-400">-</span>
+                                                    ) : (
+                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${levelCfg.color}`}>
+                                                            {levelCfg.label}
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.color}`}>
@@ -811,9 +816,11 @@ export default function AdminModulesPage() {
                                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${(STATUS_CONFIG[selectedModule.status] || STATUS_CONFIG.draft).color}`}>
                                         {(STATUS_CONFIG[selectedModule.status] || STATUS_CONFIG.draft).label}
                                     </span>
-                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${(LEVEL_CONFIG[selectedModule.level] || LEVEL_CONFIG.beginner).color}`}>
-                                        {(LEVEL_CONFIG[selectedModule.level] || LEVEL_CONFIG.beginner).label}
-                                    </span>
+                                    {!/publishing academy/i.test(selectedModule.categoryId?.name || '') && (
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${(LEVEL_CONFIG[selectedModule.level] || LEVEL_CONFIG.beginner).color}`}>
+                                            {(LEVEL_CONFIG[selectedModule.level] || LEVEL_CONFIG.beginner).label}
+                                        </span>
+                                    )}
                                 </div>
                                 <h3 className="text-xl font-bold text-gray-900">{selectedModule.title}</h3>
                                 <p className="text-gray-600 mt-1">{stripHtml(selectedModule.description)}</p>

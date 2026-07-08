@@ -6,7 +6,8 @@ import RichTextEditor from '@/components/ui/RichTextEditor';
 import InteractiveCodeEditor from '@/components/student/InteractiveCodeEditor';
 import ResourceUploader from '@/components/ui/ResourceUploader';
 import uploadService from '@/lib/api/uploadService';
-import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
+import { resolveAssetUrl, toFileViewUrl, toFileDownloadUrl } from '@/lib/utils/resolveAssetUrl';
+import { isEmbeddableVideoUrl } from '@/lib/utils/videoEmbed';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +34,13 @@ const MonacoEditor = dynamic(
     ),
   }
 );
+
+const PdfViewer = dynamic(() => import('@/components/ui/PdfViewer'), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center py-16 text-gray-400 text-sm">Loading preview…</div>
+  ),
+});
 
 /**
  * CodeEditor  Monaco wrapper for writing code (starter code, expected output, quiz snippets).
@@ -362,14 +370,14 @@ const emptyCaseStudy = () => ({
 });
 
 export const emptyLesson = (idx = 0) => ({
-  title: '', description: '', learningOutcomes: [],
+  title: '', description: '', learningOutcomes: [], topics: [], exercise: '',
   slides: [], assessmentQuiz: [], quizPassingScore: 70, quizMaxAttempts: 3,
   lessonResources: [], _caseStudy: null, order: idx,
 });
 
 // ─── Main component ─────────────────────────────────────────────────────────────
 
-export default function LessonBuilder({ lessons = [], onChange, disabled = false, onSaveDraft, draftStatus }) {
+export default function LessonBuilder({ lessons = [], onChange, disabled = false, onSaveDraft, draftStatus, categoryName }) {
   const [expandedLesson, setExpandedLesson] = useState(null);
   const [deleteDialog, setDeleteDialog] = useState(null);
 
@@ -396,7 +404,12 @@ export default function LessonBuilder({ lessons = [], onChange, disabled = false
   };
 
   const updateLesson = (idx, field, value) =>
-    update(lessons.map((l, i) => (i === idx ? { ...l, [field]: value } : l)));
+    update(lessons.map((l, i) => {
+      if (i !== idx) return l;
+      // Passing an object as `field` merges multiple keys atomically (e.g. main presentation url + name together)
+      if (field && typeof field === 'object') return { ...l, ...field };
+      return { ...l, [field]: value };
+    }));
 
   return (
     <div className="space-y-3">
@@ -478,6 +491,7 @@ export default function LessonBuilder({ lessons = [], onChange, disabled = false
           onChange={(field, value) => updateLesson(idx, field, value)}
           onDelete={() => openDelete(idx)}
           disabled={disabled}
+          categoryName={categoryName}
         />
       ))}
 
@@ -508,11 +522,12 @@ export default function LessonBuilder({ lessons = [], onChange, disabled = false
 
 // ─── Lesson Card ────────────────────────────────────────────────────────────────
 
-function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disabled }) {
+function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disabled, categoryName }) {
   const slideCount = (lesson.slides || []).length;
   const quizCount = (lesson.assessmentQuiz || []).length;
   const hasCS = !!lesson._caseStudy;
   const resCount = (lesson.lessonResources || lesson.resources || []).length;
+  const isPublishingAcademy = categoryName?.trim().toLowerCase() === 'arin publishing academy';
 
   return (
     <div className={`border rounded-xl overflow-hidden transition-all ${expanded ? 'shadow-md border-blue-200' : 'border-gray-200 hover:border-gray-300'
@@ -532,6 +547,9 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
           <p className="font-medium text-gray-900 text-sm truncate">
             {lesson.title || <span className="text-gray-400 italic font-normal">Untitled Lesson</span>}
           </p>
+          {lesson.slidesTitle && (
+            <p className="text-xs text-gray-400 truncate">{lesson.slidesTitle}</p>
+          )}
           <div className="flex flex-wrap gap-2 mt-0.5">
             {slideCount > 0 && (
               <span className="text-xs text-gray-400">{slideCount} slide{slideCount !== 1 ? 's' : ''}</span>
@@ -566,24 +584,37 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
       {expanded && (
         <div className="border-t border-gray-100">
           <Tabs defaultValue="overview" className="p-4">
-            <TabsList className="w-full grid grid-cols-5 h-9 mb-5 bg-gray-100">
+            <TabsList className={`w-full grid ${isPublishingAcademy ? 'grid-cols-3' : 'grid-cols-5'} h-9 mb-5 bg-gray-100`}>
               <TabsTrigger value="overview" className="text-xs gap-1 data-[state=active]:bg-white">
                 <Icons.Info className="w-3 h-3" /> Overview
               </TabsTrigger>
-              <TabsTrigger value="slides" className="text-xs gap-1 data-[state=active]:bg-white">
-                <Icons.Layers className="w-3 h-3" /> Slides
-                {slideCount > 0 && (
-                  <Badge className="ml-0.5 h-4 w-4 p-0 text-[9px] bg-blue-100 text-blue-700 border-0 justify-center">
-                    {slideCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="casestudy" className="text-xs gap-1 data-[state=active]:bg-white">
-                <Icons.FlaskConical className="w-3 h-3" /> Case Study
-                {hasCS && (
-                  <Badge className="ml-0.5 h-4 w-4 p-0 text-[9px] bg-amber-100 text-amber-700 border-0 justify-center">1</Badge>
-                )}
-              </TabsTrigger>
+              {isPublishingAcademy ? (
+                <TabsTrigger value="mainPresentation" className="text-xs gap-1 data-[state=active]:bg-white">
+                  <Icons.Presentation className="w-3 h-3" /> Main Presentation
+                  {lesson.mainPresentationUrl && (
+                    <Badge className="ml-0.5 h-4 w-4 p-0 text-[9px] bg-rose-100 text-rose-700 border-0 justify-center">
+                      <Icons.Check className="w-2.5 h-2.5" />
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              ) : (
+                <TabsTrigger value="slides" className="text-xs gap-1 data-[state=active]:bg-white">
+                  <Icons.Layers className="w-3 h-3" /> Slides
+                  {slideCount > 0 && (
+                    <Badge className="ml-0.5 h-4 w-4 p-0 text-[9px] bg-blue-100 text-blue-700 border-0 justify-center">
+                      {slideCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )}
+              {!isPublishingAcademy && (
+                <TabsTrigger value="casestudy" className="text-xs gap-1 data-[state=active]:bg-white">
+                  <Icons.FlaskConical className="w-3 h-3" /> Case Study
+                  {hasCS && (
+                    <Badge className="ml-0.5 h-4 w-4 p-0 text-[9px] bg-amber-100 text-amber-700 border-0 justify-center">1</Badge>
+                  )}
+                </TabsTrigger>
+              )}
               <TabsTrigger value="resources" className="text-xs gap-1 data-[state=active]:bg-white">
                 <Icons.Link className="w-3 h-3" /> Resources
                 {resCount > 0 && (
@@ -592,14 +623,16 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="quiz" className="text-xs gap-1 data-[state=active]:bg-white">
-                <Icons.HelpCircle className="w-3 h-3" /> Quiz
-                {quizCount > 0 && (
-                  <Badge className="ml-0.5 h-4 w-4 p-0 text-[9px] bg-purple-100 text-purple-700 border-0 justify-center">
-                    {quizCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
+              {!isPublishingAcademy && (
+                <TabsTrigger value="quiz" className="text-xs gap-1 data-[state=active]:bg-white">
+                  <Icons.HelpCircle className="w-3 h-3" /> Quiz
+                  {quizCount > 0 && (
+                    <Badge className="ml-0.5 h-4 w-4 p-0 text-[9px] bg-purple-100 text-purple-700 border-0 justify-center">
+                      {quizCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              )}
             </TabsList>
 
             {/* ── Overview ─────────────────────────────────────────────── */}
@@ -611,6 +644,17 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
                   onChange={(e) => onChange('title', e.target.value)}
                   disabled={disabled}
                   placeholder="e.g. Introduction to Climate AI"
+                  className="text-sm"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Subtitle / Subsection <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <Input
+                  value={lesson.slidesTitle || ''}
+                  onChange={(e) => onChange('slidesTitle', e.target.value)}
+                  disabled={disabled}
+                  placeholder="e.g. Session 1"
                   className="text-sm"
                 />
               </div>
@@ -631,25 +675,62 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
                 onChange={(v) => onChange('learningOutcomes', v)}
                 disabled={disabled}
               />
+
+              <LessonOutcomes
+                outcomes={lesson.topics || []}
+                onChange={(v) => onChange('topics', v)}
+                disabled={disabled}
+                label="Topics"
+                hint="What topics does this session cover?"
+                placeholder="e.g. Characteristics of scholarly writing"
+                emptyLabel="No topics yet."
+              />
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Exercise <span className="text-gray-400 font-normal">(optional)</span></Label>
+                <p className="text-xs text-gray-400">A practice exercise for learners to complete during or after this session.</p>
+                <RichTextEditor
+                  value={lesson.exercise || ''}
+                  onChange={(v) => onChange('exercise', v)}
+                  placeholder="e.g. Analyse a published article and identify each section."
+                  height={100}
+                />
+              </div>
             </TabsContent>
 
             {/* ── Slides ───────────────────────────────────────────────── */}
-            <TabsContent value="slides" className="mt-0">
-              <SlidesTab
-                slides={lesson.slides || []}
-                onChange={(v) => onChange('slides', v)}
-                disabled={disabled}
-              />
-            </TabsContent>
+            {!isPublishingAcademy && (
+              <TabsContent value="slides" className="mt-0">
+                <SlidesTab
+                  slides={lesson.slides || []}
+                  onChange={(v) => onChange('slides', v)}
+                  disabled={disabled}
+                />
+              </TabsContent>
+            )}
+
+            {/* ── Main Presentation (Arin Publishing Academy only) ────────── */}
+            {isPublishingAcademy && (
+              <TabsContent value="mainPresentation" className="mt-0">
+                <MainPresentationTab
+                  url={lesson.mainPresentationUrl}
+                  name={lesson.mainPresentationName}
+                  onChange={(fields) => onChange(fields)}
+                  disabled={disabled}
+                />
+              </TabsContent>
+            )}
 
             {/* ── Case Study ───────────────────────────────────────────── */}
-            <TabsContent value="casestudy" className="mt-0">
-              <CaseStudyTab
-                caseStudy={lesson._caseStudy}
-                onChange={(v) => onChange('_caseStudy', v)}
-                disabled={disabled}
-              />
-            </TabsContent>
+            {!isPublishingAcademy && (
+              <TabsContent value="casestudy" className="mt-0">
+                <CaseStudyTab
+                  caseStudy={lesson._caseStudy}
+                  onChange={(v) => onChange('_caseStudy', v)}
+                  disabled={disabled}
+                />
+              </TabsContent>
+            )}
 
             {/* ── Resources ────────────────────────────────────────────── */}
             <TabsContent value="resources" className="mt-0">
@@ -661,6 +742,7 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
             </TabsContent>
 
             {/* ── Quiz ─────────────────────────────────────────────────── */}
+            {!isPublishingAcademy && (
             <TabsContent value="quiz" className="mt-0">
               <QuizTab
                 quiz={lesson.assessmentQuiz || []}
@@ -672,6 +754,7 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
                 disabled={disabled}
               />
             </TabsContent>
+            )}
           </Tabs>
         </div>
       )}
@@ -681,7 +764,15 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
 
 // ─── Learning Outcomes ──────────────────────────────────────────────────────────
 
-function LessonOutcomes({ outcomes, onChange, disabled }) {
+function LessonOutcomes({
+  outcomes,
+  onChange,
+  disabled,
+  label = 'Learning Outcomes',
+  hint = 'What will learners be able to do after this lesson?',
+  placeholder = 'e.g. Understand how AI analyses climate data',
+  emptyLabel = 'No outcomes yet.',
+}) {
   const add = () => onChange([...outcomes, '']);
   const update = (i, v) => { const n = [...outcomes]; n[i] = v; onChange(n); };
   const remove = (i) => onChange(outcomes.filter((_, idx) => idx !== i));
@@ -690,8 +781,8 @@ function LessonOutcomes({ outcomes, onChange, disabled }) {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <div>
-          <Label className="text-xs font-semibold">Learning Outcomes</Label>
-          <p className="text-xs text-gray-400">What will learners be able to do after this lesson?</p>
+          <Label className="text-xs font-semibold">{label}</Label>
+          <p className="text-xs text-gray-400">{hint}</p>
         </div>
         {!disabled && (
           <Button type="button" variant="ghost" size="sm" onClick={add} className="h-7 text-xs gap-1 text-blue-600">
@@ -707,7 +798,7 @@ function LessonOutcomes({ outcomes, onChange, disabled }) {
               value={o}
               onChange={(e) => update(i, e.target.value)}
               disabled={disabled}
-              placeholder="e.g. Understand how AI analyses climate data"
+              placeholder={placeholder}
               className="flex-1 h-8 text-xs"
             />
             {!disabled && (
@@ -718,7 +809,7 @@ function LessonOutcomes({ outcomes, onChange, disabled }) {
           </div>
         ))}
         {outcomes.length === 0 && (
-          <p className="text-xs text-gray-400 italic pl-6">No outcomes yet.</p>
+          <p className="text-xs text-gray-400 italic pl-6">{emptyLabel}</p>
         )}
       </div>
     </div>
@@ -1177,12 +1268,144 @@ function CaseStudyTab({ caseStudy, onChange, disabled }) {
 
 // ─── Resources Tab ──────────────────────────────────────────────────────────────
 
-function ResourcesTab({ resources = [], onChange, disabled }) {
+// ─── Main Presentation (single PDF, view + download) ───────────────────────────
+
+function MainPresentationTab({ url, name, onChange, disabled }) {
+  const [uploading, setUploading] = useState(false);
+  const inputRef = React.useRef(null);
+
+  const handleFile = async (files) => {
+    const file = files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      alert('Please upload a PDF file.');
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      alert(`${file.name} is too large. Max 50MB.`);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const result = await uploadService.uploadDocument(file);
+      onChange({
+        mainPresentationUrl: result.url,
+        mainPresentationName: result.originalName || file.name,
+      });
+    } catch (error) {
+      console.error(`Failed to upload ${file.name}:`, error);
+      alert(`Failed to upload ${file.name}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const remove = () => onChange({ mainPresentationUrl: '', mainPresentationName: '' });
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-gray-400">
+        Upload one legible PDF deck for this lesson  participants can read it directly on the
+        platform and download the complete file.
+      </p>
+
+      {url ? (
+        <div className="flex items-center gap-3 p-3 border border-gray-200 rounded-xl bg-gray-50/50">
+          <Icons.FileText className="w-8 h-8 text-rose-500 flex-shrink-0" />
+          <span className="text-sm text-gray-700 flex-1 truncate">{name || 'Main Presentation.pdf'}</span>
+          <a
+            href={toFileViewUrl(url)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors"
+            title="View"
+          >
+            <Icons.Eye className="w-4 h-4" />
+          </a>
+          <a
+            href={toFileDownloadUrl(url)}
+            className="p-1.5 text-gray-400 hover:text-blue-500 transition-colors"
+            title="Download"
+          >
+            <Icons.Download className="w-4 h-4" />
+          </a>
+          {!disabled && (
+            <>
+              <button
+                type="button"
+                onClick={() => inputRef.current?.click()}
+                disabled={uploading}
+                className="p-1.5 text-gray-400 hover:text-emerald-600 transition-colors"
+                title="Replace"
+              >
+                <Icons.RefreshCw className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={remove}
+                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+                title="Remove"
+              >
+                <Icons.Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
+
+      {url && (
+        <PdfViewer url={toFileViewUrl(url)} className="h-[85vh] rounded-xl border border-gray-200 overflow-hidden" />
+      )}
+
+      {!url && (
+        !disabled && (
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="w-full border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-rose-400 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            {uploading ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-rose-600"></div>
+                <span className="text-sm text-gray-600">Uploading…</span>
+              </div>
+            ) : (
+              <div>
+                <Icons.Upload className="w-6 h-6 text-gray-400 mx-auto mb-1.5" />
+                <p className="text-sm text-gray-600">Click to upload the main presentation (PDF)</p>
+                <p className="text-xs text-gray-400 mt-0.5">Max 50MB</p>
+              </div>
+            )}
+          </button>
+        )
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf,application/pdf"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files)}
+      />
+    </div>
+  );
+}
+
+export function ResourcesTab({ resources = [], onChange, disabled }) {
   const blank = () => ({ url: '', name: '', description: '', fileType: '' });
   const add = () => onChange([...resources, blank()]);
   const remove = (i) => onChange(resources.filter((_, idx) => idx !== i));
   const update = (i, f, v) => {
-    const n = [...resources]; n[i] = { ...n[i], [f]: v }; onChange(n);
+    const n = [...resources];
+    n[i] = { ...n[i], [f]: v };
+    // Auto-tag a pasted YouTube/Vimeo link as a video resource so it renders as an embedded player for students
+    if (f === 'url' && isEmbeddableVideoUrl(v) && !n[i].fileType) {
+      n[i].fileType = 'video';
+    }
+    onChange(n);
   };
 
   const mapExtensionToType = (fileName) => {

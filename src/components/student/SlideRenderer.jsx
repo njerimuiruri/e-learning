@@ -3,6 +3,7 @@
 import React from 'react';
 import InteractiveCodeEditor from './InteractiveCodeEditor';
 import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
+import { isEmbeddableVideoUrl, getVideoEmbedUrl } from '@/lib/utils/videoEmbed';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.elearning.arin-africa.org';
 
@@ -131,9 +132,9 @@ export default function SlideRenderer({ slide, slideNumber, totalSlides, section
             {slide.videoUrl ? (
               <>
                 <div className="relative w-full rounded-xl overflow-hidden shadow-lg bg-black" style={{ paddingTop: '56.25%' }}>
-                  {isYouTube(slide.videoUrl) ? (
+                  {isEmbeddableVideoUrl(slide.videoUrl) ? (
                     <iframe
-                      src={toYouTubeEmbed(slide.videoUrl)}
+                      src={getVideoEmbedUrl(slide.videoUrl)}
                       className="absolute inset-0 w-full h-full"
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
@@ -297,16 +298,3 @@ function RichContentStyles({ darkMode }) {
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-function isYouTube(url) {
-  return /youtube\.com|youtu\.be/.test(url);
-}
-
-function toYouTubeEmbed(url) {
-  const match =
-    url.match(/youtu\.be\/([^?&]+)/) ||
-    url.match(/[?&]v=([^&]+)/) ||
-    url.match(/youtube\.com\/embed\/([^?&]+)/);
-  const id = match?.[1];
-  return id ? `https://www.youtube.com/embed/${id}` : url;
-}

@@ -5,14 +5,13 @@ import { useRouter, useParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
 import categoryService from '@/lib/api/categoryService';
-import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 import { useDraft } from '@/hooks/useDraft';
 import InstructorSidebar from '@/components/instructor/InstructorSidebar';
-import LessonBuilder from '@/components/instructor/LessonBuilder';
+import LessonBuilder, { ResourcesTab } from '@/components/instructor/LessonBuilder';
 import RichTextEditor from '@/components/ui/RichTextEditor';
 import BannerUploader from '@/components/ui/BannerUploader';
 import VideoUploader from '@/components/ui/VideoUploader';
-import ResourceUploader from '@/components/ui/ResourceUploader';
+import ModuleStudentPreview from '@/components/shared/ModuleStudentPreview';
 
 // ========== HELPER: Dynamic String List ==========
 function DynamicStringList({ label, values, onChange, placeholder }) {
@@ -40,82 +39,6 @@ function DynamicStringList({ label, values, onChange, placeholder }) {
             ))}
             <button onClick={() => onChange([...safeValues, ''])} className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
                 + Add Item
-            </button>
-        </div>
-    );
-}
-
-// ========== HELPER: Module Resource List ==========
-function ModuleResourceList({ values = [], onChange }) {
-    const blank = () => ({ url: '', name: '', description: '', fileType: '' });
-    const add    = () => onChange([...values, blank()]);
-    const update = (i, f, v) => { const n = [...values]; n[i] = { ...n[i], [f]: v }; onChange(n); };
-    const remove = (i) => onChange(values.filter((_, idx) => idx !== i));
-
-    const mapExt = (fileName) => {
-        const ext = (fileName || '').split('.').pop()?.toLowerCase();
-        if (ext === 'pdf') return 'pdf';
-        if (['doc','docx'].includes(ext)) return 'notebook';
-        if (['xls','xlsx','csv'].includes(ext)) return 'dataset';
-        return 'other';
-    };
-
-    const handleUpload = (uploaded) => {
-        onChange((uploaded || []).map((r) => ({
-            url: r.url || (typeof r === 'string' ? r : ''),
-            name: r.name || r.originalName || (typeof r === 'string' ? r.split('/').pop() : '') || 'Resource',
-            description: r.description || '',
-            fileType: r.fileType || mapExt(r.name || r.originalName || r.url),
-        })));
-    };
-
-    return (
-        <div className="space-y-3">
-            <ResourceUploader value={values} onChange={handleUpload} label="Upload module documents" />
-            {values.map((r, i) => (
-                <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
-                    <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-600">Resource {i + 1}</span>
-                        <div className="flex items-center gap-1">
-                            {r.url && (() => {
-                                const resolvedUrl = resolveAssetUrl(r.url);
-                                const ext = (r.name || r.url || '').split('.').pop()?.toLowerCase();
-                                const isPdf = ext === 'pdf';
-                                return (
-                                    <a
-                                        href={resolvedUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-1 text-gray-400 hover:text-blue-500 transition-colors rounded"
-                                        title={isPdf ? 'Open in new tab' : 'Download'}
-                                    >
-                                        {isPdf ? <Icons.ExternalLink className="w-4 h-4" /> : <Icons.Download className="w-4 h-4" />}
-                                    </a>
-                                );
-                            })()}
-                            <button type="button" onClick={() => remove(i)} className="text-red-400 hover:text-red-600 p-1">
-                                <Icons.Trash2 className="w-4 h-4" />
-                            </button>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">Name</label>
-                            <input type="text" value={r.name} onChange={(e) => update(i, 'name', e.target.value)} placeholder="Resource name" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-medium text-gray-600 mb-1">URL</label>
-                            <input type="text" value={r.url} onChange={(e) => update(i, 'url', e.target.value)} placeholder="https://…" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Description (optional)</label>
-                        <input type="text" value={r.description} onChange={(e) => update(i, 'description', e.target.value)} placeholder="Brief description" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500" />
-                    </div>
-                </div>
-            ))}
-            <button type="button" onClick={add} className="flex items-center gap-1.5 text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-                <Icons.Plus className="w-4 h-4" /> Add resource manually
             </button>
         </div>
     );
@@ -278,10 +201,13 @@ export default function EditModulePage() {
     const [categories, setCategories] = useState([]);
     const [originalModule, setOriginalModule] = useState(null);
     const [error, setError] = useState(null);
+    // Bumped whenever moduleData is replaced wholesale (draft restore) so the
+    // uncontrolled RichTextEditor fields remount and pick up the new content.
+    const [contentVersion, setContentVersion] = useState(0);
 
     // Step 1: Module Overview
     const [moduleData, setModuleData] = useState({
-        title: '', description: '', welcomeMessage: '', moduleAim: '',
+        title: '', description: '', welcomeMessage: '', goal: '', assignment: '', expectedOutput: '',
         moduleObjectives: [''], learningOutcomes: [''], targetAudience: [''],
         categoryId: '', level: 'beginner', deliveryMode: '', duration: '', order: '', bannerUrl: '', prerequisites: [],
     });
@@ -305,6 +231,7 @@ export default function EditModulePage() {
         { enabled: !initialLoading, contentType: 'module', entityId: moduleId, title: moduleData.title || 'Module' }
     );
     const [showDraftBanner, setShowDraftBanner] = useState(false);
+    const [showPreview, setShowPreview] = useState(false);
 
     useEffect(() => {
         if (!initialLoading && hasDraft) setShowDraftBanner(true);
@@ -335,7 +262,8 @@ export default function EditModulePage() {
 
             setModuleData({
                 title: moduleResult.title || '', description: moduleResult.description || '',
-                welcomeMessage: moduleResult.welcomeMessage || '', moduleAim: moduleResult.moduleAim || '',
+                welcomeMessage: moduleResult.welcomeMessage || '', goal: moduleResult.goal || '',
+                assignment: moduleResult.assignment || '', expectedOutput: moduleResult.expectedOutput || '',
                 moduleObjectives: moduleResult.moduleObjectives?.length > 0 ? moduleResult.moduleObjectives : [''],
                 learningOutcomes: learningOutcomesArr,
                 targetAudience: moduleResult.targetAudience?.length > 0 ? moduleResult.targetAudience : [''],
@@ -363,6 +291,8 @@ export default function EditModulePage() {
                 resources: Array.isArray(lesson.lessonResources)
                     ? lesson.lessonResources
                     : (Array.isArray(lesson.resources) ? lesson.resources : []),
+                topics: Array.isArray(lesson.topics) ? lesson.topics : [],
+                exercise: lesson.exercise || '',
                 _caseStudy: null,
                 order: lesson.order ?? idx,
             }));
@@ -392,8 +322,9 @@ export default function EditModulePage() {
     const steps = [
         { number: 1, title: 'Module Overview', icon: 'Info' },
         { number: 2, title: 'Lessons', icon: 'BookOpen' },
-        { number: 3, title: 'Final Assessment', icon: 'ClipboardCheck' },
-        { number: 4, title: 'Review & Save', icon: 'Save' },
+        { number: 3, title: 'Module Resources', icon: 'Paperclip' },
+        { number: 4, title: 'Final Assessment', icon: 'ClipboardCheck' },
+        { number: 5, title: 'Review & Save', icon: 'Save' },
     ];
 
     const stripHtml = (html) => { if (!html) return ''; return html.replace(/<[^>]*>/g, '').trim(); };
@@ -464,7 +395,8 @@ export default function EditModulePage() {
             });
             const modulePayload = {
                 title: moduleData.title, description: moduleData.description,
-                welcomeMessage: moduleData.welcomeMessage, moduleAim: moduleData.moduleAim,
+                welcomeMessage: moduleData.welcomeMessage, goal: moduleData.goal,
+                assignment: moduleData.assignment, expectedOutput: moduleData.expectedOutput,
                 categoryId: moduleData.categoryId, level: moduleData.level,
                 deliveryMode: moduleData.deliveryMode, duration: moduleData.duration,
                 order: moduleData.order !== '' ? Number(moduleData.order) : undefined,
@@ -499,6 +431,7 @@ export default function EditModulePage() {
             if (ls) setLessons(ls);
             if (fa) setFinalAssessment(fa);
             setShowDraftBanner(false);
+            setContentVersion((v) => v + 1);
         }
     };
     const handleDiscardDraft = () => {
@@ -592,6 +525,14 @@ export default function EditModulePage() {
                                 <Icons.Save className="w-3.5 h-3.5" />
                                 {draftStatus === 'saving' ? 'Saving…' : 'Save Draft'}
                             </button>
+                            <button
+                                type="button"
+                                onClick={() => setShowPreview(true)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-blue-200 text-blue-600 text-xs font-medium rounded-lg hover:bg-blue-50"
+                            >
+                                <Icons.Eye className="w-3.5 h-3.5" />
+                                Preview as Student
+                            </button>
                         </div>
                         <p className="mt-1 text-sm text-gray-600">
                             Editing: <strong>{originalModule?.title}</strong>
@@ -676,9 +617,11 @@ export default function EditModulePage() {
                                         <p className="text-xs text-gray-400 mt-1">Controls sequence (1 = first)</p>
                                     </div>
                                 </div>
-                                <RichTextEditor label="Description" required value={moduleData.description} onChange={(val) => setModuleData({ ...moduleData, description: val })} placeholder="What will students learn..." height={180} />
-                                <RichTextEditor label="Welcome Message" value={moduleData.welcomeMessage} onChange={(val) => setModuleData({ ...moduleData, welcomeMessage: val })} placeholder="A warm welcome message..." height={120} />
-                                <RichTextEditor label="Module Aim" value={moduleData.moduleAim} onChange={(val) => setModuleData({ ...moduleData, moduleAim: val })} placeholder="The overarching goal..." height={120} />
+                                <RichTextEditor key={`description-${contentVersion}`} label="Description" required value={moduleData.description} onChange={(val) => setModuleData({ ...moduleData, description: val })} placeholder="What will students learn..." height={180} />
+                                <RichTextEditor key={`welcomeMessage-${contentVersion}`} label="Welcome Message" value={moduleData.welcomeMessage} onChange={(val) => setModuleData({ ...moduleData, welcomeMessage: val })} placeholder="A warm welcome message..." height={120} />
+                                <RichTextEditor key={`goal-${contentVersion}`} label="Module Goal" value={moduleData.goal} onChange={(val) => setModuleData({ ...moduleData, goal: val })} placeholder="The overarching goal of this module..." height={120} />
+                                <RichTextEditor key={`assignment-${contentVersion}`} label="Assignment" value={moduleData.assignment} onChange={(val) => setModuleData({ ...moduleData, assignment: val })} placeholder="The assignment students complete for this module..." height={120} />
+                                <RichTextEditor key={`expectedOutput-${contentVersion}`} label="Expected Output" value={moduleData.expectedOutput} onChange={(val) => setModuleData({ ...moduleData, expectedOutput: val })} placeholder="What students should produce/demonstrate after the assignment..." height={120} />
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 mb-2">Category <span className="text-red-500">*</span></label>
@@ -716,13 +659,6 @@ export default function EditModulePage() {
                                 <DynamicStringList label="Expected Learning Outcomes" values={moduleData.learningOutcomes} onChange={(vals) => setModuleData({ ...moduleData, learningOutcomes: vals })} placeholder="What will students be able to do?" />
                                 <DynamicStringList label="Target Audience" values={moduleData.targetAudience} onChange={(vals) => setModuleData({ ...moduleData, targetAudience: vals })} placeholder="Who is this module designed for?" />
 
-                                {/* Module-Level Resources */}
-                                <div>
-                                    <h3 className="text-base font-semibold text-gray-900 mb-1">Module Resources</h3>
-                                    <p className="text-xs text-gray-500 mb-3">Files and links that apply to the whole module (bibliography, datasets, code repos, recorded lectures).</p>
-                                    <ModuleResourceList values={moduleResources} onChange={setModuleResources} />
-                                </div>
-
                                 <div className="flex justify-end pt-6 border-t border-gray-200">
                                     <button onClick={handleNext} className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Next: Lessons <Icons.ChevronRight className="w-5 h-5" /></button>
                                 </div>
@@ -739,10 +675,12 @@ export default function EditModulePage() {
                                     <p className="text-gray-600 text-sm">Add lessons with slides  text, images, videos, diagrams, and interactive code editors. Each lesson can also have a quiz.</p>
                                 </div>
                                 <LessonBuilder
+                                    key={`lessons-${contentVersion}`}
                                     lessons={lessons}
                                     onChange={setLessons}
                                     onSaveDraft={saveDraft}
                                     draftStatus={draftStatus}
+                                    categoryName={categories.find((c) => c._id === moduleData.categoryId)?.name}
                                 />
                                 <div className="flex justify-between pt-6 border-t border-gray-200">
                                     <button onClick={handlePrevious} className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200"><Icons.ChevronLeft className="w-5 h-5" /> Previous</button>
@@ -755,14 +693,34 @@ export default function EditModulePage() {
                                         <Icons.Save className="w-4 h-4" />
                                         {draftStatus === 'saving' ? 'Saving…' : 'Save Draft'}
                                     </button>
+                                    <button onClick={handleNext} className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Next: Module Resources <Icons.ChevronRight className="w-5 h-5" /></button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ===== STEP 3: MODULE RESOURCES ===== */}
+                    {currentStep === 3 && (
+                        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+                            <div className="space-y-6">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900 mb-1">Module Resources</h2>
+                                    <p className="text-gray-600 text-sm">Upload PDFs, Word documents, PowerPoint slides, or add links (e.g. YouTube videos) that apply to the whole module. Lesson-specific resources can be added inside each lesson instead.</p>
+                                </div>
+                                <ResourcesTab
+                                    resources={moduleResources}
+                                    onChange={setModuleResources}
+                                />
+                                <div className="flex justify-between pt-6 border-t border-gray-200">
+                                    <button onClick={handlePrevious} className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200"><Icons.ChevronLeft className="w-5 h-5" /> Previous</button>
                                     <button onClick={handleNext} className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Next: Final Assessment <Icons.ChevronRight className="w-5 h-5" /></button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* ===== STEP 3: FINAL ASSESSMENT ===== */}
-                    {currentStep === 3 && (
+                    {/* ===== STEP 4: FINAL ASSESSMENT ===== */}
+                    {currentStep === 4 && (
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
                             <div className="space-y-6">
                                 <div>
@@ -775,7 +733,7 @@ export default function EditModulePage() {
                                         <div className="text-sm text-blue-800"><p>Each lesson also has its own optional quiz (configured via the lesson builder). This final assessment covers the entire module.</p></div>
                                     </div>
                                 </div>
-                                <AssessmentSection title="Final Assessment" assessment={finalAssessment} onChange={setFinalAssessment} minQuestions={3} />
+                                <AssessmentSection key={`assessment-${contentVersion}`} title="Final Assessment" assessment={finalAssessment} onChange={setFinalAssessment} minQuestions={3} />
                                 <div className="flex justify-between pt-6 border-t border-gray-200">
                                     <button onClick={handlePrevious} className="inline-flex items-center gap-2 px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200"><Icons.ChevronLeft className="w-5 h-5" /> Previous</button>
                                     <button onClick={handleNext} className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700">Next: Review <Icons.ChevronRight className="w-5 h-5" /></button>
@@ -784,8 +742,8 @@ export default function EditModulePage() {
                         </div>
                     )}
 
-                    {/* ===== STEP 4: REVIEW & SAVE ===== */}
-                    {currentStep === 4 && (
+                    {/* ===== STEP 5: REVIEW & SAVE ===== */}
+                    {currentStep === 5 && (
                         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
                             <div className="space-y-6">
                                 <div>
@@ -866,6 +824,12 @@ export default function EditModulePage() {
                     )}
                 </div>
             </div>
+            {showPreview && (
+                <ModuleStudentPreview
+                    module={{ ...moduleData, lessons, moduleResources, finalAssessment }}
+                    onClose={() => setShowPreview(false)}
+                />
+            )}
         </>
     );
 }

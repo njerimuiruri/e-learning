@@ -156,6 +156,21 @@ const moduleService = {
     return response.data;
   },
 
+  async assignInstructor(moduleId: string, instructorEmail: string) {
+    const response = await api.put(`/${moduleId}/assign-instructor`, { instructorEmail });
+    return response.data;
+  },
+
+  async removeInstructor(moduleId: string, instructorId: string) {
+    const response = await api.delete(`/${moduleId}/instructors/${instructorId}`);
+    return response.data;
+  },
+
+  async updateInstructorCredit(moduleId: string, instructorDisplayName: string, instructorSpecialization: string) {
+    const response = await api.put(`/${moduleId}/instructor-credit`, { instructorDisplayName, instructorSpecialization });
+    return response.data;
+  },
+
   async downloadModuleZip(moduleId: string, moduleTitle: string, onProgress?: (pct: number) => void): Promise<void> {
     const response = await api.get(`/${moduleId}/download`, {
       responseType: 'blob',

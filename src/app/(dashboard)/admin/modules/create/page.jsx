@@ -944,6 +944,7 @@ export default function AdminCreateModulePage() {
               onChange={(v) => updateForm('lessons', v)}
               onSaveDraft={saveDraft}
               draftStatus={draftStatus}
+              categoryName={categories.find((c) => c._id === form.categoryId)?.name}
             />
           </div>
         );

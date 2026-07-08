@@ -269,10 +269,10 @@ function AvailableModuleCard({ mod, onDetails, onEnroll }) {
                         <Icons.Users className="w-3 h-3" />
                         {mod.enrollmentCount || 0} students
                     </span>
-                    {(mod.totalLessons || 0) > 0 && (
+                    {(mod.lessons?.length || mod.totalLessons || 0) > 0 && (
                         <span className="flex items-center gap-1">
                             <Icons.BookOpen className="w-3 h-3" />
-                            {mod.totalLessons} lessons
+                            {mod.lessons?.length || mod.totalLessons} lessons
                         </span>
                     )}
                 </div>
@@ -286,7 +286,8 @@ function AvailableModuleCard({ mod, onDetails, onEnroll }) {
                     <Button size="sm"
                         className="flex-1 h-7 text-[10px] bg-[#021d49] hover:bg-[#032a66] text-white"
                         onClick={() => onEnroll(mod._id)}>
-                        <Icons.Plus className="w-3 h-3 mr-1" /> Enroll
+                        <Icons.Plus className="w-3 h-3 mr-1" />
+                        {mod.categoryId?.name?.trim().toLowerCase() === 'arin publishing academy' ? 'Start' : 'Enroll'}
                     </Button>
                 </div>
             </CardContent>
@@ -363,10 +364,29 @@ function ModuleDrawer({ mod, onClose, onNavigate }) {
                         {clean || 'No description available.'}
                     </SheetDescription>
                 </SheetHeader>
+                {(() => {
+                    const instructorName = mod.instructorDisplayName || (mod.instructorIds || [])
+                        .map((i) => `${i.firstName || ''} ${i.lastName || ''}`.trim())
+                        .filter(Boolean)
+                        .join(', ');
+                    return instructorName ? (
+                        <div className="flex items-center gap-2 mb-5 p-3 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="w-8 h-8 rounded-full bg-[#021d49] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                {instructorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 truncate">{instructorName}</p>
+                                {mod.instructorSpecialization && (
+                                    <p className="text-xs text-gray-500 truncate">{mod.instructorSpecialization}</p>
+                                )}
+                            </div>
+                        </div>
+                    ) : null;
+                })()}
                 <div className="grid grid-cols-2 gap-3 mb-5">
                     {[
                         { icon: 'Users', label: 'Students', value: mod.enrollmentCount || 0 },
-                        { icon: 'BookOpen', label: 'Lessons', value: mod.totalLessons || 0 },
+                        { icon: 'BookOpen', label: 'Lessons', value: mod.lessons?.length || mod.totalLessons || 0 },
                     ].map(({ icon, label, value }) => {
                         const Ic = Icons[icon];
                         return (

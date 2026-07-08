@@ -95,6 +95,8 @@ function ModuleCard({ module, onView, onEdit, onSubmit, onDelete }) {
     const completionRate = module.completionRate || 0;
     const topicsCount = module.topics?.length || 0;
     const lessonsCount = module.lessons?.length || 0;
+    const categoryName = module.categoryId?.name || module.category?.name || '';
+    const isPublishingAcademy = /publishing academy/i.test(categoryName);
 
     return (
         <Card className="overflow-hidden group hover:shadow-lg transition-all duration-200 border-gray-200 hover:border-emerald-200 flex flex-col">
@@ -114,19 +116,21 @@ function ModuleCard({ module, onView, onEdit, onSubmit, onDelete }) {
                     <StatusPill status={module.status} />
                 </div>
                 {/* level in bottom-left */}
-                <div className="absolute bottom-3 left-3">
-                    <LevelBadge level={module.level} />
-                </div>
+                {!isPublishingAcademy && (
+                    <div className="absolute bottom-3 left-3">
+                        <LevelBadge level={module.level} />
+                    </div>
+                )}
             </div>
 
             <CardContent className="p-5 flex-1 flex flex-col">
                 {/* Title + category */}
                 <div className="mb-3">
                     <h3 className="font-bold text-gray-900 text-base line-clamp-2 leading-snug mb-1">{module.title}</h3>
-                    {(module.categoryId?.name || module.category?.name) && (
+                    {categoryName && (
                         <span className="text-xs text-gray-500 flex items-center gap-1">
                             <Icons.Tag className="w-3 h-3" />
-                            {module.categoryId?.name || module.category?.name}
+                            {categoryName}
                         </span>
                     )}
                 </div>
@@ -236,6 +240,7 @@ export default function InstructorModulesPage() {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('all');
+    const [categoryFilter, setCategoryFilter] = useState('all');
     const [search, setSearch] = useState('');
     const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
 
@@ -286,9 +291,23 @@ export default function InstructorModulesPage() {
         rejected:  modules.filter(m => m.status === 'rejected').length,
     }), [modules]);
 
+    // Distinct categories across the instructor's modules (for the category filter)
+    const categories = useMemo(() => {
+        const map = new Map();
+        modules.forEach((m) => {
+            const id = m.categoryId?._id || m.categoryId;
+            const name = m.categoryId?.name;
+            if (id && name && !map.has(id)) map.set(id, name);
+        });
+        return Array.from(map, ([id, name]) => ({ id, name }));
+    }, [modules]);
+
     // Filtered modules
     const filtered = useMemo(() => {
         let list = activeTab === 'all' ? modules : modules.filter(m => m.status === activeTab);
+        if (categoryFilter !== 'all') {
+            list = list.filter(m => (m.categoryId?._id || m.categoryId) === categoryFilter);
+        }
         if (search.trim()) {
             const q = search.toLowerCase();
             list = list.filter(m =>
@@ -298,7 +317,7 @@ export default function InstructorModulesPage() {
             );
         }
         return list;
-    }, [modules, activeTab, search]);
+    }, [modules, activeTab, categoryFilter, search]);
 
     // Stats for top cards
     const totalStudents = stats?.totalStudents ?? modules.reduce((s, m) => s + (m.enrollmentCount || 0), 0);
@@ -470,6 +489,30 @@ export default function InstructorModulesPage() {
                                 })}
                             </TabsList>
                         </Tabs>
+
+                        {/* Category tabs  only shown when teaching more than one category */}
+                        {categories.length > 1 && (
+                            <Tabs value={categoryFilter} onValueChange={setCategoryFilter} className="mt-3">
+                                <TabsList className="h-auto flex-wrap bg-gray-100 p-1 rounded-xl gap-1">
+                                    <TabsTrigger
+                                        value="all"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                                    >
+                                        All Categories
+                                    </TabsTrigger>
+                                    {categories.map((cat) => (
+                                        <TabsTrigger
+                                            key={cat.id}
+                                            value={cat.id}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                                        >
+                                            <Icons.Tag className="w-3.5 h-3.5" />
+                                            {cat.name}
+                                        </TabsTrigger>
+                                    ))}
+                                </TabsList>
+                            </Tabs>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -488,14 +531,14 @@ export default function InstructorModulesPage() {
                                 <Icons.Layers className="w-10 h-10 text-gray-300" />
                             </div>
                             <h3 className="text-lg font-semibold text-gray-700 mb-2">
-                                {search || activeTab !== 'all' ? 'No modules match your filters' : 'No modules yet'}
+                                {search || activeTab !== 'all' || categoryFilter !== 'all' ? 'No modules match your filters' : 'No modules yet'}
                             </h3>
                             <p className="text-gray-400 text-sm mb-6 max-w-xs mx-auto">
-                                {search || activeTab !== 'all'
+                                {search || activeTab !== 'all' || categoryFilter !== 'all'
                                     ? 'Try adjusting your search or tab filter.'
                                     : 'Create your first module and start teaching today.'}
                             </p>
-                            {activeTab === 'all' && !search && (
+                            {activeTab === 'all' && categoryFilter === 'all' && !search && (
                                 <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => router.push('/instructor/modules/create')}>
                                     <Icons.PlusCircle className="w-4 h-4 mr-2" /> Create Your First Module
                                 </Button>
