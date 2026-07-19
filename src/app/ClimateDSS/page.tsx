@@ -36,7 +36,7 @@ const SECTIONS = [
 ];
 
 const STATS = [
-  { value: '5', label: 'Analysis modules' },
+//   { value: '5', label: 'Analysis modules' },
   { value: '54', label: 'Countries covered' },
 //   { value: '90-day', label: 'Result caching' },
   { value: 'JWT', label: 'Secured API' },
