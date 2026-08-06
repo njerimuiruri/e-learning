@@ -522,7 +522,10 @@ export default function LessonViewer({
                 {resources.map((res, i) => {
                   const name = res.name || res.originalName || `Resource ${i + 1}`;
                   const rawUrl = res.url || res.fileUrl || '';
-                  const url = resolveUrl(rawUrl);
+                  // 'link' resources are navigated to as-authored  never resolved against the
+                  // API origin, which would mangle relative app routes like "/climate-dss".
+                  const isLink = res?.fileType === 'link';
+                  const url = isLink ? rawUrl : resolveUrl(rawUrl);
                   const isEmbeddedVideo = isEmbeddableVideoUrl(rawUrl);
 
                   if (isEmbeddedVideo) {
@@ -551,9 +554,10 @@ export default function LessonViewer({
                   const isPpt = ['ppt', 'pptx'].includes(ext);
                   const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
                   const isCloudinary = url.includes('cloudinary.com');
-                  const Icon = isVideo ? Icons.Video : isPdf ? Icons.FileText : isDoc ? Icons.FileText : isXls ? Icons.Table2 : isPpt ? Icons.Presentation : Icons.File;
-                  const color = isVideo ? 'text-rose-600 bg-rose-50' : isPdf ? 'text-red-600 bg-red-50' : isDoc ? 'text-blue-600 bg-blue-50' : isXls ? 'text-green-600 bg-green-50' : isPpt ? 'text-orange-600 bg-orange-50' : 'text-gray-600 bg-gray-100';
+                  const Icon = isLink ? Icons.ExternalLink : isVideo ? Icons.Video : isPdf ? Icons.FileText : isDoc ? Icons.FileText : isXls ? Icons.Table2 : isPpt ? Icons.Presentation : Icons.File;
+                  const color = isLink ? 'text-emerald-600 bg-emerald-50' : isVideo ? 'text-rose-600 bg-rose-50' : isPdf ? 'text-red-600 bg-red-50' : isDoc ? 'text-blue-600 bg-blue-50' : isXls ? 'text-green-600 bg-green-50' : isPpt ? 'text-orange-600 bg-orange-50' : 'text-gray-600 bg-gray-100';
                   const handleClick = async (e) => {
+                    if (isLink) return; // let the native <a> navigation happen
                     if (!isCloudinary) return;
                     e.preventDefault();
                     try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
@@ -571,7 +575,7 @@ export default function LessonViewer({
                         <Icon className="w-4 h-4" />
                       </div>
                       <span className={`text-sm font-medium truncate flex-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name}</span>
-                      {isPdf
+                      {isPdf || isLink
                         ? <Icons.ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
                         : <Icons.Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
                       }

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
+import { resolveAssetUrl } from '@/lib/utils/resolveAssetUrl';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -785,7 +786,17 @@ export default function StudentResponsesPage() {
                                                     <p className="text-sm font-medium text-gray-800 mb-3">{r.questionText}</p>
                                                     <div className="bg-white rounded-lg border border-violet-100 p-3">
                                                         <p className="text-xs text-gray-500 mb-1.5 font-semibold uppercase tracking-wide">Student's Answer</p>
-                                                        <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{r.studentAnswer || '(no answer provided)'}</p>
+                                                        {r.submissionType === 'pdf' ? (
+                                                            r.studentAnswer ? (
+                                                                <a href={resolveAssetUrl(r.studentAnswer)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-700 hover:text-violet-900 underline">
+                                                                    <Icons.FileDown className="w-4 h-4" /> View submitted PDF
+                                                                </a>
+                                                            ) : (
+                                                                <p className="text-sm text-gray-400 italic">(no file submitted)</p>
+                                                            )
+                                                        ) : (
+                                                            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{r.studentAnswer || '(no answer provided)'}</p>
+                                                        )}
                                                     </div>
                                                     {r.instructorFeedback && (
                                                         <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
@@ -836,7 +847,13 @@ export default function StudentResponsesPage() {
                                             <div key={i}>
                                                 <p className="text-xs font-semibold text-gray-500 mb-1">Q{r.questionIndex + 1}: {r.questionText}</p>
                                                 <div className="bg-white rounded-lg border border-gray-200 p-3 text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
-                                                    {r.studentAnswer || '(no answer)'}
+                                                    {r.submissionType === 'pdf' ? (
+                                                        r.studentAnswer ? (
+                                                            <a href={resolveAssetUrl(r.studentAnswer)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 font-medium text-violet-700 hover:text-violet-900 underline">
+                                                                <Icons.FileDown className="w-4 h-4" /> View submitted PDF
+                                                            </a>
+                                                        ) : '(no file submitted)'
+                                                    ) : (r.studentAnswer || '(no answer)')}
                                                 </div>
                                             </div>
                                         ))}

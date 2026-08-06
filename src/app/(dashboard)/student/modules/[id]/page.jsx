@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import moduleService from '@/lib/api/moduleService';
+import uploadService from '@/lib/api/uploadService';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 import paymentService from '@/lib/api/paymentService';
 import { useEnrollmentProgress } from '@/hooks/useEnrollmentProgress';
@@ -34,9 +35,9 @@ const PdfViewer = dynamic(() => import('@/components/ui/PdfViewer'), {
 function resolveUrl(url) { return resolveAssetUrl(url); }
 
 // Open or download a resource file
-async function openResource(url, fileName, isPdf) {
-    const fullUrl = resolveUrl(url);
-    if (isPdf) {
+async function openResource(url, fileName, isPdf, isLink = false) {
+    const fullUrl = isLink ? url : resolveUrl(url);
+    if (isPdf || isLink) {
         window.open(fullUrl, '_blank', 'noopener,noreferrer');
     } else {
         const a = document.createElement('a');
@@ -81,13 +82,17 @@ function VideoPlayer({ url, className = '' }) {
 // ── Resource helpers ───────────────────────────────────────────────────────────
 function resourceHref(res) {
     const raw = typeof res === 'string' ? res : res.url;
-    const url = resolveAssetUrl(raw);
+    // 'link' resources (e.g. a tool page or external site) are navigated to as-authored
+    // never run through resolveAssetUrl, which is only meant for backend-uploaded files
+    // and would otherwise mangle relative app routes like "/climate-dss" into the API origin.
+    const isLink = typeof res !== 'string' && res?.fileType === 'link';
+    const url = isLink ? raw : resolveAssetUrl(raw);
     const name = typeof res === 'string' ? res : (res.name || res.originalName || '');
     const ext = (res?.fileType || name || url || '').split('.').pop()?.toLowerCase() || '';
     const isPdf = ext === 'pdf';
     const isCloudinary = url?.includes('cloudinary.com');
     const isVideo = isEmbeddableVideoUrl(raw);
-    return { url, name, ext, isPdf, isCloudinary, isVideo };
+    return { url, name, ext, isPdf, isCloudinary, isVideo, isLink };
 }
 
 function fileIconColor(ext) {
@@ -1161,10 +1166,11 @@ function ModuleLearningContent() {
                                     </div>
                                     <div className="space-y-1.5">
                                         {filteredResources.map(({ res, source }, i) => {
-                                            const { url, name, ext, isPdf, isCloudinary, isVideo } = resourceHref(res);
+                                            const { url, name, ext, isPdf, isCloudinary, isVideo, isLink } = resourceHref(res);
                                             if (!url) return null;
                                             const colors = isVideo ? { bg: 'bg-red-100', text: 'text-red-600' } : fileIconColor(ext);
                                             const handleClick = async (e) => {
+                                                if (isLink) return; // let the native <a> navigation happen
                                                 e.preventDefault();
                                                 if (isVideo) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
                                                 try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
@@ -1605,7 +1611,7 @@ function ModuleLearningContent() {
                                                 </div>
                                                 <div className="p-4 space-y-3">
                                                     {[...lessonRes, ...moduleRes].map((res, idx) => {
-                                                        const { url, name, ext, isPdf, isCloudinary, isVideo } = resourceHref(res);
+                                                        const { url, name, ext, isPdf, isCloudinary, isVideo, isLink } = resourceHref(res);
                                                         if (!url) return null;
 
                                                         if (isVideo) {
@@ -1619,6 +1625,7 @@ function ModuleLearningContent() {
 
                                                         const colors = fileIconColor(ext);
                                                         const handleClick = async (e) => {
+                                                            if (isLink) return; // let the native <a> navigation happen
                                                             if (!isCloudinary) return;
                                                             e.preventDefault();
                                                             try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
@@ -1632,7 +1639,7 @@ function ModuleLearningContent() {
                                                                     <Icons.FileText className={`w-4 h-4 ${colors.text}`} />
                                                                 </div>
                                                                 <span className={`flex-1 text-sm font-medium truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name || `Resource ${idx + 1}`}</span>
-                                                                {isPdf
+                                                                {isPdf || isLink
                                                                     ? <Icons.ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
                                                                     : <Icons.Download className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
                                                                 }
@@ -2137,6 +2144,9 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
     const hasResult = finalAssessmentResult != null;
     const passed = enrollment.finalAssessmentPassed || finalAssessmentResult?.passed;
     const justPassed = hasResult && finalAssessmentResult?.passed;
+    // Essay/PDF submissions aren't auto-graded  the backend flags them as pending
+    // instructor review instead of pass/fail. Don't show a false "FAILED" state for these.
+    const isPendingReview = hasResult && (finalAssessmentResult?.status === 'pending_review' || enrollment.pendingInstructorReview);
     const maxAttempts = assessment?.maxAttempts || 3;
     const attempts = enrollment.finalAssessmentAttempts || 0;
     // Cooldown: prefer the value from the just-submitted result, fall back to enrollment
@@ -2240,8 +2250,8 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
                     <div className="flex flex-wrap items-center gap-4 text-sm text-green-100">
                         <span className="flex items-center gap-1.5"><Icons.CheckCircle className="w-3.5 h-3.5" />Pass: {assessment.passingScore || 70}%</span>
                         {hasResult ? (
-                            <span className={`flex items-center gap-1.5 font-bold text-base px-3 py-1 rounded-full ${passed ? 'bg-white text-green-700' : 'bg-red-500 text-white'}`}>
-                                {passed ? '✓ PASSED' : '✗ FAILED'}  {(finalAssessmentResult?.score || 0).toFixed(1)}%
+                            <span className={`flex items-center gap-1.5 font-bold text-base px-3 py-1 rounded-full ${passed ? 'bg-white text-green-700' : isPendingReview ? 'bg-amber-400 text-amber-900' : 'bg-red-500 text-white'}`}>
+                                {passed ? `✓ PASSED  ${(finalAssessmentResult?.score || 0).toFixed(1)}%` : isPendingReview ? '⏳ SUBMITTED  AWAITING REVIEW' : `✗ FAILED  ${(finalAssessmentResult?.score || 0).toFixed(1)}%`}
                             </span>
                         ) : (
                             <span className={`flex items-center gap-1.5 font-semibold ${attempts >= maxAttempts ? 'text-red-300' : 'text-white'}`}>
@@ -2337,38 +2347,58 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
                     {hasResult && (
                         <div className="space-y-5">
                             {/* Score card */}
-                            <div className={`rounded-2xl border-2 p-6 ${passed ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-200'}`}>
-                                <div className="text-center">
-                                    <div className={`text-6xl font-black mb-1 tabular-nums ${passed ? 'text-green-700' : 'text-red-600'}`}>
-                                        {(finalAssessmentResult?.score || 0).toFixed(1)}%
+                            {isPendingReview ? (
+                                <div className="rounded-2xl border-2 p-6 bg-amber-50 border-amber-200">
+                                    <div className="text-center">
+                                        <Icons.Clock className="w-10 h-10 text-amber-500 mx-auto mb-2" />
+                                        <p className="text-lg font-bold mt-1 text-amber-800">Submitted  Awaiting Instructor Review</p>
+                                        <p className="text-sm text-amber-700 mt-2 max-w-md mx-auto">
+                                            Your submission has been sent to your instructor for grading. You'll be notified once it's been reviewed  no action needed for now.
+                                        </p>
                                     </div>
-                                    <p className={`text-lg font-bold mt-1 ${passed ? 'text-green-700' : 'text-red-600'}`}>
-                                        {passed ? 'You Passed! 🎉' : 'Not Passed Yet'}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Attempt {currentAttemptNumber} of {maxAttempts} · Passing score: {assessment.passingScore || 70}%
-                                    </p>
                                 </div>
-                                {resultItems.length > 0 && (
-                                    <div className="flex justify-center mt-5 pt-4 border-t border-gray-200 divide-x divide-gray-200">
-                                        <div className="text-center flex-1 px-4">
-                                            <div className="text-3xl font-bold text-green-600">{correctCount}</div>
-                                            <p className="text-xs text-gray-500 mt-0.5">✓ Correct</p>
+                            ) : (
+                                <div className={`rounded-2xl border-2 p-6 ${passed ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-200'}`}>
+                                    <div className="text-center">
+                                        <div className={`text-6xl font-black mb-1 tabular-nums ${passed ? 'text-green-700' : 'text-red-600'}`}>
+                                            {(finalAssessmentResult?.score || 0).toFixed(1)}%
                                         </div>
-                                        <div className="text-center flex-1 px-4">
-                                            <div className="text-3xl font-bold text-red-500">{incorrectCount}</div>
-                                            <p className="text-xs text-gray-500 mt-0.5">✗ Incorrect</p>
-                                        </div>
-                                        <div className="text-center flex-1 px-4">
-                                            <div className="text-3xl font-bold text-gray-600">{resultItems.length}</div>
-                                            <p className="text-xs text-gray-500 mt-0.5">Total</p>
-                                        </div>
+                                        <p className={`text-lg font-bold mt-1 ${passed ? 'text-green-700' : 'text-red-600'}`}>
+                                            {passed ? 'You Passed! 🎉' : 'Not Passed Yet'}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            Attempt {currentAttemptNumber} of {maxAttempts} · Passing score: {assessment.passingScore || 70}%
+                                        </p>
                                     </div>
-                                )}
-                            </div>
+                                    {resultItems.length > 0 && (
+                                        <div className="flex justify-center mt-5 pt-4 border-t border-gray-200 divide-x divide-gray-200">
+                                            <div className="text-center flex-1 px-4">
+                                                <div className="text-3xl font-bold text-green-600">{correctCount}</div>
+                                                <p className="text-xs text-gray-500 mt-0.5">✓ Correct</p>
+                                            </div>
+                                            <div className="text-center flex-1 px-4">
+                                                <div className="text-3xl font-bold text-red-500">{incorrectCount}</div>
+                                                <p className="text-xs text-gray-500 mt-0.5">✗ Incorrect</p>
+                                            </div>
+                                            <div className="text-center flex-1 px-4">
+                                                <div className="text-3xl font-bold text-gray-600">{resultItems.length}</div>
+                                                <p className="text-xs text-gray-500 mt-0.5">Total</p>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             {/* Action buttons */}
-                            {passed ? (
+                            {isPendingReview ? (
+                                <Button
+                                    onClick={onGoToLessons}
+                                    variant="outline"
+                                    className="w-full border-amber-300 text-amber-800 hover:bg-amber-50 gap-2 py-3 text-base font-semibold"
+                                >
+                                    <Icons.BookOpen className="w-5 h-5" /> Back to Lessons
+                                </Button>
+                            ) : passed ? (
                                 <Button
                                     onClick={onComplete}
                                     className="w-full bg-green-600 hover:bg-green-700 text-white gap-2 py-3 text-base font-bold shadow-md"
@@ -2434,6 +2464,7 @@ function FinalAssessmentPanel({ module, enrollment, finalAnswers, setFinalAnswer
                                             index={displayPos}
                                             answer={finalAnswers[origIdx]}
                                             onChange={() => { }}
+                                            readOnly
                                             showCorrectAnswer={passed}
                                         />
                                     );
@@ -2518,7 +2549,7 @@ function withResolvedAnswer(originalQ, maybeShuffledQ) {
 }
 
 // ── Question Renderer ──────────────────────────────────────────────────────────
-function QuestionRenderer({ question, index, answer, onChange, showCorrectAnswer = true }) {
+function QuestionRenderer({ question, index, answer, onChange, showCorrectAnswer = true, readOnly = false }) {
     const [checked, setChecked] = React.useState(() => {
         // In review mode (showCorrectAnswer=true with an existing answer), pre-populate
         // the checked state so correct/incorrect indicators render immediately without
@@ -2541,8 +2572,14 @@ function QuestionRenderer({ question, index, answer, onChange, showCorrectAnswer
         || (!['true-false', 'true_false', 'truefalse', 'boolean', 'true/false', 'essay', 'short-answer', 'short_answer', 'text'].includes(qType) && (question.options?.length ?? 0) > 0);
     const isTrueFalse = ['true-false', 'true_false', 'truefalse', 'boolean', 'true/false'].includes(qType);
     const isEssay = ['essay', 'short-answer', 'short_answer', 'text'].includes(qType);
+    const isEssayPdf = isEssay && question.submissionType === 'pdf';
+    const [uploading, setUploading] = React.useState(false);
+    const [uploadError, setUploadError] = React.useState('');
     const isChecked = checked !== null;
     const isCorrect = checked?.correct;
+    // readOnly = displaying an already-submitted answer for review (pass, fail, or
+    // pending instructor review)  never editable, regardless of the checked state.
+    const locked = isChecked || readOnly;
 
     const handleSelect = (val) => {
         onChange(val);
@@ -2556,6 +2593,30 @@ function QuestionRenderer({ question, index, answer, onChange, showCorrectAnswer
             if (question.options?.length) console.log('Options shown    :', question.options);
             console.groupEnd();
             setChecked({ correct: isCorrectSelection, answer: val });
+        }
+    };
+
+    const handlePdfSelect = async (e) => {
+        const file = e.target.files?.[0];
+        e.target.value = '';
+        if (!file) return;
+        if (file.type !== 'application/pdf') {
+            setUploadError('Please select a PDF file.');
+            return;
+        }
+        if (file.size > 50 * 1024 * 1024) {
+            setUploadError('File is too large. Maximum size is 50MB.');
+            return;
+        }
+        setUploadError('');
+        setUploading(true);
+        try {
+            const { url } = await uploadService.uploadDocument(file);
+            onChange(url);
+        } catch (err) {
+            setUploadError(err?.response?.data?.message || 'Upload failed. Please try again.');
+        } finally {
+            setUploading(false);
         }
     };
 
@@ -2597,7 +2658,7 @@ function QuestionRenderer({ question, index, answer, onChange, showCorrectAnswer
                                             : 'border-gray-200 bg-white text-gray-400 opacity-60'
                                     : isSelected ? 'border-green-600 bg-blue-50 text-green-800' : 'border-gray-200 hover:border-gray-300 bg-white'
                                 }`}>
-                                <input type="radio" name={`q-${index}`} value={option} checked={isSelected} onChange={() => !isChecked && handleSelect(option)} disabled={isChecked} className="accent-green-600 flex-shrink-0" />
+                                <input type="radio" name={`q-${index}`} value={option} checked={isSelected} onChange={() => !locked && handleSelect(option)} disabled={locked} className="accent-green-600 flex-shrink-0" />
                                 <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
                                     ${isChecked
                                         ? isThisCorrect ? 'bg-green-600 text-white'
@@ -2616,15 +2677,45 @@ function QuestionRenderer({ question, index, answer, onChange, showCorrectAnswer
                 </div>
             )}
 
-            {isEssay && (
+            {isEssay && !isEssayPdf && (
                 <div className="ml-10 space-y-2">
-                    <textarea value={answer || ''} onChange={(e) => !isChecked && onChange(e.target.value)} disabled={isChecked} placeholder="Write your answer here…" rows={4}
+                    <textarea value={answer || ''} onChange={(e) => !locked && onChange(e.target.value)} disabled={locked} placeholder="Write your answer here…" rows={4}
                         className="w-full border-2 border-gray-200 rounded-xl p-3 text-sm focus:border-green-500 outline-none resize-none disabled:bg-white disabled:text-gray-500 transition-colors" />
-                    {!isChecked && answer && (
+                    {!locked && answer && (
                         <Button type="button" size="sm" onClick={() => setChecked({ correct: evaluateStudentAnswer(question, answer), answer })} className="bg-green-600 hover:bg-green-700 text-white">
                             Check Answer
                         </Button>
                     )}
+                </div>
+            )}
+
+            {isEssayPdf && (
+                <div className="ml-10 space-y-2">
+                    {answer ? (
+                        <div className="flex items-center gap-3 p-3 border-2 border-green-200 bg-green-50 rounded-xl">
+                            <Icons.FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
+                            <a href={resolveAssetUrl(answer)} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-green-800 underline truncate flex-1">
+                                View submitted PDF
+                            </a>
+                            {!locked && (
+                                <label className="text-xs font-semibold text-green-700 hover:text-green-900 cursor-pointer flex-shrink-0">
+                                    {uploading ? 'Uploading…' : 'Replace'}
+                                    <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handlePdfSelect} disabled={uploading || locked} />
+                                </label>
+                            )}
+                        </div>
+                    ) : locked ? (
+                        <p className="text-sm text-gray-400 italic">(no file submitted)</p>
+                    ) : (
+                        <label className={`flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-xl cursor-pointer transition-colors
+                            ${uploading ? 'border-gray-200 bg-gray-50 cursor-wait' : 'border-gray-300 hover:border-green-400 hover:bg-green-50/50'}`}>
+                            {uploading ? <Icons.Loader2 className="w-6 h-6 text-gray-400 animate-spin" /> : <Icons.Upload className="w-6 h-6 text-gray-400" />}
+                            <span className="text-sm font-medium text-gray-600">{uploading ? 'Uploading…' : 'Click to upload your PDF report'}</span>
+                            <span className="text-xs text-gray-400">PDF only, max 50MB</span>
+                            <input type="file" accept=".pdf,application/pdf" className="hidden" onChange={handlePdfSelect} disabled={uploading} />
+                        </label>
+                    )}
+                    {uploadError && <p className="text-xs text-red-600">{uploadError}</p>}
                 </div>
             )}
 
@@ -2670,6 +2761,7 @@ function CompletionScreen({ enrollment, moduleId, module: completedModule, route
     const [nextModule, setNextModule] = React.useState(null);
     const [loadingNext, setLoadingNext] = React.useState(false);
     const [enrollingNext, setEnrollingNext] = React.useState(false);
+    const [nextModuleError, setNextModuleError] = React.useState('');
 
     React.useEffect(() => {
         moduleRatingService.getMyRating(moduleId).then((res) => { if (res?.data) { setExistingRating(res.data); setRating(res.data.rating); setReview(res.data.review || ''); } }).catch(() => { });
@@ -2697,12 +2789,24 @@ function CompletionScreen({ enrollment, moduleId, module: completedModule, route
 
     const handleContinueToNextModule = async () => {
         if (!nextModule) return;
+        setNextModuleError('');
         try {
             setEnrollingNext(true);
-            await moduleEnrollmentService.enrollInModule(nextModule._id);
-        } catch { /* already enrolled or other error  proceed anyway */ }
-        finally { setEnrollingNext(false); }
-        router.push(`/student/modules/${nextModule._id}`);
+            const result = await moduleEnrollmentService.enrollInModule(nextModule._id);
+            if (result?.requiresPayment) {
+                if (result.hasTieredPricing) {
+                    router.push(`/checkout/module?moduleId=${nextModule._id}&categoryId=${result.categoryId}&categoryName=${encodeURIComponent(result.categoryName || '')}`);
+                } else {
+                    router.push(`/modules/${nextModule._id}`);
+                }
+                return;
+            }
+            router.push(`/student/modules/${nextModule._id}`);
+        } catch (err) {
+            setNextModuleError(err?.response?.data?.message || 'Unable to start the next module. Please try again.');
+        } finally {
+            setEnrollingNext(false);
+        }
     };
 
     const handleSubmitRating = async () => {
@@ -2755,6 +2859,9 @@ function CompletionScreen({ enrollment, moduleId, module: completedModule, route
                                 : <><Icons.Play className="w-4 h-4" /> Continue to Next Module</>
                             }
                         </Button>
+                        {nextModuleError && (
+                            <p className="text-xs text-red-600 mt-2 text-center">{nextModuleError}</p>
+                        )}
                     </div>
                 ) : (
                     <div className="flex items-center gap-2 justify-center bg-blue-50 border border-blue-100 rounded-xl px-5 py-3 mb-6 mx-auto max-w-sm">

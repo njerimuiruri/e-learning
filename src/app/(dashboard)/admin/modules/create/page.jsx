@@ -178,7 +178,7 @@ function ResourceList({ label, hint, values = [], onChange }) {
 
 function FinalAssessmentStep({ assessment, onChange }) {
   const update = (field, value) => onChange({ ...assessment, [field]: value });
-  const blank = () => ({ text: '', type: 'multiple-choice', points: 1, options: ['', '', '', ''], correctAnswer: '', explanation: '', rubric: '' });
+  const blank = () => ({ text: '', type: 'multiple-choice', points: 1, options: ['', '', '', ''], correctAnswer: '', explanation: '', rubric: '', submissionType: 'text' });
 
   const addQ = () => update('questions', [...(assessment.questions || []), blank()]);
   const removeQ = (i) => update('questions', assessment.questions.filter((_, idx) => idx !== i));
@@ -298,9 +298,21 @@ function FinalAssessmentStep({ assessment, onChange }) {
               </div>
             )}
             {q.type === 'essay' && (
-              <div className="space-y-1.5">
-                <Label className="text-xs">Grading Rubric <span className="text-gray-400 font-normal">(used for AI-assisted grading)</span></Label>
-                <Textarea value={q.rubric || ''} onChange={(e) => updateQ(i, 'rubric', e.target.value)} placeholder="Describe what a good essay answer should include..." rows={3} />
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Learner Submission Type</Label>
+                  <Select value={q.submissionType || 'text'} onValueChange={(v) => updateQ(i, 'submissionType', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="text">Written answer (text box)</SelectItem>
+                      <SelectItem value="pdf">PDF upload</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Grading Rubric <span className="text-gray-400 font-normal">(used for AI-assisted grading)</span></Label>
+                  <Textarea value={q.rubric || ''} onChange={(e) => updateQ(i, 'rubric', e.target.value)} placeholder="Describe what a good essay answer should include..." rows={3} />
+                </div>
               </div>
             )}
             <div className="space-y-1.5">

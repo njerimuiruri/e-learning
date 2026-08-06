@@ -96,10 +96,19 @@ function QuestionForm({ question, onChange }) {
                 </div>
             )}
             {question.type === 'essay' && (
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Grading Rubric</label>
-                    <textarea value={question.rubric || ''} onChange={(e) => onChange({ ...question, rubric: e.target.value })} placeholder="Describe what a good answer should include..." rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
-                </div>
+                <>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Learner Submission Type</label>
+                        <select value={question.submissionType || 'text'} onChange={(e) => onChange({ ...question, submissionType: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500">
+                            <option value="text">Written answer (text box)</option>
+                            <option value="pdf">PDF upload</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">Grading Rubric</label>
+                        <textarea value={question.rubric || ''} onChange={(e) => onChange({ ...question, rubric: e.target.value })} placeholder="Describe what a good answer should include..." rows={3} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500" />
+                    </div>
+                </>
             )}
         </div>
     );
@@ -110,7 +119,7 @@ function AssessmentSection({ assessment, onChange, title = 'Assessment', minQues
     const [editingQIndex, setEditingQIndex] = useState(null);
     const [currentQ, setCurrentQ] = useState(null);
 
-    const startAddQuestion = () => { setCurrentQ({ text: '', type: 'multiple-choice', points: 10, options: ['', '', '', ''], correctAnswer: '', explanation: '', rubric: '' }); setEditingQIndex(-1); };
+    const startAddQuestion = () => { setCurrentQ({ text: '', type: 'multiple-choice', points: 10, options: ['', '', '', ''], correctAnswer: '', explanation: '', rubric: '', submissionType: 'text' }); setEditingQIndex(-1); };
     const startEditQuestion = (index) => { setCurrentQ({ ...assessment.questions[index] }); setEditingQIndex(index); };
     const saveQuestion = () => {
         if (!currentQ.text.trim()) { alert('Question text is required'); return; }

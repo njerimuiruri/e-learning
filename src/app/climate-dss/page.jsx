@@ -1,13 +1,26 @@
 'use client';
 
 import { useState, useRef, useEffect, lazy, Suspense } from 'react';
+import Link from 'next/link';
 import {
-  MapPin, GitCompare, Layers, ChevronDown, ChevronUp,
+  MapPin, GitCompare, Layers, ChevronDown, ChevronUp, Lock,
   Loader2, CheckCircle2, AlertCircle, Play, RotateCcw, BarChart2,
 } from 'lucide-react';
 import Navbar from '@/components/navbar/navbar';
 import Footer from '@/components/Footer/Footer';
+import authService from '@/lib/api/authService';
 import { dss, diseaseDss, bboxToGeoJSON, AFRICAN_COUNTRIES } from '@/lib/api/climateDssService';
+
+// "AI for Climate Resilience" category  the only category allowed to use this tool.
+const CLIMATE_RESILIENCE_CATEGORY_ID = '69ce216b97ba6be0d2f30b66';
+
+function hasClimateResilienceAccess(user) {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  const assigned = (user.fellowData?.assignedCategories || []).map((id) => id?.toString?.() || String(id));
+  const purchased = (user.purchasedCategories || []).map((id) => id?.toString?.() || String(id));
+  return assigned.includes(CLIMATE_RESILIENCE_CATEGORY_ID) || purchased.includes(CLIMATE_RESILIENCE_CATEGORY_ID);
+}
 
 const AOIMapPicker = lazy(() => import('@/components/climate/AOIMapPicker'));
 const DssResults = lazy(() => import('@/components/climate/DssResults'));
@@ -847,11 +860,57 @@ function DiseaseComparativeContent() {
 // ---------------------------------------------------------------------------
 // Main page
 // ---------------------------------------------------------------------------
+function RestrictedScreen() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      <div className="max-w-lg mx-auto px-4 pt-32 pb-20 text-center">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center mx-auto mb-5">
+          <Lock className="w-6 h-6 text-amber-600" />
+        </div>
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Fellows-Only Tool</h1>
+        <p className="text-sm text-gray-500 leading-relaxed">
+          The Climate Decision Support System is only available to fellows enrolled in the
+          AI for Climate Resilience programme. Log in with a fellow account to continue, or
+          contact your programme administrator if you believe this is a mistake.
+        </p>
+        <Link href="/login" className="inline-block mt-6 bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+          Go to Login
+        </Link>
+      </div>
+      <Footer />
+    </div>
+  );
+}
+
 export default function ClimateDSSPage() {
   const [activeModule, setActiveModule] = useState('food-security');
   const [activeTab, setActiveTab] = useState('single-aoi');
+  const [access, setAccess] = useState('checking'); // 'checking' | 'allowed' | 'denied'
+
+  useEffect(() => {
+    const localUser = authService.getCurrentUser();
+    if (hasClimateResilienceAccess(localUser)) setAccess('allowed');
+
+    // Always re-check against the server  category assignment can change after login.
+    authService.refreshFromServer().then((freshUser) => {
+      setAccess(hasClimateResilienceAccess(freshUser || localUser) ? 'allowed' : 'denied');
+    });
+  }, []);
 
   const mod = MODULES.find((m) => m.id === activeModule);
+
+  if (access === 'checking') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
+      </div>
+    );
+  }
+
+  if (access === 'denied') {
+    return <RestrictedScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -871,7 +930,7 @@ export default function ClimateDSSPage() {
                 Choose a module, define your area, and get a risk assessment with charts and maps.
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
-                {['54 African countries', 'Google Earth Engine', 'AI-powered', 'Free to use'].map((t) => (
+                {['54 African countries', 'Google Earth Engine', 'AI-powered', 'Fellows Only'].map((t) => (
                   <span key={t} className="text-xs bg-green-50 text-green-700 border border-green-100 px-2.5 py-1 rounded-full font-medium">{t}</span>
                 ))}
               </div>

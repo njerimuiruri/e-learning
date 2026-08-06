@@ -2,9 +2,13 @@
 // The Next.js server holds the credentials and token; the browser never calls
 // the DSS server directly.
 async function dssPost<T>(path: string, body: object): Promise<T> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const res = await fetch('/api/dss-proxy', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify({ path, body }),
   });
 
