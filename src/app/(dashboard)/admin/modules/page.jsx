@@ -419,46 +419,76 @@ export default function AdminModulesPage() {
                 {adminView === 'modules' && <>
 
                 {/* Filters & Search */}
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm mb-6 overflow-hidden">
+                    {/* Category tabs — the primary way to scope modules by programme */}
+                    <div className="flex items-center gap-1 overflow-x-auto border-b border-gray-100 px-3">
+                        <button
+                            onClick={() => { setCategoryFilter('all'); setPagination(p => ({ ...p, page: 1 })); }}
+                            className={`flex items-center gap-1.5 px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${categoryFilter === 'all'
+                                ? 'border-blue-600 text-blue-700'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
+                                }`}
+                        >
+                            <Icons.LayoutGrid className="w-4 h-4" /> All Programmes
+                        </button>
+                        {categories.map((cat) => (
+                            <button
+                                key={cat._id}
+                                onClick={() => { setCategoryFilter(cat._id); setPagination(p => ({ ...p, page: 1 })); }}
+                                className={`flex items-center gap-1.5 px-4 py-3 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${categoryFilter === cat._id
+                                    ? 'border-blue-600 text-blue-700'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-200'
+                                    }`}
+                            >
+                                <Icons.Layers className="w-4 h-4" /> {cat.name}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Status + level pills, search, view toggle */}
                     <div className="p-4 flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-                        <div className="flex flex-wrap gap-3 items-center">
-                            {/* Category Filter */}
-                            <select
-                                value={categoryFilter}
-                                onChange={(e) => { setCategoryFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                                <option value="all">All Categories</option>
-                                {categories.map((cat) => (
-                                    <option key={cat._id} value={cat._id}>{cat.name}</option>
-                                ))}
-                            </select>
+                        <div className="flex flex-wrap gap-4 items-center">
+                            {/* Status Filter — pill tabs */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                {[{ value: 'all', label: 'All Statuses' }, ...Object.entries(STATUS_CONFIG).filter(([k]) => k !== 'archived').map(([value, cfg]) => ({ value, label: cfg.label }))].map((opt) => {
+                                    const isActive = statusFilter === opt.value;
+                                    const activeColor = opt.value === 'all' ? 'bg-gray-800 text-white' : STATUS_CONFIG[opt.value]?.color;
+                                    return (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => { setStatusFilter(opt.value); setPagination(p => ({ ...p, page: 1 })); }}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${isActive
+                                                ? `${activeColor} border-transparent`
+                                                : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                                }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
-                            {/* Status Filter */}
-                            <select
-                                value={statusFilter}
-                                onChange={(e) => { setStatusFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                                <option value="all">All Statuses</option>
-                                <option value="draft">Draft</option>
-                                <option value="submitted">Submitted</option>
-                                <option value="approved">Approved</option>
-                                <option value="published">Published</option>
-                                <option value="rejected">Rejected</option>
-                            </select>
+                            <div className="w-px h-5 bg-gray-200 hidden lg:block" />
 
-                            {/* Level Filter */}
-                            <select
-                                value={levelFilter}
-                                onChange={(e) => { setLevelFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
-                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            >
-                                <option value="all">All Levels</option>
-                                <option value="beginner">Beginner</option>
-                                <option value="intermediate">Intermediate</option>
-                                <option value="advanced">Advanced</option>
-                            </select>
+                            {/* Level Filter — pill tabs */}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                                {[{ value: 'all', label: 'All Levels' }, ...Object.entries(LEVEL_CONFIG).map(([value, cfg]) => ({ value, label: cfg.label }))].map((opt) => {
+                                    const isActive = levelFilter === opt.value;
+                                    const activeColor = opt.value === 'all' ? 'bg-gray-800 text-white' : LEVEL_CONFIG[opt.value]?.color;
+                                    return (
+                                        <button
+                                            key={opt.value}
+                                            onClick={() => { setLevelFilter(opt.value); setPagination(p => ({ ...p, page: 1 })); }}
+                                            className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${isActive
+                                                ? `${activeColor} border-transparent`
+                                                : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                                }`}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    );
+                                })}
+                            </div>
 
                             {/* Search */}
                             <div className="relative">
@@ -468,12 +498,12 @@ export default function AdminModulesPage() {
                                     placeholder="Search modules..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-64"
+                                    className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-56"
                                 />
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 shrink-0">
                             <button
                                 onClick={() => setViewMode('cards')}
                                 className={`p-2 rounded-lg ${viewMode === 'cards' ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'}`}
