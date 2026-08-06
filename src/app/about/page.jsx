@@ -1,12 +1,11 @@
 "use client";
-import React, { useState } from 'react';
+import React from 'react';
 import { BookOpen, Users, Target, Award, TrendingUp, FileText, Download, ChevronRight } from 'lucide-react';
 import Navbar from '@/components/navbar/navbar';
 import Footer from '@/components/Footer/Footer';
+import TeamSection from '@/app/teamsection/page';
 
 const AboutUsPage = () => {
-    const [activeSection, setActiveSection] = useState('about');
-
     const sections = [
         { id: 'about', label: 'About ARIN', icon: Users },
         { id: 'case', label: 'The Case', icon: Target },
@@ -21,69 +20,39 @@ const AboutUsPage = () => {
             <Navbar />
             <div className="min-h-screen bg-gradient-to-b from-white via-blue-50 to-white">
 
-
-                {/* Navigation Tabs */}
+                {/* Jump-link navigation + resource download */}
                 <div className="sticky top-0 z-40 bg-white shadow-md border-b border-gray-200">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <div className="flex overflow-x-auto py-4 gap-2 no-scrollbar">
-                            {sections.map((section) => (
-                                <button key={section.id} onClick={() => setActiveSection(section.id)}
-                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap
-                    transition-all duration-200 ${activeSection === section.id
-                                            ? 'bg-[#021d49] text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                                        }`}
-                                >
-                                    <section.icon size={18} />
-                                    {section.label}
-                                </button>
-                            ))}
+                    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex items-center justify-between gap-4 py-4">
+                            <nav className="flex overflow-x-auto gap-2 no-scrollbar">
+                                {sections.map((section) => (
+                                    <a key={section.id} href={`#${section.id}`}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium text-sm whitespace-nowrap text-gray-600 bg-gray-100 hover:bg-gray-200 hover:text-gray-900 transition-all duration-200"
+                                    >
+                                        <section.icon size={15} />
+                                        {section.label}
+                                    </a>
+                                ))}
+                            </nav>
+                            <a
+                                href="/documents/ARINPUBLISHNGACADEMYDOCUMENT.pdf"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="shrink-0 flex items-center gap-1.5 bg-[#021d49] text-white px-3.5 py-2 rounded-lg text-sm font-semibold hover:bg-[#03275f] transition-all duration-300"
+                            >
+                                <Download size={16} />
+                                <span className="hidden sm:inline">Download PDF</span>
+                            </a>
                         </div>
                     </div>
                 </div>
 
-                {/* Main Content */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                    <div className="grid lg:grid-cols-12 gap-8">
-                        {/* Sidebar - Table of Contents */}
-                        <div className="lg:col-span-3">
-                            <div className="sticky top-32 bg-white rounded-2xl shadow-lg p-6 border-2 border-gray-100">
-                                <h3 className="font-bold text-lg mb-4 text-gray-900">Quick Navigation</h3>
-                                <nav className="space-y-2">
-                                    {sections.map((section) => (
-                                        <button key={section.id} onClick={() => setActiveSection(section.id)}
-                                            className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 flex
-                            items-center gap-2 ${activeSection === section.id
-                                                    ? 'bg-blue-50 text-[#021d49] font-semibold'
-                                                    : 'text-gray-600 hover:bg-gray-50'
-                                                }`}
-                                        >
-                                            <ChevronRight size={16} />
-                                            {section.label}
-                                        </button>
-                                    ))}
-                                </nav>
+                {/* Main Content  single flowing page */}
+                <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16">
 
-                                <div className="mt-8 pt-6 border-t border-gray-200">
-                                    <h4 className="font-bold text-sm mb-3 text-gray-900">Resources</h4>
-                                    <a
-                                        href="/documents/ARINPUBLISHNGACADEMYDOCUMENT.pdf"
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="w-full bg-gradient-to-r from-[#021d49] to-[#1e40af] text-white px-4 py-3 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 flex items-center justify-center gap-2"
-                                    >
-                                        <Download size={18} />
-                                        Download PDF
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Main Content Area */}
-                        <div className="lg:col-span-9">
-                            {/* About ARIN Section */}
-                            {activeSection === 'about' && (
-                                <div className="space-y-8">
+                    {/* About ARIN Section */}
+                    <div id="about" className="scroll-mt-24">
+                        <div className="space-y-8">
                                     <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-100">
                                         <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                                             <div className="w-12 h-12 bg-[#021d49] rounded-xl flex items-center justify-center">
@@ -142,10 +111,10 @@ const AboutUsPage = () => {
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                            </div>
 
-                            {/* The Case Section */}
-                            {activeSection === 'case' && (
+                    {/* The Case Section */}
+                    <div id="case" className="scroll-mt-24">
                                 <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-100">
                                     <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                                         <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
@@ -194,10 +163,10 @@ const AboutUsPage = () => {
                                         </p>
                                     </div>
                                 </div>
-                            )}
+                    </div>
 
-                            {/* Capacity Gap Section */}
-                            {activeSection === 'capacity' && (
+                    {/* Capacity Gap Section */}
+                    <div id="capacity" className="scroll-mt-24">
                                 <div className="space-y-6">
                                     <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-100">
                                         <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
@@ -305,10 +274,10 @@ const AboutUsPage = () => {
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                    </div>
 
-                            {/* Initiatives Section */}
-                            {activeSection === 'initiatives' && (
+                    {/* Initiatives Section */}
+                    <div id="initiatives" className="scroll-mt-24">
                                 <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-100">
                                     <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
                                         <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
@@ -376,10 +345,10 @@ const AboutUsPage = () => {
                                         </p>
                                     </div>
                                 </div>
-                            )}
+                    </div>
 
-                            {/* Publishing Academy Section */}
-                            {activeSection === 'academy' && (
+                    {/* Publishing Academy Section */}
+                    <div id="academy" className="scroll-mt-24">
                                 <div className="space-y-6">
                                     <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-100">
                                         <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
@@ -504,10 +473,10 @@ const AboutUsPage = () => {
                                         </div>
                                     </div>
                                 </div>
-                            )}
+                    </div>
 
-                            {/* Rationale Section */}
-                            {activeSection === 'rationale' && (
+                    {/* Rationale Section */}
+                    <div id="rationale" className="scroll-mt-24">
                                 <div className="space-y-6">
                                     <div className="bg-white rounded-2xl shadow-lg p-8 border-2 border-gray-100">
                                         <h2 className="text-3xl font-bold text-gray-900 mb-6 flex items-center gap-3">
@@ -1023,13 +992,13 @@ const AboutUsPage = () => {
                                         </div>
                                     </div>
                                 </div>
-                            )}
                         </div>
                     </div>
+
                 </div>
 
+                <TeamSection />
 
-            </div>
             <Footer />
 
         </>
