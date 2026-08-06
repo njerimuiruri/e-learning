@@ -25,6 +25,92 @@ function StatCard({ label, value, helper, icon: Icon, tone }) {
     );
 }
 
+const LEVEL_THEME = {
+    beginner:     { active: 'data-[state=active]:bg-blue-600', Icon: BookOpen },
+    intermediate: { active: 'data-[state=active]:bg-amber-500', Icon: TrendingUp },
+    advanced:     { active: 'data-[state=active]:bg-rose-600', Icon: Star },
+};
+
+function CategoryLevelTabs({ category, students, issuanceDisabled, issuingAll, onIssueAll, buildColumns }) {
+    const byLevel = (level) => students.filter(s => s.level === level);
+
+    return (
+        <div className="space-y-4">
+            {issuanceDisabled && (
+                <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                    <Clock className="h-4 w-4 shrink-0 text-gray-400" />
+                    <p className="text-sm text-gray-600">
+                        No certificate template has been designed yet for <strong>{category.name}</strong>  issuance is disabled until one is added.
+                    </p>
+                </div>
+            )}
+            <Tabs defaultValue="beginner">
+                <TabsList className="mb-4 h-auto gap-1 bg-gray-100/80 p-1">
+                    {['beginner', 'intermediate', 'advanced'].map((level) => {
+                        const levelData = byLevel(level);
+                        const pending = levelData.filter(s => s.status === 'pending').length;
+                        const { active, Icon } = LEVEL_THEME[level];
+                        return (
+                            <TabsTrigger
+                                key={level}
+                                value={level}
+                                className={`flex items-center gap-2 data-[state=active]:text-white data-[state=active]:shadow-sm ${active}`}
+                            >
+                                <Icon className="h-4 w-4" />
+                                {level.charAt(0).toUpperCase() + level.slice(1)}
+                                {!issuanceDisabled && pending > 0 && (
+                                    <span className="ml-1 rounded-full bg-yellow-300 px-1.5 py-0.5 text-xs font-bold text-yellow-900">
+                                        {pending}
+                                    </span>
+                                )}
+                                <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs font-bold text-gray-600">
+                                    {levelData.length}
+                                </span>
+                            </TabsTrigger>
+                        );
+                    })}
+                </TabsList>
+
+                {['beginner', 'intermediate', 'advanced'].map((level) => {
+                    const levelData = byLevel(level);
+                    const pendingCount = levelData.filter(s => s.status === 'pending').length;
+                    const levelLabel = level.charAt(0).toUpperCase() + level.slice(1);
+                    const columns = buildColumns(level, issuanceDisabled);
+                    return (
+                        <TabsContent key={level} value={level}>
+                            {pendingCount > 0 && !issuanceDisabled && (
+                                <div className="mb-3 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                                    <p className="text-sm text-amber-800 font-medium">
+                                        {pendingCount} pending certificate{pendingCount !== 1 ? 's' : ''} awaiting issuance
+                                    </p>
+                                    <Button
+                                        size="sm"
+                                        onClick={() => onIssueAll(level, category.id)}
+                                        disabled={issuingAll}
+                                        className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
+                                    >
+                                        {issuingAll
+                                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                            : <Award className="h-3.5 w-3.5" />
+                                        }
+                                        Issue All Pending
+                                    </Button>
+                                </div>
+                            )}
+                            <CertificatesDataTable
+                                columns={columns}
+                                data={levelData}
+                                title={`${levelLabel}  ${levelData.length} fellow${levelData.length !== 1 ? 's' : ''} completed all modules  ${category.name}`}
+                                level={level}
+                            />
+                        </TabsContent>
+                    );
+                })}
+            </Tabs>
+        </div>
+    );
+}
+
 export default function CertificateManagementPage() {
     const [allStudents, setAllStudents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -55,6 +141,26 @@ export default function CertificateManagementPage() {
     };
 
     const byLevel = useCallback((level) => allStudents.filter(s => s.level === level), [allStudents]);
+
+    const byCategoryLevel = useCallback(
+        (categoryId, level) => allStudents.filter(s => s.categoryId === categoryId && s.level === level),
+        [allStudents],
+    );
+
+    // One tab per category that actually has completers, ordered alphabetically.
+    const categories = useMemo(() => {
+        const map = new Map();
+        for (const s of allStudents) {
+            const id = s.categoryId || 'uncategorized';
+            const name = s.categoryName || 'Uncategorized';
+            if (!map.has(id)) map.set(id, { id, name });
+        }
+        return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }, [allStudents]);
+
+    // Arin Publishing Academy has no certificate template yet — issuance stays
+    // disabled for it until a template is designed for that category.
+    const isIssuanceDisabled = (categoryName) => /arin publishing academy/i.test(categoryName || '');
 
     const summary = useMemo(() => ({
         beginnerTotal:      byLevel('beginner').length,
@@ -111,15 +217,15 @@ export default function CertificateManagementPage() {
         setSelectedStudent(null);
     };
 
-    const handleIssueAll = async (level) => {
-        const pendingCount = byLevel(level).filter(s => s.status === 'pending').length;
+    const handleIssueAll = async (level, categoryId) => {
+        const pendingCount = byCategoryLevel(categoryId, level).filter(s => s.status === 'pending').length;
         if (!pendingCount) return;
         if (!confirm(`Issue certificates for all ${pendingCount} pending ${level} student${pendingCount !== 1 ? 's' : ''}?`)) return;
         setIssuingAll(true);
         try {
-            const result = await certificateService.issueAll(level);
+            const result = await certificateService.issueAll(level, categoryId);
             setAllStudents(prev => prev.map(s =>
-                s.level === level && s.status === 'pending'
+                s.categoryId === categoryId && s.level === level && s.status === 'pending'
                     ? { ...s, status: 'issued', issuedDate: new Date().toISOString() }
                     : s
             ));
@@ -174,9 +280,9 @@ export default function CertificateManagementPage() {
         link.click();
     };
 
-    const beginnerColumns    = useMemo(() => buildCertificateColumns({ onIssue: openPreview, level: 'beginner' }),    [openPreview]);
-    const intermediateColumns = useMemo(() => buildCertificateColumns({ onIssue: openPreview, level: 'intermediate' }), [openPreview]);
-    const advancedColumns    = useMemo(() => buildCertificateColumns({ onIssue: openPreview, level: 'advanced' }),    [openPreview]);
+    const buildColumns = useCallback((level, issuanceDisabled) =>
+        buildCertificateColumns({ onIssue: openPreview, level, issuanceDisabled }),
+    [openPreview]);
 
     return (
         <div className="mx-auto max-w-7xl space-y-6 p-6">
@@ -246,91 +352,51 @@ export default function CertificateManagementPage() {
                         <Button variant="outline" size="sm" className="mt-4" onClick={fetchAll}>Retry</Button>
                     </CardContent>
                 </Card>
+            ) : categories.length === 0 ? (
+                <Card className="border-gray-200 shadow-sm">
+                    <CardContent className="py-16 text-center text-sm text-gray-500">
+                        No students have completed all modules in any category yet.
+                    </CardContent>
+                </Card>
             ) : (
-                <Tabs defaultValue="beginner">
-                    <TabsList className="mb-4 h-auto gap-1 bg-gray-100/80 p-1">
-                        <TabsTrigger
-                            value="beginner"
-                            className="flex items-center gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                        >
-                            <BookOpen className="h-4 w-4" />
-                            Beginner
-                            {summary.beginnerPending > 0 && (
-                                <span className="ml-1 rounded-full bg-yellow-300 px-1.5 py-0.5 text-xs font-bold text-yellow-900">
-                                    {summary.beginnerPending}
-                                </span>
-                            )}
-                            <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs font-bold text-gray-600">
-                                {summary.beginnerTotal}
-                            </span>
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="intermediate"
-                            className="flex items-center gap-2 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                        >
-                            <TrendingUp className="h-4 w-4" />
-                            Intermediate
-                            {summary.intermediatePending > 0 && (
-                                <span className="ml-1 rounded-full bg-yellow-300 px-1.5 py-0.5 text-xs font-bold text-yellow-900">
-                                    {summary.intermediatePending}
-                                </span>
-                            )}
-                            <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs font-bold text-gray-600">
-                                {summary.intermediateTotal}
-                            </span>
-                        </TabsTrigger>
-                        <TabsTrigger
-                            value="advanced"
-                            className="flex items-center gap-2 data-[state=active]:bg-rose-600 data-[state=active]:text-white data-[state=active]:shadow-sm"
-                        >
-                            <Star className="h-4 w-4" />
-                            Advanced
-                            {summary.advancedPending > 0 && (
-                                <span className="ml-1 rounded-full bg-yellow-300 px-1.5 py-0.5 text-xs font-bold text-yellow-900">
-                                    {summary.advancedPending}
-                                </span>
-                            )}
-                            <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs font-bold text-gray-600">
-                                {summary.advancedTotal}
-                            </span>
-                        </TabsTrigger>
+                <Tabs defaultValue={categories[0].id}>
+                    <TabsList className="mb-4 h-auto flex-wrap gap-1 bg-gray-100/80 p-1">
+                        {categories.map((category) => {
+                            const catStudents = allStudents.filter(s => s.categoryId === category.id);
+                            const catPending = catStudents.filter(s => s.status === 'pending').length;
+                            const disabled = isIssuanceDisabled(category.name);
+                            return (
+                                <TabsTrigger
+                                    key={category.id}
+                                    value={category.id}
+                                    className="flex items-center gap-2 data-[state=active]:bg-gray-900 data-[state=active]:text-white data-[state=active]:shadow-sm"
+                                >
+                                    {category.name}
+                                    {!disabled && catPending > 0 && (
+                                        <span className="ml-1 rounded-full bg-yellow-300 px-1.5 py-0.5 text-xs font-bold text-yellow-900">
+                                            {catPending}
+                                        </span>
+                                    )}
+                                    <span className="ml-1 rounded-full bg-gray-200 px-1.5 py-0.5 text-xs font-bold text-gray-600">
+                                        {catStudents.length}
+                                    </span>
+                                </TabsTrigger>
+                            );
+                        })}
                     </TabsList>
 
-                    {['beginner', 'intermediate', 'advanced'].map((level) => {
-                        const levelData = byLevel(level);
-                        const pendingCount = levelData.filter(s => s.status === 'pending').length;
-                        const colMap = { beginner: beginnerColumns, intermediate: intermediateColumns, advanced: advancedColumns };
-                        const levelLabel = level.charAt(0).toUpperCase() + level.slice(1);
-                        return (
-                            <TabsContent key={level} value={level}>
-                                {pendingCount > 0 && (
-                                    <div className="mb-3 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-                                        <p className="text-sm text-amber-800 font-medium">
-                                            {pendingCount} pending certificate{pendingCount !== 1 ? 's' : ''} awaiting issuance
-                                        </p>
-                                        <Button
-                                            size="sm"
-                                            onClick={() => handleIssueAll(level)}
-                                            disabled={issuingAll}
-                                            className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5"
-                                        >
-                                            {issuingAll
-                                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                                : <Award className="h-3.5 w-3.5" />
-                                            }
-                                            Issue All Pending
-                                        </Button>
-                                    </div>
-                                )}
-                                <CertificatesDataTable
-                                    columns={colMap[level]}
-                                    data={levelData}
-                                    title={`${levelLabel}  ${levelData.length} fellow${levelData.length !== 1 ? 's' : ''} completed all modules`}
-                                    level={level}
-                                />
-                            </TabsContent>
-                        );
-                    })}
+                    {categories.map((category) => (
+                        <TabsContent key={category.id} value={category.id}>
+                            <CategoryLevelTabs
+                                category={category}
+                                students={allStudents.filter(s => s.categoryId === category.id)}
+                                issuanceDisabled={isIssuanceDisabled(category.name)}
+                                issuingAll={issuingAll}
+                                onIssueAll={handleIssueAll}
+                                buildColumns={buildColumns}
+                            />
+                        </TabsContent>
+                    ))}
                 </Tabs>
             )}
 

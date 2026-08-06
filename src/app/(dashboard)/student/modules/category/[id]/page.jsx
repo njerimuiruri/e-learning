@@ -77,7 +77,7 @@ function CategoryPageContent() {
             setError(false);
             const [cat, modsResult, enrollResult, progResult, statusResult] = await Promise.allSettled([
                 categoryService.getCategoryById(categoryId),
-                moduleService.getAllModules({ limit: 500 }),
+                moduleService.getAllModules({ category: categoryId, limit: 500 }),
                 moduleEnrollmentService.getMyEnrollments(),
                 progressionService.getMyProgressions(),
                 paymentService.checkCategoryStatus(categoryId),
@@ -91,7 +91,7 @@ function CategoryPageContent() {
             if (modsResult.status === 'fulfilled') {
                 const v = modsResult.value;
                 let mods = Array.isArray(v) ? v : v?.modules || [];
-                // Filter client-side by categoryId (server filter may not be supported)
+                // Server already scopes by categoryId; re-filter defensively in case of stray cross-category rows
                 mods = mods.filter(m => {
                     const modCatId = (m.categoryId?._id || m.categoryId)?.toString?.() || String(m.categoryId?._id || m.categoryId);
                     return modCatId === categoryId?.toString();
@@ -353,7 +353,7 @@ function CategoryPageContent() {
                                 </Button>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-6">
                                 {modules.map((mod) => {
                                     const lvl = getLvl(mod.level);
                                     const LvlIcon = Icons[lvl.icon] || Icons.BookOpen;
@@ -376,12 +376,12 @@ function CategoryPageContent() {
 
                                     return (
                                         <Card key={mod._id}
-                                            className={`group overflow-hidden border-gray-100 hover:shadow-md transition-all duration-200 flex flex-col ${isLocked ? 'opacity-70' : 'hover:border-[#021d49]/20'}`}>
-                                            {/* Banner */}
-                                            <div className="relative h-36 overflow-hidden shrink-0">
+                                            className={`group overflow-hidden rounded-2xl border-gray-200 hover:shadow-lg transition-all duration-300 flex flex-col ${isLocked ? 'opacity-70' : 'hover:border-[#021d49]/30 hover:-translate-y-0.5'}`}>
+                                            {/* Banner — image stays fully visible, badges only */}
+                                            <div className="relative h-44 overflow-hidden shrink-0 bg-gray-100">
                                                 {mod.bannerUrl ? (
                                                     <img src={toAbsoluteUrl(mod.bannerUrl)} alt={mod.title}
-                                                        className={`w-full h-full object-cover transition-transform duration-300 ${!isLocked ? 'group-hover:scale-105' : 'grayscale-[30%]'}`} />
+                                                        className={`w-full h-full object-cover transition-transform duration-500 ${!isLocked ? 'group-hover:scale-105' : 'grayscale-[30%]'}`} />
                                                 ) : (
                                                     <div className={`w-full h-full flex items-center justify-center ${mod.level === 'advanced' ? 'bg-gradient-to-br from-rose-200 to-rose-300'
                                                         : mod.level === 'intermediate' ? 'bg-gradient-to-br from-amber-100 to-amber-200'
@@ -390,15 +390,18 @@ function CategoryPageContent() {
                                                         <Icons.Layers className="w-12 h-12 text-white/50" />
                                                     </div>
                                                 )}
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                                                {/* Module order badge (bottom-left) */}
+                                                {/* Subtle top/bottom fades so badges stay legible without hiding the image */}
+                                                <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/35 to-transparent pointer-events-none" />
                                                 {mod.order > 0 && (
-                                                    <div className="absolute bottom-2 left-2.5 bg-black/60 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full">
+                                                    <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/45 to-transparent pointer-events-none" />
+                                                )}
+                                                {mod.order > 0 && (
+                                                    <div className="absolute bottom-2 left-2.5 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide">
                                                         Module {mod.order}
                                                     </div>
                                                 )}
                                                 <div className="absolute top-2.5 left-2.5">
-                                                    <Badge variant="outline" className={`text-[10px] font-bold border ${lvl.badge} bg-white/90`}>
+                                                    <Badge variant="outline" className={`text-[10px] font-bold border ${lvl.badge} bg-white/95`}>
                                                         <LvlIcon className="w-2.5 h-2.5 mr-1" />{lvl.label}
                                                     </Badge>
                                                 </div>
@@ -453,34 +456,24 @@ function CategoryPageContent() {
 
                                             {/* Content */}
                                             <CardContent className="p-4 flex flex-col flex-1">
-                                                {/* Module Order Badge */}
-                                                {mod.order > 0 && (
-                                                    <div className="inline-flex items-center gap-1.5 mb-2 w-fit">
-                                                        <span className="inline-flex items-center gap-1 text-xs font-bold bg-[#021d49] text-white px-2.5 py-1 rounded-md">
-                                                            <Icons.ListOrdered className="w-3 h-3" />
-                                                            Module {mod.order}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 mb-1.5 group-hover:text-[#021d49] transition-colors leading-snug">
+                                                <h3 className="text-sm font-bold text-gray-900 line-clamp-2 mb-1.5 group-hover:text-[#021d49] transition-colors leading-snug min-h-[2.5rem]">
                                                     {mod.title}
                                                 </h3>
                                                 {desc && <p className="text-xs text-gray-500 line-clamp-2 mb-3 leading-relaxed">{desc}</p>}
 
                                                 {/* Meta */}
-                                                <div className="flex items-center gap-3 text-xs text-gray-400 mb-3">
+                                                <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 mb-3">
                                                     <span className="flex items-center gap-1">
-                                                        <Icons.BookOpen className="w-3 h-3" />
+                                                        <Icons.BookOpen className="w-3.5 h-3.5 text-gray-400" />
                                                         {mod.lessons?.length || mod.totalLessons || 0} lessons
                                                     </span>
                                                     <span className="flex items-center gap-1">
-                                                        <Icons.Users className="w-3 h-3" />
+                                                        <Icons.Users className="w-3.5 h-3.5 text-gray-400" />
                                                         {mod.enrollmentCount || 0}
                                                     </span>
                                                     {(mod.avgRating || 0) > 0 && (
-                                                        <span className="flex items-center gap-0.5 text-amber-500">
-                                                            <Icons.Star className="w-3 h-3 fill-current" />
+                                                        <span className="flex items-center gap-1 text-amber-500 font-medium">
+                                                            <Icons.Star className="w-3.5 h-3.5 fill-current" />
                                                             {(mod.avgRating || 0).toFixed(1)}
                                                         </span>
                                                     )}
@@ -488,23 +481,23 @@ function CategoryPageContent() {
 
                                                 {instructors.length > 0 && (
                                                     <div className="flex items-center gap-1.5 mb-3">
-                                                        <Icons.GraduationCap className="w-3 h-3 text-gray-400 shrink-0" />
+                                                        <Icons.GraduationCap className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                                                         <p className="text-xs text-gray-500 truncate">{instructors.join(', ')}</p>
                                                     </div>
                                                 )}
 
                                                 <Separator className="mb-3" />
 
-                                                {/* Progress if enrolled */}
+                                                {/* Progress if enrolled — always clearly visible */}
                                                 {isEnrolled && (
                                                     <div className="mb-3">
-                                                        <div className="flex items-center justify-between mb-1">
-                                                            <span className="text-[10px] text-gray-500">Your progress</span>
-                                                            <span className="text-[10px] font-bold text-[#021d49]">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <span className="text-xs text-gray-500 font-medium">Your progress</span>
+                                                            <span className="text-xs font-bold text-[#021d49]">
                                                                 {Math.min(100, Math.round(enrollment.progress || 0))}%
                                                             </span>
                                                         </div>
-                                                        <Progress value={Math.min(100, Math.round(enrollment.progress || 0))} className="h-1.5" />
+                                                        <Progress value={Math.min(100, Math.round(enrollment.progress || 0))} className="h-2" />
                                                     </div>
                                                 )}
 
@@ -512,17 +505,17 @@ function CategoryPageContent() {
                                                 {isPayLaterModule ? (
                                                     <button
                                                         onClick={() => handlePayLaterModuleClick(mod)}
-                                                        className="w-full h-8 text-xs rounded-lg bg-amber-50 border border-amber-200 text-amber-700 font-semibold hover:bg-amber-100 transition-colors flex items-center justify-center gap-1.5"
+                                                        className="w-full h-9 text-xs rounded-lg bg-amber-50 border border-amber-200 text-amber-700 font-semibold hover:bg-amber-100 transition-colors flex items-center justify-center gap-1.5 mt-auto"
                                                     >
                                                         <Icons.Lock className="w-3.5 h-3.5" /> Unlock · Pay to Access
                                                     </button>
                                                 ) : isFellowBlocked ? (
-                                                    <div className="rounded-lg bg-purple-50 border border-purple-100 p-2.5 flex items-start gap-2">
+                                                    <div className="rounded-lg bg-purple-50 border border-purple-100 p-2.5 flex items-start gap-2 mt-auto">
                                                         <Icons.Award className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" />
                                                         <p className="text-[10px] text-purple-700 leading-snug">Fellows-only. Non-fellows must pay to access.</p>
                                                     </div>
                                                 ) : isLocked ? (
-                                                    <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 flex items-start gap-2">
+                                                    <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 flex items-start gap-2 mt-auto">
                                                         <Icons.Lock className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
                                                         <p className="text-xs text-gray-500 leading-snug">
                                                             {seqLocked
@@ -532,14 +525,14 @@ function CategoryPageContent() {
                                                         </p>
                                                     </div>
                                                 ) : isEnrolled ? (
-                                                    <Button className="w-full h-8 text-xs bg-[#021d49] hover:bg-[#032a66] text-white mt-auto"
+                                                    <Button className="w-full h-9 text-xs font-semibold rounded-lg bg-[#021d49] hover:bg-[#032a66] text-white mt-auto"
                                                         onClick={() => router.push(`/student/modules/${mod._id}`)}>
                                                         <Icons.Play className="w-3.5 h-3.5 mr-1.5" />
                                                         {enrollment.isCompleted ? 'Review Module' : 'Continue Learning'}
                                                     </Button>
                                                 ) : (
                                                     <Button
-                                                        className="w-full h-8 text-xs bg-[#1e40af] hover:bg-[#1a35a0] text-white mt-auto"
+                                                        className="w-full h-9 text-xs font-semibold rounded-lg bg-[#1e40af] hover:bg-[#1a35a0] text-white mt-auto"
                                                         disabled={enrollingId === mod._id}
                                                         onClick={() => handleEnroll(mod)}>
                                                         {enrollingId === mod._id ? (

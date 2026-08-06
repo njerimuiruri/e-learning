@@ -368,8 +368,8 @@ export const certificateService = {
     const { data } = await api.post(`/certificates/${enrollmentId}/issue`);
     return data;
   },
-  issueAll: async (level: string) => {
-    const { data } = await api.post('/certificates/issue-all', { level });
+  issueAll: async (level: string, categoryId?: string) => {
+    const { data } = await api.post('/certificates/issue-all', { level, categoryId });
     return data;
   },
   reset: async (studentId: string, level: string) => {

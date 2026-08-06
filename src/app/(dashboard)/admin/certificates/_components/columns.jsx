@@ -35,7 +35,7 @@ function StatusBadge({ status, level }) {
   );
 }
 
-export function buildCertificateColumns({ onIssue, level = "beginner" }) {
+export function buildCertificateColumns({ onIssue, level = "beginner", issuanceDisabled = false }) {
   const theme = LEVEL_THEME[level] || LEVEL_THEME.beginner;
 
   return [
@@ -136,6 +136,22 @@ export function buildCertificateColumns({ onIssue, level = "beginner" }) {
       header: () => <div className="text-right pr-2">Actions</div>,
       cell: ({ row }) => {
         const student = row.original;
+        if (issuanceDisabled && student.status === "pending") {
+          return (
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                title="Certificate template not yet available for this category"
+                className="border-gray-200 text-gray-400"
+              >
+                <Award className="mr-1.5 h-3.5 w-3.5" />
+                Not Available
+              </Button>
+            </div>
+          );
+        }
         return (
           <div className="flex justify-end">
             <Button

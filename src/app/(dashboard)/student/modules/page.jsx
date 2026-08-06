@@ -787,15 +787,15 @@ function ModuleBrowsingContent() {
 
                     {/* ── Loading ── */}
                     {loading && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {Array.from({ length: 6 }).map((_, i) => (
-                                <Card key={i} className="border-gray-100 overflow-hidden">
-                                    <div className="h-40 bg-gray-100 animate-pulse" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-6">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <Card key={i} className="rounded-2xl border-gray-200 overflow-hidden">
+                                    <div className="h-44 bg-gray-100 animate-pulse" />
                                     <CardContent className="p-4 space-y-2">
                                         <div className="h-3 bg-gray-100 rounded animate-pulse w-1/3" />
                                         <div className="h-4 bg-gray-100 rounded animate-pulse w-3/4" />
                                         <div className="h-3 bg-gray-100 rounded animate-pulse w-full" />
-                                        <div className="h-8 bg-gray-100 rounded animate-pulse mt-3" />
+                                        <div className="h-9 bg-gray-100 rounded-lg animate-pulse mt-3" />
                                     </CardContent>
                                 </Card>
                             ))}
@@ -804,7 +804,7 @@ function ModuleBrowsingContent() {
 
                     {/* ── Modules Grid ── */}
                     {!loading && displayedModules.length > 0 && allEnrolledCategoryIds.length === 0 && (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 lg:gap-6">
                             {displayedModules.map((mod) => {
                                 const lvl = getLvl(mod.level);
                                 const LvlIcon = Icons[lvl.icon] || Icons.BookOpen;
@@ -839,13 +839,13 @@ function ModuleBrowsingContent() {
                                 return (
                                     <Card
                                         key={mod._id}
-                                        className={`group overflow-hidden border-gray-100 hover:shadow-md transition-all duration-200 flex flex-col ${isLocked ? 'opacity-75' : 'hover:border-[#021d49]/20'}`}
+                                        className={`group overflow-hidden rounded-2xl border-gray-200 hover:shadow-lg transition-all duration-300 flex flex-col ${isLocked ? 'opacity-75' : 'hover:border-[#021d49]/30 hover:-translate-y-0.5'}`}
                                     >
-                                        {/* Banner */}
-                                        <div className="relative h-36 overflow-hidden shrink-0">
+                                        {/* Banner — image stays fully visible, badges only */}
+                                        <div className="relative h-44 overflow-hidden shrink-0 bg-gray-100">
                                             {mod.bannerUrl ? (
                                                 <img src={toAbsoluteUrl(mod.bannerUrl)} alt={mod.title}
-                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                             ) : (
                                                 <div className={`w-full h-full flex items-center justify-center ${mod.level === 'advanced' ? 'bg-gradient-to-br from-rose-200 to-rose-300' :
                                                     mod.level === 'intermediate' ? 'bg-gradient-to-br from-amber-100 to-amber-200' :
@@ -854,10 +854,13 @@ function ModuleBrowsingContent() {
                                                     <Icons.Layers className="w-12 h-12 text-white/50" />
                                                 </div>
                                             )}
-                                            {/* Overlay badges */}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                                            {/* Subtle top/bottom fades so badges stay legible without hiding the image */}
+                                            <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-black/35 to-transparent pointer-events-none" />
+                                            {mod.order > 0 && (
+                                                <div className="absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/45 to-transparent pointer-events-none" />
+                                            )}
                                             <div className="absolute top-2.5 left-2.5">
-                                                <Badge variant="outline" className={`text-[10px] font-bold border ${lvl.badge} bg-white/90`}>
+                                                <Badge variant="outline" className={`text-[10px] font-bold border ${lvl.badge} bg-white/95`}>
                                                     <LvlIcon className="w-2.5 h-2.5 mr-1" />
                                                     {lvl.label}
                                                 </Badge>
@@ -885,16 +888,15 @@ function ModuleBrowsingContent() {
                                                 )}
                                                 {!isEnrolled && isPaid && (
                                                     category?.hasTieredPricing ? (
-                                                        <div className="flex flex-col items-end gap-0.5 shrink-0">
+                                                        <div className="flex flex-col items-end gap-0.5 shrink-0 bg-white/95 rounded-lg px-2 py-1">
                                                             <div className="flex items-center gap-1">
                                                                 <span className="text-[9px] text-sky-500 font-medium">Student</span>
-                                                                <span className="text-xs font-extrabold text-sky-700">${category.studentPrice}</span>
+                                                                <span className="text-[10px] font-extrabold text-sky-700">${category.studentPrice}</span>
                                                             </div>
                                                             <div className="flex items-center gap-1">
                                                                 <span className="text-[9px] text-orange-500 font-medium">Non-Student</span>
-                                                                <span className="text-xs font-extrabold text-orange-600">${category.nonStudentPrice}</span>
+                                                                <span className="text-[10px] font-extrabold text-orange-600">${category.nonStudentPrice}</span>
                                                             </div>
-                                                            <span className="text-[8px] text-gray-400 font-medium">USD · one-time</span>
                                                         </div>
                                                     ) : (
                                                         <Badge className="text-[10px] bg-amber-500 text-white border-0">
@@ -913,23 +915,20 @@ function ModuleBrowsingContent() {
                                                     </Badge>
                                                 )}
                                             </div>
+                                            {/* Module order badge (bottom-left) */}
+                                            {mod.order > 0 && (
+                                                <div className="absolute bottom-2 left-2.5 bg-black/70 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wide">
+                                                    Module {mod.order}
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Content */}
                                         <CardContent className="p-4 flex flex-col flex-1">
-                                            {/* Module Order Badge */}
-                                            {mod.order > 0 && (
-                                                <div className="inline-flex items-center gap-1 mb-2 w-fit">
-                                                    <span className="inline-flex items-center gap-1 text-xs font-bold bg-[#021d49] text-white px-2.5 py-1 rounded-md">
-                                                        <Icons.ListOrdered className="w-3 h-3" />
-                                                        Module {mod.order}
-                                                    </span>
-                                                </div>
-                                            )}
                                             {categoryName && (
                                                 <p className="text-[10px] font-bold text-[#021d49] uppercase tracking-wider mb-1">{categoryName}</p>
                                             )}
-                                            <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 mb-1.5 group-hover:text-[#021d49] transition-colors flex-1 leading-snug">
+                                            <h3 className="text-sm font-bold text-gray-900 line-clamp-2 mb-1.5 group-hover:text-[#021d49] transition-colors leading-snug min-h-[2.5rem]">
                                                 {mod.title}
                                             </h3>
                                             {desc && (
@@ -937,18 +936,18 @@ function ModuleBrowsingContent() {
                                             )}
 
                                             {/* Meta row */}
-                                            <div className="flex items-center gap-3 text-xs text-gray-400 mb-3">
+                                            <div className="flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-gray-400 mb-3">
                                                 <span className="flex items-center gap-1">
-                                                    <Icons.BookOpen className="w-3 h-3" />
+                                                    <Icons.BookOpen className="w-3.5 h-3.5 text-gray-400" />
                                                     {mod.lessons?.length || mod.totalLessons || 0} lessons
                                                 </span>
                                                 <span className="flex items-center gap-1">
-                                                    <Icons.Users className="w-3 h-3" />
+                                                    <Icons.Users className="w-3.5 h-3.5 text-gray-400" />
                                                     {mod.enrollmentCount || 0}
                                                 </span>
                                                 {(mod.avgRating || 0) > 0 && (
-                                                    <span className="flex items-center gap-0.5 text-amber-500">
-                                                        <Icons.Star className="w-3 h-3 fill-current" />
+                                                    <span className="flex items-center gap-1 text-amber-500 font-medium">
+                                                        <Icons.Star className="w-3.5 h-3.5 fill-current" />
                                                         {(mod.avgRating || 0).toFixed(1)}
                                                     </span>
                                                 )}
@@ -957,25 +956,25 @@ function ModuleBrowsingContent() {
                                             {/* Instructors */}
                                             {instructors.length > 0 && (
                                                 <div className="flex items-center gap-1.5 mb-3">
-                                                    <Icons.GraduationCap className="w-3 h-3 text-gray-400 shrink-0" />
+                                                    <Icons.GraduationCap className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                                                     <p className="text-xs text-gray-500 truncate">{instructors.join(', ')}</p>
                                                 </div>
                                             )}
 
                                             <Separator className="mb-3" />
 
-                                            {/* Enrollment progress if enrolled */}
+                                            {/* Enrollment progress if enrolled — always clearly visible */}
                                             {isEnrolled && (
                                                 <div className="mb-3">
                                                     {(() => {
                                                         const pct = enrollment.isCompleted ? 100 : Math.min(100, Math.round(enrollment.progress || 0));
                                                         return (
                                                             <>
-                                                                <div className="flex items-center justify-between mb-1">
-                                                                    <span className="text-[10px] text-gray-500">Your progress</span>
-                                                                    <span className="text-[10px] font-bold text-[#021d49]">{pct}%</span>
+                                                                <div className="flex items-center justify-between mb-1.5">
+                                                                    <span className="text-xs text-gray-500 font-medium">Your progress</span>
+                                                                    <span className="text-xs font-bold text-[#021d49]">{pct}%</span>
                                                                 </div>
-                                                                <Progress value={pct} className="h-1.5" />
+                                                                <Progress value={pct} className="h-2" />
                                                             </>
                                                         );
                                                     })()}
@@ -984,42 +983,42 @@ function ModuleBrowsingContent() {
 
                                             {/* Action button */}
                                             {isCrossCategory ? (
-                                                <div className="rounded-lg bg-slate-50 border border-slate-200 p-2.5 flex items-start gap-2">
+                                                <div className="rounded-lg bg-slate-50 border border-slate-200 p-2.5 flex items-start gap-2 mt-auto">
                                                     <Icons.ShieldX className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
                                                     <p className="text-[10px] text-slate-500 leading-snug">
                                                         Not available for your enrolled programme.
                                                     </p>
                                                 </div>
                                             ) : isFellowBlocked ? (
-                                                <div className="rounded-lg bg-purple-50 border border-purple-100 p-2.5 flex items-start gap-2">
+                                                <div className="rounded-lg bg-purple-50 border border-purple-100 p-2.5 flex items-start gap-2 mt-auto">
                                                     <Icons.Award className="w-3.5 h-3.5 text-purple-500 shrink-0 mt-0.5" />
                                                     <p className="text-[10px] text-purple-700 leading-snug">
                                                         Fellows-only module. Non-fellows must pay to access.
                                                     </p>
                                                 </div>
                                             ) : seqLocked ? (
-                                                <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 flex items-start gap-2">
+                                                <div className="rounded-lg bg-amber-50 border border-amber-200 p-2.5 flex items-start gap-2 mt-auto">
                                                     <Icons.Lock className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                                                     <p className="text-xs text-amber-700 leading-snug">
                                                         Complete <span className="font-medium">&ldquo;{prevModTitle}&rdquo;</span> first
                                                     </p>
                                                 </div>
                                             ) : !hasLevelAccess && !isFellowBlocked ? (
-                                                <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 flex items-center gap-2">
+                                                <div className="rounded-lg bg-gray-50 border border-gray-200 p-2.5 flex items-center gap-2 mt-auto">
                                                     <Icons.Lock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                                                     <p className="text-xs text-gray-500">
                                                         Complete {mod.level === 'advanced' ? 'intermediate' : 'beginner'} level first
                                                     </p>
                                                 </div>
                                             ) : isEnrolled ? (
-                                                <Button className="w-full h-8 text-xs bg-[#021d49] hover:bg-[#032a66] text-white"
+                                                <Button className="w-full h-9 text-xs font-semibold rounded-lg bg-[#021d49] hover:bg-[#032a66] text-white mt-auto"
                                                     onClick={() => router.push(`/student/modules/${mod._id}`)}>
                                                     <Icons.Play className="w-3.5 h-3.5 mr-1.5" />
                                                     {enrollment.isCompleted ? 'Review Module' : 'Continue Learning'}
                                                 </Button>
                                             ) : (
                                                 <Button
-                                                    className="w-full h-8 text-xs bg-[#1e40af] hover:bg-[#1a35a0] text-white"
+                                                    className="w-full h-9 text-xs font-semibold rounded-lg bg-[#1e40af] hover:bg-[#1a35a0] text-white mt-auto"
                                                     disabled={enrollingId === mod._id}
                                                     onClick={() => handleEnroll(mod)}>
                                                     {enrollingId === mod._id ? (

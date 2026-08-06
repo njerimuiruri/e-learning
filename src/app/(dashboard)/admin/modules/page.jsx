@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import * as Icons from 'lucide-react';
 import adminService from '@/lib/api/adminService';
+import categoryService from '@/lib/api/categoryService';
 import moduleRatingService from '@/lib/api/moduleRatingService';
 import ModuleStudentPreview from '@/components/shared/ModuleStudentPreview';
 import draftService from '@/lib/api/draftService';
@@ -30,6 +31,8 @@ export default function AdminModulesPage() {
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState('all');
     const [levelFilter, setLevelFilter] = useState('all');
+    const [categoryFilter, setCategoryFilter] = useState('all');
+    const [categories, setCategories] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [viewMode, setViewMode] = useState('cards');
     const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
@@ -51,7 +54,13 @@ export default function AdminModulesPage() {
     useEffect(() => {
         fetchModules();
         fetchStats();
-    }, [statusFilter, levelFilter, pagination.page]);
+    }, [statusFilter, levelFilter, categoryFilter, pagination.page]);
+
+    useEffect(() => {
+        categoryService.getAllCategories()
+            .then((data) => setCategories(Array.isArray(data) ? data : data?.categories || []))
+            .catch(() => setCategories([]));
+    }, []);
 
     useEffect(() => {
         if (selectedModule?.status === 'published' && showDetailModal) {
@@ -72,6 +81,7 @@ export default function AdminModulesPage() {
             };
             if (statusFilter !== 'all') filters.status = statusFilter;
             if (levelFilter !== 'all') filters.level = levelFilter;
+            if (categoryFilter !== 'all') filters.category = categoryFilter;
 
             const data = await adminService.getAllModules(filters);
             setModules(data.modules || []);
@@ -412,6 +422,18 @@ export default function AdminModulesPage() {
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6">
                     <div className="p-4 flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
                         <div className="flex flex-wrap gap-3 items-center">
+                            {/* Category Filter */}
+                            <select
+                                value={categoryFilter}
+                                onChange={(e) => { setCategoryFilter(e.target.value); setPagination(p => ({ ...p, page: 1 })); }}
+                                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                <option value="all">All Categories</option>
+                                {categories.map((cat) => (
+                                    <option key={cat._id} value={cat._id}>{cat.name}</option>
+                                ))}
+                            </select>
+
                             {/* Status Filter */}
                             <select
                                 value={statusFilter}
