@@ -35,6 +35,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import EssayQuestionCard from '@/components/shared/submissions/EssayQuestionCard';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -344,6 +345,21 @@ export default function StudentResponsesPage() {
         } finally {
             setGradeLoading(false);
         }
+    };
+
+    // Patch a freshly generated/regenerated AI insights result into both the
+    // open "View Submission" dialog and the underlying submissions list, so
+    // reopening the dialog later shows the cached result instantly.
+    const handleInsightsUpdate = (questionIndex, insights) => {
+        const patchResults = (results = []) =>
+            results.map(r => r.questionIndex === questionIndex ? { ...r, aiInsights: insights } : r);
+
+        setViewTarget(prev => prev && ({ ...prev, finalAssessmentResults: patchResults(prev.finalAssessmentResults) }));
+        setSubmissions(prev => prev.map(s =>
+            s.enrollmentId === viewTarget?.enrollmentId
+                ? { ...s, finalAssessmentResults: patchResults(s.finalAssessmentResults) }
+                : s
+        ));
     };
 
     const handleMessageStudent = (sub) => {
@@ -780,31 +796,13 @@ export default function StudentResponsesPage() {
                                             Essay Questions ({essayResults(viewTarget).length})
                                         </h3>
                                         <div className="space-y-4">
-                                            {essayResults(viewTarget).map((r, i) => (
-                                                <div key={i} className="rounded-xl border border-violet-200 bg-violet-50 p-4">
-                                                    <p className="text-xs font-semibold text-violet-600 mb-1">Essay Q{r.questionIndex + 1}</p>
-                                                    <p className="text-sm font-medium text-gray-800 mb-3">{r.questionText}</p>
-                                                    <div className="bg-white rounded-lg border border-violet-100 p-3">
-                                                        <p className="text-xs text-gray-500 mb-1.5 font-semibold uppercase tracking-wide">Student's Answer</p>
-                                                        {r.submissionType === 'pdf' ? (
-                                                            r.studentAnswer ? (
-                                                                <a href={resolveAssetUrl(r.studentAnswer)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-sm font-medium text-violet-700 hover:text-violet-900 underline">
-                                                                    <Icons.FileDown className="w-4 h-4" /> View submitted PDF
-                                                                </a>
-                                                            ) : (
-                                                                <p className="text-sm text-gray-400 italic">(no file submitted)</p>
-                                                            )
-                                                        ) : (
-                                                            <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{r.studentAnswer || '(no answer provided)'}</p>
-                                                        )}
-                                                    </div>
-                                                    {r.instructorFeedback && (
-                                                        <div className="mt-3 bg-emerald-50 border border-emerald-200 rounded-lg p-3">
-                                                            <p className="text-xs text-emerald-700 font-semibold mb-1 uppercase tracking-wide">Instructor Feedback</p>
-                                                            <p className="text-sm text-emerald-800 leading-relaxed">{r.instructorFeedback}</p>
-                                                        </div>
-                                                    )}
-                                                </div>
+                                            {essayResults(viewTarget).map((r) => (
+                                                <EssayQuestionCard
+                                                    key={r.questionIndex}
+                                                    result={r}
+                                                    enrollmentId={viewTarget.enrollmentId}
+                                                    onInsightsUpdate={handleInsightsUpdate}
+                                                />
                                             ))}
                                         </div>
                                     </div>

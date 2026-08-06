@@ -112,6 +112,27 @@ const moduleEnrollmentService = {
     const response = await api.post(`/${enrollmentId}/grade-essay`, body);
     return response.data;
   },
+
+  // Instructor/Admin: get (or generate + cache) AI summary/insights for one essay answer
+  async getEssayAiAnalysis(enrollmentId: string, questionIndex: number, regenerate = false) {
+    const response = await api.post(
+      `/${enrollmentId}/essay/${questionIndex}/ai-analysis`,
+      {},
+      { params: regenerate ? { regenerate: 'true' } : {} },
+    );
+    return response.data;
+  },
+
+  // Admin: get all submissions across every module (view-only)
+  async getAdminSubmissions(params: {
+    moduleId?: string;
+    instructorId?: string;
+    submissionType?: 'essay' | 'mcq' | 'all';
+    status?: 'pending' | 'passed' | 'failed' | 'all';
+  } = {}) {
+    const response = await api.get('/admin/submissions', { params });
+    return response.data;
+  },
 };
 
 export default moduleEnrollmentService;

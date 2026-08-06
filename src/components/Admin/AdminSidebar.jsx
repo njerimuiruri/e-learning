@@ -130,6 +130,11 @@ export default function AdminSidebar() {
             path: '/admin/modules',
         },
         {
+            icon: 'FileText',
+            label: 'Essay Submissions',
+            path: '/admin/submissions',
+        },
+        {
             icon: 'UserCog',
             label: 'Instructor Approvals',
             path: '/admin/instructors',
