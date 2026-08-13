@@ -543,8 +543,12 @@ function ModuleLearningContent() {
         const modRes = moduleData.resources || moduleData.moduleResources || [];
         modRes.forEach(r => r && items.push({ res: r, source: 'Module Resources' }));
         lessons.forEach((l, li) => {
+            const lessonLabel = l.title || `Lesson ${li + 1}`;
             const lRes = l.lessonResources || l.resources || [];
-            lRes.forEach(r => r && items.push({ res: r, source: l.title || `Lesson ${li + 1}` }));
+            lRes.forEach(r => r && items.push({ res: r, source: lessonLabel }));
+            (l.resourceGroups || []).forEach(group => {
+                (group.resources || []).forEach(r => r && items.push({ res: r, source: `${lessonLabel} — ${group.title || 'Resources'}` }));
+            });
         });
         return items.filter(item => typeof item.res === 'string' ? item.res : item.res?.url);
     }, [moduleData, lessons]);
@@ -868,7 +872,46 @@ function ModuleLearningContent() {
     }
 
     const lessonRes = currentLesson ? (currentLesson.lessonResources || currentLesson.resources || []) : [];
+    const lessonResourceGroups = currentLesson ? (currentLesson.resourceGroups || []).filter(g => (g.resources || []).length > 0) : [];
     const moduleRes = moduleData?.resources || moduleData?.moduleResources || [];
+    const totalLessonResCount = lessonRes.length + lessonResourceGroups.reduce((s, g) => s + g.resources.length, 0);
+
+    const renderResourceItem = (res, idx) => {
+        const { url, name, ext, isPdf, isCloudinary, isVideo, isLink } = resourceHref(res);
+        if (!url) return null;
+
+        if (isVideo) {
+            return (
+                <div key={idx} className="space-y-1.5">
+                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name || `Resource ${idx + 1}`}</p>
+                    <VideoPlayer url={url} />
+                </div>
+            );
+        }
+
+        const colors = fileIconColor(ext);
+        const handleClick = async (e) => {
+            if (isLink) return; // let the native <a> navigation happen
+            if (!isCloudinary) return;
+            e.preventDefault();
+            try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
+        };
+        return (
+            <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
+                onClick={handleClick}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-all group cursor-pointer ${darkMode ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-gray-50 border-gray-200 hover:border-gray-300 hover:bg-white'}`}
+            >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
+                    <Icons.FileText className={`w-4 h-4 ${colors.text}`} />
+                </div>
+                <span className={`flex-1 text-sm font-medium truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name || `Resource ${idx + 1}`}</span>
+                {isPdf || isLink
+                    ? <Icons.ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
+                    : <Icons.Download className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
+                }
+            </a>
+        );
+    };
     const hasSlides = !showLessonAssessment && (currentLesson?.slides?.length > 0);
 
     // ── RENDER ─────────────────────────────────────────────────────────────────
@@ -1512,9 +1555,9 @@ function ModuleLearningContent() {
                                                         <Icons.HelpCircle className="w-3 h-3" /> Quiz included
                                                     </span>
                                                 )}
-                                                {lessonRes.length > 0 && (
+                                                {totalLessonResCount > 0 && (
                                                     <span className="inline-flex items-center gap-1 text-xs bg-gray-50 text-gray-600 px-2 py-1 rounded-lg font-medium">
-                                                        <Icons.Paperclip className="w-3 h-3" /> {lessonRes.length} resource{lessonRes.length !== 1 ? 's' : ''}
+                                                        <Icons.Paperclip className="w-3 h-3" /> {totalLessonResCount} resource{totalLessonResCount !== 1 ? 's' : ''}
                                                     </span>
                                                 )}
                                             </div>
@@ -1602,50 +1645,30 @@ function ModuleLearningContent() {
                                             </div>
                                         )}
 
-                                        {/* Resources (lesson + module) */}
+                                        {/* Resource groups */}
+                                        {!showLessonAssessment && lessonResourceGroups.map((group, gi) => (
+                                            <div key={gi} className={`rounded-2xl border shadow-sm overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
+                                                <div className={`flex items-center gap-2 px-5 py-3 border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
+                                                    <Icons.Folder className="w-4 h-4 text-gray-400" />
+                                                    <span className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{group.title || 'Resources'}</span>
+                                                </div>
+                                                <div className="p-4 space-y-3">
+                                                    {group.resources.map(renderResourceItem)}
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* Resources (lesson + module, ungrouped) */}
                                         {!showLessonAssessment && (lessonRes.length > 0 || moduleRes.length > 0) && (
                                             <div className={`rounded-2xl border shadow-sm overflow-hidden ${darkMode ? 'bg-gray-900 border-gray-700' : 'bg-white border-gray-200'}`}>
                                                 <div className={`flex items-center gap-2 px-5 py-3 border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-gray-50 border-gray-100'}`}>
                                                     <Icons.FolderOpen className="w-4 h-4 text-gray-400" />
-                                                    <span className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Resources</span>
+                                                    <span className={`text-xs font-semibold uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                                        {lessonResourceGroups.length > 0 ? 'Other Resources' : 'Resources'}
+                                                    </span>
                                                 </div>
                                                 <div className="p-4 space-y-3">
-                                                    {[...lessonRes, ...moduleRes].map((res, idx) => {
-                                                        const { url, name, ext, isPdf, isCloudinary, isVideo, isLink } = resourceHref(res);
-                                                        if (!url) return null;
-
-                                                        if (isVideo) {
-                                                            return (
-                                                                <div key={idx} className="space-y-1.5">
-                                                                    <p className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name || `Resource ${idx + 1}`}</p>
-                                                                    <VideoPlayer url={url} />
-                                                                </div>
-                                                            );
-                                                        }
-
-                                                        const colors = fileIconColor(ext);
-                                                        const handleClick = async (e) => {
-                                                            if (isLink) return; // let the native <a> navigation happen
-                                                            if (!isCloudinary) return;
-                                                            e.preventDefault();
-                                                            try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
-                                                        };
-                                                        return (
-                                                            <a key={idx} href={url} target="_blank" rel="noopener noreferrer"
-                                                                onClick={handleClick}
-                                                                className={`flex items-center gap-3 p-3 rounded-xl border transition-all group cursor-pointer ${darkMode ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-gray-50 border-gray-200 hover:border-gray-300 hover:bg-white'}`}
-                                                            >
-                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
-                                                                    <Icons.FileText className={`w-4 h-4 ${colors.text}`} />
-                                                                </div>
-                                                                <span className={`flex-1 text-sm font-medium truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name || `Resource ${idx + 1}`}</span>
-                                                                {isPdf || isLink
-                                                                    ? <Icons.ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
-                                                                    : <Icons.Download className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
-                                                                }
-                                                            </a>
-                                                        );
-                                                    })}
+                                                    {[...lessonRes, ...moduleRes].map(renderResourceItem)}
                                                 </div>
                                             </div>
                                         )}

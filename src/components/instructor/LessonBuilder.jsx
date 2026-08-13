@@ -372,7 +372,7 @@ const emptyCaseStudy = () => ({
 export const emptyLesson = (idx = 0) => ({
   title: '', description: '', learningOutcomes: [], topics: [], exercise: '',
   slides: [], assessmentQuiz: [], quizPassingScore: 70, quizMaxAttempts: 3,
-  lessonResources: [], _caseStudy: null, order: idx,
+  lessonResources: [], resourceGroups: [], _caseStudy: null, order: idx,
 });
 
 // ─── Main component ─────────────────────────────────────────────────────────────
@@ -526,7 +526,8 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
   const slideCount = (lesson.slides || []).length;
   const quizCount = (lesson.assessmentQuiz || []).length;
   const hasCS = !!lesson._caseStudy;
-  const resCount = (lesson.lessonResources || lesson.resources || []).length;
+  const groupResCount = (lesson.resourceGroups || []).reduce((sum, g) => sum + (g.resources || []).length, 0);
+  const resCount = (lesson.lessonResources || lesson.resources || []).length + groupResCount;
   const isPublishingAcademy = categoryName?.trim().toLowerCase() === 'arin publishing academy';
 
   return (
@@ -736,7 +737,10 @@ function LessonCard({ lesson, idx, expanded, onToggle, onChange, onDelete, disab
             <TabsContent value="resources" className="mt-0">
               <ResourcesTab
                 resources={lesson.lessonResources || lesson.resources || []}
+                resourceGroups={lesson.resourceGroups || []}
                 onChange={(v) => onChange('lessonResources', v)}
+                onGroupsChange={(v) => onChange('resourceGroups', v)}
+                onMove={(fields) => onChange(fields)}
                 disabled={disabled}
               />
             </TabsContent>
@@ -1394,7 +1398,22 @@ function MainPresentationTab({ url, name, onChange, disabled }) {
   );
 }
 
-export function ResourcesTab({ resources = [], onChange, disabled }) {
+function mapExtensionToType(fileName) {
+  const ext = (fileName || '').split('.').pop()?.toLowerCase();
+  if (!ext) return 'other';
+  if (['pdf'].includes(ext)) return 'pdf';
+  if (['doc', 'docx'].includes(ext)) return 'notebook';
+  if (['xls', 'xlsx', 'csv'].includes(ext)) return 'dataset';
+  if (['ppt', 'pptx'].includes(ext)) return 'dataset';
+  return 'other';
+}
+
+// ─── Resource List Editor  shared by the ungrouped list and each named group ──
+// containerId identifies this list for drag-and-drop moves: 'ungrouped' or a group index.
+function ResourceListEditor({
+  resources = [], onChange, disabled, uploaderLabel = 'Upload resources', emptyLabel = 'No resources yet.',
+  containerId, dragItem, onDragStartItem, onDropOnItem, onDropOnContainer,
+}) {
   const blank = () => ({ url: '', name: '', description: '', fileType: '' });
   const add = () => onChange([...resources, blank()]);
   const remove = (i) => onChange(resources.filter((_, idx) => idx !== i));
@@ -1408,16 +1427,6 @@ export function ResourcesTab({ resources = [], onChange, disabled }) {
     onChange(n);
   };
 
-  const mapExtensionToType = (fileName) => {
-    const ext = (fileName || '').split('.').pop()?.toLowerCase();
-    if (!ext) return 'other';
-    if (['pdf'].includes(ext)) return 'pdf';
-    if (['doc', 'docx'].includes(ext)) return 'notebook';
-    if (['xls', 'xlsx', 'csv'].includes(ext)) return 'dataset';
-    if (['ppt', 'pptx'].includes(ext)) return 'dataset';
-    return 'other';
-  };
-
   const handleUploadResources = (uploadedResources) => {
     const mapped = (uploadedResources || []).map((r) => ({
       url: r.url || (typeof r === 'string' ? r : ''),
@@ -1428,23 +1437,38 @@ export function ResourcesTab({ resources = [], onChange, disabled }) {
     onChange(mapped);
   };
 
+  const draggable = !disabled && containerId != null && !!onDragStartItem;
+  const isDropTarget = dragItem && dragItem.containerId !== containerId;
+
   return (
     <div className="space-y-3">
-      <div className="mb-3">
-        <ResourceUploader value={resources} onChange={handleUploadResources} label="Upload lesson resources" />
-      </div>
+      <ResourceUploader value={resources} onChange={handleUploadResources} label={uploaderLabel} />
       {resources.length === 0 ? (
-        <div className="text-center py-10 text-sm text-gray-400 border border-dashed border-gray-200 rounded-xl">
-          <Icons.Link className="w-10 h-10 text-gray-200 mx-auto mb-2" />
-          <p>No resources attached to this lesson.</p>
-          <p className="text-xs mt-1">Resources can be links, PDFs, notebooks, datasets, and more.</p>
+        <div
+          onDragOver={(e) => { if (draggable) e.preventDefault(); }}
+          onDrop={(e) => { if (draggable) { e.preventDefault(); onDropOnContainer?.(); } }}
+          className={`text-center py-6 text-xs text-gray-400 border border-dashed rounded-xl transition-colors ${isDropTarget ? 'border-teal-400 bg-teal-50/50 text-teal-500' : 'border-gray-200'}`}
+        >
+          {isDropTarget ? 'Drop here to move it into this group' : emptyLabel}
         </div>
       ) : (
         <div className="space-y-3">
           {resources.map((r, i) => (
-            <div key={i} className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/50">
+            <div
+              key={i}
+              draggable={draggable}
+              onDragStart={(e) => { e.dataTransfer.effectAllowed = 'move'; onDragStartItem?.({ containerId, index: i }); }}
+              onDragOver={(e) => { if (draggable) e.preventDefault(); }}
+              onDrop={(e) => { if (draggable) { e.preventDefault(); onDropOnItem?.({ containerId, index: i }); } }}
+              className="border border-gray-200 rounded-xl p-4 space-y-3 bg-gray-50/50"
+            >
               <div className="flex justify-between items-center">
-                <span className="text-xs font-semibold text-gray-600">Resource {i + 1}</span>
+                <span className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+                  {draggable && (
+                    <Icons.GripVertical className="w-3.5 h-3.5 text-gray-300 cursor-grab active:cursor-grabbing" />
+                  )}
+                  Resource {i + 1}
+                </span>
                 <div className="flex items-center gap-1">
                   {r.url && (() => {
                     const resolvedUrl = resolveAssetUrl(r.url);
@@ -1538,6 +1562,178 @@ export function ResourcesTab({ resources = [], onChange, disabled }) {
           <Icons.Plus className="w-3.5 h-3.5" /> Add Resource
         </Button>
       )}
+    </div>
+  );
+}
+
+export function ResourcesTab({ resources = [], resourceGroups = [], onChange, onGroupsChange, onMove, disabled }) {
+  const [expandedGroup, setExpandedGroup] = useState(resourceGroups.length > 0 ? 0 : null);
+  const [dragItem, setDragItem] = useState(null); // { containerId: 'ungrouped' | groupIndex, index }
+
+  const addGroup = () => {
+    const updated = [...resourceGroups, { title: '', order: resourceGroups.length, resources: [] }];
+    onGroupsChange?.(updated);
+    setExpandedGroup(updated.length - 1);
+  };
+  const removeGroup = (gi) => {
+    onGroupsChange?.(resourceGroups.filter((_, i) => i !== gi).map((g, i) => ({ ...g, order: i })));
+    if (expandedGroup === gi) setExpandedGroup(null);
+    else if (expandedGroup > gi) setExpandedGroup(expandedGroup - 1);
+  };
+  const updateGroupTitle = (gi, title) => {
+    const n = [...resourceGroups];
+    n[gi] = { ...n[gi], title };
+    onGroupsChange?.(n);
+  };
+  const updateGroupResources = (gi, list) => {
+    const n = [...resourceGroups];
+    n[gi] = { ...n[gi], resources: list };
+    onGroupsChange?.(n);
+  };
+
+  // Move a resource card between containers (or reorder within one), then commit
+  // both `lessonResources` and `resourceGroups` atomically via onMove so neither is lost.
+  const moveResource = (from, to) => {
+    if (!from) return;
+    if (from.containerId === to.containerId && from.index === to.index) { setDragItem(null); return; }
+
+    const nextResources = [...resources];
+    const nextGroups = resourceGroups.map((g) => ({ ...g, resources: [...(g.resources || [])] }));
+
+    const takeFrom = (containerId, index) =>
+      containerId === 'ungrouped' ? nextResources.splice(index, 1)[0] : nextGroups[containerId].resources.splice(index, 1)[0];
+    const putInto = (containerId, index, item) => {
+      const arr = containerId === 'ungrouped' ? nextResources : nextGroups[containerId].resources;
+      if (index == null) arr.push(item); else arr.splice(index, 0, item);
+    };
+
+    const item = takeFrom(from.containerId, from.index);
+    let targetIndex = to.index;
+    if (from.containerId === to.containerId && targetIndex != null && targetIndex > from.index) targetIndex -= 1;
+    putInto(to.containerId, targetIndex, item);
+
+    onMove?.({ lessonResources: nextResources, resourceGroups: nextGroups });
+    setDragItem(null);
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Named groups */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <Label className="text-xs font-semibold">Resource Groups</Label>
+            <p className="text-xs text-gray-400">Organise resources under named sections, e.g. "Policy", "Literature", "Research Papers".</p>
+          </div>
+          {!disabled && (
+            <Button type="button" variant="outline" size="sm" onClick={addGroup} className="gap-1.5 flex-shrink-0">
+              <Icons.FolderPlus className="w-3.5 h-3.5" /> Add Group
+            </Button>
+          )}
+        </div>
+
+        {resourceGroups.length === 0 ? (
+          <p className="text-xs text-gray-400 italic pl-1">No groups yet. Add one to organise resources under a heading.</p>
+        ) : (
+          <div className="space-y-2">
+            {resourceGroups.map((group, gi) => {
+              const expanded = expandedGroup === gi;
+              const count = (group.resources || []).length;
+              const isValidDropTarget = dragItem && dragItem.containerId !== gi;
+              return (
+                <div key={gi} className={`border rounded-xl overflow-hidden transition-all ${expanded ? 'border-teal-200 shadow-sm' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div
+                    className={`flex items-center gap-2.5 px-3 py-2.5 cursor-pointer select-none transition-colors ${expanded ? 'bg-teal-50' : 'bg-gray-50/70 hover:bg-gray-100/70'} ${isValidDropTarget ? 'ring-2 ring-inset ring-teal-400 bg-teal-50' : ''}`}
+                    onClick={() => setExpandedGroup(expanded ? null : gi)}
+                    onDragOver={(e) => { if (isValidDropTarget) e.preventDefault(); }}
+                    onDrop={(e) => { if (isValidDropTarget) { e.preventDefault(); moveResource(dragItem, { containerId: gi, index: null }); } }}
+                  >
+                    <Icons.Folder className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-gray-800 flex-1 truncate">
+                      {group.title || <span className="text-gray-400 italic font-normal">Untitled Group</span>}
+                    </span>
+                    {isValidDropTarget && (
+                      <span className="text-[10px] font-semibold text-teal-700 flex-shrink-0">Drop to move here</span>
+                    )}
+                    {count > 0 && (
+                      <Badge className="text-[9px] h-4 px-1.5 bg-teal-100 text-teal-700 border-0 flex-shrink-0">{count}</Badge>
+                    )}
+                    {!disabled && (
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); removeGroup(gi); }}
+                        className="p-1 text-gray-400 hover:text-red-500 transition-colors flex-shrink-0"
+                      >
+                        <Icons.Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <Icons.ChevronDown className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${expanded ? 'rotate-180' : ''}`} />
+                  </div>
+                  {expanded && (
+                    <div className="p-4 border-t border-gray-100 space-y-3 bg-white">
+                      <div className="space-y-1">
+                        <Label className="text-xs text-gray-500">Group Title <span className="text-red-500">*</span></Label>
+                        <Input
+                          value={group.title || ''}
+                          onChange={(e) => updateGroupTitle(gi, e.target.value)}
+                          disabled={disabled}
+                          placeholder="e.g. Policy"
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <ResourceListEditor
+                        resources={group.resources || []}
+                        onChange={(list) => updateGroupResources(gi, list)}
+                        disabled={disabled}
+                        uploaderLabel="Upload resources to this group"
+                        emptyLabel="No resources in this group yet."
+                        containerId={gi}
+                        dragItem={dragItem}
+                        onDragStartItem={setDragItem}
+                        onDropOnItem={(to) => moveResource(dragItem, to)}
+                        onDropOnContainer={() => moveResource(dragItem, { containerId: gi, index: null })}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Ungrouped resources (legacy flat list, still supported) */}
+      <div
+        className={`space-y-2 border-t border-gray-100 pt-4 -mx-2 px-2 rounded-lg transition-colors ${dragItem && dragItem.containerId !== 'ungrouped' ? 'ring-2 ring-inset ring-teal-400 bg-teal-50/40' : ''}`}
+        onDragOver={(e) => { if (dragItem && dragItem.containerId !== 'ungrouped') e.preventDefault(); }}
+        onDrop={(e) => { if (dragItem && dragItem.containerId !== 'ungrouped') { e.preventDefault(); moveResource(dragItem, { containerId: 'ungrouped', index: null }); } }}
+      >
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-semibold">
+            {resourceGroups.length > 0 ? 'Other Resources (ungrouped)' : 'Resources'}
+          </Label>
+          {dragItem && dragItem.containerId !== 'ungrouped' && (
+            <span className="text-[10px] font-semibold text-teal-700">Drop to move here</span>
+          )}
+        </div>
+        <p className="text-xs text-gray-400">
+          {resourceGroups.length > 0
+            ? 'Resources not placed in a named group  shown to students under a general list. Drag a card onto a group above to move it there.'
+            : 'Resources can be links, PDFs, notebooks, datasets, and more.'}
+        </p>
+        <ResourceListEditor
+          resources={resources}
+          onChange={onChange}
+          disabled={disabled}
+          uploaderLabel="Upload lesson resources"
+          emptyLabel="No resources attached to this lesson."
+          containerId="ungrouped"
+          dragItem={dragItem}
+          onDragStartItem={setDragItem}
+          onDropOnItem={(to) => moveResource(dragItem, to)}
+          onDropOnContainer={() => moveResource(dragItem, { containerId: 'ungrouped', index: null })}
+        />
+      </div>
     </div>
   );
 }

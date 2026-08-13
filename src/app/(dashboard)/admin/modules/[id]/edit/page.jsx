@@ -253,6 +253,7 @@ export default function AdminModuleEditPage() {
           resources: Array.isArray(l.lessonResources)
             ? l.lessonResources
             : (Array.isArray(l.resources) ? l.resources : []),
+          resourceGroups: Array.isArray(l.resourceGroups) ? l.resourceGroups : [],
           _caseStudy: null,
           order: l.order ?? idx,
           mainPresentationUrl: l.mainPresentationUrl || '',

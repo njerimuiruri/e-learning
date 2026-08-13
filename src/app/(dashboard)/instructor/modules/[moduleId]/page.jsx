@@ -449,9 +449,9 @@ export default function ModuleDetailPage() {
                                                                         <Icons.Presentation className="w-3 h-3" /> Presentation
                                                                     </span>
                                                                 )}
-                                                                {(lesson.lessonResources || lesson.resources || []).length > 0 && (
+                                                                {((lesson.lessonResources || lesson.resources || []).length + (lesson.resourceGroups || []).reduce((s, g) => s + (g.resources || []).length, 0)) > 0 && (
                                                                     <span className="text-xs text-purple-600 flex items-center gap-1">
-                                                                        <Icons.Paperclip className="w-3 h-3" /> {(lesson.lessonResources || lesson.resources || []).length} resource(s)
+                                                                        <Icons.Paperclip className="w-3 h-3" /> {(lesson.lessonResources || lesson.resources || []).length + (lesson.resourceGroups || []).reduce((s, g) => s + (g.resources || []).length, 0)} resource(s)
                                                                     </span>
                                                                 )}
                                                                 {lesson.assessment?.questions?.length > 0 && (
@@ -494,9 +494,38 @@ export default function ModuleDetailPage() {
                                                                 <PdfViewer url={toFileViewUrl(lesson.mainPresentationUrl)} className="h-[80vh] rounded-lg border border-gray-200 overflow-hidden" />
                                                             </div>
                                                         )}
+                                                        {(lesson.resourceGroups || []).filter(g => (g.resources || []).length > 0).map((group, gi) => (
+                                                            <div key={gi}>
+                                                                <p className="text-sm font-medium text-gray-700 mb-2">{group.title || 'Resources'}:</p>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {group.resources.map((resource, rIdx) => {
+                                                                        const url = resolveAssetUrl(typeof resource === 'string' ? resource : resource.url);
+                                                                        const name = typeof resource === 'string' ? `Resource ${rIdx + 1}` : (resource.name || resource.originalName || resource.url?.split('/').pop() || `Resource ${rIdx + 1}`);
+                                                                        const ext = (name || url || '').split('.').pop()?.toLowerCase();
+                                                                        const isPdf = ext === 'pdf';
+                                                                        const href = isPdf ? url : url?.replace('/upload/', '/upload/fl_attachment/');
+                                                                        return url ? (
+                                                                            <a
+                                                                                key={rIdx}
+                                                                                href={href}
+                                                                                target="_blank"
+                                                                                rel="noopener noreferrer"
+                                                                                {...(!isPdf && { download: name })}
+                                                                                className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-200 rounded-lg text-xs text-gray-700 hover:bg-gray-50"
+                                                                            >
+                                                                                {isPdf ? <Icons.ExternalLink className="w-3 h-3" /> : <Icons.Download className="w-3 h-3" />}
+                                                                                {name}
+                                                                            </a>
+                                                                        ) : null;
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        ))}
                                                         {(lesson.lessonResources || lesson.resources || []).length > 0 && (
                                                             <div>
-                                                                <p className="text-sm font-medium text-gray-700 mb-2">Resources:</p>
+                                                                <p className="text-sm font-medium text-gray-700 mb-2">
+                                                                    {(lesson.resourceGroups || []).length > 0 ? 'Other Resources' : 'Resources'}:
+                                                                </p>
                                                                 <div className="flex flex-wrap gap-2">
                                                                     {(lesson.lessonResources || lesson.resources || []).map((resource, rIdx) => {
                                                                         const url = resolveAssetUrl(typeof resource === 'string' ? resource : resource.url);

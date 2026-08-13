@@ -32,6 +32,69 @@ import QuizResultsModal from './QuizResultsModal';
 import { useEngagementTracker } from '@/hooks/useEngagementTracker';
 import moduleEnrollmentService from '@/lib/api/moduleEnrollmentService';
 
+// ─── Single resource card  shared by grouped and ungrouped resource lists ────
+function ResourceCard({ res, name, darkMode }) {
+  const rawUrl = res.url || res.fileUrl || '';
+  // 'link' resources are navigated to as-authored  never resolved against the
+  // API origin, which would mangle relative app routes like "/climate-dss".
+  const isLink = res?.fileType === 'link';
+  const url = isLink ? rawUrl : resolveUrl(rawUrl);
+  const isEmbeddedVideo = isEmbeddableVideoUrl(rawUrl);
+
+  if (isEmbeddedVideo) {
+    return (
+      <div className="space-y-1.5">
+        <p className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name}</p>
+        <div className="relative w-full aspect-video rounded-xl overflow-hidden">
+          <iframe
+            src={getVideoEmbedUrl(rawUrl)}
+            className="absolute inset-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={name}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  const nameExt = name.split('.').pop()?.toLowerCase() || '';
+  const urlExt = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+  const ext = nameExt || urlExt;
+  const isPdf = ext === 'pdf';
+  const isDoc = ['doc', 'docx'].includes(ext);
+  const isXls = ['xls', 'xlsx', 'csv'].includes(ext);
+  const isPpt = ['ppt', 'pptx'].includes(ext);
+  const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
+  const isCloudinary = url.includes('cloudinary.com');
+  const Icon = isLink ? Icons.ExternalLink : isVideo ? Icons.Video : isPdf ? Icons.FileText : isDoc ? Icons.FileText : isXls ? Icons.Table2 : isPpt ? Icons.Presentation : Icons.File;
+  const color = isLink ? 'text-emerald-600 bg-emerald-50' : isVideo ? 'text-rose-600 bg-rose-50' : isPdf ? 'text-red-600 bg-red-50' : isDoc ? 'text-blue-600 bg-blue-50' : isXls ? 'text-green-600 bg-green-50' : isPpt ? 'text-orange-600 bg-orange-50' : 'text-gray-600 bg-gray-100';
+  const handleClick = async (e) => {
+    if (isLink) return; // let the native <a> navigation happen
+    if (!isCloudinary) return;
+    e.preventDefault();
+    try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
+  };
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={handleClick}
+      className={`flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-sm hover:-translate-y-0.5 cursor-pointer ${darkMode ? 'border-gray-700 bg-gray-800 hover:bg-gray-750' : 'border-gray-200 bg-gray-50 hover:bg-white'}`}
+    >
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
+        <Icon className="w-4 h-4" />
+      </div>
+      <span className={`text-sm font-medium truncate flex-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name}</span>
+      {isPdf || isLink
+        ? <Icons.ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        : <Icons.Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      }
+    </a>
+  );
+}
+
 /**
  * LessonViewer  Netacad-style slide experience.
  * Phases: intro → slides → assessment
@@ -351,6 +414,8 @@ export default function LessonViewer({
     const outcomes = lesson?.learningOutcomes || [];
     const topics = lesson?.topics || [];
     const resources = lesson?.lessonResources || lesson?.resources || [];
+    const resourceGroups = (lesson?.resourceGroups || []).filter(g => (g.resources || []).length > 0);
+    const totalResourceCount = resources.length + resourceGroups.reduce((sum, g) => sum + g.resources.length, 0);
     return (
       <div className={`flex-1 overflow-y-auto overflow-x-hidden ${darkMode ? 'bg-gray-900' : 'bg-white'}`}>
         <div className="px-4 sm:px-6 py-4 space-y-5">
@@ -394,13 +459,13 @@ export default function LessonViewer({
                   <Icons.Clock className="w-3.5 h-3.5" /> {lesson.duration}
                 </span>
               )}
-              {resources.length > 0 && (
+              {totalResourceCount > 0 && (
                 <span
                   className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 cursor-pointer select-none`}
-                  title={`${resources.length} resource${resources.length !== 1 ? 's' : ''} available for download`}
+                  title={`${totalResourceCount} resource${totalResourceCount !== 1 ? 's' : ''} available for download`}
                 >
                   <Icons.Paperclip className="w-3.5 h-3.5" />
-                  {resources.length} resource{resources.length !== 1 ? 's' : ''}
+                  {totalResourceCount} resource{totalResourceCount !== 1 ? 's' : ''}
                 </span>
               )}
             </div>
@@ -504,7 +569,34 @@ export default function LessonViewer({
             </div>
           )}
 
-          {/* Resources */}
+          {/* Resource Groups */}
+          {resourceGroups.map((group, gi) => (
+            <div key={gi} className={`border-t pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-7 h-7 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <Icons.Folder className="w-4 h-4 text-emerald-700" />
+                </div>
+                <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {group.title || 'Resources'}
+                  <span className="ml-2 text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                    {group.resources.length}
+                  </span>
+                </p>
+              </div>
+              <div className="space-y-2">
+                {group.resources.map((res, i) => (
+                  <ResourceCard
+                    key={i}
+                    res={res}
+                    name={res.name || res.originalName || `Resource ${i + 1}`}
+                    darkMode={darkMode}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Resources (ungrouped) */}
           {resources.length > 0 && (
             <div className={`border-t pt-4 ${darkMode ? 'border-gray-700' : 'border-gray-100'}`}>
               <div className="flex items-center gap-2 mb-3">
@@ -512,76 +604,21 @@ export default function LessonViewer({
                   <Icons.Paperclip className="w-4 h-4 text-emerald-700" />
                 </div>
                 <p className={`text-sm font-bold ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-                  Lesson Resources
+                  {resourceGroups.length > 0 ? 'Other Resources' : 'Lesson Resources'}
                   <span className="ml-2 text-xs font-medium text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                     {resources.length}
                   </span>
                 </p>
               </div>
               <div className="space-y-2">
-                {resources.map((res, i) => {
-                  const name = res.name || res.originalName || `Resource ${i + 1}`;
-                  const rawUrl = res.url || res.fileUrl || '';
-                  // 'link' resources are navigated to as-authored  never resolved against the
-                  // API origin, which would mangle relative app routes like "/climate-dss".
-                  const isLink = res?.fileType === 'link';
-                  const url = isLink ? rawUrl : resolveUrl(rawUrl);
-                  const isEmbeddedVideo = isEmbeddableVideoUrl(rawUrl);
-
-                  if (isEmbeddedVideo) {
-                    return (
-                      <div key={i} className="space-y-1.5">
-                        <p className={`text-sm font-medium ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name}</p>
-                        <div className="relative w-full aspect-video rounded-xl overflow-hidden">
-                          <iframe
-                            src={getVideoEmbedUrl(rawUrl)}
-                            className="absolute inset-0 w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            title={name}
-                          />
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  const nameExt = name.split('.').pop()?.toLowerCase() || '';
-                  const urlExt = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
-                  const ext = nameExt || urlExt;
-                  const isPdf = ext === 'pdf';
-                  const isDoc = ['doc', 'docx'].includes(ext);
-                  const isXls = ['xls', 'xlsx', 'csv'].includes(ext);
-                  const isPpt = ['ppt', 'pptx'].includes(ext);
-                  const isVideo = ['mp4', 'webm', 'mov'].includes(ext);
-                  const isCloudinary = url.includes('cloudinary.com');
-                  const Icon = isLink ? Icons.ExternalLink : isVideo ? Icons.Video : isPdf ? Icons.FileText : isDoc ? Icons.FileText : isXls ? Icons.Table2 : isPpt ? Icons.Presentation : Icons.File;
-                  const color = isLink ? 'text-emerald-600 bg-emerald-50' : isVideo ? 'text-rose-600 bg-rose-50' : isPdf ? 'text-red-600 bg-red-50' : isDoc ? 'text-blue-600 bg-blue-50' : isXls ? 'text-green-600 bg-green-50' : isPpt ? 'text-orange-600 bg-orange-50' : 'text-gray-600 bg-gray-100';
-                  const handleClick = async (e) => {
-                    if (isLink) return; // let the native <a> navigation happen
-                    if (!isCloudinary) return;
-                    e.preventDefault();
-                    try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
-                  };
-                  return (
-                    <a
-                      key={i}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={handleClick}
-                      className={`flex items-center gap-3 p-3 rounded-xl border transition-all hover:shadow-sm hover:-translate-y-0.5 cursor-pointer ${darkMode ? 'border-gray-700 bg-gray-800 hover:bg-gray-750' : 'border-gray-200 bg-gray-50 hover:bg-white'}`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${color}`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <span className={`text-sm font-medium truncate flex-1 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>{name}</span>
-                      {isPdf || isLink
-                        ? <Icons.ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                        : <Icons.Download className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      }
-                    </a>
-                  );
-                })}
+                {resources.map((res, i) => (
+                  <ResourceCard
+                    key={i}
+                    res={res}
+                    name={res.name || res.originalName || `Resource ${i + 1}`}
+                    darkMode={darkMode}
+                  />
+                ))}
               </div>
             </div>
           )}

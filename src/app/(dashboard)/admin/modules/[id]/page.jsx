@@ -710,6 +710,8 @@ export default function AdminModuleDetailPage() {
                                         const slides = lesson.slides || [];
                                         const quiz = lesson.assessmentQuiz || [];
                                         const resources = lesson.lessonResources || lesson.resources || [];
+                                        const resourceGroups = (lesson.resourceGroups || []).filter(g => (g.resources || []).length > 0);
+                                        const groupResCount = resourceGroups.reduce((s, g) => s + g.resources.length, 0);
                                         const outcomes = lesson.learningOutcomes || [];
                                         const lessonTopics = lesson.topics || [];
                                         return (
@@ -733,9 +735,9 @@ export default function AdminModuleDetailPage() {
                                                                     <Icons.FileQuestion className="w-3 h-3" /> {quiz.length} question{quiz.length !== 1 ? 's' : ''}
                                                                 </span>
                                                             )}
-                                                            {resources.length > 0 && (
+                                                            {(resources.length + groupResCount) > 0 && (
                                                                 <span className="text-xs text-teal-600 font-medium flex items-center gap-1">
-                                                                    <Icons.Paperclip className="w-3 h-3" /> {resources.length} resource{resources.length !== 1 ? 's' : ''}
+                                                                    <Icons.Paperclip className="w-3 h-3" /> {resources.length + groupResCount} resource{(resources.length + groupResCount) !== 1 ? 's' : ''}
                                                                 </span>
                                                             )}
                                                             {lesson.quizPassingScore && (
@@ -974,10 +976,45 @@ export default function AdminModuleDetailPage() {
                                                             </div>
                                                         )}
 
-                                                        {/* Resources */}
+                                                        {/* Resource Groups */}
+                                                        {resourceGroups.map((group, gi) => (
+                                                            <div key={gi}>
+                                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{group.title || 'Resources'}</p>
+                                                                <div className="space-y-1.5">
+                                                                    {group.resources.map((res, ri) => {
+                                                                        const name = typeof res === 'string' ? res : (res.name || res.url);
+                                                                        const url = resolveAssetUrl(typeof res === 'string' ? res : res.url);
+                                                                        const desc = typeof res === 'object' ? res.description : '';
+                                                                        const fileType = typeof res === 'object' ? (res.fileType || res.type) : '';
+                                                                        return (
+                                                                            <div key={ri} className="flex items-center gap-3 p-2.5 bg-teal-50 rounded-xl border border-teal-100">
+                                                                                <Icons.Paperclip className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                                                                                <div className="flex-1 min-w-0">
+                                                                                    <p className="text-sm font-medium text-teal-900 truncate">{name}</p>
+                                                                                    {desc && <p className="text-xs text-teal-600 truncate">{desc}</p>}
+                                                                                </div>
+                                                                                {fileType && <span className="text-xs bg-teal-200 text-teal-800 px-1.5 py-0.5 rounded flex-shrink-0">{fileType}</span>}
+                                                                                {url && (() => {
+                                                                                    const ext = (name || url || '').split('.').pop()?.toLowerCase();
+                                                                                    const isPdf = ext === 'pdf';
+                                                                                    const href = isPdf ? url : url.replace('/upload/', '/upload/fl_attachment/');
+                                                                                    return (
+                                                                                        <a href={href} target="_blank" rel="noopener noreferrer" {...(!isPdf && { download: name })} className="text-teal-600 hover:text-teal-800 flex-shrink-0">
+                                                                                            {isPdf ? <Icons.ExternalLink className="w-3.5 h-3.5" /> : <Icons.Download className="w-3.5 h-3.5" />}
+                                                                                        </a>
+                                                                                    );
+                                                                                })()}
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+
+                                                        {/* Resources (ungrouped) */}
                                                         {resources.length > 0 && (
                                                             <div>
-                                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Resources</p>
+                                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">{resourceGroups.length > 0 ? 'Other Resources' : 'Resources'}</p>
                                                                 <div className="space-y-1.5">
                                                                     {resources.map((res, ri) => {
                                                                         const name = typeof res === 'string' ? res : (res.name || res.url);

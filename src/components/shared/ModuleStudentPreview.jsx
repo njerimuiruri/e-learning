@@ -21,6 +21,38 @@ function resourceHref(r) {
   return { href, isPdf, name: name || url.split('/').pop() || 'Resource' };
 }
 
+function ResourceRow({ r }) {
+  const { href, isPdf, name } = resourceHref(r);
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 min-w-0">
+      <Icons.FileText className="w-4 h-4 text-teal-500 flex-shrink-0" />
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-gray-800 truncate">{name}</p>
+        {r.description && (
+          <p className="text-xs text-gray-500 break-words">{r.description}</p>
+        )}
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {r.fileType && (
+          <Badge variant="secondary" className="text-xs">{r.fileType}</Badge>
+        )}
+        {href && (
+          <a
+            href={href} target="_blank" rel="noopener noreferrer"
+            download={!isPdf ? name : undefined}
+            className="text-teal-500 hover:text-teal-700"
+          >
+            {isPdf
+              ? <Icons.ExternalLink className="w-3.5 h-3.5" />
+              : <Icons.Download className="w-3.5 h-3.5" />
+            }
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ytEmbedUrl(url) {
   const match = url.match(/(?:v=|youtu\.be\/)([^&?/]+)/);
   return match ? `https://www.youtube.com/embed/${match[1]}` : null;
@@ -325,45 +357,30 @@ export default function ModuleStudentPreview({ module, onClose }) {
                   </div>
                 )}
 
-                {/* Lesson resources */}
+                {/* Resource groups */}
+                {(lesson.resourceGroups || []).filter(g => (g.resources || []).length > 0).map((group, gi) => (
+                  <div key={gi} className="mx-6 mb-4 border border-teal-200 rounded-xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 py-3 bg-teal-50 border-b border-teal-100">
+                      <Icons.Folder className="w-4 h-4 text-teal-600 flex-shrink-0" />
+                      <span className="text-sm font-semibold text-teal-800">{group.title || 'Resources'}</span>
+                    </div>
+                    <div className="divide-y divide-teal-50">
+                      {group.resources.map((r, i) => <ResourceRow key={i} r={r} />)}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Lesson resources (ungrouped) */}
                 {(lesson.lessonResources || lesson.resources || []).length > 0 && (
                   <div className="mx-6 mb-4 border border-teal-200 rounded-xl overflow-hidden">
                     <div className="flex items-center gap-2 px-4 py-3 bg-teal-50 border-b border-teal-100">
                       <Icons.Link className="w-4 h-4 text-teal-600 flex-shrink-0" />
-                      <span className="text-sm font-semibold text-teal-800">Lesson Resources</span>
+                      <span className="text-sm font-semibold text-teal-800">
+                        {(lesson.resourceGroups || []).length > 0 ? 'Other Resources' : 'Lesson Resources'}
+                      </span>
                     </div>
                     <div className="divide-y divide-teal-50">
-                      {(lesson.lessonResources || lesson.resources || []).map((r, i) => {
-                        const { href, isPdf, name } = resourceHref(r);
-                        return (
-                          <div key={i} className="flex items-center gap-3 px-4 py-3 min-w-0">
-                            <Icons.FileText className="w-4 h-4 text-teal-500 flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-gray-800 truncate">{name}</p>
-                              {r.description && (
-                                <p className="text-xs text-gray-500 break-words">{r.description}</p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              {r.fileType && (
-                                <Badge variant="secondary" className="text-xs">{r.fileType}</Badge>
-                              )}
-                              {href && (
-                                <a
-                                  href={href} target="_blank" rel="noopener noreferrer"
-                                  download={!isPdf ? name : undefined}
-                                  className="text-teal-500 hover:text-teal-700"
-                                >
-                                  {isPdf
-                                    ? <Icons.ExternalLink className="w-3.5 h-3.5" />
-                                    : <Icons.Download className="w-3.5 h-3.5" />
-                                  }
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
+                      {(lesson.lessonResources || lesson.resources || []).map((r, i) => <ResourceRow key={i} r={r} />)}
                     </div>
                   </div>
                 )}

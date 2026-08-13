@@ -300,6 +300,7 @@ export default function EditModulePage() {
                 resources: Array.isArray(lesson.lessonResources)
                     ? lesson.lessonResources
                     : (Array.isArray(lesson.resources) ? lesson.resources : []),
+                resourceGroups: Array.isArray(lesson.resourceGroups) ? lesson.resourceGroups : [],
                 topics: Array.isArray(lesson.topics) ? lesson.topics : [],
                 exercise: lesson.exercise || '',
                 _caseStudy: null,
