@@ -177,6 +177,8 @@ function ModuleLearningContent() {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [activeTab, setActiveTab] = useState('outline');
     const [searchQuery, setSearchQuery] = useState('');
+    const [openResourceSections, setOpenResourceSections] = useState(new Set());
+    const [hoveredResourceSection, setHoveredResourceSection] = useState(null);
     const [darkMode, setDarkMode] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showIntroVideo, setShowIntroVideo] = useState(false); // shown first only if introVideoUrl exists
@@ -561,6 +563,17 @@ function ModuleLearningContent() {
             return name.toLowerCase().includes(q) || source.toLowerCase().includes(q);
         });
     }, [allResources, searchQuery]);
+
+    // Group the flat resource list by its section label (module / lesson / lesson — group)
+    // so the sidebar can render actual section headers instead of a per-item subtitle.
+    const groupedResources = useMemo(() => {
+        const map = new Map();
+        filteredResources.forEach((item) => {
+            if (!map.has(item.source)) map.set(item.source, []);
+            map.get(item.source).push(item);
+        });
+        return Array.from(map.entries()).map(([section, items]) => ({ section, items }));
+    }, [filteredResources]);
 
     const filteredLessons = useMemo(() => {
         if (!moduleData) return [];
@@ -1207,37 +1220,75 @@ function ModuleLearningContent() {
                                             {filteredResources.length} file{filteredResources.length !== 1 ? 's' : ''}
                                         </span>
                                     </div>
-                                    <div className="space-y-1.5">
-                                        {filteredResources.map(({ res, source }, i) => {
-                                            const { url, name, ext, isPdf, isCloudinary, isVideo, isLink } = resourceHref(res);
-                                            if (!url) return null;
-                                            const colors = isVideo ? { bg: 'bg-red-100', text: 'text-red-600' } : fileIconColor(ext);
-                                            const handleClick = async (e) => {
-                                                if (isLink) return; // let the native <a> navigation happen
-                                                e.preventDefault();
-                                                if (isVideo) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
-                                                try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
-                                            };
+                                    <div className="space-y-2">
+                                        {groupedResources.map(({ section, items }) => {
+                                            const isOpen = openResourceSections.has(section) || hoveredResourceSection === section;
                                             return (
-                                                <a key={i} href={url} target="_blank" rel="noopener noreferrer"
-                                                    onClick={handleClick}
-                                                    className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all group cursor-pointer
-                                                        ${darkMode ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                            <div
+                                                key={section}
+                                                className={`rounded-xl border transition-colors ${darkMode ? 'border-gray-700' : 'border-gray-200'} ${isOpen ? (darkMode ? 'bg-gray-800/40' : 'bg-gray-50/60') : ''}`}
+                                                onMouseEnter={() => setHoveredResourceSection(section)}
+                                                onMouseLeave={() => setHoveredResourceSection((s) => (s === section ? null : s))}
+                                            >
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setOpenResourceSections((prev) => {
+                                                        const next = new Set(prev);
+                                                        if (next.has(section)) next.delete(section); else next.add(section);
+                                                        return next;
+                                                    })}
+                                                    className="w-full flex items-center gap-1.5 px-2.5 py-2 text-left"
                                                 >
-                                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
-                                                        {isVideo ? <Icons.PlayCircle className={`w-4 h-4 ${colors.text}`} /> : <Icons.FileText className={`w-4 h-4 ${colors.text}`} />}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className={`text-xs font-medium truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                                                            {name || `Resource ${i + 1}`}
-                                                        </p>
-                                                        <p className={`text-[11px] truncate ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>{source}</p>
-                                                    </div>
-                                                    {isPdf || isVideo
-                                                        ? <Icons.ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
-                                                        : <Icons.Download className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
-                                                    }
-                                                </a>
+                                                    <Icons.Folder className={`w-3.5 h-3.5 flex-shrink-0 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`} />
+                                                    <span className={`flex-1 min-w-0 text-[11px] font-semibold uppercase tracking-wide truncate ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                                                        {section}
+                                                    </span>
+                                                    <span className={`text-[10px] flex-shrink-0 ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                                        {items.length} file{items.length !== 1 ? 's' : ''}
+                                                    </span>
+                                                    <Icons.ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${darkMode ? 'text-gray-500' : 'text-gray-400'} ${isOpen ? 'rotate-180' : ''}`} />
+                                                </button>
+                                                {!isOpen && (
+                                                    <p className={`px-2.5 pb-2 -mt-1 text-[10px] italic ${darkMode ? 'text-gray-600' : 'text-gray-400'}`}>
+                                                        Hover to see materials
+                                                    </p>
+                                                )}
+                                                {isOpen && (
+                                                <div className="px-2.5 pb-2.5 space-y-1.5">
+                                                    {items.map(({ res }, i) => {
+                                                        const { url, name, ext, isPdf, isCloudinary, isVideo, isLink } = resourceHref(res);
+                                                        if (!url) return null;
+                                                        const colors = isVideo ? { bg: 'bg-red-100', text: 'text-red-600' } : fileIconColor(ext);
+                                                        const handleClick = async (e) => {
+                                                            if (isLink) return; // let the native <a> navigation happen
+                                                            e.preventDefault();
+                                                            if (isVideo) { window.open(url, '_blank', 'noopener,noreferrer'); return; }
+                                                            try { await openResource(url, name, isPdf); } catch { window.open(url, '_blank', 'noopener,noreferrer'); }
+                                                        };
+                                                        return (
+                                                            <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                                                                onClick={handleClick}
+                                                                className={`flex items-center gap-2.5 p-2.5 rounded-xl border transition-all group cursor-pointer
+                                                                    ${darkMode ? 'bg-gray-800 border-gray-700 hover:border-gray-600' : 'bg-white border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}
+                                                            >
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colors.bg}`}>
+                                                                    {isVideo ? <Icons.PlayCircle className={`w-4 h-4 ${colors.text}`} /> : <Icons.FileText className={`w-4 h-4 ${colors.text}`} />}
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className={`text-xs font-medium truncate ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                                                                        {name || `Resource ${i + 1}`}
+                                                                    </p>
+                                                                </div>
+                                                                {isPdf || isVideo
+                                                                    ? <Icons.ExternalLink className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
+                                                                    : <Icons.Download className="w-3.5 h-3.5 text-gray-400 group-hover:text-green-600 flex-shrink-0" />
+                                                                }
+                                                            </a>
+                                                        );
+                                                    })}
+                                                </div>
+                                                )}
+                                            </div>
                                             );
                                         })}
                                     </div>
