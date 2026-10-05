@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTableViewOptions } from "./data-table-view-options";
 import { DataTableFacetedFilter } from "./data-table-faceted-filter";
+import { ExportCompletedDialog } from "./export-completed-dialog";
 
 const STATUS_OPTIONS = [
   { label: "Completed", value: "completed" },
@@ -79,6 +80,8 @@ export function FellowsDataTableToolbar({ table }) {
           <X className="ml-2 h-4 w-4" />
         </Button>
       )}
+
+      <ExportCompletedDialog table={table} />
 
       <DataTableViewOptions table={table} />
     </div>

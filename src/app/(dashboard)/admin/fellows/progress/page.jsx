@@ -93,6 +93,21 @@ function deriveCurrentLevel(modules) {
   return 'beginner';
 }
 
+const LEVELS = ['beginner', 'intermediate', 'advanced'];
+
+// A level counts as completed when the fellow has finished every published
+// module of that level (falls back to their enrolled modules of that level).
+function deriveCompletedLevels(modules, levelTotals) {
+  const result = {};
+  LEVELS.forEach((lvl) => {
+    const levelMods = modules.filter((m) => (m.level || 'beginner') === lvl);
+    const required = levelTotals[lvl] || levelMods.length;
+    const done = levelMods.filter((m) => m.isCompleted).length;
+    result[lvl] = required > 0 && done >= required;
+  });
+  return result;
+}
+
 function statusForProgress(completedModules, totalModules, overallProgress) {
   if (!totalModules) return 'notstarted';
   // Primary: completed when every enrolled module is done  avoids floating-point edge cases
@@ -426,11 +441,21 @@ export default function FellowProgressPage() {
       // Resolve total programme modules FIRST so progress uses the correct denominator
       let progTotal = 0;
       let beginnerTotal = 0;
+      const levelTotals = { beginner: 0, intermediate: 0, advanced: 0 };
       if (modulesRes.status === 'fulfilled') {
         const raw = modulesRes.value;
-        const moduleList = Array.isArray(raw) ? raw : (raw?.modules ?? raw?.data ?? []);
+        const allModules = Array.isArray(raw) ? raw : (raw?.modules ?? raw?.data ?? []);
+        // The progress endpoint is scoped to one category  only count that category's
+        // modules, otherwise other categories inflate the per-level requirements.
+        const progressCategoryId = progressRes.status === 'fulfilled' ? (progressRes.value?.categoryId ?? progressRes.value?.data?.categoryId) : null;
+        const moduleList = progressCategoryId
+          ? allModules.filter((m) => String(m.categoryId?._id ?? m.categoryId ?? m.category?._id ?? m.category ?? '') === String(progressCategoryId))
+          : allModules;
         progTotal = moduleList.length;
         beginnerTotal = moduleList.filter((m) => m.level === 'beginner').length;
+        LEVELS.forEach((lvl) => {
+          levelTotals[lvl] = moduleList.filter((m) => (m.level || 'beginner') === lvl).length;
+        });
       }
       if (!progTotal) {
         // Fallback: use the highest enrolled module count as a proxy
@@ -466,6 +491,12 @@ export default function FellowProgressPage() {
           overallProgress,
           status: statusForProgress(fellow.completedModules, programmeTotal, overallProgress),
           certIssued,
+          completedLevels: (() => {
+            const levels = deriveCompletedLevels(fellow.modules, levelTotals);
+            // An issued beginner certificate means the beginner level is done
+            if (certIssued) levels.beginner = true;
+            return levels;
+          })(),
         };
       });
 
