@@ -32,10 +32,10 @@ const features = [
 
 const AboutTeaser = () => {
     return (
-        <section className="py-16 lg:py-20 bg-gradient-to-b from-white to-blue-50">
+        <section className="py-10 lg:py-12 bg-gradient-to-b from-white to-blue-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-10">
+                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
                     <div className="lg:max-w-2xl">
                         <span className="text-[#021d49] font-semibold text-sm uppercase tracking-wider">
                             About the Academy

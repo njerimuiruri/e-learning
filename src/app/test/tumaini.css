@@ -1,0 +1,609 @@
+/* ============================================================
+   SETTINGS AND COLOURS
+   All class names start with "tm-" so they never clash with
+   the rest of the e-learning site.
+   ============================================================ */
+
+.tm-app {
+  --tm-lake: #1B6E8E;
+  --tm-sky: #DDF0F7;
+  --tm-maize: #F2B544;
+  --tm-soil: #A4532F;
+  --tm-leaf: #4C8E44;
+  --tm-text: #13303A;
+  --tm-white: #FFFFFF;
+  --tm-shadow: 0 6px 0 rgba(19, 48, 58, 0.12), 0 10px 24px rgba(19, 48, 58, 0.12);
+  --tm-shadow-lift: 0 10px 0 rgba(19, 48, 58, 0.14), 0 18px 34px rgba(19, 48, 58, 0.2);
+  --tm-radius: 24px;
+
+  min-height: 100vh;
+  background: var(--tm-sky);
+  color: var(--tm-text);
+  font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  font-size: 19px;
+  line-height: 1.5;
+  overflow-x: hidden; /* nothing scrolls sideways */
+}
+
+.tm-app h1,
+.tm-app h2,
+.tm-app h3 {
+  line-height: 1.15;
+  font-weight: 800;
+}
+
+/* Hidden visually, but read by screen readers */
+.tm-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Thick, clear keyboard focus outline everywhere */
+.tm-app a:focus-visible,
+.tm-app button:focus-visible,
+.tm-app h1:focus-visible {
+  outline: 4px solid var(--tm-maize);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 8px var(--tm-text);
+}
+.tm-app h1:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+
+.tm-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 26px;
+  border: 3px solid var(--tm-text);
+  border-radius: 999px;
+  background: var(--tm-maize);
+  color: var(--tm-text);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--tm-text);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.tm-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--tm-text);
+}
+.tm-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 var(--tm-text);
+}
+.tm-button-secondary {
+  background: var(--tm-white);
+}
+.tm-button-small {
+  padding: 8px 16px;
+  font-size: 16px;
+}
+
+.tm-link-button {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tm-lake);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Fixed Home and Full screen buttons */
+.tm-topbar {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none; /* only the buttons themselves are clickable */
+}
+.tm-topbar > * {
+  pointer-events: auto;
+}
+
+/* ============================================================
+   SWITCHING VIEWS: a short fade and slide up
+   ============================================================ */
+
+.tm-view {
+  animation: tm-fade-in 0.4s ease-out;
+}
+@keyframes tm-fade-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   HOME SCREEN
+   ============================================================ */
+
+.tm-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 80px 16px 110px;
+  background: linear-gradient(#BFE4F2, var(--tm-sky) 70%);
+  text-align: center;
+}
+
+.tm-hero-text {
+  position: relative;
+  z-index: 2;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.tm-hero h1 {
+  font-size: clamp(2.1rem, 5.5vw, 3.8rem);
+  color: var(--tm-text);
+  text-shadow: 3px 3px 0 var(--tm-white);
+  margin: 0 0 12px;
+}
+.tm-subtitle {
+  font-size: clamp(1.1rem, 2.3vw, 1.45rem);
+  margin: 0 auto;
+  max-width: 680px;
+}
+
+/* Sun and clouds */
+.tm-sky {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.tm-sun {
+  position: absolute;
+  top: 20px;
+  right: 6%;
+  width: clamp(70px, 10vw, 120px);
+  animation: tm-spin 40s linear infinite;
+}
+.tm-cloud {
+  position: absolute;
+  opacity: 0.9;
+  animation: tm-drift 14s ease-in-out infinite alternate;
+}
+.tm-cloud-1 { top: 70px;  left: 4%;  width: 140px; }
+.tm-cloud-2 { top: 210px; right: 14%; width: 110px; animation-duration: 18s; }
+.tm-cloud-3 { top: 330px; left: 12%; width: 90px;  animation-duration: 22s; }
+
+@keyframes tm-drift {
+  from { transform: translateX(0); }
+  to   { transform: translateX(50px); }
+}
+@keyframes tm-spin {
+  to { transform: rotate(360deg); }
+}
+
+.tm-hills {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 140px;
+  z-index: 0;
+}
+
+/* Tumaini + speech bubble side by side */
+.tm-stage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  margin: 24px auto 0;
+  max-width: 900px;
+}
+.tm-robot {
+  flex-shrink: 0;
+  max-width: 100%;
+  overflow: visible;
+}
+
+/* ============================================================
+   TUMAINI ANIMATIONS
+   ============================================================ */
+
+/* Floating up and down */
+.tm-float {
+  animation: tm-float 3s ease-in-out infinite;
+}
+@keyframes tm-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.tm-robot-shadow {
+  opacity: 0.15;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tm-shadow 3s ease-in-out infinite;
+}
+@keyframes tm-shadow {
+  0%, 100% { transform: scaleX(1); }
+  50%      { transform: scaleX(0.85); }
+}
+
+/* Waving arm: turns around the shoulder (the arm group's 0,0 point) */
+.tm-wave {
+  transform-origin: 0 0;
+  animation: tm-wave 0.9s ease-in-out infinite alternate;
+}
+@keyframes tm-wave {
+  from { transform: rotate(-14deg); }
+  to   { transform: rotate(22deg); }
+}
+
+/* Blinking eyes: quickly squash flat, then open again */
+.tm-eyes {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tm-blink 4s infinite;
+}
+@keyframes tm-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95%           { transform: scaleY(0.1); }
+}
+
+/* Glowing face */
+.tm-face {
+  filter: drop-shadow(0 0 3px #8BE9F5);
+}
+
+/* Antenna light blinking on and off */
+.tm-antenna-light {
+  animation: tm-light 1.6s steps(1) infinite;
+}
+@keyframes tm-light {
+  0%   { fill: #F2B544; }
+  50%  { fill: #FFF3C4; }
+}
+
+/* Chest light gently glowing */
+.tm-chest-light {
+  animation: tm-pulse 2.4s ease-in-out infinite;
+}
+@keyframes tm-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.6; }
+}
+
+.tm-think-mark {
+  animation: tm-float 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   SPEECH BUBBLE
+   ============================================================ */
+
+.tm-bubble {
+  position: relative;
+  max-width: 420px;
+  min-height: 150px;
+  padding: 20px 24px 12px;
+  background: var(--tm-white);
+  border: 4px solid var(--tm-text);
+  border-radius: var(--tm-radius);
+  box-shadow: var(--tm-shadow);
+  text-align: left;
+}
+.tm-bubble-text {
+  margin: 0;
+  font-size: clamp(1.1rem, 2vw, 1.3rem);
+  font-weight: 600;
+}
+.tm-cursor {
+  animation: tm-light 0.8s steps(1) infinite;
+  color: var(--tm-lake);
+  margin-left: 2px;
+}
+.tm-bubble-actions {
+  text-align: right;
+  min-height: 32px;
+}
+
+/* The little pointer: two triangles (outline + white fill) */
+.tm-bubble::before,
+.tm-bubble::after {
+  content: "";
+  position: absolute;
+  border-style: solid;
+  border-color: transparent;
+}
+.tm-bubble-tail-left::before {
+  left: -26px;
+  top: 50%;
+  margin-top: -16px;
+  border-width: 16px 26px 16px 0;
+  border-right-color: var(--tm-text);
+}
+.tm-bubble-tail-left::after {
+  left: -19px;
+  top: 50%;
+  margin-top: -12px;
+  border-width: 12px 20px 12px 0;
+  border-right-color: var(--tm-white);
+}
+
+/* ============================================================
+   EPISODE MENU (cards)
+   ============================================================ */
+
+.tm-menu {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 16px 64px;
+}
+.tm-menu h2 {
+  text-align: center;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  margin: 0 0 28px;
+}
+
+.tm-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 24px;
+}
+
+.tm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 24px;
+  background: var(--tm-white);
+  border: 3px solid var(--tm-text);
+  border-radius: var(--tm-radius);
+  box-shadow: var(--tm-shadow);
+  color: var(--tm-text);
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.tm-card:hover,
+.tm-card:focus-visible {
+  transform: translateY(-6px);
+  box-shadow: var(--tm-shadow-lift);
+}
+
+/* Finished episodes get a green "✔ Completed" badge */
+.tm-card {
+  position: relative;
+}
+.tm-card.is-done {
+  border-color: var(--tm-leaf);
+}
+.tm-done-badge {
+  position: absolute;
+  top: -14px;
+  right: 18px;
+  padding: 4px 14px;
+  border-radius: 999px;
+  background: var(--tm-leaf);
+  color: var(--tm-white);
+  border: 3px solid var(--tm-text);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.tm-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tm-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: 3px solid var(--tm-text);
+  font-size: 28px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.tm-number-big {
+  width: 80px;
+  height: 80px;
+  font-size: 40px;
+}
+
+.tm-card-title {
+  font-size: 26px;
+  margin: 4px 0 0;
+}
+.tm-card-desc {
+  margin: 0;
+}
+
+.tm-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  margin: 4px 0;
+}
+.tm-tag {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--tm-sky);
+  border: 2px solid var(--tm-lake);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.tm-time {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #35535D;
+}
+
+.tm-card-cta {
+  margin-top: auto;
+  align-self: flex-start;
+  padding: 8px 20px;
+  border-radius: 999px;
+  background: var(--tm-maize);
+  border: 3px solid var(--tm-text);
+  font-weight: 800;
+}
+
+/* ============================================================
+   EPISODE PAGE
+   ============================================================ */
+
+.tm-episode {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 80px 16px 64px;
+}
+
+.tm-episode-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 28px 0 12px;
+}
+.tm-episode-header h1 {
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  margin: 0;
+}
+.tm-episode-label {
+  margin: 0;
+  font-weight: 700;
+  color: var(--tm-lake);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 17px;
+}
+.tm-episode-icon {
+  margin-left: auto;
+}
+.tm-episode-desc {
+  font-size: clamp(1.15rem, 2.3vw, 1.4rem);
+  margin: 0 0 8px;
+}
+
+.tm-scenes-title {
+  font-size: 28px;
+  margin: 36px 0 16px;
+}
+.tm-scenes {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+.tm-scene-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 16px 20px;
+  background: var(--tm-white);
+  border: 3px solid var(--tm-text);
+  border-radius: 18px;
+  box-shadow: var(--tm-shadow);
+}
+.tm-scene-number {
+  padding: 2px 12px;
+  border-radius: 999px;
+  background: var(--tm-lake);
+  color: var(--tm-white);
+  font-weight: 700;
+  font-size: 16px;
+}
+.tm-scene-title {
+  font-size: 22px;
+  font-weight: 800;
+}
+.tm-scene-idea {
+  color: #35535D;
+}
+.tm-soon {
+  margin-left: auto;
+  padding: 2px 12px;
+  border-radius: 999px;
+  border: 2px dashed var(--tm-soil);
+  color: var(--tm-soil);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.tm-stage-small {
+  margin: 40px auto 32px;
+  justify-content: flex-start;
+}
+
+/* ============================================================
+   PHONES: stack everything in one column
+   ============================================================ */
+
+@media (max-width: 700px) {
+  .tm-app { font-size: 18px; }
+
+  .tm-stage {
+    flex-direction: column;
+    gap: 28px;
+  }
+  .tm-robot {
+    width: 180px;
+    height: 216px;
+  }
+  .tm-bubble {
+    max-width: 100%;
+    min-height: 0;
+  }
+  /* Point the bubble's tail UP at Tumaini instead of left */
+  .tm-bubble-tail-left::before {
+    left: 50%;
+    top: -26px;
+    margin: 0 0 0 -16px;
+    border-width: 0 16px 26px 16px;
+    border-color: transparent transparent var(--tm-text) transparent;
+  }
+  .tm-bubble-tail-left::after {
+    left: 50%;
+    top: -19px;
+    margin: 0 0 0 -12px;
+    border-width: 0 12px 20px 12px;
+    border-color: transparent transparent var(--tm-white) transparent;
+  }
+
+  .tm-episode-header { flex-wrap: wrap; }
+  .tm-soon { margin-left: 0; }
+  .tm-cloud-3 { display: none; }
+}
+
+/* ============================================================
+   REDUCED MOTION: switch off all moving parts
+   ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-app *,
+  .tm-app *::before,
+  .tm-app *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

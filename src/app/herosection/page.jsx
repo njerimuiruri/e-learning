@@ -57,24 +57,22 @@ const HeroSection = () => {
             <div className="absolute bottom-20 right-10 w-40 h-40 bg-[#00c4b3] rounded-full opacity-10 blur-3xl"></div>
             <div className="absolute top-1/2 left-1/2 w-64 h-64 bg-[#039e8e] rounded-full opacity-5 blur-3xl"></div>
 
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 lg:pt-28 lg:pb-32">
-                <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10 lg:pt-12 lg:pb-14">
+                <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
 
                     {/* Left Content */}
-                    <div className="space-y-8 z-10">
+                    <div className="space-y-5 z-10">
                         <div className="inline-block">
                             <span className="text-[#021d49] font-semibold text-sm uppercase tracking-wider bg-[#00c4b3] bg-opacity-10 px-4 py-2 rounded-full border border-[#00c4b3] border-opacity-20">
                                 Welcome to Arin Publishing Academy
                             </span>
                         </div>
 
-                        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
-                            Strengthening Africa's
-                            <br />
+                        <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 leading-tight">
+                            Strengthening Africa's{' '}
                             <span className="text-[#021d49]">
                                 Research, Writing
-                            </span>
-                            <br />
+                            </span>{' '}
                             & Policy Translation
                         </h1>
 
@@ -92,7 +90,7 @@ const HeroSection = () => {
                         </p>
 
                         {/* Features List */}
-                        <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="grid sm:grid-cols-2 gap-3">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-[#021d49] bg-opacity-10 rounded-lg flex items-center justify-center flex-shrink-0">
                                     <Lightbulb className="w-5 h-5 text-[#021d49]" />
@@ -120,7 +118,7 @@ const HeroSection = () => {
                         </div>
 
                         {/* CTA Buttons */}
-                        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                        <div className="flex flex-col sm:flex-row gap-4 pt-1">
                             <Link href="/register"
                                 className="group bg-gradient-to-r from-[#021d49] to-[#021d49] hover:from-[#03275f] hover:to-[#03275f] text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg hover:shadow-2xl flex items-center justify-center gap-2">
                                 Get Started
@@ -136,7 +134,7 @@ const HeroSection = () => {
                     </div>
 
                     {/* Right Content  Two program pathways, replacing the old event flyer */}
-                    <div className="relative flex flex-col gap-5">
+                    <div className="relative flex flex-col gap-4">
                         {PROGRAMS.map((program) => {
                             const Icon = program.icon;
                             const count = moduleCounts[program.key];
@@ -154,7 +152,7 @@ const HeroSection = () => {
                                         <p className="text-sm text-gray-500 leading-relaxed mb-2">{program.blurb}</p>
                                         {typeof count === 'number' && count > 0 && (
                                             <span className="inline-flex items-center gap-1 text-xs font-semibold text-gray-400">
-                                                <Sparkles className="w-3 h-3" /> {count} module{count !== 1 ? 's' : ''} available
+                                                 {count} module{count !== 1 ? 's' : ''} available
                                             </span>
                                         )}
                                     </div>

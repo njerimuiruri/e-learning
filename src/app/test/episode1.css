@@ -1,0 +1,507 @@
+/* ============================================================
+   EPISODE 1 ACTIVITY STYLES
+   Scene 1: notebook pages, bars, tick boxes, rain gauge
+   Scene 2: rainfall wheel, farm, month slider, late-rains switch
+   ============================================================ */
+
+/* ---------- Scene 1: "Give Tumaini a page" ---------- */
+.tm-notebook {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: 20px;
+}
+
+.tm-page-slot {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+}
+/* A notebook page: lined paper with a red margin line */
+.tm-page {
+  width: 100%;
+  padding: 16px 18px 16px 38px;
+  border: 3px solid var(--tm-text);
+  border-radius: 10px;
+  box-shadow: var(--tm-shadow);
+  background:
+    linear-gradient(90deg, transparent 24px, #E0533D 24px, #E0533D 26px, transparent 26px),
+    repeating-linear-gradient(#FFFBEA 0 36px, #BFDCE8 36px 37px);
+  transform: rotate(-2deg);
+}
+.tm-page-day {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+.tm-page-signs {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.tm-page-signs li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+}
+.tm-page-signs li strong {
+  margin-left: auto;
+  white-space: nowrap;
+}
+.tm-page-signs .is-yes strong {
+  color: #2F6A2B;
+}
+.tm-page-signs .is-no {
+  opacity: 0.5;
+}
+.tm-page-signs .is-no strong {
+  color: var(--tm-soil);
+}
+.tm-page-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+.tm-page-result.is-rain {
+  background: #D6EEF6;
+}
+.tm-page-result.is-dry {
+  background: #FCEFD0;
+}
+.tm-page-done {
+  text-align: center;
+  padding: 32px 20px;
+}
+
+/* A new page slides in... */
+.tm-page-in {
+  animation: tm-page-in 0.4s ease-out;
+}
+@keyframes tm-page-in {
+  from { transform: translateY(24px) rotate(-8deg); opacity: 0; }
+  to   { transform: rotate(-2deg); opacity: 1; }
+}
+/* ...and flies into Tumaini when given */
+.tm-page-fly {
+  animation: tm-page-fly 0.65s ease-in forwards;
+}
+@keyframes tm-page-fly {
+  to { transform: translate(180px, -30px) scale(0.12) rotate(25deg); opacity: 0; }
+}
+
+.tm-notebook-robot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+.tm-notebook-robot .tm-bubble {
+  width: 100%;
+}
+
+/* Bars on Tumaini's face screen grow from the bottom */
+.tm-screen-bar {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  transition: transform 0.6s ease-out;
+}
+
+/* The big bars panel */
+.tm-bars {
+  padding: 16px 18px;
+  background: #0E2A33;
+  color: var(--tm-white);
+  border: 4px solid var(--tm-text);
+  border-radius: 18px;
+}
+.tm-bars-title {
+  margin: 0;
+  font-weight: 800;
+  color: #8BE9F5;
+  font-size: 1.15rem;
+}
+.tm-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.tm-bar-row > svg {
+  flex-shrink: 0;
+  padding: 3px;
+  background: var(--tm-sky);
+  border-radius: 10px;
+}
+.tm-bar-body {
+  flex: 1;
+  min-width: 0;
+}
+.tm-bar-label {
+  font-size: 16px;
+  font-weight: 700;
+}
+.tm-bar-track {
+  height: 22px;
+  margin-top: 4px;
+  overflow: hidden;
+  background: #1F4450;
+  border-radius: 999px;
+}
+.tm-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.6s ease-out;
+}
+.tm-bar-value {
+  min-width: 3.4ch;
+  text-align: right;
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--tm-maize);
+}
+
+/* Pages counter */
+.tm-counter p {
+  margin: 0;
+  font-size: 1.25rem;
+}
+.tm-counter-pips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.tm-counter-pips span {
+  width: 18px;
+  height: 24px;
+  background: var(--tm-white);
+  border: 2px solid var(--tm-text);
+  border-radius: 4px;
+}
+.tm-counter-pips span.is-on {
+  background: var(--tm-maize);
+}
+
+/* ---------- Scene 1: "What do you see in today's sky?" ---------- */
+.tm-sky-guess {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+  align-items: start;
+  gap: 24px;
+}
+.tm-ticks {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+.tm-tick {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 18px;
+  background: var(--tm-white);
+  border: 3px solid var(--tm-text);
+  border-radius: 18px;
+  box-shadow: 0 4px 0 var(--tm-text);
+  font-size: 1.3rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s, background 0.15s;
+}
+.tm-tick:hover {
+  transform: translateY(-2px);
+}
+/* The real checkbox is hidden; we draw our own big box */
+.tm-tick input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+.tm-tick:has(input:focus-visible) {
+  outline: 4px solid var(--tm-maize);
+  outline-offset: 3px;
+}
+.tm-tick-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  background: var(--tm-white);
+  border: 3px solid var(--tm-text);
+  border-radius: 10px;
+  color: var(--tm-white);
+  font-size: 1.6rem;
+}
+.tm-tick.is-on {
+  background: #FFF4D6;
+}
+.tm-tick.is-on .tm-tick-box {
+  background: var(--tm-leaf);
+}
+
+.tm-guess-visuals {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+.tm-gauge-box {
+  text-align: center;
+}
+.tm-gauge {
+  width: min(280px, 100%);
+  height: auto;
+}
+.tm-gauge-value {
+  margin: -6px 0 0;
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 900;
+  color: var(--tm-lake);
+}
+.tm-needle {
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+  transition: transform 0.7s cubic-bezier(0.3, 1.5, 0.6, 1);
+}
+.tm-weather {
+  width: 160px;
+  height: auto;
+  border: 3px solid var(--tm-text);
+  border-radius: 16px;
+}
+.tm-sun-spin {
+  transform-box: view-box;
+  animation: tm-spin 14s linear infinite;
+}
+.tm-drop {
+  animation: tm-rain 0.8s linear infinite;
+}
+
+/* ---------- Scene 2: wheel and farm ---------- */
+.tm-seasons {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: center;
+  gap: 20px;
+}
+.tm-wheel {
+  display: block;
+  width: 100%;
+  max-width: 470px;
+  height: auto;
+  margin: 0 auto;
+}
+.tm-wheel path {
+  transition: fill 0.3s;
+}
+.tm-season-labels {
+  animation: tm-fade-in 0.6s ease-out;
+}
+.tm-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  font-weight: 700;
+}
+.tm-legend-dash {
+  display: inline-block;
+  width: 36px;
+  border-top: 4px dashed var(--tm-soil);
+}
+
+.tm-farm-box {
+  display: grid;
+  gap: 10px;
+}
+.tm-month-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.tm-month-banner strong {
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+}
+.tm-farm {
+  position: relative;
+  overflow: hidden;
+  border: 4px solid var(--tm-text);
+  border-radius: 18px;
+}
+.tm-farm-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.tm-farm-sky {
+  transition: fill 0.6s;
+}
+.tm-farm-mama {
+  position: absolute;
+  left: 2%;
+  bottom: 3%;
+  width: 15%;
+}
+.tm-farm-mama svg {
+  width: 100%;
+  height: auto;
+}
+.tm-farm-sign {
+  margin: 0;
+  padding: 12px 16px;
+  background: #F5E1C0;
+  border: 3px solid var(--tm-soil);
+  border-radius: 12px;
+  box-shadow: 0 4px 0 var(--tm-soil);
+  font-size: 1.2rem;
+  font-weight: 800;
+}
+.tm-farm-sign.is-alert {
+  background: #FBE0DA;
+  border-color: #E0533D;
+  box-shadow: 0 4px 0 #E0533D;
+  animation: tm-shake 0.5s;
+}
+@keyframes tm-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-6px); }
+  75%      { transform: translateX(6px); }
+}
+
+/* Maize grows up from the ground when its stage changes */
+.tm-grow {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: tm-grow 0.6s ease-out;
+}
+@keyframes tm-grow {
+  from { transform: scaleY(0.3); opacity: 0.3; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+
+/* Month slider */
+.tm-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  min-width: 220px;
+  font-weight: 800;
+}
+.tm-slider input[type="range"] {
+  width: 100%;
+  height: 32px;
+  accent-color: var(--tm-lake);
+  cursor: pointer;
+}
+
+/* Late-rains switch */
+.tm-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 20px;
+  background: var(--tm-white);
+  color: var(--tm-text);
+  border: 3px solid var(--tm-text);
+  border-radius: 999px;
+  box-shadow: 0 4px 0 var(--tm-text);
+  font: inherit;
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+.tm-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 64px;
+  height: 36px;
+  background: #9FB7BF;
+  border: 3px solid var(--tm-text);
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+.tm-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  background: var(--tm-white);
+  border: 2px solid var(--tm-text);
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.tm-switch.is-on .tm-switch-track {
+  background: #E0533D;
+}
+.tm-switch.is-on .tm-switch-knob {
+  transform: translateX(28px);
+}
+
+/* Flashing warning sign next to Tumaini */
+.tm-alert-icon {
+  font-size: 2.6rem;
+  animation: tm-alert-flash 0.8s steps(1) infinite;
+}
+@keyframes tm-alert-flash {
+  50% { opacity: 0.2; }
+}
+
+/* ---------- Medium screens ---------- */
+@media (max-width: 960px) {
+  .tm-notebook {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .tm-bars {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 700px) {
+  .tm-notebook,
+  .tm-sky-guess,
+  .tm-seasons {
+    grid-template-columns: 1fr;
+  }
+  .tm-page-slot {
+    min-height: 0;
+  }
+  /* On phones Tumaini is below the page, so the page flies down */
+  .tm-page-fly {
+    animation-name: tm-page-fly-down;
+  }
+  @keyframes tm-page-fly-down {
+    to { transform: translate(0, 200px) scale(0.12) rotate(25deg); opacity: 0; }
+  }
+  .tm-tick {
+    font-size: 1.15rem;
+  }
+  .tm-activity-buttons,
+  .tm-activity-buttons .tm-button {
+    width: 100%;
+    justify-content: center;
+  }
+}

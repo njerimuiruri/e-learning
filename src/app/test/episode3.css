@@ -1,0 +1,360 @@
+/* ============================================================
+   EPISODE 3 STYLES
+   Season cards, the decision tree, the village map, and (for
+   now) the sneak-peek containers.
+   ============================================================ */
+
+/* ---------- Season cards ---------- */
+.tm-season-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 10px;
+}
+.tm-season-card {
+  padding: 8px 8px 6px;
+  background: var(--tm-white);
+  border: 3px solid var(--tm-text);
+  border-radius: 14px;
+  box-shadow: 0 3px 0 rgba(19, 48, 58, 0.25);
+  text-align: center;
+}
+.tm-season-card.is-good { border-color: #2F6A2B; background: #F4FBF1; }
+.tm-season-card.is-poor { border-color: #8A5A36; background: #FBF3EA; }
+.tm-season-title {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 900;
+}
+.tm-season-answers {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tm-season-answers li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.tm-season-answers strong {
+  font-size: 18px;
+  line-height: 1;
+}
+.tm-season-answers .is-yes { color: #2F6A2B; }
+.tm-season-answers .is-no  { color: #B3321F; }
+.tm-season-result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+}
+.tm-season-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 10px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.tm-season-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Small chips, for piles */
+.tm-season-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 8px 2px 2px;
+  border: 2.5px solid var(--tm-text);
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 900;
+}
+.tm-season-chip.is-good { background: #FFF1C9; }
+.tm-season-chip.is-poor { background: #E8D2BC; }
+
+/* ---------- Decision tree ---------- */
+.tm-tree {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+/* New branches grow from the parent outwards */
+.tm-branch-grow {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: tm-draw-line 0.9s ease-out forwards;
+}
+.tm-branch-label {
+  animation: tm-fade-only 0.4s ease-out 0.6s both;
+}
+.tm-branch {
+  transition: opacity 0.4s;
+}
+.tm-branch.is-faded,
+.tm-tree-box.is-faded {
+  opacity: 0.35;
+}
+/* A light travelling along the chosen branch */
+.tm-branch-glow {
+  stroke-dasharray: 0.18 0.82;
+  animation: tm-glow-travel 1.2s linear infinite;
+  filter: drop-shadow(0 0 6px #FFE38A);
+}
+@keyframes tm-glow-travel {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+/* Boxes pop out once their branch has grown ("backwards" so a reached fruit can still grow bigger) */
+.tm-tree-box {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tm-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) backwards;
+  transition: opacity 0.4s, transform 0.5s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.tm-fruit.is-reached {
+  transform: scale(1.18);
+}
+.tm-tree-current {
+  animation: tm-alert-flash 0.9s steps(1) infinite;
+}
+/* Season dots slide to their new box when the tree grows */
+.tm-season-dot {
+  transition: transform 0.9s ease-in-out;
+}
+
+/* ---------- Village map ---------- */
+.tm-village-map {
+  touch-action: manipulation;
+}
+.tm-roof {
+  transition: fill 0.5s;
+}
+.tm-star-drop {
+  animation: tm-star-drop 0.8s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+@keyframes tm-star-drop {
+  from { transform: translateY(-300px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.tm-join-line {
+  opacity: 0.75;
+  animation: tm-fade-only 0.4s ease-out both;
+}
+.tm-group-label {
+  animation: tm-fade-only 0.6s ease-out both;
+}
+
+/* ---------- Sneak peek containers (temporary) ---------- */
+.tm-preview-tree,
+.tm-preview-map {
+  max-width: 820px;
+  margin: 0 auto;
+  border: 3px solid var(--tm-text);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #DDF0F7;
+}
+.tm-preview-map {
+  max-width: 560px;
+}
+
+/* With "reduce motion": show branches fully grown straight away */
+@media (prefers-reduced-motion: reduce) {
+  .tm-branch-grow {
+    stroke-dashoffset: 0;
+  }
+  .tm-branch-glow {
+    stroke-dasharray: none;
+  }
+}
+
+/* ============================================================
+   SCENE 5: "Which question should we ask FIRST?"
+   ============================================================ */
+.tm-question-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.tm-question-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 10px;
+  background: #9BD48A;
+  color: var(--tm-text);
+  border: 4px solid var(--tm-text);
+  border-radius: 22px;
+  box-shadow: 0 5px 0 var(--tm-text);
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+.tm-question-button:hover {
+  transform: translateY(-2px);
+}
+.tm-question-button.is-chosen {
+  background: var(--tm-maize);
+  transform: translateY(2px);
+  box-shadow: 0 3px 0 var(--tm-text);
+}
+.tm-question-score {
+  padding: 2px 10px;
+  background: var(--tm-white);
+  border-radius: 999px;
+  font-size: 0.9rem;
+}
+.tm-attention-group .tm-question-button {
+  animation: tm-attention 1.4s ease-out infinite;
+}
+
+/* The sorting meter */
+.tm-sort-meter {
+  margin-top: 14px;
+  padding: 12px 16px;
+  background: #0E2A33;
+  color: var(--tm-white);
+  border: 4px solid var(--tm-text);
+  border-radius: 16px;
+  text-align: center;
+}
+.tm-sort-meter p {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.tm-sort-meter strong {
+  color: var(--tm-maize);
+}
+.tm-sort-meter-track {
+  height: 22px;
+  margin: 8px 0 0;
+  overflow: hidden;
+  background: #1F4450;
+  border-radius: 999px;
+}
+.tm-sort-meter-fill {
+  height: 100%;
+  background: var(--tm-maize);
+  border-radius: 999px;
+  transition: width 0.6s ease-out;
+}
+.tm-sort-compare {
+  margin-top: 8px !important;
+  font-size: 1rem !important;
+  color: #BFDCE8;
+}
+
+/* The two piles */
+.tm-piles-question {
+  margin: 16px 0 8px;
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 900;
+}
+.tm-piles {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+.tm-pile {
+  padding: 10px;
+  background: #FBF3EA;
+  border: 4px solid var(--tm-text);
+  border-radius: 18px;
+}
+.tm-pile.is-clean {
+  border-color: var(--tm-leaf);
+  box-shadow: 0 0 0 4px rgba(76, 142, 68, 0.3);
+}
+.tm-pile-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+}
+.tm-pile-title strong {
+  font-size: 1.4rem;
+}
+.tm-pile-clean {
+  padding: 2px 10px;
+  background: #E3F2DF;
+  border: 2px solid var(--tm-leaf);
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+.tm-mix-bar {
+  display: flex;
+  height: 28px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 3px solid var(--tm-text);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 900;
+}
+.tm-mix-bar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.tm-mix-good { background: #F2B544; }
+.tm-mix-poor { background: #B5835A; color: var(--tm-white); }
+.tm-pile-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
+}
+.tm-pile-cards .tm-season-card {
+  padding: 6px 4px 4px;
+}
+/* Cards slide into their pile one after another */
+.tm-card-slide {
+  animation: tm-card-slide 0.5s ease-out both;
+}
+@keyframes tm-card-slide {
+  from { transform: translateY(-40px) scale(0.85); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* ============================================================
+   SCENE 5: "Grow the tree"
+   ============================================================ */
+.tm-tree-box-frame {
+  max-width: 880px;
+  margin: 0 auto;
+  overflow: hidden;
+  background: linear-gradient(#CDEAF5, #E6F3F8);
+  border: 4px solid var(--tm-text);
+  border-radius: 18px;
+}
+.tm-tree-legend {
+  padding: 6px 0 10px;
+  color: var(--tm-text);
+}
+
+@media (max-width: 700px) {
+  .tm-question-buttons {
+    grid-template-columns: 1fr;
+  }
+  .tm-piles {
+    grid-template-columns: 1fr;
+  }
+}

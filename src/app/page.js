@@ -17,7 +17,7 @@ export default function Home() {
       <AboutTeaser />
 
       {/* Closing CTA */}
-      <section className="py-16 bg-gray-50 border-t border-gray-100">
+      <section className="py-12 bg-gray-50 border-t border-gray-100">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">
             Ready to start learning?

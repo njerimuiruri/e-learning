@@ -1,0 +1,160 @@
+/* ============================================================
+   EPISODE 0 STYLES
+   The greenhouse blanket, and the reusable card-sort game.
+   ============================================================ */
+
+/* ---------- The greenhouse blanket ---------- */
+.tm-greenhouse {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+.tm-greenhouse-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 4px solid var(--tm-text);
+  border-radius: 18px;
+}
+.tm-greenhouse-svg path,
+.tm-greenhouse-svg rect {
+  transition: opacity 0.6s;
+}
+.tm-greenhouse-info {
+  padding: 16px;
+  background: var(--tm-white);
+  border: 4px solid var(--tm-text);
+  border-radius: 18px;
+  font-size: 1.1rem;
+}
+.tm-greenhouse-era {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+.tm-greenhouse-warming {
+  margin: 4px 0 8px;
+  font-size: 1.2rem;
+}
+.tm-greenhouse-warming strong {
+  color: #B3321F;
+}
+.tm-greenhouse-key {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin: 10px 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.tm-greenhouse-key span {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  margin-left: 6px;
+}
+.tm-key-sun   { border-top: 4px solid #F2B544; }
+.tm-key-heat  { border-top: 4px solid #FF6B4A; }
+.tm-key-paris { border-top: 4px dashed #F2B544; }
+/* Sunlight and heat pulse gently, so you can see them moving */
+.tm-ray,
+.tm-heat {
+  animation: tm-shine 1.4s ease-in-out infinite alternate;
+}
+
+/* ---------- Card sort ---------- */
+.tm-sort-bins {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.tm-sort-bin {
+  min-height: 110px;
+  padding: 10px;
+  background: #F4F8FA;
+  border: 4px dashed #9FB7BF;
+  border-radius: 18px;
+  transition: border-color 0.3s, background 0.3s;
+}
+.tm-sort-bin.is-right {
+  background: #E3F2DF;
+  border-color: var(--tm-leaf);
+  border-style: solid;
+}
+.tm-sort-bin.is-wrong {
+  background: #FBE0DA;
+  border-color: #E0533D;
+  border-style: solid;
+}
+.tm-sort-bin-title {
+  margin: 0 0 8px;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+.tm-sort-bin-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.tm-sort-chip {
+  padding: 3px 10px;
+  background: var(--tm-white);
+  border: 2px solid var(--tm-text);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  animation: tm-pop-in 0.4s ease-out both;
+}
+.tm-sort-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 560px;
+  margin: 18px auto 0;
+  padding: 20px;
+  background: var(--tm-white);
+  border: 4px solid var(--tm-text);
+  border-radius: 22px;
+  box-shadow: var(--tm-shadow-lift);
+  text-align: center;
+  animation: tm-pop-in 0.5s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+.tm-sort-card-emoji {
+  font-size: 3.2rem;
+  line-height: 1;
+}
+.tm-sort-card-text {
+  font-size: clamp(1.3rem, 3vw, 1.7rem);
+  font-weight: 900;
+}
+.tm-sort-card-count {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #35535D;
+}
+.tm-sort-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  max-width: 720px;
+  margin: 16px auto 0;
+}
+.tm-sort-choices .tm-sort-button {
+  background: #FFF4D6;
+}
+
+@media (max-width: 760px) {
+  .tm-greenhouse {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 560px) {
+  .tm-sort-bins,
+  .tm-sort-choices {
+    grid-template-columns: 1fr;
+  }
+}

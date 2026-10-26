@@ -51,9 +51,9 @@ const CategoriesTeaser = () => {
     }, []);
 
     return (
-        <section className="py-16 lg:py-20 bg-white">
+        <section className="py-10 lg:py-12 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-10">
+                <div className="text-center mb-8">
                     <p className="text-sm font-semibold text-[#021d49] uppercase tracking-widest mb-2">Our Programmes</p>
                     <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">Explore What We Offer</h2>
                 </div>

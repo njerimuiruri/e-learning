@@ -1,0 +1,487 @@
+/* ============================================================
+   MOTION AND "MAKE IT UNDERSTANDABLE" STYLES
+   ------------------------------------------------------------
+   • Characters walk in, breathe, lean towards the speaker,
+     move their mouths while talking, jump and show things
+   • Scenery moves: clouds drift, birds fly, maize sways
+   • Picture cards pop up beside speech bubbles
+   • Auto-play timer bar, "start here" pulses, journey bar
+   All of it switches off with "reduce motion" (see the end).
+   ============================================================ */
+
+/* ---------- The top of the stage: bubble + picture card ---------- */
+.tm-stage-top {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+.tm-stage-top .tm-stage-bubble {
+  flex: 1;
+  min-width: 0;
+}
+.tm-stage-picture {
+  flex: 0 0 min(300px, 36%);
+  animation: tm-pop-in 0.6s cubic-bezier(0.3, 1.5, 0.5, 1) both;
+}
+.tm-stage-top.has-wide-picture {
+  flex-direction: column;
+  align-items: stretch;
+}
+.tm-stage-top.has-wide-picture .tm-stage-picture {
+  flex-basis: auto;
+}
+@keyframes tm-pop-in {
+  from { transform: scale(0.3) rotate(-6deg); opacity: 0; }
+  to   { transform: scale(1) rotate(0); opacity: 1; }
+}
+
+/* A bubble waiting for someone to finish walking in */
+.tm-bubble {
+  transition: opacity 0.3s;
+}
+.tm-bubble.is-waiting {
+  opacity: 0;
+}
+
+/* ---------- Picture cards ---------- */
+.tm-idea {
+  margin: 0;
+  overflow: hidden;
+  background: var(--tm-white);
+  border: 4px solid var(--tm-text);
+  border-radius: 18px;
+  box-shadow: var(--tm-shadow);
+}
+.tm-idea svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.tm-idea figcaption {
+  padding: 8px 12px;
+  background: #FFF4D6;
+  border-top: 3px solid var(--tm-text);
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+/* Things inside pictures pop in one after another */
+.tm-pop {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tm-pop 0.5s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+@keyframes tm-pop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+.tm-bar-grow {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: tm-grow-y 0.6s ease-out both;
+}
+@keyframes tm-grow-y {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+.tm-bar-grow-x {
+  transform-box: fill-box;
+  transform-origin: left;
+  animation: tm-grow-x 0.9s ease-out both;
+}
+@keyframes tm-grow-x {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.tm-sun-pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tm-sun-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tm-sun-pulse {
+  50% { transform: scale(1.12); }
+}
+.tm-fly-away {
+  animation: tm-fly-away 2.4s ease-in infinite;
+}
+@keyframes tm-fly-away {
+  0%   { transform: translate(0, 0); opacity: 1; }
+  100% { transform: translate(30px, -60px); opacity: 0; }
+}
+.tm-spin-slow {
+  transform-box: view-box;
+  animation: tm-spin 2.5s linear infinite;
+}
+.tm-wobble {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: tm-wobble 1.4s ease-in-out infinite;
+}
+@keyframes tm-wobble {
+  0%, 100% { transform: rotate(-8deg); }
+  50%      { transform: rotate(8deg); }
+}
+
+/* The big message: four steps light up one by one */
+.tm-message-chain {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 14px;
+  list-style: none;
+  background: var(--tm-white);
+  border: 4px solid var(--tm-text);
+  border-radius: 18px;
+  box-shadow: var(--tm-shadow);
+}
+.tm-message-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border: 3px solid var(--tm-text);
+  border-radius: 14px;
+  background: var(--tm-sky);
+  text-align: center;
+  font-size: clamp(0.95rem, 1.8vw, 1.15rem);
+  font-weight: 800;
+  opacity: 0.3;
+  animation: tm-light-up 0.6s ease-out forwards;
+}
+.tm-message-icon {
+  font-size: 2rem;
+}
+@keyframes tm-light-up {
+  to { opacity: 1; background: #FFF4D6; transform: scale(1.04); }
+}
+
+/* ---------- Characters ---------- */
+.tm-slot {
+  transform-origin: bottom center;
+  transition: transform 0.5s ease;
+}
+/* Mama and Otieno breathe gently, so they never look frozen */
+.tm-slot-mama .tm-slot-inner,
+.tm-slot-otieno .tm-slot-inner {
+  transform-origin: bottom center;
+  animation: tm-breathe 3.2s ease-in-out infinite;
+}
+@keyframes tm-breathe {
+  0%, 100% { transform: scale(1, 1); }
+  50%      { transform: scale(1.01, 1.025); }
+}
+/* Listeners lean towards the speaker */
+.tm-lean-left  { transform: rotate(-3deg); }
+.tm-lean-right { transform: rotate(3deg); }
+
+/* Walking in from the left */
+.tm-walk-in {
+  animation: tm-walk-in 1.6s ease-out backwards;
+}
+@keyframes tm-walk-in {
+  from { transform: translateX(-75vw); }
+  to   { transform: translateX(0); }
+}
+.tm-walk-in .tm-slot-inner {
+  animation: tm-step-bob 0.4s ease-in-out 4;
+}
+@keyframes tm-step-bob {
+  50% { transform: translateY(-7px); }
+}
+/* Legs swing while walking */
+.tm-walk-in .tm-leg-l,
+.tm-walk-in .tm-leg-r {
+  transform-box: fill-box;
+  transform-origin: top center;
+  animation: tm-leg 0.4s ease-in-out 4 alternate;
+}
+.tm-walk-in .tm-leg-r {
+  animation-direction: alternate-reverse;
+}
+@keyframes tm-leg {
+  from { transform: rotate(-14deg); }
+  to   { transform: rotate(14deg); }
+}
+/* Tumaini's wheels turn when it rolls in */
+.tm-roll-in {
+  animation-fill-mode: backwards;
+}
+.tm-walk-in .tm-wheel-spin,
+.tm-roll-in .tm-wheel-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tm-spin-back 0.45s linear 3;
+}
+@keyframes tm-spin-back {
+  to { transform: rotate(-360deg); }
+}
+
+/* Mouths open and close while words are typing */
+.tm-mouth-moving .tm-mouth {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tm-mouth 0.2s ease-in-out infinite alternate;
+}
+@keyframes tm-mouth {
+  from { transform: scale(1, 1); }
+  to   { transform: scale(0.85, 0.35); }
+}
+
+/* Actions */
+.tm-action-jump .tm-slot-inner {
+  animation: tm-jump 0.6s ease-in-out 3;
+}
+@keyframes tm-jump {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  15%      { transform: translateY(0) scale(1.06, 0.92); }
+  50%      { transform: translateY(-26px) scale(0.97, 1.04); }
+}
+.tm-action-show-notebook .tm-held-notebook {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tm-show-book 1s cubic-bezier(0.3, 1.4, 0.5, 1) 0.3s both;
+}
+@keyframes tm-show-book {
+  from { transform: translateY(0) scale(1); }
+  to   { transform: translateY(-16px) scale(1.25) rotate(-5deg); }
+}
+
+/* ---------- Moving scenery ---------- */
+.tm-bg-cloud {
+  animation: tm-drift 20s ease-in-out infinite alternate;
+}
+.tm-bg-cloud-slow {
+  animation-duration: 32s;
+}
+.tm-birds {
+  animation: tm-birds 24s linear infinite;
+}
+@keyframes tm-birds {
+  from { transform: translate(-100px, 150px); }
+  to   { transform: translate(1100px, 70px); }
+}
+.tm-sway {
+  transform-box: fill-box;
+  transform-origin: bottom center;
+  animation: tm-sway 3s ease-in-out infinite alternate;
+}
+@keyframes tm-sway {
+  from { transform: rotate(-3deg); }
+  to   { transform: rotate(3deg); }
+}
+
+/* ---------- Notebook activity extras ---------- */
+.tm-munch {
+  position: relative;
+  animation: tm-munch 0.5s ease-out;
+}
+@keyframes tm-munch {
+  0%   { transform: scale(1, 1); }
+  40%  { transform: scale(1.08, 0.92); }
+  100% { transform: scale(1, 1); }
+}
+.tm-plus-one {
+  position: absolute;
+  top: 6%;
+  right: -6px;
+  z-index: 3;
+  padding: 2px 12px;
+  background: var(--tm-maize);
+  border: 3px solid var(--tm-text);
+  border-radius: 999px;
+  font-weight: 900;
+  animation: tm-float-up 1.3s ease-out forwards;
+}
+@keyframes tm-float-up {
+  from { transform: translateY(0); opacity: 1; }
+  to   { transform: translateY(-60px); opacity: 0; }
+}
+.tm-bar-count {
+  display: block;
+  font-size: 14px;
+  color: #BFDCE8;
+}
+.tm-working {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  background: var(--tm-sky);
+  border-radius: 12px;
+  text-align: center;
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+.tm-wheel-key {
+  margin: 4px 0 0;
+  text-align: center;
+  font-size: 1rem;
+}
+
+/* ---------- "What to do" help line ---------- */
+.tm-help {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  max-width: 780px;
+  margin: -4px auto 18px;
+  padding: 10px 16px;
+  background: #FFF4D6;
+  border: 3px dashed var(--tm-maize);
+  border-radius: 14px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.tm-help-hand {
+  font-size: 1.7rem;
+  animation: tm-hand 0.8s ease-in-out infinite alternate;
+}
+@keyframes tm-hand {
+  to { transform: translateY(-6px); }
+}
+
+/* ---------- "Start here" pulse on the first thing to press ---------- */
+.tm-attention,
+.tm-attention-group .tm-tick {
+  animation: tm-attention 1.4s ease-out infinite;
+}
+@keyframes tm-attention {
+  0%   { box-shadow: 0 4px 0 var(--tm-text), 0 0 0 0 rgba(242, 181, 68, 0.9); }
+  70%  { box-shadow: 0 4px 0 var(--tm-text), 0 0 0 16px rgba(242, 181, 68, 0); }
+  100% { box-shadow: 0 4px 0 var(--tm-text), 0 0 0 0 rgba(242, 181, 68, 0); }
+}
+/* Next pulses after an activity is finished */
+.tm-pulse {
+  animation: tm-attention 1.2s ease-out infinite;
+}
+
+/* ---------- Auto-play timer bar inside the Next button ---------- */
+.tm-next {
+  position: relative;
+  overflow: hidden;
+}
+.tm-next-timer {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 7px;
+  background: var(--tm-lake);
+  transform-origin: left;
+  animation: tm-timer linear forwards;
+}
+@keyframes tm-timer {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* ---------- Presenter toggles ---------- */
+.tm-toggle {
+  padding: 6px 14px;
+  background: var(--tm-white);
+  color: var(--tm-text);
+  border: 3px solid var(--tm-text);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tm-toggle.is-on {
+  background: #E3F2DF;
+  border-color: var(--tm-leaf);
+}
+
+/* ---------- The 6-part journey bar ---------- */
+.tm-journey ol {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+}
+.tm-journey-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  height: 100%;
+  padding: 8px 4px;
+  background: var(--tm-white);
+  color: #35535D;
+  border: 3px solid #9FB7BF;
+  border-radius: 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+.tm-journey-step:disabled {
+  cursor: default;
+}
+.tm-journey-step.is-done {
+  background: #E3F2DF;
+  border-color: var(--tm-leaf);
+  color: var(--tm-text);
+}
+.tm-journey-step.is-now {
+  background: var(--tm-maize);
+  border-color: var(--tm-text);
+  color: var(--tm-text);
+  box-shadow: 0 4px 0 var(--tm-text);
+  transform: translateY(-3px);
+}
+.tm-journey-icon {
+  font-size: 1.4rem;
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 700px) {
+  .tm-stage-top {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  /* On phones the picture goes first, so the bubble still points at the speaker */
+  .tm-stage-picture {
+    order: -1;
+    flex-basis: auto;
+    width: 100%;
+    max-width: 300px;
+    align-self: center;
+  }
+  .tm-message-chain {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tm-journey-label {
+    display: none;
+  }
+  .tm-journey-step.is-now .tm-journey-label {
+    display: block;
+    font-size: 11px;
+  }
+  .tm-help {
+    font-size: 1rem;
+  }
+}
+
+/* ---------- Reduced motion: show everything still, at once ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .tm-message-step {
+    opacity: 1;
+    background: #FFF4D6;
+  }
+  .tm-lean-left,
+  .tm-lean-right {
+    transform: none;
+  }
+}
