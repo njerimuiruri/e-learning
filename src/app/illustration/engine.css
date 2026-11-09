@@ -105,6 +105,15 @@
   margin: 0;
   font-size: clamp(1.6rem, 4vw, 2.4rem);
 }
+.tm-scene-where {
+  margin: 0;
+  color: #35535D;
+  font-size: 16px;
+  font-weight: 700;
+}
+.tm-scene-where:empty {
+  display: none;
+}
 .tm-scene-count {
   margin: 0;
   padding: 4px 14px;
@@ -241,12 +250,47 @@
   font-size: 16px;
   font-weight: 700;
 }
+/* A thin bar instead of a row of dots */
+.tm-progress-bar {
+  max-width: 320px;
+  height: 8px;
+  margin: 0 auto;
+  border-radius: 999px;
+  background: #DCE6E9;
+  overflow: hidden;
+}
+.tm-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--tm-lake);
+  transition: width 0.3s ease-out;
+}
 .tm-locked-hint {
   min-height: 1.5em;
   margin: 8px 0 0;
   text-align: right;
   font-weight: 700;
   color: var(--tm-soil);
+}
+/* Presenter options stay folded away so the slide is the focus */
+.tm-presenter {
+  margin-top: 8px;
+  text-align: center;
+}
+.tm-presenter > summary {
+  display: inline-block;
+  cursor: pointer;
+  color: #5B747C;
+  font-size: 15px;
+  font-weight: 700;
+  list-style: none;
+}
+.tm-presenter > summary::-webkit-details-marker {
+  display: none;
+}
+.tm-presenter[open] > summary {
+  margin-bottom: 8px;
 }
 .tm-controls-extra {
   display: flex;

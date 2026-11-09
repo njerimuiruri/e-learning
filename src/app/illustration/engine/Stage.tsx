@@ -59,6 +59,8 @@ interface StageProps {
   moods: Partial<Record<CharacterId, Mood>>;
   speaker?: CharacterId;
   text?: string;
+  /** Big slide heading: one idea per slide */
+  title?: string;
   /** A character who arrives with a "roll in" animation */
   entering?: CharacterId;
   /** Characters who walk in from the side (start of a scene) */
@@ -73,7 +75,7 @@ interface StageProps {
   mamaHolds?: "notebook" | "seeds" | "phone";
 }
 
-export default function Stage({ setting, cast, moods, speaker, text, entering, walkIn = [], action, picture, onTypingDone, announcer, mamaHolds }: StageProps) {
+export default function Stage({ setting, cast, moods, speaker, text, title, entering, walkIn = [], action, picture, onTypingDone, announcer, mamaHolds }: StageProps) {
   const [typing, setTyping] = useState(true);
   useEffect(() => setTyping(true), [text]);
 
@@ -89,6 +91,8 @@ export default function Stage({ setting, cast, moods, speaker, text, entering, w
   return (
     <div className={`tm-stage-box tm-setting-${setting}`}>
       <Background setting={setting} />
+
+      {title && <h3 className="tm-slide-title">{title}</h3>}
 
       <div className={`tm-stage-top ${picture ? "has-picture" : ""} ${picture === "big-message" ? "has-wide-picture" : ""}`}>
         {announcer === "radio" && <Radio />}
@@ -109,7 +113,7 @@ export default function Stage({ setting, cast, moods, speaker, text, entering, w
         </div>
         {picture && (
           <div className="tm-stage-picture" style={{ animationDelay: `${bubbleDelay + 300}ms` }}>
-            <IdeaPictureCard id={picture} />
+            <IdeaPictureCard id={picture} hideCaption={Boolean(title)} />
           </div>
         )}
       </div>

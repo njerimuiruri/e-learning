@@ -10,6 +10,23 @@
    ============================================================ */
 
 /* ---------- The top of the stage: bubble + picture card ---------- */
+/* KISS slide heading: one idea per slide */
+.tm-slide-title {
+  position: relative;
+  z-index: 2;
+  margin: 0 auto 12px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 16px;
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 12px;
+  color: var(--tm-text);
+  font-size: clamp(1.4rem, 3.4vw, 2.1rem);
+  font-weight: 900;
+  line-height: 1.2;
+  text-align: center;
+}
+
 .tm-stage-top {
   position: relative;
   z-index: 2;
@@ -330,13 +347,11 @@
   justify-content: center;
   gap: 10px;
   max-width: 780px;
-  margin: -4px auto 18px;
-  padding: 10px 16px;
-  background: #FFF4D6;
-  border: 3px dashed var(--tm-maize);
-  border-radius: 14px;
+  margin: -8px auto 16px;
+  color: #35535D;
   font-size: 1.1rem;
-  font-weight: 700;
+  font-weight: 600;
+  text-align: center;
 }
 .tm-help-hand {
   font-size: 1.7rem;

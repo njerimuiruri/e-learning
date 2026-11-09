@@ -133,7 +133,7 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
   // the short version). "beatNo" is the beat's real number in the content.
   const visible = useMemo(() => visibleBeats(scene, short), [scene, short]);
   const [index, setIndex] = useState(0);
-  const [furthest, setFurthest] = useState(0); // the furthest beat reached (real number)
+  const [, setFurthest] = useState(0); // the furthest beat reached (real number)
   const [completed, setCompleted] = useState<number[]>([]); // real numbers of beats whose task is done
   const [guesses, setGuesses] = useState<Record<number, number>>({}); // predict beats: the option chosen
   const [runKey, setRunKey] = useState(0); // changes on "Start again" to reset everything
@@ -355,6 +355,7 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
             {...stageBasics}
             speaker={beat.who}
             text={beat.text}
+            title={beat.title}
             entering={beat.enters ? beat.who : undefined}
             walkIn={walkingIn}
             action={beat.action}
@@ -385,9 +386,7 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
           <div className="tm-activity-wrap" onPointerDown={touched} onKeyDown={touched} onInput={touched}>
             <h3 className="tm-prompt">{beat.prompt}</h3>
             {beat.help && (
-              <p className="tm-help">
-                <span className="tm-help-hand" aria-hidden="true">👆</span> {beat.help}
-              </p>
+              <p className="tm-help">{beat.help}</p>
             )}
             <Activity done={taskDone} onComplete={() => markDone(beatNo)} onSpeech={setActivitySpeech} />
           </div>
@@ -413,49 +412,16 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
     }
   };
 
-  // The first played beat of each part, for jumping with the journey bar.
-  const firstIndexOfPart = (part: ScenePart) => visible.findIndex((n) => partOfBeat[n] === part);
-
   return (
     <section className="tm-scene" aria-labelledby="tm-scene-title">
+      {/* One quiet line: where we are. No extra boxes. */}
       <header className="tm-scene-header">
-        {sceneCount > 1 && (
-          <p className="tm-scene-count">
-            Scene {sceneIndex + 1} of {sceneCount}
-          </p>
-        )}
         <h2 id="tm-scene-title">{scene.title}</h2>
+        <p className="tm-scene-where">
+          {sceneCount > 1 && `Scene ${sceneIndex + 1} of ${sceneCount} · `}
+          {partsUsed.length > 1 && partInfo(currentPart).label}
+        </p>
       </header>
-
-      {/* ---------- The journey through the scene's parts ---------- */}
-      <nav className="tm-journey" aria-label="Parts of this scene">
-        <ol style={{ gridTemplateColumns: `repeat(${partsUsed.length}, minmax(0, 1fr))` }}>
-          {partsUsed.map((part) => {
-            const start = firstIndexOfPart(part);
-            const reached = start >= 0 && visible[start] <= furthest;
-            const state = part < currentPart ? "is-done" : part === currentPart ? "is-now" : "";
-            return (
-              <li key={part}>
-                <button
-                  type="button"
-                  className={`tm-journey-step ${state}`}
-                  disabled={!reached || part === currentPart}
-                  onClick={() => {
-                    setHeldBeat(visible[start]);
-                    setIndex(start);
-                  }}
-                  aria-current={part === currentPart ? "step" : undefined}
-                >
-                  <span className="tm-journey-icon" aria-hidden="true">
-                    {part < currentPart ? "✔" : partInfo(part).icon}
-                  </span>
-                  <span className="tm-journey-label">{partInfo(part).label}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </nav>
 
       <div className="tm-beat" key={`${runKey}-${beatNo}`}>
         {renderBeat()}
@@ -472,15 +438,10 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
           ← Back
         </button>
 
-        <div className="tm-progress">
-          <div className="tm-dots" aria-hidden="true">
-            {visible.map((n, i) => (
-              <span key={n} className={`tm-dot ${i < safeIndex ? "is-past" : ""} ${i === safeIndex ? "is-now" : ""}`} />
-            ))}
+        <div className="tm-progress" role="progressbar" aria-valuemin={1} aria-valuemax={visible.length} aria-valuenow={safeIndex + 1} aria-label={`Step ${safeIndex + 1} of ${visible.length}`}>
+          <div className="tm-progress-bar">
+            <span style={{ width: `${((safeIndex + 1) / visible.length) * 100}%` }} />
           </div>
-          <p className="tm-progress-text">
-            Step {safeIndex + 1} of {visible.length}
-          </p>
         </div>
 
         <button
@@ -497,25 +458,14 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
         </button>
       </div>
 
+      {/* Only speak up when the audience must do something. */}
       <p id="tm-next-hint" className="tm-locked-hint" aria-live="polite">
-        {locked
-          ? beat.type === "question"
-            ? "Choose the right answer to continue."
-            : beat.type === "predict"
-              ? "Make a guess to continue. There's no wrong answer!"
-              : "Finish the task above to continue."
-          : beat.type === "interactive"
-            ? counting
-              ? "Well done! Moving on in a few seconds… (keep playing to stay here)"
-              : "Well done! Press Next when you're ready →"
-            : counting
-              ? "Moving on by itself…"
-              : heldBeat === beatNo && autoPlay
-                ? "Paused here. Press Next to carry on."
-                : " "}
+        {locked ? (beat.type === "question" ? "Pick the right answer." : beat.type === "predict" ? "Make a guess." : "Finish the task.") : ""}
       </p>
 
-      {/* ---------- Presenter controls ---------- */}
+      {/* ---------- Presenter controls: tucked away until needed ---------- */}
+      <details className="tm-presenter">
+        <summary>⚙ Presenter options</summary>
       <div className="tm-controls-extra">
         <button
           type="button"
@@ -559,8 +509,7 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
           📋 For the facilitator
         </button>
       </div>
-
-      {scene.dataNote && <p className="tm-data-note">{scene.dataNote}</p>}
+      </details>
 
       <FacilitatorPanel
         open={panelOpen}

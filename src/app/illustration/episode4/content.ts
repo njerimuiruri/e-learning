@@ -120,7 +120,7 @@ export const CHAT = {
     answer: "Exactly 23.4 mm of rain will fall in Nyakach on 1 December 2030.",
     reactions: [
       { who: "otieno" as const, text: "Wait… nobody can know that exactly, years ahead!" },
-      { who: "tumaini" as const, text: "You're right. I produced words that SOUNDED right, but I don't actually know. Chatbots can sound very sure and still be wrong." },
+      { who: "tumaini" as const, text: "Right. My words SOUNDED right, but I didn't know. Chatbots can sound sure and still be wrong." },
     ],
   },
 };
@@ -155,146 +155,123 @@ const story: PlayableScene = {
     "Ask: \"When would you trust a chatbot? When would you check with a person?\" \"Which languages would help farmers here most?\" (Kiswahili, Dholuo, English…). Please have a fluent Kiswahili speaker check the Kiswahili sentences before presenting.",
   ],
   dataNote: DATA_NOTE,
+  // KISS: one idea per slide. Title = the idea, text = the short answer.
   beats: [
     // 👁️ Chapter 1: Seeing from space
     {
       part: 1, type: "say", who: "mama", mood: "worried", picture: "forest-mud",
-      text: "When I was a girl, these hills were covered in forest. Now they're mostly farms. And every year, the river carries more mud, and the floods get worse.",
-    },
-    {
-      optional: true, type: "say", who: "otieno", mood: "curious",
-      text: "Is the forest really disappearing? How much? It's hard to see from down here.",
+      title: "The forest is shrinking",
+      text: "Fewer trees, more mud in the river, worse floods.",
     },
     {
       type: "say", who: "tumaini", mood: "excited", action: "jump",
-      text: "Then let's look from up high! I'll go up as a satellite and look down from space.",
-    },
-    {
-      optional: true, type: "say", who: "otieno", mood: "thinking",
-      text: "Like when my phone finds faces in photos? It just knows where the faces are.",
+      text: "Let's look from space, like a satellite!",
     },
     {
       type: "interactive", activity: "pixel-zoom", prompt: "Tumaini's view from space",
-      help: "This is the land seen from a satellite. Press Zoom in to see how a computer really sees a picture.",
+      help: "Press Zoom in.",
     },
     {
-      type: "interactive", activity: "teach-labels", prompt: "Teach Tumaini: forest, farm or water?",
-      help: "Choose a label, then tap a square on the map. Show at least one forest, one farm and one water square. Then let Tumaini label the rest.",
+      type: "interactive", activity: "teach-labels", prompt: "Forest, farm or water?",
+      help: "Pick a label, tap a square. Then let Tumaini do the rest.",
     },
     {
       type: "say", who: "tumaini", mood: "happy",
-      text: "That's image recognition: I learned what forest, farm and water look like from YOUR labelled examples. So it's supervised learning again. And if the examples are wrong, I learn the wrong thing.",
+      title: "Image recognition",
+      text: "I learned what forest, farm and water look like from YOUR labels.",
     },
     {
       type: "predict", who: "mama",
-      question: "From 2005 to 2025, how much of the forest on these hills do YOU think was lost?",
+      question: "How much forest was lost, 2005 to 2025?",
       options: [
         { text: "Almost none", emoji: "🌳" },
-        { text: "About a quarter", emoji: "🌲" },
-        { text: "About half", emoji: "🪓" },
+        { text: "A quarter", emoji: "🌲" },
+        { text: "Half", emoji: "🪓" },
       ],
-      reply: "Let's compare the two years from space!",
+      reply: "Let's look from space!",
     },
     {
-      type: "interactive", activity: "forest-change", prompt: "Then and now: 2005 → 2025",
-      help: "Move the switch to 2025 and watch the forest. Then press 'Ask Tumaini' to find where to plant trees first.",
+      type: "interactive", activity: "forest-change", prompt: "2005 → 2025",
+      help: "Move the switch. Then press 'Ask Tumaini'.",
     },
     {
       type: "say", who: "mama", mood: "worried",
-      text: "Without trees, the rain washes the soil straight into the river. That's the mud we see, and it makes the floods worse. So we plant trees on those red squares first.",
-    },
-    {
-      optional: true, type: "say", who: "otieno", mood: "excited", action: "jump",
-      text: "We could plant trees there with my school's environment club!",
+      text: "We plant trees on the red squares first.",
     },
 
     // 🧠 Chapter 2: Inside Tumaini's head (at the lakeshore)
     {
       part: 2, setting: "river", walkIn: ["otieno", "tumaini"],
       type: "say", who: "baba", mood: "worried", enters: true,
-      text: "Storms on the lake can come very fast. Every year, fishermen are caught out on the water. I need to know before I go out.",
-    },
-    {
-      type: "say", who: "otieno", mood: "curious",
-      text: "Tumaini, you've learned so many things. But how do you actually THINK?",
+      text: "Lake storms come fast. I need to know before I go fishing.",
     },
     {
       type: "say", who: "tumaini", mood: "excited", picture: "neuron-relay",
-      text: "Let me show you inside my head! My brain is a network of tiny calculators called neurons. Each one passes a signal forward, like a relay race: each runner adds a small clue, and the last one announces the answer. Scientists call this a neural network.",
+      title: "Neural network",
+      text: "Tiny calculators (neurons) pass clues forward, like a relay race.",
     },
     {
       type: "interactive", activity: "brain-trainer", prompt: "Teach Tumaini's brain",
-      help: "Turn a dial and watch the signals move. Then press 'Show Tumaini a day': it guesses first, sees the real answer, and adjusts its connections.",
+      help: "Turn a dial. Then press 'Show Tumaini a day'.",
     },
     {
       type: "say", who: "tumaini", mood: "happy",
-      text: "That's how a neural network learns: guess, check the real answer, and adjust the connections a little. Again and again.",
+      title: "How it learns",
+      text: "Guess. Check. Adjust a little. Repeat.",
     },
     {
       type: "predict", who: "baba",
-      question: "This afternoon: clouds 8, humidity 9, wind 6, temperature 7. Should I go fishing?",
+      question: "Clouds 8, humidity 9, wind 6. Go fishing?",
       options: [
         { text: "Go fishing", emoji: "🎣" },
         { text: "Stay on shore", emoji: "🏖️" },
       ],
-      reply: "Let's ask Tumaini's trained brain!",
+      reply: "Let's ask Tumaini!",
     },
     {
-      type: "interactive", activity: "storm-check", prompt: "This afternoon: should Baba go out?",
-      help: "These are this afternoon's dials. Tumaini's trained brain gives the chance of a storm. You can move the dials too.",
+      type: "interactive", activity: "storm-check", prompt: "Should Baba go out?",
+      help: "Move the dials if you like.",
     },
     {
       type: "say", who: "baba", mood: "proud",
-      text: "Today, I'm safe on shore. Tumaini, you may have saved my life.",
+      text: "I stay on shore today. Thank you, Tumaini!",
     },
 
     // 💬 Chapter 3: Talking (on Mama's veranda)
     {
       part: 3, setting: "house", walkIn: ["mama", "otieno", "tumaini"],
       type: "say", who: "mama", mood: "curious",
-      text: "Otieno bought me a phone! People say I can ask it questions and it answers like a person. But how does it understand me? And can I ask in Kiswahili?",
+      text: "My new phone answers questions. Can I ask in Kiswahili?",
     },
     {
       type: "say", who: "tumaini", mood: "excited",
-      text: "Phones that chat use language AI, also called chatbots. You know how WhatsApp suggests your next word when you type? A chatbot is a giant version of that, which has read millions of books and websites.",
+      title: "Language AI",
+      text: "Chatbots guess the next word, again and again. Like WhatsApp suggestions, but giant.",
     },
     {
-      type: "interactive", activity: "next-word", prompt: "Build a sentence, one word at a time",
-      help: "Tap a word to add it. The numbers show how likely each word is to come next. Or let Tumaini pick the most likely one.",
-    },
-    {
-      optional: true, type: "say", who: "tumaini", mood: "thinking",
-      text: "Real chatbots learned their guesses by reading huge amounts of text, including Kiswahili. That's why they can answer in many languages.",
+      type: "interactive", activity: "next-word", prompt: "Build a sentence",
+      help: "Tap a word, or let Tumaini pick.",
     },
     {
       type: "interactive", activity: "phone-chat", prompt: "Ask the phone",
-      help: "Press Send to ask Mama's question. Then try Otieno's tricky question.",
+      help: "Press Send. Then try Otieno's question.",
     },
     {
       type: "say", who: "mama", mood: "happy",
-      text: "So I use it for ideas. But for important decisions, I still check with the extension officer and the weather service.",
+      title: "Check big decisions",
+      text: "Chatbots can sound sure and still be wrong. I check with experts.",
     },
 
     // 📝 What we learned
     {
       part: 4, type: "lesson",
-      title: "Today we learned: how AI sees, thinks and talks",
+      title: "Today we learned",
       rows: [
-        {
-          label: "Image recognition", text: "To a computer, a picture is a grid of numbers called pixels. AI learns from labelled examples to recognise forest, farmland and water.",
-          list: ["Wrong examples teach it the wrong thing"],
-        },
-        {
-          label: "Neural networks", text: "Many tiny calculators (neurons) in layers pass signals forward and decide together.",
-          list: ["They learn: guess → check the real answer → adjust a little → repeat"],
-        },
-        {
-          label: "Language AI", text: "Chatbots predict the next word, again and again. They can answer in Kiswahili and many other languages.",
-          list: ["Careful: they can sound sure and still be wrong. Check important advice with experts."],
-        },
-        { label: "Climate use", text: "Tracking forest loss and choosing where to plant trees, storm warnings for fishermen, and advice for farmers in their own language." },
+        { label: "Image recognition", text: "Learns to see forest, farm and water from labels." },
+        { label: "Neural networks", text: "Guess, check, adjust, repeat." },
+        { label: "Language AI", text: "Guesses the next word. Check what it says." },
       ],
-      tumainiSays: "Seeing, thinking, talking: it all starts with learning patterns from examples!",
+      tumainiSays: "It all starts with examples!",
     },
   ],
 };
@@ -346,11 +323,11 @@ export const EPISODE_4: EpisodeContent = {
     message: MAIN_MESSAGE,
   },
   teaser: {
-    text: "Next time: when can you trust AI, and who makes the final decision? The most important episode of all!",
+    text: "Next time: when can you trust AI, and who decides?",
     picture: "exam-robots",
     mood: "thinking",
   },
   recap: {
-    text: "Last time, I grew a decision tree and found groups of villages by myself. Today, I look down from space, show you inside my head, and learn to talk!",
+    text: "Last time: I grew a decision tree. Today: I look from space, and learn to talk!",
   },
 };

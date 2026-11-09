@@ -35,7 +35,8 @@ function BigMessage() {
   );
 }
 
-export default function IdeaPictureCard({ id }: { id: IdeaPictureId }) {
+/** hideCaption: the slide already has a title saying the idea, so skip the caption. */
+export default function IdeaPictureCard({ id, hideCaption = false }: { id: IdeaPictureId; hideCaption?: boolean }) {
   if (id === "big-message") {
     return (
       <div className="tm-idea tm-idea-wide">
@@ -49,7 +50,7 @@ export default function IdeaPictureCard({ id }: { id: IdeaPictureId }) {
       <svg viewBox="0 0 240 160" role="img" aria-label={picture.label}>
         {picture.draw}
       </svg>
-      <figcaption>{picture.caption}</figcaption>
+      {!hideCaption && <figcaption>{picture.caption}</figcaption>}
     </figure>
   );
 }

@@ -90,155 +90,120 @@ const story: PlayableScene = {
     "Real flood forecasting uses rainfall, river gauges, soil moisture and more; real crop-disease apps learn from thousands of photos. The numbers here are made up for teaching.",
   ],
   dataNote: DATA_NOTE,
+  // KISS: one idea per slide. Title = the idea, text = the short answer.
   beats: [
     // ❓ The problem
     {
       part: 1, type: "say", who: "mama", mood: "worried", picture: "flooded-house",
-      text: "Otieno, look at those clouds. Last year the river came into the house in the night. We lost two goats.",
-    },
-    {
-      optional: true, type: "say", who: "otieno", mood: "curious",
-      text: "If only we knew before the river rises. Then we could move in time.",
+      title: "The river floods",
+      text: "Last year the river came into the house at night. We lost two goats.",
     },
     {
       type: "say", who: "tumaini", mood: "confused", enters: true,
-      text: "Maybe I can help! But I don't know anything about rivers… yet.",
+      text: "If we knew early, we could move in time. Let me learn!",
     },
     {
       type: "say", who: "baba", mood: "calm", enters: true, picture: "storm-notebook", action: "show-notebook",
-      text: "I have written down every big storm for ten years: how many hours of heavy rain fell, and how high the river rose.",
+      text: "Ten years of storms: hours of rain, and how high the river rose.",
     },
 
     // 📈 Chapter 1: Predict a number
     {
-      part: 2, optional: true, type: "say", who: "otieno", mood: "thinking", picture: "bus-fare",
-      text: "So Tumaini looks at old storms to guess the next one? That's like bus fare! If the fare goes up by about the same amount every year, I can guess next year's fare.",
-    },
-    {
-      type: "predict", who: "tumaini",
-      question: "What do YOU think? The more hours of heavy rain, the…",
+      part: 2, type: "predict", who: "tumaini",
+      question: "More hours of rain means the river goes…",
       options: [
-        { text: "Higher the river", emoji: "📈" },
-        { text: "Lower the river", emoji: "📉" },
+        { text: "Higher", emoji: "📈" },
+        { text: "Lower", emoji: "📉" },
         { text: "No change", emoji: "➖" },
       ],
-      reply: "Let's check with Baba's storms!",
+      reply: "Let's check Baba's storms!",
     },
     {
       type: "interactive", activity: "storm-graph", prompt: "Give Tumaini a storm.",
-      help: "Press the yellow button. Each storm becomes a dot on the graph. Watch Tumaini's line move, and settle down as it learns more storms.",
+      help: "Press the yellow button. Watch the line settle.",
     },
     {
       type: "say", who: "tumaini", mood: "happy", picture: "y-mx-c",
-      text: "Here is the pattern: for every extra hour of heavy rain, the river rises about 39 centimetres. It's the y = mx + c from maths class: m is the rise for each hour (0.39 m), and c is where the river starts (0.81 m). Drawing the best line through past examples to predict a number is called linear regression.",
+      title: "The pattern",
+      text: "Each extra hour of rain lifts the river about 39 cm.",
     },
     {
-      optional: true, type: "say", who: "otieno", mood: "excited", action: "jump",
-      text: "So the maths we learn in class is how a computer predicts floods!",
+      type: "say", who: "tumaini", mood: "excited",
+      title: "Linear regression",
+      text: "Draw the best line through past examples. Use it to predict a NUMBER.",
     },
     {
-      type: "interactive", activity: "beat-the-computer", prompt: "Can YOU draw a better line than Tumaini?",
-      help: "Drag the two orange handles. The dashed lines are your mistakes. The mistake meter adds them up: the smaller the score, the better your line.",
+      type: "interactive", activity: "beat-the-computer", prompt: "Can YOU draw a better line?",
+      help: "Drag the orange handles. Smaller mistake score = better.",
     },
     {
       type: "announce", source: "radio",
-      text: "Weather forecast: heavy rain expected tomorrow.",
+      text: "Heavy rain expected tomorrow.",
     },
     {
-      optional: true, type: "say", who: "mama", mood: "worried",
-      text: "Tumaini, how high will the river go?",
-    },
-    {
-      type: "interactive", activity: "river-forecast", prompt: "How many hours of heavy rain tomorrow?",
-      help: "Move the big slider. Tumaini goes up from the hours to its line, then across to read the river height. What happens at the red DANGER line?",
+      type: "interactive", activity: "river-forecast", prompt: "How many hours of rain tomorrow?",
+      help: "Move the slider. Watch the red DANGER line.",
     },
     {
       type: "say", who: "mama", mood: "proud", picture: "safe-uphill",
-      text: "This time, we are ready. The warning came early, so we moved the goats before the water came.",
-    },
-    {
-      optional: true, type: "say", who: "baba", mood: "calm", action: "show-notebook", picture: "storm-notebook",
-      text: "And my old notebook helped! Writing things down matters.",
+      title: "Warned in time",
+      text: "We moved the goats before the water came.",
     },
 
     // 🍃 Chapter 2: Sort into groups (a few weeks later, at the farm)
     {
       part: 3, setting: "farm", walkIn: ["mama", "otieno", "tumaini"],
       type: "say", who: "mama", mood: "worried", picture: "spreading-disease",
-      text: "The floods have gone… but now some of my maize leaves are turning yellow with spots. If it's a disease, it can spread to the whole field.",
-    },
-    {
-      type: "say", who: "otieno", mood: "curious",
-      text: "The extension officer said warm, wet weather like this helps some crop diseases spread.",
+      title: "Sick leaves",
+      text: "Yellow spots on my maize. A disease can spread to the whole field.",
     },
     {
       type: "say", who: "tumaini", mood: "thinking", picture: "photo-check",
-      text: "This is a different kind of job. I don't need to predict a number this time. I need to put each leaf in a group: healthy or sick. If I learn from examples, a farmer could take a photo and I could tell them.",
+      text: "New job: put each leaf in a group. Healthy or sick?",
     },
     {
-      optional: true, type: "say", who: "otieno", mood: "thinking", picture: "tomato-sorting",
-      text: "Like sorting tomatoes at the market. After sorting enough of them, you can tell good from rotten at a glance.",
-    },
-    {
-      type: "interactive", activity: "leaf-sorter", prompt: "You sort the leaves. Tumaini watches and learns!",
-      help: "Is each leaf healthy or sick? Look at the spots and the colour. Mama checks every answer, so Tumaini learns from correct examples.",
+      type: "interactive", activity: "leaf-sorter", prompt: "You sort. Tumaini learns!",
+      help: "Healthy or sick? Look at the spots and colour.",
     },
     {
       type: "interactive", activity: "ai-learns", prompt: "Let Tumaini learn.",
-      help: "Press the button. Tumaini draws a line that splits the healthy leaves from the sick ones.",
+      help: "Press the button.",
     },
     {
       type: "say", who: "tumaini", mood: "happy",
-      text: "Leaves with many spots and lots of yellow fall on the sick side of my line. Putting things into groups, after learning from examples that someone has already labelled, is called classification. Mama gave me the right answers, so this is supervised learning again.",
+      title: "Classification",
+      text: "Sort things into GROUPS, after learning from labelled examples.",
     },
     {
       type: "predict", who: "mama",
-      question: "Now Tumaini sorts 8 new leaves by itself. How many do YOU think it gets right?",
+      question: "Tumaini sorts 8 new leaves. How many right?",
       options: [
         { text: "All 8", emoji: "💯" },
-        { text: "Most of them", emoji: "👍" },
-        { text: "Only a few", emoji: "🤏" },
+        { text: "Most", emoji: "👍" },
+        { text: "A few", emoji: "🤏" },
       ],
-      reply: "Let's watch and count!",
+      reply: "Let's count!",
     },
     {
       type: "interactive", activity: "ai-sorter", prompt: "Tumaini sorts the rest.",
-      help: "Press Start. For each leaf, Tumaini says how sure it is. Watch what happens with a leaf that is very close to the line.",
+      help: "Press Start.",
     },
     {
       type: "say", who: "mama", mood: "proud", picture: "ask-expert",
-      text: "Seven out of eight is very good. But when Tumaini isn't sure, we should still ask the extension officer.",
-    },
-    {
-      optional: true, type: "say", who: "otieno", mood: "excited", action: "jump",
-      text: "So a farmer can take a photo, and get an answer fast, before the disease spreads!",
+      title: "Not sure? Ask",
+      text: "7 of 8 is good. When Tumaini isn't sure, ask the extension officer.",
     },
 
-    // 📝 What we learned: both ideas side by side
+    // 📝 What we learned
     {
       part: 4, type: "lesson",
-      title: "Today we learned: Predicting and sorting",
+      title: "Today we learned",
       rows: [
-        {
-          label: "Linear regression", text: "Draw the best straight line through past examples, then follow it to predict a NUMBER, like how high the river will rise.",
-          list: [
-            "y = mx + c: m ≈ 0.39 m more river for each extra hour of rain; c ≈ 0.81 m with no heavy rain",
-            "The \"best\" line has the smallest total mistake",
-            "More examples = a steadier line",
-          ],
-        },
-        {
-          label: "Classification", text: "Sort things into GROUPS, like healthy or sick, after learning from labelled examples.",
-          list: [
-            "AI says how sure it is",
-            "Cases close to the dividing line are the hardest, and AI can get them wrong",
-          ],
-        },
-        { label: "The difference", text: "Regression answers \"How much?\". Classification answers \"Which group?\"." },
-        { label: "Both are supervised", text: "Baba's storms came with the river heights, and Mama labelled every leaf. The answers were given, so both are supervised learning." },
-        { label: "Climate use", text: "Flood warnings by SMS, and phone apps that spot crop disease early." },
+        { label: "Regression", text: "Predicts a NUMBER: how much?" },
+        { label: "Classification", text: "Sorts into GROUPS: which one?" },
+        { label: "Both", text: "Learn from examples with answers (supervised)." },
       ],
-      tumainiSays: "Both start the same way: learning patterns from past examples!",
+      tumainiSays: "Both learn from past examples!",
     },
   ],
 };
@@ -295,6 +260,6 @@ export const EPISODE_2: EpisodeContent = {
     mood: "thinking",
   },
   recap: {
-    text: "Last time, I learned from Mama's notebook and found the two rainy seasons. Today, I learn to predict and to sort!",
+    text: "Last time: I found the two rainy seasons. Today: I predict and sort!",
   },
 };

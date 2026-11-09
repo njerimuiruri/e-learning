@@ -151,6 +151,8 @@ export interface SayBeat extends BaseBeat {
   type: "say";
   who: CharacterId;
   mood: Mood;
+  /** KISS slide heading, e.g. "What is climate change?" One idea per slide. */
+  title?: string;
   text: string;
   /** true = this character arrives on stage at this beat (e.g. Tumaini rolls in). */
   enters?: boolean;

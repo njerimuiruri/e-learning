@@ -113,55 +113,51 @@ const scene5: PlayableScene = {
     "The seasons and questions are examples for teaching. Real planting advice comes from the Kenya Meteorological Department and agricultural extension officers.",
   ],
   dataNote: DATA_NOTE,
+  // KISS: one idea per slide. Title = the idea, text = the short answer.
   beats: [
     // ① The problem
     {
       part: 1, type: "say", who: "mama", mood: "worried", picture: "plant-timing",
-      text: "Every season I ask myself the same thing: should I plant today, or wait? If I plant too early, my seeds dry out. If I plant too late, I miss the rain.",
-    },
-    {
-      optional: true, type: "say", who: "otieno", mood: "curious",
-      text: "Grandma, how do you decide?",
+      title: "Plant today, or wait?",
+      text: "Too early, seeds dry out. Too late, I miss the rain.",
     },
     {
       type: "say", who: "mama", mood: "happy", picture: "three-questions",
-      text: "I ask myself a few questions. Have the rains started? Is the soil wet enough? Will there be a long dry spell?",
+      text: "I ask 3 questions: Rains started? Soil wet? Dry spell coming?",
     },
     // ② It's like…
     {
       part: 2, type: "say", who: "otieno", mood: "thinking", picture: "doctor-questions",
-      text: "Like when I'm sick and the doctor asks: Do you have a fever? Is your throat sore? Each answer leads to the next question, until the doctor decides.",
+      text: "Like a doctor: each answer leads to the next question.",
     },
     {
       type: "say", who: "tumaini", mood: "excited", action: "jump",
-      text: "Yes! A chain of yes-or-no questions that ends in a decision. Scientists call it a decision tree, because it branches like a tree!",
+      title: "Decision tree",
+      text: "Yes-or-no questions that branch, until you reach a decision.",
     },
     // ③ Tumaini learns
     {
       part: 3, type: "predict", who: "mama",
-      question: "Here are my last 16 seasons. Which of my three questions do YOU think matters most?",
+      question: "Which question matters most?",
       options: [
-        { text: "Have the rains started?", emoji: "🌧️" },
-        { text: "Is the soil moist?", emoji: "💧" },
-        { text: "Is a dry spell forecast?", emoji: "☀️" },
+        { text: "Rains started?", emoji: "🌧️" },
+        { text: "Soil moist?", emoji: "💧" },
+        { text: "Dry spell coming?", emoji: "☀️" },
       ],
-      reply: "Let's test all three with Mama's 16 seasons!",
+      reply: "Let's test with 16 seasons!",
     },
     {
-      type: "interactive", activity: "first-question", prompt: "Which question should we ask FIRST?",
-      help: "Press a question. The 16 seasons split into a Yes pile and a No pile. The cleaner the piles, the better the question!",
+      type: "interactive", activity: "first-question", prompt: "Which question goes FIRST?",
+      help: "Press a question. Cleaner piles = better question.",
     },
     {
       type: "say", who: "tumaini", mood: "happy",
-      text: "The best first question is: Have the rains started? It separates good and bad seasons best. Now I keep going, asking the next best question on each branch.",
+      title: "Best first question",
+      text: "Have the rains started? It splits good and bad seasons best.",
     },
     {
       type: "interactive", activity: "grow-tree", prompt: "Grow the tree.",
-      help: "Press Grow. Each press adds the next question. Watch the seasons (the little dots) move into their branches.",
-    },
-    {
-      optional: true, type: "say", who: "tumaini", mood: "excited", action: "jump",
-      text: "My tree is ready! Three questions, and four pieces of advice.",
+      help: "Press Grow.",
     },
     // Coming in step (c): follow the tree, then the lesson board.
   ],

@@ -91,115 +91,109 @@ const story: PlayableScene = {
     "The late-rains year and the notebook numbers are made-up examples. Real AI weather systems use thousands of days and many more measurements (temperature, humidity, air pressure). The Kenya Meteorological Department makes seasonal forecasts that advise farmers when to plant.",
   ],
   dataNote: DATA_NOTE,
+  // KISS: one idea per slide. Title = the idea, text = the short answer.
   beats: [
     // ❓ The problem
     {
       part: 1, type: "say", who: "mama", mood: "worried", picture: "dry-seeds",
-      text: "I want to plant my maize this week. But will it rain tomorrow? If I plant and the rain doesn't come, my seeds will dry out.",
-    },
-    {
-      optional: true, type: "say", who: "otieno", mood: "curious",
-      text: "Grandma, how do you usually know when rain is coming?",
+      title: "Will it rain?",
+      text: "If I plant and no rain comes, my seeds dry out.",
     },
     {
       type: "say", who: "mama", mood: "happy", picture: "notebook", action: "show-notebook",
-      text: "Experience! For many years I've written in this notebook what I saw each morning, and whether it rained that day.",
+      text: "For years, I wrote down what I saw each morning, and if it rained.",
     },
     {
       type: "say", who: "tumaini", mood: "confused", enters: true, action: "wave",
-      text: "Hello again! I can learn from examples… but I don't know anything about the rain here. Yet! Can your notebook teach me?",
+      text: "Hello! Can your notebook teach me about the rain?",
     },
 
     // 📒 Chapter 1: Learning from examples
     {
-      part: 2, optional: true, type: "say", who: "otieno", mood: "thinking", picture: "mangoes",
-      text: "Like how I learned what a ripe mango looks like: by seeing lots of mangoes, not by reading a rule!",
-    },
-    {
-      type: "predict", who: "tumaini",
-      question: "Before I learn: which sign do YOU think comes before rain most often?",
+      part: 2, type: "predict", who: "tumaini",
+      question: "Which sign comes before rain most often?",
       options: [
         { text: "Dark clouds", emoji: "☁️" },
         { text: "Ants flying", emoji: "🐜" },
         { text: "Wind from the lake", emoji: "💨" },
       ],
-      reply: "Let's see what Mama's notebook says!",
+      reply: "Let's check Mama's notebook!",
     },
     {
       type: "interactive", activity: "notebook", prompt: "Give Tumaini a page.",
-      help: "Press the yellow button. Each page is one morning from Mama's notebook. Watch the bars: they show how often it rained after each sign.",
+      help: "Press the yellow button. Watch the bars grow.",
     },
     {
       type: "say", who: "tumaini", mood: "happy", picture: "clues",
-      text: "Dark clouds are my strongest clue: it rained on 5 of the 6 days with dark clouds. Wind from the lake is a weak clue. And notice: every page told me the answer, rain or no rain. Learning from examples that come with their answers is called supervised learning.",
+      title: "The best clue",
+      text: "Dark clouds! It rained on 5 of 6 cloudy days.",
     },
     {
-      type: "interactive", activity: "sky-guess", prompt: "What do you see in today's sky?",
-      help: "Tick the signs you can see today. Tumaini uses what it learned to guess the chance of rain, and shows its working.",
+      type: "say", who: "tumaini", mood: "happy", picture: "learn-flow",
+      title: "Supervised learning",
+      text: "Every page gave the answer: rain or no rain. I learned from those answers.",
     },
     {
-      type: "say", who: "mama", mood: "proud", action: "show-notebook",
-      text: "Tumaini learned the same way I did, from experience. But it remembers every page perfectly.",
+      type: "interactive", activity: "sky-guess", prompt: "What's in today's sky?",
+      help: "Tick the signs you see.",
     },
     {
       optional: true, type: "say", who: "otieno", mood: "excited", picture: "many-days", action: "jump",
-      text: "And imagine if it read thousands of days, from weather stations all over Kenya!",
+      title: "More examples = better learning",
+      text: "Imagine thousands of days from all over Kenya!",
     },
 
     // 📅 Chapter 2: Patterns over time (on the farm)
     {
       part: 3, setting: "farm", walkIn: ["mama", "otieno", "tumaini"],
-      type: "say", who: "mama", mood: "worried", picture: "two-seasons",
-      text: "My notebook shows something bigger too. Here in Kisumu, the rain comes in two seasons every year. If I plant at the right time, my maize grows well. If I plant at the wrong time, I waste seed and money.",
-    },
-    {
-      optional: true, type: "say", who: "otieno", mood: "thinking", picture: "timetable",
-      text: "So the rains have a timetable? Like school holidays. They come at the same time every year, so we'd notice at once if they moved.",
+      type: "say", who: "mama", mood: "worried", picture: "wasted-seed",
+      title: "Plant at the right time",
+      text: "Plant at the wrong time, and I lose seed and money.",
     },
     {
       type: "predict", who: "tumaini",
-      question: "Which month do YOU think brings the most rain to Kisumu?",
+      question: "Which month is wettest in Kisumu?",
       options: [
         { text: "January", emoji: "☀️" },
         { text: "April", emoji: "🌧️" },
         { text: "August", emoji: "🌤️" },
         { text: "November", emoji: "🌦️" },
       ],
-      reply: "Let's play the whole year and find out!",
+      reply: "Let's play the year!",
     },
     {
       type: "interactive", activity: "play-year", prompt: "Play the year.",
-      help: "Press Play. Each slice of the wheel is one month: a longer slice means more rain. Watch the farm change with the rain.",
+      help: "Press Play. Longer slice = more rain.",
     },
     {
       type: "say", who: "tumaini", mood: "happy", picture: "two-seasons", action: "wave",
-      text: "I found the rhythm: two rainy seasons every year, the long rains and the short rains. The wettest month is April. And because I know what NORMAL looks like, I can notice when a year is different.",
+      title: "Two rainy seasons",
+      text: "Long rains and short rains, every year. April is wettest.",
     },
     {
       type: "say", who: "otieno", mood: "curious", picture: "late-rain",
-      text: "But Tumaini, what if one year the rain comes late?",
+      text: "What if the rain comes late?",
     },
     {
-      type: "interactive", activity: "late-rains", prompt: "Show a year when the long rains came late.",
-      help: "Press the switch. The dashed line shows a normal year, so you can compare. What happens to Mama's seeds?",
+      type: "interactive", activity: "late-rains", prompt: "A year with late rains.",
+      help: "Press the switch. Compare with the dashed line.",
     },
     {
       type: "say", who: "mama", mood: "proud", picture: "saved-seed",
-      text: "If Tumaini warns me early, I can wait and plant when the rain really starts. I save my seed!",
+      title: "Early warning",
+      text: "Warn me early, I wait, and I save my seed!",
     },
 
     // 📝 What we learned
     {
       part: 4, type: "lesson",
-      title: "Today we learned: Learning from examples",
+      title: "Today we learned",
       rows: [
-        { label: "Machine learning", text: "AI learns patterns from examples, instead of following rules someone wrote. More examples = better learning." },
-        { label: "Supervised learning", text: "Every page of Mama's notebook gave the answer (rain or no rain), so Tumaini learned with a teacher." },
-        { label: "Patterns over time", text: "The rains follow a yearly rhythm: the long rains (March–May) and the short rains (October–December). AI learns the normal rhythm, so it notices when a year is different. (Scientists call this time-series analysis.)" },
-        { label: "It's like", text: "Learning what a ripe mango looks like by seeing many mangoes; knowing when school holidays come." },
-        { label: "Climate use", text: "Rain forecasts and early warnings that help farmers plant at the right time." },
+        { label: "Machine learning", text: "AI learns patterns from examples." },
+        { label: "Supervised", text: "The examples come with answers." },
+        { label: "Patterns over time", text: "AI learns the normal year, so it spots changes." },
       ],
-      tumainiSays: "I learned from your examples, and now I can warn you early!",
+      tumainiSays: "Now I can warn you early!",
     },
   ],
 };

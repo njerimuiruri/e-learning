@@ -123,141 +123,129 @@ const story: PlayableScene = {
     "Be honest about AI's costs: data centres used about 1.5% of the world's electricity in 2024, and this could roughly double by 2030 (IEA). AI should be used where it really helps, and powered with clean energy.",
   ],
   links: ALL_LINKS,
+  // KISS: one idea per slide. Title = the question, text = the short answer.
   beats: [
     // 🌍 Climate change
     {
       part: 1, type: "say", who: "mama", mood: "worried",
-      text: "When I was a girl, the long rains came every March, like clockwork. Now they come late, or they come all at once and flood the river.",
+      text: "The rains used to come every March. Now they come late, or they flood the river.",
     },
     {
       type: "say", who: "otieno", mood: "curious",
-      text: "Why is the weather changing, Grandma?",
+      text: "Why is the weather changing?",
     },
     {
       type: "say", who: "tumaini", mood: "happy", enters: true, action: "wave", picture: "weather-vs-climate",
-      text: "Hello! I'm Tumaini, a robot that learns. Let me help. WEATHER is what happens today: rain, sun, wind. CLIMATE is the usual pattern over many years. Climate change means that usual pattern is shifting.",
+      title: "Weather or climate?",
+      text: "Hi, I'm Tumaini! Weather is today. Climate is the usual pattern over many years.",
+    },
+    {
+      type: "say", who: "tumaini", mood: "thinking",
+      title: "What is climate change?",
+      text: "The usual pattern is shifting, because the Earth is getting warmer.",
     },
     {
       type: "interactive", activity: "greenhouse", prompt: "Why is the Earth getting warmer?",
-      help: "Move the slider from long ago to today. Watch the blanket of gases get thicker, more heat get trapped, and the thermometer rise.",
+      help: "Move the slider from long ago to today. Watch the blanket thicken.",
     },
     {
       type: "say", who: "tumaini", mood: "thinking", picture: "fossil-causes",
-      text: "Gases like carbon dioxide act like a blanket around the Earth. Burning coal, oil and gas, for power stations, cars and factories, and cutting down forests make the blanket thicker. Today the world is about 1.3 °C warmer than in the 1800s, and 2024 was the hottest year ever measured.",
+      title: "What causes it?",
+      text: "Burning coal, oil and gas, and cutting forests. They trap more heat.",
     },
     {
       type: "say", who: "mama", mood: "worried", picture: "kenya-impacts",
-      text: "And we feel it here. In 2020, Lake Victoria rose higher than ever recorded. From 2020 to 2022, five rainy seasons in a row failed. In 2024, floods forced over 200,000 Kenyans from their homes.",
-    },
-    {
-      optional: true, type: "say", who: "otieno", mood: "thinking",
-      text: "But Africa burned very little of that coal and oil. That doesn't seem fair!",
-    },
-    {
-      optional: true, type: "say", who: "tumaini", mood: "unsure",
-      text: "You're right. Africa caused only a small part of the problem, but feels it strongly. That's one reason the whole world agreed to work together.",
+      title: "Kenya feels it",
+      text: "Floods, droughts and late rains. In 2024, floods forced over 200,000 Kenyans from home.",
     },
 
     // 🤝 The Paris Agreement
     {
       part: 2, type: "say", who: "otieno", mood: "excited", picture: "paris-promise",
-      text: "We learned this at school! In 2015, almost every country in the world signed the Paris Agreement. They promised to keep warming well below 2 °C, and to try hard to stop at 1.5 °C.",
+      title: "The Paris Agreement",
+      text: "In 2015, the world promised: keep warming below 2 °C, and try for 1.5 °C.",
     },
     {
       type: "say", who: "tumaini", mood: "happy",
-      text: "To keep that promise, there are two kinds of action. CUT: make less of the gases that thicken the blanket. ADAPT: get ready for the changes that are already happening. Let's sort some examples!",
+      title: "Two kinds of action",
+      text: "CUT the gases. ADAPT to the changes. Let's sort!",
     },
     {
-      type: "interactive", activity: "cut-or-adapt", prompt: "Cut the gases, or adapt and be ready?",
-      help: "Read each card and tap the group it belongs in. Tumaini will tell you why.",
+      type: "interactive", activity: "cut-or-adapt", prompt: "Cut or adapt?",
+      help: "Tap the group for each card.",
     },
     {
-      type: "say", who: "tumaini", mood: "happy",
-      text: "Every country writes its own climate plan and updates it every 5 years. Kenya's plan aims to cut its emissions by 32% by 2030, and to help people adapt. My job is mostly on the ADAPT side: helping people get warnings early.",
-    },
-    {
-      type: "say", who: "tumaini", mood: "thinking", picture: "climate-promises",
-      text: "Paris isn't the only promise. In 1992, countries agreed the UN climate treaty that all later climate talks build on. In 2015, they also agreed the Sustainable Development Goals (Goal 13 is climate action) and the Sendai Framework, which aims to give far more people early warnings of disasters by 2030. And Kenya has its own Climate Change Act, from 2016.",
+      optional: true, type: "say", who: "tumaini", mood: "happy",
+      title: "Kenya's plan",
+      text: "Cut emissions by 32% by 2030, and help people adapt.",
     },
 
     // 🤖 What is AI?
     {
       part: 3, type: "say", who: "otieno", mood: "curious",
-      text: "So what exactly IS AI, Tumaini?",
+      text: "So what IS AI, Tumaini?",
     },
     {
-      type: "say", who: "tumaini", mood: "excited", picture: "rules-vs-learning",
-      text: "AI means artificial intelligence: computer programs that do things that usually need human thinking, like spotting patterns, making predictions or understanding language. Most AI today learns from examples instead of following rules a person wrote. That is called machine learning.",
+      type: "say", who: "tumaini", mood: "excited",
+      title: "What is AI?",
+      text: "Computer programs that do tasks that usually need human thinking.",
+    },
+    {
+      type: "say", who: "tumaini", mood: "happy", picture: "rules-vs-learning",
+      title: "What is machine learning?",
+      text: "AI that learns from examples, not from fixed rules.",
     },
     {
       type: "interactive", activity: "ai-or-not", prompt: "AI or not AI?",
-      help: "Does it LEARN from examples, or does it just follow fixed rules? Tap your answer for each card.",
+      help: "Does it LEARN, or follow fixed rules?",
     },
     {
       type: "say", who: "tumaini", mood: "happy", picture: "supervised-unsupervised",
-      text: "Machines learn in two main ways. SUPERVISED learning: every example comes with the answer, like leaves labelled \"healthy\" or \"sick\". UNSUPERVISED learning: no answers are given, and the machine finds groups by itself, like villages with similar problems.",
+      title: "Supervised vs unsupervised",
+      text: "Supervised: examples come WITH answers. Unsupervised: no answers, the machine finds groups.",
     },
     {
       type: "interactive", activity: "learn-sort", prompt: "Supervised or unsupervised?",
-      help: "Ask yourself: does each example come with its answer? If yes, it's supervised. If not, it's unsupervised.",
+      help: "Does each example come with its answer?",
     },
 
     // 🌦️ Why AI for climate?
     {
       part: 4, type: "predict", who: "mama",
-      question: "Why do YOU think AI is useful for climate problems?",
+      question: "Why is AI useful for climate?",
       options: [
-        { text: "It can read huge amounts of data fast", emoji: "📊" },
-        { text: "It can spot patterns people might miss", emoji: "🔍" },
-        { text: "It can help warn people early", emoji: "⏰" },
+        { text: "Reads huge data fast", emoji: "📊" },
+        { text: "Spots hidden patterns", emoji: "🔍" },
+        { text: "Warns people early", emoji: "⏰" },
       ],
-      reply: "In fact, all three are true! Let me show you.",
+      reply: "All three are true!",
     },
     {
       type: "say", who: "tumaini", mood: "happy", picture: "climate-big-data",
-      text: "Rain gauges, weather stations and satellites send millions of numbers every day. That's far too much for people to read, but I can find the patterns in it quickly. Then people get warnings early, and can plan ahead.",
+      title: "Why AI for climate?",
+      text: "Millions of weather readings a day. AI finds the patterns and warns people early.",
     },
     {
       type: "say", who: "tumaini", mood: "unsure", picture: "ai-footprint",
-      text: "One honest thing: AI runs on big computers that use a lot of electricity and water. They already use about 1.5% of the world's electricity. So AI should be used where it really helps, and powered with clean energy, like Kenya's geothermal and solar.",
-    },
-    {
-      type: "say", who: "tumaini", mood: "happy", picture: "ai-promises",
-      text: "There are promises about AI too. In 2021, all 193 member countries of UNESCO agreed that AI must be fair, safe, open about how it works, and good for people and the planet. In 2024, the African Union agreed a plan for AI that works for Africa. In 2025, Kenya launched its own National AI Strategy, with farming and sustainability among its priorities.",
+      title: "Use AI wisely",
+      text: "AI uses a lot of electricity. Use it where it helps, with clean power.",
     },
     {
       type: "say", who: "mama", mood: "proud",
-      text: "So AI won't stop climate change by itself. But it can help us prepare. And people still make the decisions.",
+      text: "AI helps us prepare. People still decide.",
     },
 
     // 📝 What we learned
     {
       part: 5, type: "lesson",
-      title: "Today we learned: the big picture",
+      title: "Today we learned",
       rows: [
-        { label: "Climate change", text: "The usual weather pattern is shifting, because gases from burning coal, oil and gas, and from cutting forests, trap more heat. Kenya already feels it: floods, droughts, late rains." },
-        { label: "Paris Agreement", text: "In 2015, almost every country promised to keep warming well below 2 °C, and try for 1.5 °C. Two kinds of action: CUT the gases, and ADAPT." },
-        { label: "AI", text: "Computer programs that do things that usually need human thinking." },
-        {
-          label: "Machine learning", text: "AI that learns patterns from examples instead of following rules a person wrote.",
-          list: ["Supervised: the examples come with answers (\"healthy\" or \"sick\")", "Unsupervised: no answers; the machine finds groups by itself"],
-        },
-        { label: "Why AI for climate", text: "It finds patterns in huge amounts of weather data and helps warn people early. Use it wisely: it needs energy too." },
-        {
-          label: "Other promises", text: "The world has made more promises that link climate and AI (tap one to read it):",
-          list: [
-            { text: "1992: the UN climate treaty", href: L.unfccc.href },
-            { text: "2015: the Paris Agreement", href: L.paris.href },
-            { text: "2015: Sustainable Development Goal 13, climate action", href: L.sdg13.href },
-            { text: "2015: the Sendai Framework (early warnings for all)", href: L.sendai.href },
-            { text: "2016: Kenya's Climate Change Act", href: L.kenyaAct.href },
-            { text: "2021: UNESCO's ethics of AI", href: L.unesco.href },
-            { text: "2024: the African Union's AI strategy", href: L.auAi.href },
-            { text: "2025: Kenya's National AI Strategy", href: L.kenyaAi.href },
-          ],
-        },
+        { label: "Climate change", text: "The usual weather pattern is shifting as the Earth warms." },
+        { label: "Paris Agreement", text: "Keep warming below 2 °C. Cut the gases and adapt." },
+        { label: "AI", text: "Programs that learn patterns from examples." },
+        { label: "AI for climate", text: "Finds patterns in huge data and warns early." },
       ],
-      tumainiSays: "Now let's see AI at work! First, I learn from Mama's notebook.",
+      tumainiSays: "Next: I learn from Mama's notebook!",
     },
   ],
 };
