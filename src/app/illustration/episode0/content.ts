@@ -1,32 +1,34 @@
 // ============================================================
-// EPISODE 0 CONTENT: "The Big Picture"
+// PART 1 CONTENT: "Climate change"
 // ------------------------------------------------------------
-// The foundation for the whole series, before any AI method:
-//   🌍 What is climate change?        (weather vs climate, the greenhouse blanket, Kenya)
-//   🤝 The Paris Agreement            (1.5 °C / 2 °C, every country's plan, cut vs adapt)
-//   🤖 What is AI?                    (AI, machine learning, supervised vs unsupervised)
-//   🌦️ Why AI for climate?            (huge data, early warnings, and AI's own footprint)
+// KISS: one idea per slide. Title = the question, text = the
+// short answer. Pictures only where they explain. ONE exercise.
 //
-// Facts checked against: WMO State of the Global Climate 2024; the
-// IEA "Energy and AI" report (2025); Kenya's updated NDC (2020);
-// ReliefWeb / Kenya Ministry of Interior (2024 floods); the Lake
-// Victoria Basin Commission (2020 record level); WMO (2020–22 drought).
+//   Scene 1  What is climate change?  why it matters, weather vs climate, causes
+//   Scene 2  How does it affect us?   floods, drought, heat, food & water, who, fairness
+//   Scene 3  What is the world doing? policy, Paris, Kenya, mitigation vs adaptation,
+//                                     the exercise, the lesson board
+//
+// (AI_OR_NOT and LEARN_SORT below are kept for the later AI parts.)
+//
+// Facts checked against: WMO State of the Global Climate 2024;
+// Kenya's updated NDC (2020); ReliefWeb / Kenya Ministry of Interior
+// (2024 floods); the Lake Victoria Basin Commission (2020 record
+// level); WMO (2020–22 drought).
 // See docs/tumaini/climate-and-ai-coverage.md for the sources.
 // ============================================================
 
 import type { EpisodeContent, PlayableScene } from "../types";
 import type { CardSortConfig } from "../engine/CardSortActivity";
-
-const MAIN_MESSAGE =
-  "I learn patterns from past data, so I can warn people early, and they can act early!";
+import { PHOTOS } from "../photos";
 
 // ------------------------------------------------------------
 // CARD GAMES (used by the card-sort activity in engine/CardSortActivity.tsx)
 // ------------------------------------------------------------
 export const CUT_OR_ADAPT: CardSortConfig = {
   bins: [
-    { emoji: "✂️", label: "Cut the gases" },
-    { emoji: "🛡️", label: "Adapt and be ready" },
+    { emoji: "✂️", label: "Mitigation: cut the gases" },
+    { emoji: "🛡️", label: "Adaptation: get ready" },
   ],
   cards: [
     { emoji: "☀️", text: "Solar and geothermal power instead of coal", bin: 0, why: "Clean power makes far less of the gases that thicken the blanket." },
@@ -36,7 +38,7 @@ export const CUT_OR_ADAPT: CardSortConfig = {
     { emoji: "🍳", text: "Cleaner cooking stoves", bin: 0, why: "They burn less wood and charcoal, so less smoke and gas goes into the air." },
     { emoji: "🏠", text: "Raising houses near the river", bin: 1, why: "It keeps families safe when floods come." },
   ],
-  finish: "Great sorting! The world needs BOTH: cutting the gases AND adapting.",
+  finish: "Great sorting! The world needs BOTH: mitigation AND adaptation.",
 };
 
 export const AI_OR_NOT: CardSortConfig = {
@@ -88,229 +90,361 @@ export const AGREEMENT_LINKS = {
   iea: { label: "IEA: Energy and AI (AI's electricity use)", href: "https://www.iea.org/reports/energy-and-ai" },
 };
 const L = AGREEMENT_LINKS;
-const ALL_LINKS = [L.paris, L.unfccc, L.sdg13, L.sendai, L.kenyaNdc, L.kenyaAct, L.unesco, L.auAi, L.kenyaAi, L.wmo, L.iea];
+const CLIMATE_LINKS = [L.paris, L.unfccc, L.kenyaNdc, L.kenyaAct, L.sdg13, L.sendai, L.wmo];
 
 // ------------------------------------------------------------
-// THE STORY: The Big Picture
+// THE STORY: Wanjiku, a maize farmer. One story slide opens each
+// scene, so the ideas explain what happens to a real person.
+// Her photo is PHOTOS.wanjiku (see ../photos.ts).
 // ------------------------------------------------------------
-const story: PlayableScene = {
-  id: "big-picture",
-  number: 0,
-  title: "Our Changing Climate, and a Robot Called Tumaini",
-  idea: "Climate change, the Paris Agreement, AI and machine learning",
+const WANJIKU = { photo: PHOTOS.wanjiku };
+
+// ------------------------------------------------------------
+// SCENE 1: What is climate change?
+// ------------------------------------------------------------
+const whatItIs: PlayableScene = {
+  id: "climate-what",
+  number: 1,
+  title: "What is climate change?",
+  idea: "Weather vs climate, the greenhouse effect, and the causes",
   setting: "house",
-  mamaHolds: "notebook",
-  cast: ["mama", "otieno", "tumaini"],
-  lateArrivals: ["tumaini"],
-  walkIn: ["mama", "otieno"],
-  chapters: {
-    1: { icon: "🌍", label: "Climate change" },
-    2: { icon: "🤝", label: "The Paris Agreement" },
-    3: { icon: "🤖", label: "What is AI?" },
-    4: { icon: "🌦️", label: "Why AI for climate?" },
-    5: { icon: "📝", label: "What we learned" },
-  },
-  facilitatorNotes: [
-    "This episode gives the big picture before the AI methods in Episodes 1–5. Take your time here: everything later builds on it.",
-    "Weather vs climate: weather is what happens today; climate is the usual pattern over many years (scientists usually look at 30 years). Ask: \"What changes have your parents or grandparents seen in the rains?\"",
-    "The greenhouse effect: gases such as carbon dioxide (CO₂) and methane trap heat like a blanket. Since the 1800s, burning coal, oil and gas and cutting forests have thickened it. 2024 was the warmest year on record, about 1.55 °C above the late-1800s average; long-term warming is about 1.3–1.4 °C (WMO).",
-    "Kenya: Lake Victoria reached a record 13.42 m in May 2020; five rainy seasons in a row failed in 2020–2022 (the longest drought in 40 years); the 2024 long-rains floods displaced over 200,000 people.",
-    "Fairness: African countries have released only a small share of the world's greenhouse gases, but are among the hardest hit. This is often called climate justice.",
-    "The Paris Agreement (adopted December 2015, in force November 2016): keep warming well below 2 °C and try to limit it to 1.5 °C. Each country writes its own plan (an NDC) and updates it every 5 years. Kenya's updated NDC (2020) aims to cut emissions by 32% by 2030 compared with business as usual, and includes adaptation.",
-    "AI: computer programs that do tasks that usually need human thinking. Machine learning = learning patterns from examples instead of following rules a person wrote. Supervised learning uses examples WITH answers (labels); unsupervised learning finds groups WITHOUT answers. Episodes 1–3 show both in action.",
-    "Other climate agreements: the UN Framework Convention on Climate Change (UNFCCC, 1992) is the treaty behind all the yearly COP meetings; the Paris Agreement sits under it. In 2015 the world also agreed the Sustainable Development Goals (SDG 13: climate action) and the Sendai Framework for Disaster Risk Reduction 2015–2030, whose Target G is more early warning systems for people by 2030. Kenya's Climate Change Act came into force in May 2016.",
-    "AI agreements: UNESCO's Recommendation on the Ethics of AI (November 2021, all 193 member states) includes protecting the environment. The African Union's Continental AI Strategy was endorsed in July 2024. Kenya launched its National AI Strategy 2025–2030 in March 2025; agriculture and sustainability are among its priority areas.",
-    "Be honest about AI's costs: data centres used about 1.5% of the world's electricity in 2024, and this could roughly double by 2030 (IEA). AI should be used where it really helps, and powered with clean energy.",
-  ],
-  links: ALL_LINKS,
-  // KISS: one idea per slide. Title = the question, text = the short answer.
+  cast: ["tumaini"],
   beats: [
-    // 🌍 Climate change
     {
-      part: 1, type: "say", who: "mama", mood: "worried",
-      text: "The rains used to come every March. Now they come late, or they flood the river.",
+      part: 1, type: "slide", mood: "worried",
+      title: "Why should we care?",
+      text: "In 2024, floods forced over 200,000 Kenyans from their homes.",
+      visual: { photo: PHOTOS.floodsAerial },
     },
     {
-      type: "say", who: "otieno", mood: "curious",
-      text: "Why is the weather changing?",
+      type: "slide",
+      title: "Meet Wanjiku",
+      text: "Wanjiku grows maize in Machakos. Her mother always planted when the long rains came in March. Now the rains don't come on time.",
+      visual: WANJIKU,
     },
     {
-      type: "say", who: "tumaini", mood: "happy", enters: true, action: "wave", picture: "weather-vs-climate",
+      type: "slide",
       title: "Weather or climate?",
-      text: "Hi, I'm Tumaini! Weather is today. Climate is the usual pattern over many years.",
+      text: "They are not the same thing.",
+      visual: {
+        compare: [
+          { icon: "☀️🌧️", title: "Weather", text: "The rain, sun, heat and wind in a place today or this week" },
+          { icon: "📅", title: "Climate", text: "The average weather in a place over a long time, usually 30 years" },
+        ],
+      },
     },
     {
-      type: "say", who: "tumaini", mood: "thinking",
+      type: "slide", mood: "thinking",
       title: "What is climate change?",
-      text: "The usual pattern is shifting, because the Earth is getting warmer.",
-    },
-    {
-      type: "interactive", activity: "greenhouse", prompt: "Why is the Earth getting warmer?",
-      help: "Move the slider from long ago to today. Watch the blanket thicken.",
-    },
-    {
-      type: "say", who: "tumaini", mood: "thinking", picture: "fossil-causes",
-      title: "What causes it?",
-      text: "Burning coal, oil and gas, and cutting forests. They trap more heat.",
-    },
-    {
-      type: "say", who: "mama", mood: "worried", picture: "kenya-impacts",
-      title: "Kenya feels it",
-      text: "Floods, droughts and late rains. In 2024, floods forced over 200,000 Kenyans from home.",
-    },
-
-    // 🤝 The Paris Agreement
-    {
-      part: 2, type: "say", who: "otieno", mood: "excited", picture: "paris-promise",
-      title: "The Paris Agreement",
-      text: "In 2015, the world promised: keep warming below 2 °C, and try for 1.5 °C.",
-    },
-    {
-      type: "say", who: "tumaini", mood: "happy",
-      title: "Two kinds of action",
-      text: "CUT the gases. ADAPT to the changes. Let's sort!",
-    },
-    {
-      type: "interactive", activity: "cut-or-adapt", prompt: "Cut or adapt?",
-      help: "Tap the group for each card.",
-    },
-    {
-      optional: true, type: "say", who: "tumaini", mood: "happy",
-      title: "Kenya's plan",
-      text: "Cut emissions by 32% by 2030, and help people adapt.",
-    },
-
-    // 🤖 What is AI?
-    {
-      part: 3, type: "say", who: "otieno", mood: "curious",
-      text: "So what IS AI, Tumaini?",
-    },
-    {
-      type: "say", who: "tumaini", mood: "excited",
-      title: "What is AI?",
-      text: "Computer programs that do tasks that usually need human thinking.",
-    },
-    {
-      type: "say", who: "tumaini", mood: "happy", picture: "rules-vs-learning",
-      title: "What is machine learning?",
-      text: "AI that learns from examples, not from fixed rules.",
-    },
-    {
-      type: "interactive", activity: "ai-or-not", prompt: "AI or not AI?",
-      help: "Does it LEARN, or follow fixed rules?",
-    },
-    {
-      type: "say", who: "tumaini", mood: "happy", picture: "supervised-unsupervised",
-      title: "Supervised vs unsupervised",
-      text: "Supervised: examples come WITH answers. Unsupervised: no answers, the machine finds groups.",
-    },
-    {
-      type: "interactive", activity: "learn-sort", prompt: "Supervised or unsupervised?",
-      help: "Does each example come with its answer?",
-    },
-
-    // 🌦️ Why AI for climate?
-    {
-      part: 4, type: "predict", who: "mama",
-      question: "Why is AI useful for climate?",
-      options: [
-        { text: "Reads huge data fast", emoji: "📊" },
-        { text: "Spots hidden patterns", emoji: "🔍" },
-        { text: "Warns people early", emoji: "⏰" },
+      text: "Climate change is a long-term shift in the Earth's usual temperatures and weather patterns.",
+      points: [
+        "It happens over decades, not days.",
+        "Since the 1800s, people have been the main cause.",
+        "The Earth is now about 1.3 °C warmer than in the late 1800s.",
       ],
-      reply: "All three are true!",
+      visual: { icon: "🌡️" },
     },
     {
-      type: "say", who: "tumaini", mood: "happy", picture: "climate-big-data",
-      title: "Why AI for climate?",
-      text: "Millions of weather readings a day. AI finds the patterns and warns people early.",
-    },
-    {
-      type: "say", who: "tumaini", mood: "unsure", picture: "ai-footprint",
-      title: "Use AI wisely",
-      text: "AI uses a lot of electricity. Use it where it helps, with clean power.",
-    },
-    {
-      type: "say", who: "mama", mood: "proud",
-      text: "AI helps us prepare. People still decide.",
-    },
-
-    // 📝 What we learned
-    {
-      part: 5, type: "lesson",
-      title: "Today we learned",
-      rows: [
-        { label: "Climate change", text: "The usual weather pattern is shifting as the Earth warms." },
-        { label: "Paris Agreement", text: "Keep warming below 2 °C. Cut the gases and adapt." },
-        { label: "AI", text: "Programs that learn patterns from examples." },
-        { label: "AI for climate", text: "Finds patterns in huge data and warns early." },
+      type: "slide", mood: "thinking",
+      title: "What is the greenhouse effect?",
+      text: "Some gases in the air let sunlight in, but stop heat from escaping, like a blanket around the Earth.",
+      points: [
+        "These are called greenhouse gases, e.g. carbon dioxide (CO₂) and methane.",
+        "A little is good: without it, the Earth would be too cold for life.",
+        "More gas = a thicker blanket = a hotter Earth.",
       ],
-      tumainiSays: "Next: I learn from Mama's notebook!",
+      visual: { diagram: "greenhouse-blanket" },
     },
+    {
+      type: "slide", mood: "unsure",
+      title: "What causes climate change?",
+      text: "People are adding more greenhouse gases to the air.",
+      points: [
+        "Burning coal, oil and gas for power, transport and factories releases CO₂.",
+        "Cutting down forests: fewer trees to take CO₂ out of the air.",
+        "Livestock, rubbish dumps and some farming release methane.",
+      ],
+      visual: { picture: "fossil-causes" },
+    },
+  ],
+  facilitatorNotes: [
+    "Definition (UN): climate change refers to long-term shifts in temperatures and weather patterns. Since the 1800s, human activities have been the main driver, mainly burning fossil fuels.",
+    "Weather vs climate: weather is the conditions today or this week; climate is the average over a long time (scientists usually use 30 years). Ask: \"What changes have your parents or grandparents seen in the rains?\"",
+    "The greenhouse effect is natural and keeps the Earth warm enough for life. The problem is the EXTRA gases people add, which thicken the blanket.",
+    "2024 was the warmest year on record, about 1.55 °C above the late-1800s average; long-term warming is about 1.3 °C (WMO).",
+  ],
+  links: [L.wmo],
+};
+
+// ------------------------------------------------------------
+// SCENE 2: How does it affect us?
+// ------------------------------------------------------------
+const howItAffectsUs: PlayableScene = {
+  id: "climate-affects",
+  number: 2,
+  title: "How does it affect us?",
+  idea: "Floods, drought, heat, food, water and health, and who is hit hardest",
+  setting: "house",
+  cast: ["tumaini"],
+  beats: [
+    {
+      part: 1, type: "slide", mood: "worried",
+      title: "Wanjiku's bad year",
+      text: "The rains came late, and her maize dried up. Then rain fell so hard that it washed her soil away.",
+      visual: WANJIKU,
+    },
+    {
+      // TODO: swap the icon for a flood photo when we have one.
+      type: "slide", mood: "worried",
+      title: "More floods",
+      text: "A flood is when water covers land that is normally dry.",
+      points: [
+        "Warmer air holds more water, so rain falls harder.",
+        "Rivers overflow, and homes, roads and farms are washed away.",
+      ],
+      visual: { icon: "🌊" },
+    },
+    {
+      type: "slide", mood: "worried",
+      title: "More droughts",
+      text: "A drought is a long time with much less rain than normal.",
+      points: [
+        "Heat dries out soil and water faster.",
+        "Crops fail, and animals die without water and pasture.",
+      ],
+      visual: { photo: PHOTOS.droughtMaize },
+    },
+    {
+      type: "slide", mood: "worried",
+      title: "Kenya's worst drought in 40 years",
+      text: "Millions of people needed food aid, and millions of animals died.",
+      visual: { stat: { value: "5", label: "rainy seasons failed in a row (2020–2022)" } },
+    },
+    {
+      type: "slide", mood: "unsure",
+      title: "More heat",
+      text: "A heatwave is a spell of unusually hot days.",
+      points: [
+        "It harms health, especially for babies and older people.",
+        "It scorches crops and stresses livestock.",
+      ],
+      visual: { photo: PHOTOS.heatMaize },
+    },
+    {
+      type: "slide", mood: "thinking",
+      title: "Food, water and health",
+      text: "Climate change affects what we eat and drink, and how healthy we are.",
+      points: [
+        "Smaller harvests mean less food and higher prices.",
+        "Floods can spread diseases like cholera.",
+        "Malaria mosquitoes can spread to cooler highland areas.",
+      ],
+      visual: { icon: "🌾💧" },
+    },
+    {
+      type: "slide", mood: "thinking",
+      title: "Who is hit hardest?",
+      text: "People who depend most on the weather, and have the least to fall back on.",
+      points: [
+        "Farmers and herders who rely on rain, like Wanjiku.",
+        "Families living in informal settlements or near rivers.",
+        "Women, children, older people and people with disabilities.",
+      ],
+      visual: { photo: PHOTOS.floodsSettlement },
+    },
+    {
+      type: "slide", mood: "unsure",
+      title: "Is it fair?",
+      text: "No. Africa produces less than 4% of the world's greenhouse gases, but is among the hardest hit. This is called climate justice.",
+      visual: {
+        compare: [
+          { icon: "🏭", title: "Caused most of it", text: "Rich, industrial countries" },
+          { icon: "🌍", title: "Feels it strongly", text: "Africa, which caused very little" },
+        ],
+      },
+    },
+  ],
+  facilitatorNotes: [
+    "Kenya: five rainy seasons in a row failed in 2020–2022 (the longest drought in 40 years); the 2024 long-rains floods displaced over 200,000 people; Lake Victoria reached a record 13.42 m in May 2020.",
+    "Why heavier rain: warmer air can hold about 7% more water vapour for every 1 °C of warming, so when it rains, it can pour.",
+    "Ask: \"Which of these have you seen where you live?\" Let a few people share before moving on.",
+    "Fairness: Africa accounts for less than 4% of global greenhouse gas emissions, but is among the most vulnerable regions. This is often called climate justice.",
   ],
 };
 
 // ------------------------------------------------------------
-// The whole episode
+// SCENE 3: What is the world doing? (policy + the one exercise)
+// ------------------------------------------------------------
+const climatePolicy: PlayableScene = {
+  id: "climate-policy",
+  number: 3,
+  title: "What is the world doing?",
+  idea: "Climate policy: the Paris Agreement, Kenya's plan, mitigation and adaptation",
+  setting: "house",
+  cast: ["tumaini"],
+  beats: [
+    {
+      part: 1, type: "slide",
+      title: "What can be done?",
+      text: "Wanjiku can't fix the climate alone. So what are countries doing, and what can she do?",
+      visual: WANJIKU,
+    },
+    {
+      type: "slide",
+      title: "What is climate policy?",
+      text: "Climate policy is the laws, plans and agreements that governments make to tackle climate change.",
+      points: [
+        "Global: agreements between countries, like the Paris Agreement.",
+        "National: each country's own laws and plans.",
+        "Local: county plans, e.g. for water and farming.",
+      ],
+      visual: { icon: "📜" },
+    },
+    {
+      type: "slide",
+      title: "The Paris Agreement (2015)",
+      text: "A promise by almost every country in the world to limit global warming.",
+      points: [
+        "Keep warming well below 2 °C, and try to stop at 1.5 °C.",
+        "Every country writes its own climate plan (an NDC).",
+        "Plans are updated every 5 years, each one stronger.",
+      ],
+      visual: { picture: "paris-promise" },
+    },
+    {
+      type: "slide",
+      title: "Kenya's plan",
+      text: "Kenya's Climate Change Act (2016) is the law that guides how Kenya responds to climate change.",
+      points: [
+        "Kenya plans to cut its emissions by 32% by 2030.",
+        "It also plans how people and farms will adapt.",
+        "A National Climate Change Council, led by the President, oversees the work.",
+      ],
+      visual: { stat: { value: "32%", label: "cut in emissions planned by 2030" } },
+    },
+    {
+      type: "slide",
+      title: "Two ways to act",
+      text: "We need both.",
+      visual: {
+        compare: [
+          { icon: "✂️", title: "Mitigation", text: "Reducing the greenhouse gases we release, so warming slows down" },
+          { icon: "🛡️", title: "Adaptation", text: "Changing how we live and farm, so climate change harms us less" },
+        ],
+      },
+    },
+    {
+      type: "slide",
+      title: "Mitigation: cut the gases",
+      text: "Clean power instead of coal, oil and gas.",
+      points: [
+        "Kenya gets most of its electricity from clean sources: geothermal, water, wind and sun.",
+        "The Lake Turkana wind farm is one of the biggest in Africa.",
+        "Planting trees and protecting forests also helps.",
+      ],
+      visual: { photo: PHOTOS.windTurkana },
+    },
+    {
+      type: "slide",
+      title: "Adaptation: get ready",
+      text: "Preparing for the changes that are already happening.",
+      points: [
+        "Saving rainwater in tanks and pans for the dry months.",
+        "Planting drought-tolerant seed.",
+        "Early warnings, so people can act before floods and droughts.",
+      ],
+      visual: { photo: PHOTOS.waterTanks },
+    },
+    {
+      type: "slide", mood: "happy",
+      title: "Back to Wanjiku",
+      text: "She can't stop climate change alone, but she can adapt: plant drought-tolerant seed, and save rainwater.",
+      visual: WANJIKU,
+    },
+    {
+      type: "interactive", activity: "cut-or-adapt", prompt: "Mitigation or adaptation?",
+      help: "Tap the right group for each card.",
+    },
+    {
+      part: 5, type: "lesson",
+      title: "What we learned",
+      rows: [
+        { label: "Climate change", text: "A long-term shift in the Earth's usual temperatures and weather patterns." },
+        { label: "Cause", text: "Extra greenhouse gases from burning coal, oil and gas, and cutting forests." },
+        { label: "Effects", text: "More floods, droughts and heat; less food and water. The poor are hit hardest." },
+        { label: "Action", text: "Paris Agreement and Kenya's plan. Mitigation (cut the gases) and adaptation (get ready)." },
+      ],
+      tumainiSays: "How can Wanjiku adapt? Let's find out in Module 2!",
+    },
+  ],
+  facilitatorNotes: [
+    "The Paris Agreement (adopted December 2015 at COP21): keep warming well below 2 °C and try to limit it to 1.5 °C. Each country writes its own plan, a Nationally Determined Contribution (NDC), and updates it every 5 years.",
+    "Kenya's Climate Change Act came into force in May 2016. It set up the National Climate Change Council (chaired by the President) and the Climate Change Directorate. Kenya's updated NDC (2020) aims to cut emissions by 32% by 2030 compared with business as usual, and includes adaptation.",
+    "The UN Framework Convention on Climate Change (UNFCCC, 1992) is the treaty behind the yearly COP meetings; the Paris Agreement sits under it.",
+    "Mitigation = reduce the gases (solar, wind, geothermal, trees, clean stoves). Adaptation = prepare for the changes (drought seed, water harvesting, early warnings, raised houses). Some actions do both, e.g. trees.",
+  ],
+  links: CLIMATE_LINKS,
+};
+
+// ------------------------------------------------------------
+// The whole of Part 1
 // ------------------------------------------------------------
 export const EPISODE_0: EpisodeContent = {
-  scenes: [story],
+  scenes: [whatItIs, howItAffectsUs, climatePolicy],
   quiz: [
     {
       question: "What is climate change?",
       options: [
-        { text: "A long-term shift in the usual weather patterns", correct: true },
+        { text: "A long-term shift in the usual weather pattern", correct: true },
         { text: "The weather today" },
         { text: "Only very hot days" },
       ],
-      praise: "Yes! Climate is the pattern over many years, and that pattern is shifting.",
-      hint: "Remember: weather is today, climate is the pattern over many years. Try again!",
+      praise: "Yes! Climate is the pattern over many years, and it is shifting.",
+      hint: "Weather is today. Climate is the pattern over many years. Try again!",
     },
     {
-      question: "What did countries promise in the Paris Agreement?",
+      question: "What makes the Earth warmer?",
       options: [
-        { text: "To keep warming well below 2 °C, and try for 1.5 °C", correct: true },
-        { text: "To stop all rain" },
-        { text: "To build more coal power stations" },
+        { text: "Burning coal, oil and gas, and cutting forests", correct: true },
+        { text: "Too much rain" },
+        { text: "The moon" },
       ],
-      praise: "Correct! Well below 2 °C, and try hard for 1.5 °C.",
-      hint: "Remember the marks on the thermometer? Try again!",
+      praise: "Correct! These thicken the blanket of gases.",
+      hint: "Think about the blanket of gases. Try again!",
     },
     {
-      question: "A computer learns from leaves labelled \"healthy\" or \"sick\". What kind of learning is that?",
+      question: "What did the Paris Agreement promise?",
       options: [
-        { text: "Supervised learning", correct: true },
-        { text: "Unsupervised learning" },
-        { text: "No learning at all" },
+        { text: "Keep warming below 2 °C, and try for 1.5 °C", correct: true },
+        { text: "Stop all rain" },
+        { text: "Build more coal power stations" },
       ],
-      praise: "Right! The examples come with answers, so it's supervised.",
-      hint: "Does each example come with its answer? Try again!",
+      praise: "Right! Below 2 °C, and try for 1.5 °C.",
+      hint: "It is about limiting warming. Try again!",
     },
     {
-      question: "Why is AI useful for climate problems?",
+      question: "Planting drought-tolerant seed is…",
       options: [
-        { text: "It finds patterns in huge amounts of data and helps warn people early", correct: true },
-        { text: "It controls the weather" },
-        { text: "It replaces farmers" },
+        { text: "Adaptation: getting ready", correct: true },
+        { text: "Mitigation: cutting the gases" },
       ],
-      praise: "Yes! AI helps people prepare. People still make the decisions.",
-      hint: "Can a computer control the rain? Try again!",
+      praise: "Yes! It doesn't cut gases, but it helps crops survive.",
+      hint: "Does it cut gases, or help us cope? Try again!",
     },
   ],
   summary: {
     points: [
-      "Climate change: the usual weather pattern is shifting, and Kenya already feels it",
-      "The Paris Agreement: well below 2 °C, try for 1.5 °C; cut the gases AND adapt",
-      "AI learns patterns from examples: machine learning",
-      "Supervised (answers given) and unsupervised (finds groups alone)",
-      "AI helps by finding patterns in huge data and warning early, if used wisely",
+      "Climate change: a long-term shift in the Earth's usual temperatures and weather patterns",
+      "Cause: extra greenhouse gases from burning coal, oil and gas, and cutting forests",
+      "Effects: more floods, droughts and heat; less food and water; the poor are hit hardest",
+      "Action: the Paris Agreement, Kenya's plan, mitigation and adaptation",
     ],
-    message: MAIN_MESSAGE,
+    message: "Climate change is already here. We must cut the gases AND get ready.",
   },
-  links: ALL_LINKS,
+  links: CLIMATE_LINKS,
   teaser: {
-    text: "Next time, Mama shows me her old weather notebook, and I try to learn when the rain will come!",
-    picture: "notebook-teaser",
-    mood: "excited",
+    text: "Next: how can Wanjiku, and all of us, adapt and bounce back?",
+    picture: "river-storm",
+    mood: "thinking",
   },
 };

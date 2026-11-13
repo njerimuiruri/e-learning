@@ -22,38 +22,13 @@ export type MamaHolds = "notebook" | "seeds" | "phone";
 export type CropStage = "bare" | "sprouts" | "growing" | "tall" | "cobs" | "golden" | "dried";
 
 // Pictures that can be used for the "Next time…" teaser.
-export type PictureId = "river-storm" | "planting-day" | "notebook-teaser" | "exam-robots";
+export type PictureId = "river-storm" | "notebook-teaser";
 export type IconName = "globe" | "notebook" | "gauge" | "tree" | "satellite" | "shield";
 
 // Small explaining pictures that pop up beside a speech bubble.
-// Each episode draws its own in episodeN/IdeaPictures.tsx, and
+// Each part draws its own in its folder's IdeaPictures.tsx, and
 // engine/registry.tsx puts them all together.
-export type Episode1PictureId =
-  | "dry-seeds"
-  | "notebook"
-  | "mangoes"
-  | "learn-flow"
-  | "clues"
-  | "many-days"
-  | "two-seasons"
-  | "wasted-seed"
-  | "timetable"
-  | "late-rain"
-  | "saved-seed";
-export type Episode2PictureId =
-  // Scene 3
-  | "flooded-house"
-  | "storm-notebook"
-  | "bus-fare"
-  | "y-mx-c"
-  | "safe-uphill"
-  // Scene 4
-  | "spreading-disease"
-  | "photo-check"
-  | "tomato-sorting"
-  | "ask-expert";
-// "big-message" is the 4-step main message, shared by every episode.
-export type Episode3PictureId = "plant-timing" | "three-questions" | "doctor-questions";
+// "big-message" is the 4-step main message, shared by every part.
 export type Episode0PictureId =
   | "weather-vs-climate"
   | "fossil-causes"
@@ -65,8 +40,7 @@ export type Episode0PictureId =
   | "ai-footprint"
   | "climate-promises"
   | "ai-promises";
-export type Episode4PictureId = "forest-mud" | "neuron-relay";
-export type IdeaPictureId = Episode0PictureId | Episode1PictureId | Episode2PictureId | Episode3PictureId | Episode4PictureId | "big-message";
+export type IdeaPictureId = Episode0PictureId | "big-message";
 
 /** One explaining picture: the drawing, a caption, and words for screen readers. */
 export interface IdeaPicture {
@@ -78,30 +52,16 @@ export interface IdeaPicture {
 // The interactive parts we have built. Add a new name here when you
 // build a new activity, then register it in engine/registry.tsx.
 export type ActivityId =
-  // Episode 1
-  | "notebook"
-  | "sky-guess"
-  | "play-year"
-  | "late-rains"
-  // Episode 2
-  | "storm-graph"
-  | "beat-the-computer"
-  | "river-forecast"
-  | "leaf-sorter"
-  | "ai-learns"
-  | "ai-sorter"
-  // Episode 3
-  | "first-question"
-  | "grow-tree"
-  // Episode 4
-  | "pixel-zoom"
-  | "teach-labels"
-  | "forest-change"
-  | "brain-trainer"
-  | "storm-check"
-  | "next-word"
-  | "phone-chat"
-  // Episode 0
+  // Part 4: Decisions
+  | "risk-map"
+  | "walk-tree"
+  | "forest-vote"
+  | "group-villages"
+  // Part 3: Modelling
+  | "river-model"
+  // Part 2: Adaptation & resilience
+  | "late-rains-choice"
+  // Part 1: Climate change
   | "greenhouse"
   | "cut-or-adapt"
   | "ai-or-not"
@@ -173,6 +133,61 @@ export interface InteractiveBeat extends BaseBeat {
   help?: string;
 }
 
+// ---------- The calm slide (KISS): one idea, one visual ----------
+
+/** A real photo saved in public/illustration/photos/. */
+export interface SlidePhoto {
+  src: string;
+  /** Words for screen readers: what the photo shows */
+  alt: string;
+  /** Small credit line, e.g. "Photo: Jane Doe / Wikimedia Commons (CC BY 4.0)" */
+  credit?: string;
+}
+
+/** One side of a side-by-side comparison. */
+export interface CompareSide {
+  icon: string;
+  title: string;
+  text: string;
+}
+
+/**
+ * The visual kit: pick ONE per slide.
+ *   photo    -> a real photo
+ *   stat     -> a big number that hits hard
+ *   compare  -> two things side by side
+ *   diagram  -> a simple drawing that builds up once
+ *   picture  -> one of the existing explaining drawings
+ *   icon     -> a big emoji for simple ideas
+ *   steps    -> 2–4 boxes in a row joined by "→" or "+" (no animation)
+ *   chart    -> a simple still chart (drawn in partN/Charts.tsx, listed in registry.tsx)
+ */
+export type SlideVisual =
+  | { photo: SlidePhoto }
+  | { stat: { value: string; label: string } }
+  | { compare: [CompareSide, CompareSide] }
+  | { diagram: "greenhouse-blanket" }
+  | { picture: IdeaPictureId }
+  | { icon: string }
+  | { steps: { items: { icon: string; title: string }[]; joiner: "→" | "+"; result?: string } }
+  | { chart: ChartId };
+
+/** The simple still charts. */
+export type ChartId = "rain-by-month" | "temperature-trend" | "river-model";
+
+/** A calm slide: title, one visual, one short line. Tumaini sits small in the corner. */
+export interface SlideBeat extends BaseBeat {
+  type: "slide";
+  title: string;
+  /** The main line: a clear, specific explanation (e.g. the definition) */
+  text: string;
+  /** Up to 3 short points that make it concrete (examples, numbers) */
+  points?: string[];
+  visual?: SlideVisual;
+  /** Tumaini's face on this slide (default: happy) */
+  mood?: TumainiMood;
+}
+
 /** Something that is not a character speaks, like a radio. */
 export interface AnnounceBeat extends BaseBeat {
   type: "announce";
@@ -217,7 +232,7 @@ export interface QuestionBeat extends BaseBeat {
   wrongReply: string;
 }
 
-export type Beat = SayBeat | AnnounceBeat | PredictBeat | InteractiveBeat | LessonBeat | QuestionBeat;
+export type Beat = SlideBeat | SayBeat | AnnounceBeat | PredictBeat | InteractiveBeat | LessonBeat | QuestionBeat;
 
 // ---------- Scenes and episodes ----------
 

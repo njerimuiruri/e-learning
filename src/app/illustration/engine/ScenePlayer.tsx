@@ -35,6 +35,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { itemText, type Beat, type CharacterId, type Mood, type PlayableScene, type ScenePart } from "../types";
 import Stage from "./Stage";
+import Slide from "./Slide";
 import LessonBoard from "./LessonBoard";
 import QuestionCard from "./QuestionCard";
 import PredictCard from "./PredictCard";
@@ -64,6 +65,8 @@ const PART_NUMBERS: ScenePart[] = [1, 2, 3, 4, 5, 6];
 /** The text that the voice should read for a beat. */
 function speechFor(beat: Beat): string {
   switch (beat.type) {
+    case "slide":
+      return `${beat.title}. ${beat.text} ${(beat.points ?? []).join(". ")}`;
     case "say":
     case "announce":
       return beat.text;
@@ -297,7 +300,10 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
 
   // ---------- Auto-play: when is this beat "ready" to move on? ----------
   let waitMs: number | null = null;
-  if ((beat.type === "say" || beat.type === "announce") && typed && (!voiceOn || voiceDone)) {
+  if (beat.type === "slide" && (!voiceOn || voiceDone)) {
+    // No typing on calm slides: just time to read.
+    waitMs = voiceOn ? 1200 : readingTime(`${beat.title} ${beat.text} ${(beat.points ?? []).join(" ")}`, 3500, 14000);
+  } else if ((beat.type === "say" || beat.type === "announce") && typed && (!voiceOn || voiceDone)) {
     waitMs = voiceOn ? 1200 : readingTime(beat.text, 2500, 7000);
   } else if (beat.type === "lesson" && (!voiceOn || voiceDone)) {
     const allText = [...beat.rows.map((r) => `${r.text} ${(r.list ?? []).map(itemText).join(" ")}`), beat.tumainiSays ?? ""].join(" ");
@@ -349,6 +355,9 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
 
   const renderBeat = () => {
     switch (beat.type) {
+      case "slide":
+        return <Slide beat={beat} />;
+
       case "say":
         return (
           <Stage
@@ -418,7 +427,7 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
       <header className="tm-scene-header">
         <h2 id="tm-scene-title">{scene.title}</h2>
         <p className="tm-scene-where">
-          {sceneCount > 1 && `Scene ${sceneIndex + 1} of ${sceneCount} · `}
+          {sceneCount > 1 && `Lesson ${sceneIndex + 1} of ${sceneCount} · `}
           {partsUsed.length > 1 && partInfo(currentPart).label}
         </p>
       </header>
@@ -438,7 +447,7 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
           ← Back
         </button>
 
-        <div className="tm-progress" role="progressbar" aria-valuemin={1} aria-valuemax={visible.length} aria-valuenow={safeIndex + 1} aria-label={`Step ${safeIndex + 1} of ${visible.length}`}>
+        <div className="tm-progress" role="progressbar" aria-valuemin={1} aria-valuemax={visible.length} aria-valuenow={safeIndex + 1} aria-label={`Slide ${safeIndex + 1} of ${visible.length}`}>
           <div className="tm-progress-bar">
             <span style={{ width: `${((safeIndex + 1) / visible.length) * 100}%` }} />
           </div>
@@ -451,7 +460,7 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
           disabled={locked}
           aria-describedby="tm-next-hint"
         >
-          {isLast ? (sceneIndex + 1 < sceneCount ? "Next scene →" : "Finish ✔") : "Next →"}
+          {isLast ? (sceneIndex + 1 < sceneCount ? "Next lesson →" : "Finish ✔") : "Next →"}
           {counting && (
             <span key={`${beatNo}-${runKey}-${waitMs}-${touches}`} className="tm-next-timer" style={{ animationDuration: `${waitMs}ms` }} aria-hidden="true" />
           )}
@@ -503,7 +512,7 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
           </button>
         )}
         <button type="button" className="tm-link-button" onClick={restart}>
-          ↺ Start this scene again
+          ↺ Start this lesson again
         </button>
         <button type="button" className="tm-link-button" onClick={() => setPanelOpen(true)}>
           📋 For the facilitator
@@ -514,7 +523,7 @@ export default function ScenePlayer({ scene, sceneIndex, sceneCount, onFinish, o
       <FacilitatorPanel
         open={panelOpen}
         onClose={() => setPanelOpen(false)}
-        sceneTitle={`Scene ${scene.number}: ${scene.title}`}
+        sceneTitle={`Lesson ${scene.number}: ${scene.title}`}
         notes={scene.facilitatorNotes}
         dataNote={scene.dataNote}
         links={scene.links}

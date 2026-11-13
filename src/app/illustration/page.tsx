@@ -1,27 +1,30 @@
 "use client";
 
 // ============================================================
-// TUMAINI'S CLIMATE AI ADVENTURES  -  page at /test
+// CLIMATE & AI BASICS WITH TUMAINI  -  page at /illustration
 // ------------------------------------------------------------
 // Folders and files:
-//   page.tsx        -> this file: home screen, episode pages, navigation
-//   episodes.ts     -> the episode list (edit episodes here)
+//   page.tsx        -> this file: home screen, part pages, navigation
+//   episodes.ts     -> the list of parts (edit parts here)
 //   types.ts        -> the "shape" of our data
-//   progress.ts     -> remembers finished episodes
+//   progress.ts     -> remembers finished parts
 //   characters/     -> Tumaini, Mama Akinyi, Otieno
 //   components/     -> speech bubble, icons, backgrounds, maize, confetti
-//   engine/         -> the scene engine that plays any episode
-//   episode1/       -> Episode 1's words, data and activities
+//   engine/         -> the scene engine that plays any part
+//   episode0/       -> Module 1 (Climate change); part2/ to part4/ -> Modules 2 to 4
 //   tumaini.css     -> home screen styles and Tumaini's animations
 //   engine.css      -> scene, controls, lesson board, quiz styles
-//   episode1.css    -> Episode 1 activity styles
+//   episode1.css    -> shared sliders and small animations
 //   motion.css      -> walking, talking, moving scenery, auto-play bar
-//   episode0.css    -> Episode 0: greenhouse blanket, card-sort game
-//   episode2.css    -> Episode 2: river, phone alert, leaves
-//   episode3.css    -> Episode 3: season cards, decision tree, village map
+//   slides.css      -> the calm KISS slides (title, one visual, one line)
+//   part4.css       -> Module 4 tasks: risk map, decision tree, forest vote, grouping
+//   fit.css         -> one screen, no scrolling: home and lesson layout
+//   episode0.css    -> Module 1: greenhouse blanket, card-sort game
+//   episode2.css    -> shared river, phone and goat styles (used by backgrounds)
+//   episode3.css    -> old Episode 3 styles (kept for now; safe to trim later)
 // ============================================================
 
-import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type RefObject } from "react";
 import "./tumaini.css";
 import "./engine.css";
 import "./episode1.css";
@@ -29,6 +32,9 @@ import "./motion.css";
 import "./episode2.css";
 import "./episode0.css";
 import "./episode3.css";
+import "./slides.css";
+import "./part4.css";
+import "./fit.css";
 import type { Episode } from "./types";
 import { EPISODES } from "./episodes";
 import { getCompletedEpisodes } from "./progress";
@@ -38,13 +44,13 @@ import EpisodeIcon from "./components/EpisodeIcon";
 import EpisodePlayer from "./engine/EpisodePlayer";
 
 const WELCOME_TEXT =
-  "Hi! I'm Tumaini. My name means 'hope'. I'm a robot that learns from examples. Pick an episode and help me learn about the weather!";
+  "Hi, I'm Tumaini! My name means 'hope'. I'll be your guide.";
 
 // ============================================================
 // NAVIGATION HELPERS
 // The URL hash (the part after "#") decides what we show:
 //   #home or nothing -> home screen
-//   #episode-2       -> episode 2
+//   #part-1          -> part 1
 // Because the browser remembers hashes in its history, the
 // Back and Forward buttons work for free.
 // ============================================================
@@ -96,93 +102,73 @@ function Tags({ tags }: { tags: string[] }) {
   );
 }
 
-// The sky, sun and clouds behind the home screen
-function SkyDecorations() {
-  return (
-    <div className="tm-sky" aria-hidden="true">
-      <svg className="tm-sun" viewBox="0 0 100 100">
-        {Array.from({ length: 8 }, (_, i) => (
-          <line
-            key={i}
-            x1="50" y1="6" x2="50" y2="18"
-            stroke="#F2B544" strokeWidth="6" strokeLinecap="round"
-            transform={`rotate(${i * 45} 50 50)`}
-          />
-        ))}
-        <circle cx="50" cy="50" r="24" fill="#F2B544" stroke="#E09A1F" strokeWidth="3" />
-      </svg>
-      <Cloud className="tm-cloud tm-cloud-1" />
-      <Cloud className="tm-cloud tm-cloud-2" />
-      <Cloud className="tm-cloud tm-cloud-3" />
-    </div>
-  );
-}
-
-function Cloud({ className }: { className: string }) {
-  return (
-    <svg className={className} viewBox="0 0 120 60">
-      <path
-        d="M20 50 a16 16 0 0 1 4 -31 a22 22 0 0 1 40 -6 a18 18 0 0 1 32 12 a13 13 0 0 1 4 25 Z"
-        fill="#FFFFFF"
-      />
-    </svg>
-  );
-}
-
-// Green hills and a strip of Lake Victoria along the bottom
-function HillsAndLake() {
-  return (
-    <svg className="tm-hills" viewBox="0 0 1200 140" preserveAspectRatio="none" aria-hidden="true">
-      <path d="M0 70 C200 20 380 30 560 70 C760 110 950 30 1200 60 L1200 140 L0 140 Z" fill="#6FAE5F" />
-      <path d="M0 95 C250 60 450 80 650 95 C850 110 1000 75 1200 90 L1200 140 L0 140 Z" fill="#4C8E44" />
-      <path d="M0 118 C300 108 900 108 1200 118 L1200 140 L0 140 Z" fill="#1B6E8E" />
-      <path d="M120 126 h60 M420 124 h80 M760 127 h50 M1000 124 h70" stroke="#DDF0F7" strokeWidth="3" strokeLinecap="round" opacity="0.7" />
-    </svg>
-  );
-}
-
 // ============================================================
-// HOME SCREEN
+// HOME SCREEN: clean, on ONE screen, no scrolling
+//   left:  course name, one line, Start/Continue button, progress
+//   right: Tumaini, the guide
+//   below: the 4 modules as clean cards (no icons, no tags)
 // ============================================================
+
+/** Total minutes, read from "about 15 minutes" on each module. */
+const TOTAL_MINUTES = EPISODES.reduce((sum, e) => sum + (parseInt(e.time.replace(/\D+/g, " ").trim(), 10) || 0), 0);
 
 function HomeScreen({ headingRef, completed }: { headingRef: RefObject<HTMLHeadingElement | null>; completed: number[] }) {
+  const doneCount = EPISODES.filter((e) => completed.includes(e.number)).length;
+  const next = EPISODES.find((e) => !completed.includes(e.number));
+  const startLabel = !next ? "Watch again from Module 1" : doneCount === 0 ? "Start Module 1" : `Continue: Module ${next.number}`;
+  const startHref = `#${(next ?? EPISODES[0]).slug}`;
+
   return (
-    <main className="tm-view" aria-labelledby="tm-home-title">
-      <section className="tm-hero">
-        <SkyDecorations />
-
-        <div className="tm-hero-text">
-          <h1 id="tm-home-title" ref={headingRef} tabIndex={-1}>
-            Tumaini&apos;s Climate AI Adventures
-          </h1>
-          <p className="tm-subtitle">
-            Learn how computers help us prepare for floods, droughts and changing seasons.
+    <main className="tm-view tm-home" aria-labelledby="tm-home-title">
+      <section className="tm-h-hero">
+        <div className="tm-h-intro">
+          <p className="tm-h-eyebrow">
+            {EPISODES.length} modules · about {TOTAL_MINUTES} minutes
           </p>
+          <h1 id="tm-home-title" ref={headingRef} tabIndex={-1}>
+            Climate &amp; AI Basics
+          </h1>
+          <p className="tm-h-lead">From climate change to smart, data-driven decisions, explained simply.</p>
+
+          <div className="tm-h-actions">
+            <a href={startHref} className="tm-h-start">
+              {startLabel} <span aria-hidden="true">→</span>
+            </a>
+            <div className="tm-h-progress">
+              <div className="tm-h-progress-bar" role="progressbar" aria-valuemin={0} aria-valuemax={EPISODES.length} aria-valuenow={doneCount} aria-label="Modules completed">
+                <span style={{ width: `${(doneCount / EPISODES.length) * 100}%` }} />
+              </div>
+              <span>
+                {doneCount} of {EPISODES.length} completed
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div className="tm-stage">
-          <Tumaini mood="happy" waving size={230} />
-          <SpeechBubble text={WELCOME_TEXT} tail="left" />
+        <div className="tm-h-guide">
+          <p className="tm-h-bubble">{WELCOME_TEXT}</p>
+          <Tumaini mood="happy" waving size={170} />
         </div>
-
-        <HillsAndLake />
       </section>
 
-      <section className="tm-menu" aria-labelledby="tm-menu-title">
-        <h2 id="tm-menu-title">Choose an episode</h2>
-
-        <div className="tm-card-grid">
+      <section aria-labelledby="tm-menu-title">
+        <h2 id="tm-menu-title" className="tm-sr-only">
+          Modules
+        </h2>
+        <ol className="tm-h-grid">
           {EPISODES.map((episode) => (
-            <EpisodeCard key={episode.slug} episode={episode} done={completed.includes(episode.number)} />
+            <li key={episode.slug}>
+              <ModuleCard episode={episode} done={completed.includes(episode.number)} isNext={next?.number === episode.number && doneCount > 0} />
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
     </main>
   );
 }
 
-function EpisodeCard({ episode, done }: { episode: Episode; done: boolean }) {
-  // Cards are links to "#episode-N". Links already open with Enter;
+function ModuleCard({ episode, done, isNext }: { episode: Episode; done: boolean; isNext: boolean }) {
+  // Cards are links to "#part-N". Links already open with Enter;
   // here we also let the Space bar open them.
   const onKeyDown = (event: KeyboardEvent<HTMLAnchorElement>) => {
     if (event.key === " ") {
@@ -194,28 +180,25 @@ function EpisodeCard({ episode, done }: { episode: Episode; done: boolean }) {
   return (
     <a
       href={`#${episode.slug}`}
-      className={`tm-card ${done ? "is-done" : ""}`}
+      className={`tm-h-card ${done ? "is-done" : ""} ${isNext ? "is-next" : ""}`}
+      style={{ "--accent": episode.color } as CSSProperties}
       onKeyDown={onKeyDown}
-      aria-label={`Episode ${episode.number}: ${episode.title}. ${episode.description} ${episode.time}.${done ? " Completed." : ""}`}
+      aria-label={`Module ${episode.number}: ${episode.title}. ${episode.description} ${episode.time}.${done ? " Completed." : ""}`}
     >
-      {done && (
-        <span className="tm-done-badge" aria-hidden="true">
-          ✔ Completed
+      <span className="tm-h-card-top">
+        <span className="tm-h-num" aria-hidden="true">
+          {String(episode.number).padStart(2, "0")}
         </span>
-      )}
-      <div className="tm-card-top">
-        <NumberCircle episode={episode} />
-        <EpisodeIcon name={episode.icon} />
-      </div>
-      <h3 className="tm-card-title">{episode.title}</h3>
-      <p className="tm-card-desc">{episode.description}</p>
-      <Tags tags={episode.tags} />
-      <p className="tm-time">
-        <span aria-hidden="true">⏱ </span>
-        {episode.time}
-      </p>
-      <span className="tm-card-cta" aria-hidden="true">
-        {done ? "Watch again ▶" : episode.content ? "Start ▶" : "Peek inside ▶"}
+        {done && <span className="tm-h-status is-done">✓ Completed</span>}
+        {isNext && <span className="tm-h-status is-next">Up next</span>}
+      </span>
+      <span className="tm-h-card-title">{episode.title}</span>
+      <span className="tm-h-card-desc">{episode.description}</span>
+      <span className="tm-h-card-foot">
+        <span className="tm-h-time">{episode.time.replace("about ", "")}</span>
+        <span className="tm-h-go" aria-hidden="true">
+          {done ? "Watch again" : "Start"} <span className="tm-h-arrow">→</span>
+        </span>
       </span>
     </a>
   );
@@ -229,13 +212,13 @@ function PlaceholderEpisode({ episode, headingRef }: { episode: Episode; heading
   return (
     <main className="tm-view tm-episode" aria-labelledby="tm-episode-title">
       <a href="#home" className="tm-button tm-button-secondary">
-        ← Back to all episodes
+        ← Back to all modules
       </a>
 
       <header className="tm-episode-header">
         <NumberCircle episode={episode} big />
         <div>
-          <p className="tm-episode-label">Episode {episode.number}</p>
+          <p className="tm-episode-label">Module {episode.number}</p>
           <h1 id="tm-episode-title" ref={headingRef} tabIndex={-1}>
             {episode.title}
           </h1>
@@ -255,11 +238,11 @@ function PlaceholderEpisode({ episode, headingRef }: { episode: Episode; heading
       {/* While an episode is being built: its test panel */}
       {episode.sneakPeek && <episode.sneakPeek />}
 
-      <h2 className="tm-scenes-title">Scenes in this episode</h2>
+      <h2 className="tm-scenes-title">Lessons in this module</h2>
       <ol className="tm-scenes">
         {episode.scenes.map((scene) => (
           <li key={scene.number} className="tm-scene-item">
-            <span className="tm-scene-number">Scene {scene.number}</span>
+            <span className="tm-scene-number">Lesson {scene.number}</span>
             <span className="tm-scene-title">{scene.title}</span>
             <span className="tm-scene-idea">{scene.idea}</span>
             <span className="tm-soon">Coming soon</span>
@@ -269,11 +252,11 @@ function PlaceholderEpisode({ episode, headingRef }: { episode: Episode; heading
 
       <div className="tm-stage tm-stage-small">
         <Tumaini mood="thinking" size={150} />
-        <SpeechBubble text="I'm still learning this episode. Come back soon!" tail="left" />
+        <SpeechBubble text="I'm still learning this module. Come back soon!" tail="left" />
       </div>
 
       <a href="#home" className="tm-button">
-        ← Back to all episodes
+        ← Back to all modules
       </a>
     </main>
   );
@@ -284,7 +267,7 @@ function PlayableEpisode({ episode, headingRef }: { episode: Episode; headingRef
   return (
     <main className="tm-view tm-play" aria-labelledby="tm-play-title">
       <h1 id="tm-play-title" ref={headingRef} tabIndex={-1} className="tm-play-title">
-        Episode {episode.number}: {episode.title}
+        Module {episode.number}: {episode.title}
       </h1>
       <EpisodePlayer episode={episode} />
     </main>
@@ -338,9 +321,14 @@ export default function TumainiPage() {
     <div className="tm-app">
       {/* Fixed buttons for the presenter */}
       <nav className="tm-topbar" aria-label="Presenter controls">
-        <a href="#home" className="tm-button tm-button-small">
-          <span aria-hidden="true">🏠</span> Home
-        </a>
+        {/* No Home button on the home screen itself */}
+        {view === "home" ? (
+          <span />
+        ) : (
+          <a href="#home" className="tm-button tm-button-small">
+            <span aria-hidden="true">🏠</span> Home
+          </a>
+        )}
         <button type="button" className="tm-button tm-button-small" onClick={toggleFullscreen}>
           <span aria-hidden="true">⛶</span> {isFullscreen ? "Exit full screen" : "Full screen"}
         </button>

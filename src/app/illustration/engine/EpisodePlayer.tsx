@@ -16,11 +16,9 @@ import { useEffect, useState } from "react";
 import type { Episode } from "../types";
 import ScenePlayer from "./ScenePlayer";
 import QuestionCard from "./QuestionCard";
-import { PICTURES } from "./registry";
 import Tumaini from "../characters/Tumaini";
 import SpeechBubble from "../components/SpeechBubble";
 import Confetti from "../components/Confetti";
-import IdeaPictureCard from "./IdeaPictureCard";
 import { markEpisodeCompleted } from "../progress";
 
 type Phase =
@@ -92,11 +90,11 @@ function DraftCard({ episode, onReplay }: { episode: Episode; onReplay: () => vo
   return (
     <section className="tm-summary tm-view" aria-labelledby="tm-draft-title">
       <div className="tm-summary-card">
-        <h2 id="tm-draft-title">🚧 That&apos;s all of Episode {episode.number} so far!</h2>
+        <h2 id="tm-draft-title">🚧 That&apos;s all of Module {episode.number} so far!</h2>
         <p>The next parts are still being built. Come back soon.</p>
         <div className="tm-feedback">
           <Tumaini mood="thinking" size={120} />
-          <SpeechBubble text="I'm still learning the rest of this episode!" name="Tumaini" small />
+          <SpeechBubble text="I'm still learning the rest of this module!" name="Tumaini" small />
         </div>
       </div>
       {Extra && <Extra />}
@@ -105,7 +103,7 @@ function DraftCard({ episode, onReplay }: { episode: Episode; onReplay: () => vo
           ↺ Watch again
         </button>
         <a href="#home" className="tm-button tm-button-big">
-          ← Back to all episodes
+          ← Back to all modules
         </a>
       </div>
     </section>
@@ -154,8 +152,8 @@ function TitleCard({ episode, onDone }: { episode: Episode; onDone: () => void }
   }, [onDone]);
 
   return (
-    <button type="button" className="tm-title-card" onClick={onDone} aria-label={`Episode ${episode.number}: ${episode.title}. Click to start.`}>
-      <span className="tm-title-card-label">Episode {episode.number}</span>
+    <button type="button" className="tm-title-card" onClick={onDone} aria-label={`Module ${episode.number}: ${episode.title}. Click to start.`}>
+      <span className="tm-title-card-label">Module {episode.number}</span>
       <span className="tm-title-card-title">{episode.title}</span>
       <Tumaini mood="excited" waving size={200} />
       <span className="tm-title-card-hint">Click to start ▶</span>
@@ -192,7 +190,7 @@ function Quiz({ episode, onDone }: { episode: Episode; onDone: () => void }) {
     const perfect = score === questions.length;
     return (
       <section className="tm-quiz tm-view" aria-labelledby="tm-quiz-title">
-        <h2 id="tm-quiz-title" className="tm-quiz-title">Episode quiz</h2>
+        <h2 id="tm-quiz-title" className="tm-quiz-title">Quick quiz</h2>
         <div className="tm-score-card">
           {perfect && <Confetti />}
           <p className="tm-score">
@@ -253,17 +251,17 @@ function Quiz({ episode, onDone }: { episode: Episode; onDone: () => void }) {
 
 function Summary({ episode, onReplay }: { episode: Episode; onReplay: () => void }) {
   const { summary, teaser } = episode.content!;
-  const Picture = PICTURES[teaser.picture];
 
-  // Reaching the summary = the episode is finished. Remember that.
+  // Reaching the summary = the module is finished. Remember that.
   useEffect(() => {
     markEpisodeCompleted(episode.number);
   }, [episode.number]);
 
+  // KISS: one calm card that fits the screen. Links fold away.
   return (
     <section className="tm-summary tm-view" aria-labelledby="tm-summary-title">
       <div className="tm-summary-card">
-        <h2 id="tm-summary-title">In Episode {episode.number} you learned:</h2>
+        <h2 id="tm-summary-title">In Module {episode.number} you learned:</h2>
         <ul className="tm-summary-points">
           {summary.points.map((p) => (
             <li key={p}>
@@ -271,51 +269,35 @@ function Summary({ episode, onReplay }: { episode: Episode; onReplay: () => void
             </li>
           ))}
         </ul>
-        <div className="tm-feedback">
-          <Tumaini mood="happy" waving size={130} />
-          <SpeechBubble text={summary.message} name="Tumaini" />
-        </div>
-        {/* The big message, once per episode: four steps that light up one by one */}
-        <div className="tm-summary-message">
-          <IdeaPictureCard id="big-message" />
-        </div>
-      </div>
+        <p className="tm-summary-message-line">{summary.message}</p>
+        <p className="tm-summary-next">
+          <Tumaini mood={teaser.mood ?? "happy"} size={56} /> {teaser.text}
+        </p>
 
-      {/* Links to the official texts (they open in a new tab, and need internet) */}
-      {episode.content!.links && episode.content!.links.length > 0 && (
-        <div className="tm-summary-card tm-learn-more">
-          <h2>📎 Learn more: read the originals</h2>
-          <ul>
-            {episode.content!.links.map((link) => (
-              <li key={link.href}>
-                <a href={link.href} target="_blank" rel="noopener noreferrer">
-                  {link.label} <span aria-hidden="true">↗</span>
-                  <span className="tm-sr-only"> (opens in a new tab)</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="tm-learn-more-note">These links open the official websites in a new tab, so they need internet.</p>
-        </div>
-      )}
-
-      <div className="tm-teaser">
-        <h2 className="tm-teaser-title">Next time…</h2>
-        <div className="tm-teaser-picture">
-          <Picture />
-        </div>
-        <div className="tm-feedback">
-          <Tumaini mood={teaser.mood ?? "worried"} size={120} />
-          <SpeechBubble text={teaser.text} name="Tumaini" small />
-        </div>
+        {/* Links to the official texts (they open in a new tab, and need internet) */}
+        {episode.content!.links && episode.content!.links.length > 0 && (
+          <details className="tm-learn-more">
+            <summary>📎 Learn more: read the originals</summary>
+            <ul>
+              {episode.content!.links.map((link) => (
+                <li key={link.href}>
+                  <a href={link.href} target="_blank" rel="noopener noreferrer">
+                    {link.label} <span aria-hidden="true">↗</span>
+                    <span className="tm-sr-only"> (opens in a new tab)</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
       </div>
 
       <div className="tm-summary-buttons">
         <button type="button" className="tm-button tm-button-big tm-button-secondary" onClick={onReplay}>
-          ↺ Watch Episode {episode.number} again
+          ↺ Watch Module {episode.number} again
         </button>
         <a href="#home" className="tm-button tm-button-big">
-          ← Back to all episodes
+          ← Back to all modules
         </a>
       </div>
     </section>

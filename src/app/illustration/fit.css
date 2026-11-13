@@ -1,0 +1,521 @@
+/* ============================================================
+   ONE SCREEN, NO SCROLLING
+   ------------------------------------------------------------
+   Loaded last, so these rules win.
+   • Home: a clean intro (Tumaini visible) + the 4 module cards.
+   • Lessons: header, slide and controls fill the window exactly.
+     Visuals shrink to fit. If a task is ever taller than the
+     screen, only the slide area scrolls, never the whole page.
+   (On small phones some scrolling may still be needed.)
+   ============================================================ */
+
+/* ---------- Home: clean, one screen ---------- */
+.tm-home {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(20px, 4vh, 40px);
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 72px 24px 28px;
+}
+
+/* Intro (left) + Tumaini (right) */
+.tm-h-hero {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 32px;
+}
+.tm-h-eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tm-lake);
+}
+.tm-home h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--tm-text);
+  text-shadow: none;
+}
+.tm-h-lead {
+  max-width: 34ch;
+  margin: 12px 0 0;
+  font-size: clamp(1.05rem, 2vw, 1.3rem);
+  line-height: 1.45;
+  color: #35535D;
+}
+.tm-h-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 24px;
+  margin-top: 24px;
+}
+.tm-h-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: var(--tm-lake);
+  color: var(--tm-white);
+  border-radius: 12px;
+  font-weight: 800;
+  text-decoration: none;
+  transition: background 0.2s, transform 0.2s;
+}
+.tm-h-start:hover,
+.tm-h-start:focus-visible {
+  background: #155A75;
+  transform: translateY(-2px);
+}
+.tm-h-progress {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #5B747C;
+}
+.tm-h-progress-bar {
+  width: 120px;
+  height: 8px;
+  background: #CFE2E9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.tm-h-progress-bar span {
+  display: block;
+  height: 100%;
+  background: var(--tm-leaf);
+  border-radius: inherit;
+}
+
+/* Tumaini with a small speech bubble above */
+.tm-h-guide {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.tm-h-bubble {
+  position: relative;
+  max-width: 230px;
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--tm-white);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(19, 48, 58, 0.08);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: center;
+}
+.tm-h-bubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  margin-left: -8px;
+  border: 8px solid transparent;
+  border-bottom: 0;
+  border-top-color: var(--tm-white);
+}
+
+/* The 4 module cards */
+.tm-h-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tm-h-grid li {
+  display: flex;
+}
+.tm-h-card {
+  --accent: var(--tm-lake);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding: 20px 18px 16px;
+  background: var(--tm-white);
+  border: 1px solid #DCE6E9;
+  border-top: 4px solid var(--accent);
+  border-radius: 16px;
+  color: var(--tm-text);
+  text-decoration: none;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+.tm-h-card:hover,
+.tm-h-card:focus-visible {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(19, 48, 58, 0.12);
+}
+.tm-h-card.is-next {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.tm-h-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+}
+.tm-h-num {
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--accent);
+}
+.tm-h-status {
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+.tm-h-status.is-done {
+  background: #E3F2DF;
+  color: #2F6B29;
+}
+.tm-h-status.is-next {
+  background: #FFF4D6;
+  color: #8A5A00;
+}
+.tm-h-card-title {
+  font-size: 1.2rem;
+  font-weight: 900;
+  line-height: 1.2;
+}
+.tm-h-card-desc {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #35535D;
+}
+.tm-h-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid #EEF3F5;
+  font-size: 0.88rem;
+}
+.tm-h-time {
+  color: #5B747C;
+}
+.tm-h-go {
+  font-weight: 800;
+  color: var(--accent);
+}
+.tm-h-arrow {
+  display: inline-block;
+  transition: transform 0.2s;
+}
+.tm-h-card:hover .tm-h-arrow,
+.tm-h-card:focus-visible .tm-h-arrow {
+  transform: translateX(4px);
+}
+
+@media (max-width: 1050px) {
+  .tm-h-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .tm-h-hero {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .tm-h-lead {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .tm-h-actions {
+    justify-content: center;
+  }
+  .tm-h-guide {
+    order: -1;
+  }
+  .tm-h-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- Home: gentle motion ----------
+   Things rise in one after another when the page opens; a soft
+   glow breathes behind Tumaini; the progress bar fills; the
+   "Up next" card and the main button pulse softly.
+   (All off with "reduce motion": see tumaini.css.) */
+@keyframes tm-h-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes tm-h-pop {
+  from { opacity: 0; transform: scale(0.85); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes tm-h-breathe {
+  0%, 100% { transform: scale(1);    opacity: 0.55; }
+  50%      { transform: scale(1.08); opacity: 0.8; }
+}
+@keyframes tm-h-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes tm-h-nudge {
+  0%, 70%, 100% { transform: translateX(0); }
+  80%           { transform: translateX(5px); }
+  90%           { transform: translateX(0); }
+}
+@keyframes tm-h-ring {
+  0%, 100% { box-shadow: 0 0 0 2px var(--accent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 25%, transparent); }
+}
+
+/* Intro text rises in, one line after another */
+.tm-h-eyebrow,
+.tm-home h1,
+.tm-h-lead,
+.tm-h-actions {
+  animation: tm-h-rise 0.6s ease-out both;
+}
+.tm-home h1      { animation-delay: 0.1s; }
+.tm-h-lead       { animation-delay: 0.2s; }
+.tm-h-actions    { animation-delay: 0.3s; }
+
+/* Tumaini: a soft glow behind, and the bubble pops in */
+.tm-h-guide {
+  position: relative;
+  animation: tm-h-rise 0.7s 0.2s ease-out both;
+}
+.tm-h-guide::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  bottom: 0;
+  width: 240px;
+  height: 240px;
+  margin-left: -120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%);
+  animation: tm-h-breathe 5s ease-in-out infinite;
+}
+.tm-h-guide > * {
+  position: relative;
+  z-index: 1;
+}
+.tm-h-bubble {
+  transform-origin: 50% 100%;
+  animation: tm-h-pop 0.45s 0.8s cubic-bezier(0.3, 1.4, 0.5, 1) both;
+}
+
+/* The progress bar fills up */
+.tm-h-progress-bar span {
+  transform-origin: left;
+  animation: tm-h-fill 0.9s 0.7s ease-out both;
+}
+
+/* The main button's arrow nudges now and then */
+.tm-h-start span {
+  display: inline-block;
+  animation: tm-h-nudge 3s 1.5s ease-in-out infinite;
+}
+
+/* Cards rise in one after another (the wrapper moves, so the hover lift still works) */
+.tm-h-grid li {
+  animation: tm-h-rise 0.5s ease-out both;
+}
+.tm-h-grid li:nth-child(1) { animation-delay: 0.35s; }
+.tm-h-grid li:nth-child(2) { animation-delay: 0.45s; }
+.tm-h-grid li:nth-child(3) { animation-delay: 0.55s; }
+.tm-h-grid li:nth-child(4) { animation-delay: 0.65s; }
+
+/* "Up next" card: a slow, soft pulse */
+.tm-h-card.is-next {
+  animation: tm-h-ring 2.8s 1.2s ease-in-out infinite;
+}
+
+/* ---------- Lessons: fill the window exactly ---------- */
+.tm-play {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+.tm-play .tm-scene {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 12px 16px 8px;
+}
+/* The title sits between the fixed Home and Full screen buttons */
+.tm-play .tm-scene-header {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  min-height: 48px;
+  margin: 0 0 10px;
+  padding: 0 170px;
+  text-align: center;
+}
+.tm-play .tm-scene-header h2 {
+  font-size: clamp(1.15rem, 2.6vw, 1.6rem);
+}
+.tm-play .tm-scene-where {
+  font-size: 14px;
+}
+.tm-play .tm-beat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.tm-play .tm-beat > * {
+  flex: 1 0 auto;
+}
+.tm-play .tm-controls {
+  margin-top: 10px;
+}
+.tm-play .tm-locked-hint {
+  min-height: 1.2em;
+  margin: 4px 0 0;
+  font-size: 15px;
+}
+.tm-play .tm-presenter {
+  margin-top: 0;
+}
+
+/* The slide uses the space it has; visuals shrink to fit */
+.tm-play .tm-sl {
+  min-height: 0;
+  gap: clamp(8px, 2vh, 18px);
+  padding: clamp(14px, 3vh, 28px) 20px 72px;
+}
+.tm-play .tm-sl-title {
+  font-size: clamp(1.4rem, 4.2vh, 2.3rem);
+}
+.tm-play .tm-sl-text {
+  font-size: clamp(1.05rem, 2.6vh, 1.4rem);
+}
+.tm-play .tm-sl-points li {
+  font-size: clamp(0.95rem, 2.2vh, 1.15rem);
+}
+.tm-play .tm-sl-photo img,
+.tm-play .tm-sl-photo-empty {
+  max-height: 34vh;
+}
+.tm-play .tm-sl-chart svg,
+.tm-play .tm-sl-diagram,
+.tm-play .tm-sl-picture svg {
+  max-height: 34vh;
+}
+.tm-play .tm-sl-icon {
+  font-size: clamp(3rem, 10vh, 5.5rem);
+}
+.tm-play .tm-sl-stat-value {
+  font-size: clamp(3rem, 11vh, 5.5rem);
+}
+
+/* Tasks and the lesson board: a little tighter */
+.tm-play .tm-activity-wrap {
+  padding: 16px;
+  border-width: 1px;
+  border-color: #E1E9EC;
+  box-shadow: none;
+  border-radius: 20px;
+}
+.tm-play .tm-prompt {
+  margin: 0 0 10px;
+  font-size: clamp(1.3rem, 3.6vh, 1.9rem);
+}
+.tm-play .tm-p4-map {
+  max-height: 34vh;
+}
+.tm-play .tm-lesson {
+  align-items: center;
+}
+
+/* Title card, recap, quiz and summary also fit the window */
+.tm-play .tm-title-card,
+.tm-play .tm-recap,
+.tm-play .tm-quiz,
+.tm-play .tm-summary {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-top: 64px;
+  padding-bottom: 16px;
+}
+.tm-play .tm-summary {
+  align-content: center;
+}
+.tm-summary-message-line {
+  margin: 16px 0 0;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--tm-lake);
+}
+.tm-summary-next {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  background: #F2F7F9;
+  border-radius: 12px;
+  font-weight: 700;
+}
+.tm-summary-next svg {
+  flex-shrink: 0;
+}
+.tm-learn-more {
+  margin-top: 12px;
+}
+.tm-learn-more > summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: var(--tm-lake);
+}
+
+/* ---------- Phones: the buttons sit above the title ---------- */
+@media (max-width: 700px) {
+  .tm-play .tm-scene {
+    padding-top: 60px;
+  }
+  .tm-play .tm-scene-header {
+    padding: 0;
+  }
+}
+
+/* ---------- Short screens (e.g. laptops at 720px high) ---------- */
+@media (max-height: 760px) {
+  .tm-play .tm-sl-photo img,
+  .tm-play .tm-sl-photo-empty,
+  .tm-play .tm-sl-chart svg,
+  .tm-play .tm-sl-diagram,
+  .tm-play .tm-sl-picture svg,
+  .tm-play .tm-p4-map {
+    max-height: 28vh;
+  }
+  .tm-play .tm-sl-guide svg {
+    width: 56px;
+    height: auto;
+  }
+}

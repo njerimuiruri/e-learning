@@ -1,0 +1,230 @@
+/* ============================================================
+   PART 4 TASKS: risk map, decision tree, forest vote, grouping
+   Calm on purpose: flat colours, no animation. Choices turn
+   green (good) or red (try again). Reuses .tm-choice-* styles
+   from slides.css for buttons and results.
+   ============================================================ */
+
+.tm-p4 {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.tm-p4-two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* ---------- Task 1: risk map ---------- */
+.tm-p4-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+.tm-p4-toggle {
+  padding: 8px 14px;
+  background: var(--tm-white);
+  color: var(--tm-text);
+  border: 2px solid #C9D7DC;
+  border-radius: 999px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tm-p4-toggle.is-on {
+  background: #E6F1F5;
+  border-color: var(--tm-lake);
+}
+.tm-p4-map {
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+  border-radius: 12px;
+}
+
+/* ---------- Task 2: decision tree ---------- */
+.tm-p4-path {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 560px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.tm-p4-path li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: #F7FAFB;
+  border-left: 4px solid #C9D7DC;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  color: #35535D;
+}
+.tm-p4-path .is-yes { color: var(--tm-leaf); }
+.tm-p4-path .is-no { color: var(--tm-soil); }
+.tm-p4-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.tm-p4-yesno {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 1fr));
+  gap: 10px;
+}
+.tm-p4-yesno .tm-choice-option {
+  justify-content: center;
+}
+.tm-p4-decision {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 460px;
+  padding: 20px;
+  background: #E3F2DF;
+  border-radius: 14px;
+  text-align: center;
+  font-size: 1.1rem;
+}
+.tm-p4-decision-icon {
+  font-size: 2.4rem;
+}
+.tm-p4-again {
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: var(--tm-lake);
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---------- Task 3: forest vote ---------- */
+.tm-p4-forest {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 640px;
+}
+.tm-p4-tree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 6px;
+  background: #F2F7F9;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  text-align: center;
+}
+.tm-p4-tree.is-evacuate {
+  background: #FBEDE6;
+  border-color: var(--tm-soil);
+}
+.tm-p4-tree.is-prepare {
+  background: #FFF4D6;
+  border-color: var(--tm-maize);
+}
+.tm-p4-tree-icon {
+  font-size: 1.8rem;
+}
+.tm-p4-tree-looked {
+  font-size: 0.8rem;
+  color: #5B747C;
+}
+.tm-p4-tree-vote {
+  font-weight: 800;
+}
+.tm-p4-ask-btn {
+  padding: 12px 22px;
+  background: var(--tm-lake);
+  color: var(--tm-white);
+  border: none;
+  border-radius: 12px;
+  font: inherit;
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tm-p4-ask-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* ---------- Task 4: group the villages ---------- */
+.tm-p4-villages {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+}
+.tm-p4-village {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: #F7FAFB;
+  border: 2px solid #E1E9EC;
+  border-radius: 12px;
+}
+.tm-p4-village.is-match {
+  border-color: var(--tm-leaf);
+}
+.tm-p4-village.is-miss {
+  border-color: var(--tm-soil);
+}
+.tm-p4-village ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.9rem;
+  color: #35535D;
+}
+.tm-p4-village-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.tm-p4-village-buttons button {
+  padding: 6px 4px;
+  background: var(--tm-white);
+  color: var(--tm-text);
+  border: 2px solid #C9D7DC;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.tm-p4-village-buttons .is-high {
+  background: #FBEDE6;
+  border-color: var(--tm-soil);
+}
+.tm-p4-village-buttons .is-low {
+  background: #E3F2DF;
+  border-color: var(--tm-leaf);
+}
+.tm-p4-village-ai {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--tm-lake);
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 700px) {
+  .tm-p4-two,
+  .tm-p4-villages {
+    grid-template-columns: 1fr;
+  }
+  .tm-p4-forest {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
