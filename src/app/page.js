@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import HeroSection from "./herosection/page";
 import CategoriesTeaser from "@/components/home/CategoriesTeaser";
 import AboutTeaser from "@/components/home/AboutTeaser";
+import { AwardeesPreview } from "@/components/awardees/Awardees";
 import Navbar from "../components/navbar/navbar";
 import Footer from "../components/Footer/Footer";
 
@@ -14,6 +15,12 @@ export default function Home() {
       <Navbar />
       <HeroSection />
       <CategoriesTeaser />
+
+      {/* Mini-grant awardees */}
+      <section className="py-10 lg:py-12 bg-gray-50 border-y border-gray-100">
+        <AwardeesPreview className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" />
+      </section>
+
       <AboutTeaser />
 
       {/* Closing CTA */}

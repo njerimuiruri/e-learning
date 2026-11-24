@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import {
   BookOpen, Users, Lock, Loader2, CheckCircle, Play,
   Sprout, Flame, Rocket, Video, Monitor, PenLine,
-  Layers, ArrowRight, Award, GraduationCap, Trophy, Building2, MapPin, X,
+  Layers, ArrowRight, Award, GraduationCap,
 } from 'lucide-react';
 import Navbar from '@/components/navbar/navbar';
-import { aiAwardees } from '@/data/ai-awardees';
+import { AwardeesPreview } from '@/components/awardees/Awardees';
 import Footer from '@/components/Footer/Footer';
 import categoryService from '@/lib/api/categoryService';
 import moduleService from '@/lib/api/moduleService';
@@ -159,107 +159,8 @@ function ModuleCard({ mod, onAction, isLoggedIn }) {
   );
 }
 
-const initials = (name = '') =>
-  name.replace(/^(Dr\.|Prof\.)\s*/i, '').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('');
-
-function AwardeeAvatar({ awardee, className = '' }) {
-  if (awardee.image) {
-    return <img src={awardee.image} alt={awardee.name || 'Awardee'} className={`object-cover ${className}`} />;
-  }
-  return (
-    <div className={`flex items-center justify-center bg-amber-50 text-amber-600 font-bold ${className}`}>
-      {awardee.name ? initials(awardee.name) : <Award className="w-1/2 h-1/2" />}
-    </div>
-  );
-}
-
-function AwardeeCard({ awardee, onOpen }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(awardee)}
-      className="group text-left bg-white rounded-xl border border-gray-100 overflow-hidden hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col"
-    >
-      <div className="h-0.5 w-full bg-amber-400" />
-      <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-center gap-1.5 mb-3">
-          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
-            <Trophy className="w-2.5 h-2.5" /> Awardee
-          </span>
-          {awardee.theme && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-100 truncate">
-              {awardee.theme}
-            </span>
-          )}
-        </div>
-        <h3 className="text-sm font-semibold text-gray-900 leading-snug line-clamp-3 mb-4 group-hover:text-[#021d49] transition-colors">
-          {awardee.projectTitle}
-        </h3>
-        <div className="flex items-center gap-2.5 mt-auto pt-3 border-t border-gray-50">
-          <AwardeeAvatar awardee={awardee} className="w-9 h-9 rounded-full shrink-0 text-xs" />
-          <div className="min-w-0">
-            {awardee.name && <p className="text-xs font-semibold text-gray-800 truncate">{awardee.name}</p>}
-            <p className={`text-[11px] truncate ${awardee.name ? 'text-gray-400' : 'text-gray-700 font-semibold'}`}>{awardee.position}</p>
-            <p className="text-[11px] text-gray-400 truncate">{awardee.institution}</p>
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function AwardeeModal({ awardee, onClose }) {
-  if (!awardee) return null;
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto shadow-xl" onClick={e => e.stopPropagation()}>
-        <div className="relative bg-[#021d49] text-white px-6 pt-6 pb-5 rounded-t-2xl">
-          <button onClick={onClose} aria-label="Close" className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
-            <X className="w-4 h-4" />
-          </button>
-          <div className="flex items-center gap-4 pr-8">
-            <AwardeeAvatar awardee={awardee} className="w-16 h-16 rounded-xl shrink-0 text-lg ring-2 ring-white/20" />
-            <div className="min-w-0">
-              <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-widest text-amber-300 mb-1">
-                <Trophy className="w-3 h-3" /> Mini-Grant Awardee
-              </p>
-              {awardee.name && <h3 className="text-lg font-bold leading-tight">{awardee.name}</h3>}
-              <p className={`text-blue-100 ${awardee.name ? 'text-xs mt-0.5' : 'text-sm font-semibold text-white'}`}>{awardee.position}</p>
-            </div>
-          </div>
-        </div>
-        <div className="p-6 space-y-5">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Awarded Project</p>
-            <p className="text-sm font-bold text-gray-900 leading-snug">{awardee.projectTitle}</p>
-          </div>
-          {awardee.overview && (
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Project Overview</p>
-              <p className="text-xs text-gray-600 leading-relaxed whitespace-pre-line">{awardee.overview}</p>
-            </div>
-          )}
-          <div className="space-y-2.5">
-            <div className="flex items-start gap-2.5">
-              <Building2 className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
-              <p className="text-xs text-gray-600 leading-relaxed">{awardee.institution}</p>
-            </div>
-            {awardee.country && (
-              <div className="flex items-start gap-2.5">
-                <MapPin className="w-3.5 h-3.5 text-gray-400 mt-0.5 shrink-0" />
-                <p className="text-xs text-gray-600">{awardee.country}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function AIClimateResiliencePage() {
   const router = useRouter();
-  const [selectedAwardee, setSelectedAwardee] = useState(null);
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -448,28 +349,7 @@ export default function AIClimateResiliencePage() {
           </div>
 
           {/* ── Mini-Grant Awardees ── */}
-          {aiAwardees.length > 0 && (
-            <section>
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-0.5">Recognition</p>
-                  <h2 className="text-base font-bold text-gray-900">Mini-Grant Awardees</h2>
-                  <p className="text-xs text-gray-400 mt-1 max-w-lg">
-                    Fellows awarded mini-grants to apply AI and machine learning to climate resilience challenges across Africa.
-                  </p>
-                </div>
-                <span className="shrink-0 inline-flex items-center gap-1 text-xs text-amber-700 bg-amber-50 border border-amber-100 px-3 py-1 rounded-full">
-                  <Trophy className="w-3 h-3" />
-                  {aiAwardees.length} awardee{aiAwardees.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {aiAwardees.map(a => (
-                  <AwardeeCard key={a.id} awardee={a} onOpen={setSelectedAwardee} />
-                ))}
-              </div>
-            </section>
-          )}
+          <AwardeesPreview limit={Infinity} />
 
           {/* ── Course Modules ── */}
           <section>
@@ -560,7 +440,6 @@ export default function AIClimateResiliencePage() {
         </div>
       </div>
 
-      <AwardeeModal awardee={selectedAwardee} onClose={() => setSelectedAwardee(null)} />
       <Footer />
     </>
   );
