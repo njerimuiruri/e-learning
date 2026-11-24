@@ -18,7 +18,7 @@ export default function Home() {
 
       {/* Mini-grant awardees */}
       <section className="py-10 lg:py-12 bg-gray-50 border-y border-gray-100">
-        <AwardeesPreview className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" />
+        <AwardeesPreview limit={Infinity} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8" />
       </section>
 
       <AboutTeaser />
